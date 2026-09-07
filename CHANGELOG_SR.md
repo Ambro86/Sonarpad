@@ -1,5 +1,21 @@
 # Dnevnik izmena
 
+Verzija 0.9.5 – 2026-09-07
+
+Аудио-дескрипција уз AI
+1. Побољшана је отпорност када Gemini привремено врати `MALFORMED_RESPONSE` без употребљивог садржаја. Sonarpad сада поново покушава са потпуно истим сегментом до три пута, уз кратко чекање између покушаја, уместо да одмах прекине целу аудио-дескрипцију. Нормални Gemini одговори, безбедносне блокаде, грешке ограничења токена и постојеће понашање контролних тачака остају непромењени.
+
+2. Ispravljen je još jedan redak slučaj greške `invalid Gemini chunk timeline` kod nekih video zapisa čiji segmenti pripremljeni pomoću FFmpeg-a prijavljuju malo kumulativno odstupanje trajanja. Sonarpad ostavlja postojeći tok nepromenjen kada je vremenska linija ispravna i koristi konzervativno usklađivanje samo kada bi normalna vremenska linija otkazala i ukupno odstupanje je malo; velika ili sumnjiva odstupanja i dalje izazivaju grešku.
+
+3. Додата је опциона Sonarpad AI услуга за AI аудио-дескрипцију. Корисници могу и даље да користе сопствени Gemini API кључ или да изаберу Sonarpad услугу и унесу лични Sonarpad код. Код је заштићен помоћу Windows DPAPI. У режиму услуге припремљени видео сегменти се шаљу директно са корисниковог рачунара на Google преко привременог Google URL-а за отпремање; sonarpad.com не прима нити чува видео бајтове. Backend само одобрава приступ, намеће Gemini модел/Standard ниво и ограничења употребе, евидентира потрошњу и враћа Gemini одговор.
+
+4. Побољшано је уређивање сачуваних пројеката аудио-описа. Сада је могуће изменити више описа један за другим без тренутног примењивања сваке измене. Измене остају у меморији; притиском на „Примени текст“ Sonarpad проверава сваки измењени опис у односу на његов сачувани временски опсег и затим заједно чува све исправне измене. Ако опис не може да стане у свој опсег, фокус се враћа на њега без губитка осталих измена на чекању.
+
+5. Додато је „Подеси глас“ непосредно пре „Креирај аудио-опис“. Нови прозор омогућава избор мотора, гласа, брзине и јачине звука и садржи „Тестирај глас“. Притиском на OK фокус се враћа тачно на „Подеси глас“, а изабране вредности се примењују на аудио-опис који се креира. Ако се прозор не користи, синтеза остаје потпуно иста као раније.
+
+
+6. Proširene su kontrole glasa u sačuvanim projektima audio-deskripcije. U izmeni projekta, pored motora i glasa, sada su dostupni brzina, jačina zvuka i „Testiraj glas“. Kada se primene parametri glasa, Sonarpad ponovo proverava sve postojeće opise sa novim parametrima sinteze i ponovo pravi MP3 samo ako svi opisi i dalje staju u sačuvane vremenske intervale. Intervali bez dijaloga, Visual Evidence vremena, Gemini opisi i vremenska analiza projekta ponovo se koriste bez ponovnog pokretanja AI analize.
+
 Verzija 0.9.4 – 2026-09-04
 
 Аудио-дескрипција уз AI

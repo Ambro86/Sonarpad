@@ -1,5 +1,21 @@
 # Ändringslogg
 
+Version 0.9.5 – 2026-09-07
+
+AI-ljudbeskrivning
+1. Förbättrad robusthet när Gemini tillfälligt returnerar `MALFORMED_RESPONSE` utan användbart innehåll. Sonarpad försöker nu exakt samma segment igen upp till tre gånger, med en kort väntan mellan försöken, i stället för att omedelbart avbryta hela ljudbeskrivningen. Normala Gemini-svar, säkerhetsblockeringar, tokenbegränsningsfel och det befintliga checkpoint-beteendet förblir oförändrade.
+
+2. Ytterligare ett sällsynt fall av `invalid Gemini chunk timeline` har rättats för vissa videor där segment som förberetts av FFmpeg rapporterar en liten ackumulerad avvikelse i längd. Sonarpad lämnar den normala tidslinjehanteringen oförändrad när den är giltig och använder en försiktig justering endast när den normala tidslinjen annars skulle misslyckas och den totala avvikelsen är liten; stora eller misstänkta avvikelser ger fortfarande fel.
+
+3. Den valfria Sonarpad AI-tjänsten för AI-ljudbeskrivning har lagts till. Användare kan fortsätta använda sin egen Gemini API-nyckel eller välja Sonarpad-tjänsten och ange en personlig Sonarpad-kod. Koden skyddas med Windows DPAPI. I tjänsteläget laddas förberedda videosegment upp direkt från användarens dator till Google via en tillfällig Google-uppladdningsadress; sonarpad.com tar inte emot eller lagrar videodata. Backend-tjänsten auktoriserar endast åtkomst, styr Gemini-modell/Standard-nivå och användningsgränser, registrerar förbrukning och returnerar Gemini-svaret.
+
+4. Förbättrad redigering av sparade syntolkningsprojekt. Nu kan flera beskrivningar ändras efter varandra utan att varje ändring måste tillämpas direkt. Ändringarna ligger kvar i minnet; när “Tillämpa text” trycks kontrollerar Sonarpad varje ändrad beskrivning mot dess sparade tidsintervall och sparar sedan alla giltiga ändringar tillsammans. Om en beskrivning inte ryms i sitt intervall flyttas fokus tillbaka till den utan att övriga väntande ändringar går förlorade.
+
+5. “Justera röst” har lagts till direkt före “Skapa syntolkning”. Det nya fönstret innehåller val för talsyntesmotor, röst, hastighet och volym samt “Testa röst”. När OK trycks återgår fokus exakt till “Justera röst” och de valda värdena används för syntolkningen som ska skapas. Om fönstret aldrig används förblir syntesen exakt som tidigare.
+
+
+6. Röstkontrollerna i sparade syntolkningsprojekt har utökats. I Redigera projekt finns nu även hastighet, volym och ”Testa röst” utöver motor och röst. När röstinställningarna tillämpas kontrollerar Sonarpad alla befintliga beskrivningar igen med de nya syntesparametrarna och bygger bara om MP3-filen om alla fortfarande ryms inom sina sparade tidsintervall. Dialogfria intervall, Visual Evidence-tider, Gemini-beskrivningar och projektets tidsanalys återanvänds utan att AI-analysen körs igen.
+
 Version 0.9.4 – 2026-09-04
 
 AI-ljudbeskrivning

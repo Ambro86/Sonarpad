@@ -67,31 +67,47 @@ jobs:
           core.setOutput('next_title', nextTitle);
           core.setOutput('delete_tags_json', JSON.stringify(existingPrereleaseTags));
 
-    - name: Get latest successful CI run
+    - name: Get successful CI run for this exact commit
       id: get_run
       uses: actions/github-script@v7
       with:
         script: |
+          const targetSha = context.sha;
           const runs = await github.rest.actions.listWorkflowRuns({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'ci.yml',
-            status: 'completed',
-            conclusion: 'success',
-            per_page: 1
+            head_sha: targetSha,
+            status: 'success',
+            per_page: 100
           });
 
-          if (runs.data.workflow_runs.length === 0) {
-            core.setFailed('No successful ci.yml run found');
+          const eligibleRuns = runs.data.workflow_runs.filter(run =>
+            run.head_sha === targetSha &&
+            (run.event === 'push' || run.event === 'workflow_dispatch')
+          );
+
+          if (eligibleRuns.length === 0) {
+            core.setFailed(
+              `No successful ci.yml run found for commit ${targetSha}. ` +
+              'Run ci.yml for this exact commit before creating the prerelease.'
+            );
             return;
           }
 
-          const latestRun = runs.data.workflow_runs[0];
-          core.setOutput('run_id', String(latestRun.id));
-          core.setOutput('run_sha', latestRun.head_sha.substring(0, 7));
-          core.setOutput('run_date', latestRun.created_at);
+          const selectedRun = eligibleRuns[0];
+          if (selectedRun.head_sha !== targetSha) {
+            core.setFailed(`Build SHA mismatch: expected ${targetSha}, got ${selectedRun.head_sha}`);
+            return;
+          }
 
-    - name: Download artifacts from latest CI run
+          console.log(`Selected CI run: ${selectedRun.id} for commit ${selectedRun.head_sha}`);
+          core.setOutput('run_id', String(selectedRun.id));
+          core.setOutput('run_sha', selectedRun.head_sha);
+          core.setOutput('run_sha_short', selectedRun.head_sha.substring(0, 7));
+          core.setOutput('run_date', selectedRun.created_at);
+
+    - name: Download artifacts from matching CI run
       uses: actions/download-artifact@v4
       with:
         run-id: ${{ steps.get_run.outputs.run_id }}
@@ -135,6 +151,35 @@ jobs:
         done
 
         ls -la release_files
+
+    - name: Verify artifact commit provenance
+      env:
+        EXPECTED_SHA: ${{ github.sha }}
+      run: |
+        python - <<'PY'
+        import os
+        import pathlib
+        import re
+
+        info_path = pathlib.Path("release_files/GITHUB_BUILD_INFO.txt")
+        if not info_path.is_file():
+            raise SystemExit("ERROR: GITHUB_BUILD_INFO.txt is missing from the CI artifacts")
+
+        text = info_path.read_text(encoding="utf-8-sig", errors="replace")
+        match = re.search(r"^Commit SHA:\s*([0-9a-fA-F]{40})\s*$", text, re.MULTILINE)
+        if not match:
+            raise SystemExit("ERROR: Commit SHA not found in GITHUB_BUILD_INFO.txt")
+
+        artifact_sha = match.group(1).lower()
+        expected_sha = os.environ["EXPECTED_SHA"].lower()
+        if artifact_sha != expected_sha:
+            raise SystemExit(
+                f"ERROR: artifacts belong to commit {artifact_sha}, "
+                f"but prerelease requires {expected_sha}"
+            )
+
+        print(f"Artifact provenance verified for commit {artifact_sha}")
+        PY
 
     - name: Build prerelease notes from latest changelog section
       run: |
@@ -196,6 +241,7 @@ jobs:
       run: |
         gh release create "${{ steps.beta_meta.outputs.next_tag }}" \
           release_files/* \
+          --target "${GITHUB_SHA}" \
           --title "${{ steps.beta_meta.outputs.next_title }}" \
           --notes-file prerelease_notes.md \
           --prerelease
@@ -205,6 +251,6 @@ jobs:
         echo "Prerelease created/replaced successfully"
         echo "Tag: ${{ steps.beta_meta.outputs.next_tag }}"
         echo "Build ID: ${{ steps.get_run.outputs.run_id }}"
-        echo "Build SHA: ${{ steps.get_run.outputs.run_sha }}"
+        echo "Build SHA: ${{ steps.get_run.outputs.run_sha_short }}"
         echo "Assets:"
         ls -la release_files | sed 's/^/  /'

@@ -1,5 +1,15 @@
 # परिवर्तन सूची
 
+Version 0.9.5 – 2026-09-07
+
+AI ऑडियो विवरण
+1. Gemini द्वारा अस्थायी रूप से `MALFORMED_RESPONSE` लौटाने और उपयोग योग्य सामग्री न मिलने की स्थिति में स्थिरता बेहतर की गई है। Sonarpad अब पूरी ऑडियो विवरण प्रक्रिया को तुरंत रोकने के बजाय उसी chunk को अधिकतम तीन बार दोबारा आज़माता है और हर प्रयास के बीच थोड़ी देर प्रतीक्षा करता है। Gemini की सामान्य प्रतिक्रियाएँ, safety blocks, token-limit errors और मौजूदा checkpoint behavior बिना बदलाव के रहते हैं।
+
+2. कुछ वीडियो में FFmpeg द्वारा तैयार किए गए chunks की duration में छोटा cumulative drift रिपोर्ट होने पर आने वाली दुर्लभ `invalid Gemini chunk timeline` त्रुटि का एक और मामला ठीक किया गया है। Timeline सही होने पर Sonarpad मौजूदा सामान्य व्यवहार को बिल्कुल नहीं बदलता; conservative realignment fallback केवल तभी उपयोग होता है जब सामान्य timeline विफल होने वाली हो और कुल अंतर छोटा हो। बड़ा या संदिग्ध अंतर होने पर अभी भी त्रुटि दी जाती है।
+
+3. AI ऑडियो विवरण के लिए वैकल्पिक Sonarpad AI सेवा जोड़ी गई है। उपयोगकर्ता पहले की तरह अपनी Gemini API key का उपयोग जारी रख सकते हैं या Sonarpad code दर्ज कर सकते हैं। सेवा मोड में code को Windows DPAPI से सुरक्षित किया जाता है और हर तैयार video chunk को अस्थायी Google upload URL के माध्यम से सीधे उपयोगकर्ता के PC से Google पर भेजा जाता है; sonarpad.com वीडियो bytes प्राप्त या संग्रहीत नहीं करता। Backend केवल access को authorize करता है, Gemini model/Flex tier और usage limits लागू करता है और Gemini response वापस करता है।
+
+
 Version 0.9.4 – 2026-09-04
 
 AI ऑडियो विवरण

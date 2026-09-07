@@ -23,6 +23,7 @@ DEFAULT_SETTINGS = {
     "enable_video_chunking": True,
     "video_chunk_duration_seconds": 180,
     "enable_character_glossary": True,
+    "recognize_screen_text": False,
     "verify_chunk_timing_with_gemini": True,
 }
 

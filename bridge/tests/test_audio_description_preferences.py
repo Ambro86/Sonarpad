@@ -18,6 +18,7 @@ class AudioDescriptionPreferenceTests(unittest.TestCase):
             "audio_description_verbosity",
             "audio_description_extended_pauses",
             "audio_description_recognize_characters",
+            "audio_description_recognize_screen_text",
             "audio_description_keep_character_catalog",
             "audio_description_character_catalog",
             "audio_description_save_project",
@@ -31,6 +32,7 @@ class AudioDescriptionPreferenceTests(unittest.TestCase):
         self.assertIn("audio_description_tts_voice.clone()", WINDOW)
         self.assertIn("audio_description_extended_pauses", WINDOW)
         self.assertIn("audio_description_recognize_characters", WINDOW)
+        self.assertIn("audio_description_recognize_screen_text", WINDOW)
         self.assertIn("audio_description_keep_character_catalog", WINDOW)
         self.assertIn("audio_description_character_catalog", WINDOW)
         self.assertIn("audio_description_save_project", WINDOW)
@@ -52,6 +54,7 @@ class AudioDescriptionPreferenceTests(unittest.TestCase):
         )
         self.assertIn("ID_EXTENDED | ID_SAVE_PROJECT if !state.running", WINDOW)
         self.assertIn("ID_DELETE_VIDEO_AFTER if !state.running", WINDOW)
+        self.assertIn("ID_RECOGNIZE_SCREEN_TEXT if !state.running", WINDOW)
         self.assertIn("save_settings(app.settings.clone());", WINDOW)
 
     def test_delete_video_option_is_hidden_and_blocked_when_project_is_saved(self):

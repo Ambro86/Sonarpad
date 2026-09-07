@@ -79,6 +79,7 @@ pub struct AudioDescriptionJob {
     pub verbosity: AudioDescriptionVerbosity,
     pub allow_extended_pauses: bool,
     pub recognize_characters: bool,
+    pub recognize_screen_text: bool,
     pub character_catalog: Option<AudioDescriptionCharacterCatalogContext>,
     pub save_project: bool,
     pub tts_engine: TtsEngine,
@@ -88,6 +89,9 @@ pub struct AudioDescriptionJob {
     pub tts_volume: i32,
     pub dictionary: Vec<DictionaryEntry>,
     pub gemini_api_key: String,
+    pub sonarpad_ai_service_url: String,
+    pub sonarpad_ai_access_code: String,
+    pub sonarpad_ai_device_id: String,
     pub gemini_model: String,
     pub audiobook_bitrate_kbps: u32,
     pub resume_checkpoint_path: Option<PathBuf>,
@@ -129,6 +133,8 @@ struct AudioDescriptionPartialCheckpoint {
     verbosity: String,
     allow_extended_pauses: bool,
     recognize_characters: bool,
+    #[serde(default)]
+    recognize_screen_text: bool,
     save_project: bool,
     tts_engine: TtsEngine,
     tts_voice: String,
@@ -157,6 +163,7 @@ pub struct AudioDescriptionResumeSettings {
     pub verbosity: AudioDescriptionVerbosity,
     pub allow_extended_pauses: bool,
     pub recognize_characters: bool,
+    pub recognize_screen_text: bool,
     pub save_project: bool,
     pub tts_engine: TtsEngine,
     pub tts_voice: String,
@@ -682,6 +689,13 @@ pub struct AudioDescriptionProject {
 #[derive(Clone, Debug)]
 pub struct AudioDescriptionProjectEditOutcome {
     pub project: AudioDescriptionProject,
+    pub applied_count: usize,
+}
+
+#[derive(Debug)]
+pub struct AudioDescriptionProjectBatchEditError {
+    pub index: Option<usize>,
+    pub error: AudioDescriptionProjectEditError,
 }
 
 #[derive(Debug)]
@@ -737,6 +751,14 @@ impl std::fmt::Display for AudioDescriptionProjectEditError {
 }
 
 impl std::error::Error for AudioDescriptionProjectEditError {}
+
+#[derive(Clone, Debug)]
+pub struct AudioDescriptionProjectVoiceSettings {
+    pub engine: TtsEngine,
+    pub voice: String,
+    pub rate: i32,
+    pub volume: i32,
+}
 
 #[derive(Debug)]
 pub enum AudioDescriptionProjectVoiceError {
@@ -967,6 +989,83 @@ fn normalize_prepared_gemini_chunk_duration(
     measured_duration_sec
 }
 
+fn build_gemini_chunk_timeline(
+    measured_chunks: &[(PathBuf, f64)],
+    duration_sec: f64,
+    reconcile_small_drift: bool,
+) -> Option<Vec<AudioDescriptionPreparedChunk>> {
+    if measured_chunks.is_empty() || !duration_sec.is_finite() || duration_sec <= 0.0 {
+        return None;
+    }
+
+    let scale = if reconcile_small_drift {
+        let measured_total = measured_chunks
+            .iter()
+            .map(|(_, measured)| *measured)
+            .sum::<f64>();
+        if !measured_total.is_finite() || measured_total <= duration_sec {
+            return None;
+        }
+        let excess_ratio = (measured_total - duration_sec) / duration_sec;
+        if !excess_ratio.is_finite() || excess_ratio <= 0.0 || excess_ratio > 0.02 {
+            return None;
+        }
+        duration_sec / measured_total
+    } else {
+        1.0
+    };
+
+    let mut chunks = Vec::with_capacity(measured_chunks.len());
+    let mut cursor = 0.0_f64;
+    let chunk_count = measured_chunks.len();
+    for (index, (path, measured)) in measured_chunks.iter().enumerate() {
+        if !measured.is_finite() || *measured <= 0.0 {
+            return None;
+        }
+        let start_sec = cursor;
+        let end_sec = if index + 1 == chunk_count {
+            duration_sec
+        } else {
+            (start_sec + measured * scale).min(duration_sec)
+        };
+        if !end_sec.is_finite() || end_sec <= start_sec {
+            return None;
+        }
+        chunks.push(AudioDescriptionPreparedChunk {
+            path: path.to_string_lossy().to_string(),
+            start_sec,
+            end_sec,
+        });
+        if index + 1 < chunk_count {
+            cursor = end_sec;
+        }
+    }
+    Some(chunks)
+}
+
+fn clear_prepared_gemini_chunks(cache_dir: &Path) -> Result<(), String> {
+    for entry in fs::read_dir(cache_dir)
+        .map_err(|error| format!("Audio description: read chunk folder failed: {error}"))?
+    {
+        let path = entry
+            .map_err(|error| format!("Audio description: read chunk entry failed: {error}"))?
+            .path();
+        let is_prepared_chunk = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with("gemini_chunk_") && name.ends_with(".mkv"));
+        if is_prepared_chunk {
+            fs::remove_file(&path).map_err(|error| {
+                format!(
+                    "Audio description: remove stale Gemini chunk {} failed: {error}",
+                    path.display()
+                )
+            })?;
+        }
+    }
+    Ok(())
+}
+
 fn prepare_gemini_chunks(
     input_path: &Path,
     duration_sec: f64,
@@ -1004,35 +1103,43 @@ fn prepare_gemini_chunks(
         if cancel.load(Ordering::Relaxed) {
             return Err("cancelled".to_string());
         }
-        for entry in fs::read_dir(cache_dir)
-            .map_err(|error| format!("Audio description: read chunk folder failed: {error}"))?
-        {
-            let path = entry
-                .map_err(|error| format!("Audio description: read chunk entry failed: {error}"))?
-                .path();
-            let is_prepared_chunk = path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.starts_with("gemini_chunk_") && name.ends_with(".mkv"));
-            if is_prepared_chunk {
-                fs::remove_file(&path).map_err(|error| {
-                    format!(
-                        "Audio description: remove stale Gemini chunk {} failed: {error}",
-                        path.display()
-                    )
-                })?;
-            }
-        }
+        clear_prepared_gemini_chunks(cache_dir)?;
 
-        crate::ffmpeg_export::segment_media_file_for_analysis(
+        let primary_segment_result = crate::ffmpeg_export::segment_media_file_for_analysis(
             input_path,
             &output_pattern,
             segment_seconds,
             1,
             preferred_audio_stream_index,
             None,
-        )
-        .map_err(|error| format!("Audio description: FFmpeg chunk preparation failed: {error}"))?;
+        );
+        if let Err(primary_error) = primary_segment_result {
+            if !primary_error.starts_with("FFmpeg: failed to write segment header:") {
+                return Err(format!(
+                    "Audio description: FFmpeg chunk preparation failed: {primary_error}"
+                ));
+            }
+
+            crate::log_debug(&format!(
+                "Audio description: Gemini chunk header failed with selected audio; retrying video-only analysis chunks. primary_error={primary_error}"
+            ));
+            clear_prepared_gemini_chunks(cache_dir)?;
+            crate::ffmpeg_export::segment_media_file_for_analysis_video_only(
+                input_path,
+                &output_pattern,
+                segment_seconds,
+                1,
+                None,
+            )
+            .map_err(|fallback_error| {
+                format!(
+                    "Audio description: FFmpeg chunk preparation failed: {primary_error}; video-only fallback failed: {fallback_error}"
+                )
+            })?;
+            crate::log_debug(
+                "Audio description: video-only Gemini chunk fallback succeeded; dialogue/silence analysis remains unchanged.",
+            );
+        }
         if cancel.load(Ordering::Relaxed) {
             return Err("cancelled".to_string());
         }
@@ -1103,10 +1210,9 @@ fn prepare_gemini_chunks(
         attempt = attempt.saturating_add(1);
     };
 
-    let mut chunks = Vec::with_capacity(paths.len());
-    let mut cursor = 0.0_f64;
     let path_count = paths.len();
-    for (index, path) in paths.into_iter().enumerate() {
+    let mut measured_chunks = Vec::with_capacity(path_count);
+    for path in paths {
         if cancel.load(Ordering::Relaxed) {
             return Err("cancelled".to_string());
         }
@@ -1137,25 +1243,48 @@ fn prepare_gemini_chunks(
                 measured
             ));
         }
-        let start_sec = cursor;
-        let end_sec = if index + 1 == path_count {
-            duration_sec
-        } else {
-            (start_sec + measured).min(duration_sec)
-        };
-        if end_sec <= start_sec {
-            return Err("Audio description: invalid Gemini chunk timeline".to_string());
-        }
-        chunks.push(AudioDescriptionPreparedChunk {
-            path: path.to_string_lossy().to_string(),
-            start_sec,
-            end_sec,
-        });
-        if index + 1 < path_count {
-            cursor = end_sec;
+        measured_chunks.push((path, measured));
+    }
+
+    if let Some(chunks) = build_gemini_chunk_timeline(&measured_chunks, duration_sec, false) {
+        return Ok(chunks);
+    }
+
+    // Keep the historical timeline untouched for every source where it is valid.
+    // Some remuxed/segmented media report a small per-chunk duration overhead; over
+    // many chunks that metadata drift can make the cursor reach the source duration
+    // before the final file. Only in that already-invalid case, and only when the
+    // total drift is small, proportionally reconcile measured chunk durations to the
+    // known source duration. Large discrepancies remain hard failures rather than
+    // being hidden by a fallback.
+    let measured_total = measured_chunks
+        .iter()
+        .map(|(_, measured)| *measured)
+        .sum::<f64>();
+    let excess_ratio = if duration_sec > 0.0 {
+        (measured_total - duration_sec) / duration_sec
+    } else {
+        f64::INFINITY
+    };
+    if measured_total.is_finite()
+        && measured_total > duration_sec
+        && excess_ratio.is_finite()
+        && excess_ratio > 0.0
+        && excess_ratio <= 0.02
+    {
+        crate::log_debug(&format!(
+            "Audio description: Gemini chunk timeline fallback measured_total={:.3}s source_duration={:.3}s excess={:.3}% chunks={}",
+            measured_total,
+            duration_sec,
+            excess_ratio * 100.0,
+            path_count
+        ));
+        if let Some(chunks) = build_gemini_chunk_timeline(&measured_chunks, duration_sec, true) {
+            return Ok(chunks);
         }
     }
-    Ok(chunks)
+
+    Err("Audio description: invalid Gemini chunk timeline".to_string())
 }
 
 fn read_wav_as_f32(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
@@ -1874,6 +2003,7 @@ fn save_audio_description_partial_checkpoint(
         verbosity: job.verbosity.as_bridge_value().to_string(),
         allow_extended_pauses: job.allow_extended_pauses,
         recognize_characters: job.recognize_characters,
+        recognize_screen_text: job.recognize_screen_text,
         save_project: job.save_project,
         tts_engine: job.tts_engine,
         tts_voice: job.tts_voice.clone(),
@@ -1928,6 +2058,7 @@ pub fn load_audio_description_resume_settings(
         verbosity: AudioDescriptionVerbosity::from_bridge_value(&checkpoint.verbosity),
         allow_extended_pauses: checkpoint.allow_extended_pauses,
         recognize_characters: checkpoint.recognize_characters,
+        recognize_screen_text: checkpoint.recognize_screen_text,
         save_project: checkpoint.save_project,
         tts_engine: checkpoint.tts_engine,
         tts_voice: checkpoint.tts_voice,
@@ -1940,6 +2071,9 @@ pub fn load_audio_description_resume_settings(
 pub fn audio_description_job_from_checkpoint(
     checkpoint_path: &Path,
     gemini_api_key: String,
+    sonarpad_ai_service_url: String,
+    sonarpad_ai_access_code: String,
+    sonarpad_ai_device_id: String,
 ) -> Result<AudioDescriptionJob, String> {
     let checkpoint = load_audio_description_partial_checkpoint(checkpoint_path)?;
     let character_catalog =
@@ -1959,6 +2093,7 @@ pub fn audio_description_job_from_checkpoint(
         verbosity: AudioDescriptionVerbosity::from_bridge_value(&checkpoint.verbosity),
         allow_extended_pauses: checkpoint.allow_extended_pauses,
         recognize_characters: checkpoint.recognize_characters,
+        recognize_screen_text: checkpoint.recognize_screen_text,
         character_catalog,
         save_project: checkpoint.save_project,
         tts_engine: checkpoint.tts_engine,
@@ -1968,6 +2103,9 @@ pub fn audio_description_job_from_checkpoint(
         tts_volume: checkpoint.tts_volume,
         dictionary: checkpoint.dictionary,
         gemini_api_key,
+        sonarpad_ai_service_url,
+        sonarpad_ai_access_code,
+        sonarpad_ai_device_id,
         gemini_model: checkpoint.gemini_model,
         audiobook_bitrate_kbps: checkpoint.audiobook_bitrate_kbps,
         resume_checkpoint_path: Some(checkpoint_path.to_path_buf()),
@@ -2234,6 +2372,7 @@ fn audio_description_job_from_project(project: &AudioDescriptionProject) -> Audi
         verbosity: verbosity_from_project(&project.verbosity),
         allow_extended_pauses: project.allow_extended_pauses,
         recognize_characters: project.recognize_characters,
+        recognize_screen_text: false,
         character_catalog: None,
         save_project: true,
         tts_engine: project.tts_engine,
@@ -2243,6 +2382,9 @@ fn audio_description_job_from_project(project: &AudioDescriptionProject) -> Audi
         tts_volume: project.tts_volume,
         dictionary: project.dictionary.clone(),
         gemini_api_key: String::new(),
+        sonarpad_ai_service_url: String::new(),
+        sonarpad_ai_access_code: String::new(),
+        sonarpad_ai_device_id: String::new(),
         gemini_model: project.gemini_model.clone(),
         audiobook_bitrate_kbps: project.bitrate_kbps,
         resume_checkpoint_path: None,
@@ -2396,93 +2538,166 @@ pub fn synthesize_audio_description_project_preview(
     })
 }
 
-pub fn apply_audio_description_project_edit(
+pub fn apply_audio_description_project_batch_edits(
     project_path: &Path,
     project: &AudioDescriptionProject,
-    index: usize,
-    text: &str,
+    edits: &[(usize, String)],
     cancel: Arc<AtomicBool>,
-) -> Result<AudioDescriptionProjectEditOutcome, AudioDescriptionProjectEditError> {
-    let normalized_text = text.trim();
-    if normalized_text.is_empty() {
-        return Err(AudioDescriptionProjectEditError::Other(
-            "Audio description: description text cannot be empty".to_string(),
-        ));
-    }
-    let current = project.descriptions.get(index).ok_or_else(|| {
-        AudioDescriptionProjectEditError::Other(
-            "Audio description: selected project description does not exist".to_string(),
-        )
-    })?;
-    let available_duration_sec = audio_description_project_edit_available_duration(project, index)
-        .map_err(AudioDescriptionProjectEditError::Other)?;
-    if current.text == normalized_text {
+) -> Result<AudioDescriptionProjectEditOutcome, AudioDescriptionProjectBatchEditError> {
+    if edits.is_empty() {
         return Ok(AudioDescriptionProjectEditOutcome {
             project: project.clone(),
+            applied_count: 0,
         });
     }
     if project.tts_voice.trim().is_empty() {
-        return Err(AudioDescriptionProjectEditError::Other(
-            "Audio description: project has no synthesis voice".to_string(),
-        ));
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: edits.first().map(|(index, _)| *index),
+            error: AudioDescriptionProjectEditError::Other(
+                "Audio description: project has no synthesis voice".to_string(),
+            ),
+        });
     }
     if cancel.load(Ordering::Relaxed) {
-        return Err(AudioDescriptionProjectEditError::Cancelled);
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Cancelled,
+        });
+    }
+
+    let mut normalized_edits = Vec::new();
+    for (index, text) in edits {
+        let normalized_text = text.trim();
+        if normalized_text.is_empty() {
+            return Err(AudioDescriptionProjectBatchEditError {
+                index: Some(*index),
+                error: AudioDescriptionProjectEditError::Other(
+                    "Audio description: description text cannot be empty".to_string(),
+                ),
+            });
+        }
+        let current = project.descriptions.get(*index).ok_or_else(|| {
+            AudioDescriptionProjectBatchEditError {
+                index: Some(*index),
+                error: AudioDescriptionProjectEditError::Other(
+                    "Audio description: selected project description does not exist".to_string(),
+                ),
+            }
+        })?;
+        if current.text != normalized_text {
+            normalized_edits.push((*index, normalized_text.to_string()));
+        }
+    }
+
+    if normalized_edits.is_empty() {
+        return Ok(AudioDescriptionProjectEditOutcome {
+            project: project.clone(),
+            applied_count: 0,
+        });
     }
 
     let job = audio_description_job_from_project(project);
-    let cache_dir = temporary_job_dir().map_err(AudioDescriptionProjectEditError::Other)?;
-    let synthesis_result = synthesize_description(
-        normalized_text,
-        current.id,
-        &job,
-        &cache_dir,
-        cancel.clone(),
-    );
+    let cache_dir = temporary_job_dir().map_err(|error| AudioDescriptionProjectBatchEditError {
+        index: None,
+        error: AudioDescriptionProjectEditError::Other(error),
+    })?;
+
+    let validation_result = (|| {
+        for (index, text) in &normalized_edits {
+            if cancel.load(Ordering::Relaxed) {
+                return Err(AudioDescriptionProjectBatchEditError {
+                    index: Some(*index),
+                    error: AudioDescriptionProjectEditError::Cancelled,
+                });
+            }
+            let current = project.descriptions.get(*index).ok_or_else(|| {
+                AudioDescriptionProjectBatchEditError {
+                    index: Some(*index),
+                    error: AudioDescriptionProjectEditError::Other(
+                        "Audio description: selected project description does not exist"
+                            .to_string(),
+                    ),
+                }
+            })?;
+            let available_duration_sec = audio_description_project_edit_available_duration(
+                project, *index,
+            )
+            .map_err(|error| AudioDescriptionProjectBatchEditError {
+                index: Some(*index),
+                error: AudioDescriptionProjectEditError::Other(error),
+            })?;
+            let synthesis_result =
+                synthesize_description(text, current.id, &job, &cache_dir, cancel.clone());
+            let (samples, sample_rate, channels) =
+                synthesis_result.map_err(|error| AudioDescriptionProjectBatchEditError {
+                    index: Some(*index),
+                    error: if error == "cancelled" || cancel.load(Ordering::Relaxed) {
+                        AudioDescriptionProjectEditError::Cancelled
+                    } else {
+                        AudioDescriptionProjectEditError::Other(error)
+                    },
+                })?;
+            if cancel.load(Ordering::Relaxed) {
+                return Err(AudioDescriptionProjectBatchEditError {
+                    index: Some(*index),
+                    error: AudioDescriptionProjectEditError::Cancelled,
+                });
+            }
+            let frames = samples.len() / channels.max(1) as usize;
+            let synthesized_duration_sec = frames as f64 / sample_rate.max(1) as f64;
+            validate_audio_description_project_edit_duration(
+                available_duration_sec,
+                synthesized_duration_sec,
+            )
+            .map_err(|error| AudioDescriptionProjectBatchEditError {
+                index: Some(*index),
+                error,
+            })?;
+        }
+        Ok(())
+    })();
+
     crate::log_if_err!(
         fs::remove_dir_all(&cache_dir),
         "Audio description cleanup operation failed"
     );
-    let (samples, sample_rate, channels) = synthesis_result.map_err(|error| {
-        if error == "cancelled" || cancel.load(Ordering::Relaxed) {
-            AudioDescriptionProjectEditError::Cancelled
-        } else {
-            AudioDescriptionProjectEditError::Other(error)
-        }
-    })?;
-    if cancel.load(Ordering::Relaxed) {
-        return Err(AudioDescriptionProjectEditError::Cancelled);
-    }
-    let frames = samples.len() / channels.max(1) as usize;
-    let synthesized_duration_sec = frames as f64 / sample_rate.max(1) as f64;
-    validate_audio_description_project_edit_duration(
-        available_duration_sec,
-        synthesized_duration_sec,
-    )?;
+    validation_result?;
 
     let mut updated = project.clone();
-    let description = updated.descriptions.get_mut(index).ok_or_else(|| {
-        AudioDescriptionProjectEditError::Other(
-            "Audio description: selected project description does not exist".to_string(),
-        )
-    })?;
-    description.text = normalized_text.to_string();
-    description.modified = description.text != description.original_text;
+    for (index, text) in &normalized_edits {
+        let description = updated.descriptions.get_mut(*index).ok_or_else(|| {
+            AudioDescriptionProjectBatchEditError {
+                index: Some(*index),
+                error: AudioDescriptionProjectEditError::Other(
+                    "Audio description: selected project description does not exist".to_string(),
+                ),
+            }
+        })?;
+        description.text = text.clone();
+        description.modified = description.text != description.original_text;
+    }
     updated.updated_at_utc = chrono::Utc::now().to_rfc3339();
-    save_audio_description_project(project_path, &updated)
-        .map_err(AudioDescriptionProjectEditError::Other)?;
-    Ok(AudioDescriptionProjectEditOutcome { project: updated })
+    save_audio_description_project(project_path, &updated).map_err(|error| {
+        AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Other(error),
+        }
+    })?;
+
+    Ok(AudioDescriptionProjectEditOutcome {
+        project: updated,
+        applied_count: normalized_edits.len(),
+    })
 }
 
 pub fn change_audio_description_project_voice(
     project_path: &Path,
     project: &AudioDescriptionProject,
-    engine: TtsEngine,
-    voice: &str,
+    settings: &AudioDescriptionProjectVoiceSettings,
     cancel: Arc<AtomicBool>,
     mut callbacks: AudioDescriptionCallbacks,
 ) -> Result<AudioDescriptionProject, AudioDescriptionProjectVoiceError> {
-    let voice = voice.trim();
+    let voice = settings.voice.trim();
     if voice.is_empty() {
         return Err(AudioDescriptionProjectVoiceError::Other(
             "Audio description: no synthesis voice is selected".to_string(),
@@ -2498,8 +2713,10 @@ pub fn change_audio_description_project_voice(
     }
 
     let mut job = audio_description_job_from_project(project);
-    job.tts_engine = engine;
+    job.tts_engine = settings.engine;
     job.tts_voice = voice.to_string();
+    job.tts_rate = settings.rate;
+    job.tts_volume = settings.volume;
     notify_status(
         &mut callbacks,
         "voice_check",
@@ -2766,8 +2983,14 @@ fn validate_job(job: &AudioDescriptionJob) -> Result<(), String> {
     if job.output_path.as_os_str().is_empty() {
         return Err("Audio description: output path is empty".to_string());
     }
-    if job.gemini_api_key.trim().is_empty() {
-        return Err("Audio description: Gemini API key is not configured".to_string());
+    if job.gemini_api_key.trim().is_empty()
+        && (job.sonarpad_ai_service_url.trim().is_empty()
+            || job.sonarpad_ai_access_code.trim().is_empty()
+            || job.sonarpad_ai_device_id.trim().is_empty())
+    {
+        return Err(
+            "Audio description: Gemini API key or Sonarpad AI access is not configured".to_string(),
+        );
     }
     if job.tts_voice.trim().is_empty() {
         return Err("Audio description: no synthesis voice is selected".to_string());
@@ -3167,6 +3390,24 @@ pub fn create_audio_description(
     } else {
         None
     };
+    let use_sonarpad_ai = !job.sonarpad_ai_service_url.trim().is_empty();
+    if use_sonarpad_ai && !job.gemini_api_key.trim().is_empty() {
+        return Err(
+            "Audio description: invalid AI configuration: Sonarpad AI mode must not include a personal Gemini API key".to_string(),
+        );
+    }
+    if !use_sonarpad_ai && job.gemini_api_key.trim().is_empty() {
+        return Err(
+            "Audio description: invalid AI configuration: personal Gemini mode requires an API key"
+                .to_string(),
+        );
+    }
+    crate::log_debug(if use_sonarpad_ai {
+        "Audio description: AI access mode = Sonarpad AI (personal Gemini API key disabled)"
+    } else {
+        "Audio description: AI access mode = personal Gemini API key"
+    });
+
     let bridge_request = AudioDescriptionBridgeRequest {
         input_path: job.input_path.to_string_lossy().to_string(),
         audio_wav_path: audio_wav_path
@@ -3178,12 +3419,21 @@ pub fn create_audio_description(
         verbosity: job.verbosity.as_bridge_value().to_string(),
         allow_extended_pauses: job.allow_extended_pauses,
         recognize_characters: job.recognize_characters,
+        recognize_screen_text: job.recognize_screen_text,
         initial_character_glossary: job
             .character_catalog
             .as_ref()
             .map(|catalog| catalog.characters.clone())
             .unwrap_or_default(),
+        ai_access_mode: if job.sonarpad_ai_service_url.trim().is_empty() {
+            "personal".to_string()
+        } else {
+            "sonarpad".to_string()
+        },
         gemini_api_key: job.gemini_api_key.clone(),
+        sonarpad_ai_service_url: job.sonarpad_ai_service_url.clone(),
+        sonarpad_ai_access_code: job.sonarpad_ai_access_code.clone(),
+        sonarpad_ai_device_id: job.sonarpad_ai_device_id.clone(),
         gemini_model: job.gemini_model.clone(),
         resume,
     };
@@ -3500,8 +3750,8 @@ mod tests {
         audio_description_character_catalog_path,
         audio_description_project_edit_available_duration, audio_description_project_path,
         audio_description_samples_have_signal, audio_description_tts_chunks,
-        audio_description_tts_error_is_empty_output, build_audio_description_project, choose_slot,
-        delete_audio_description_project_description,
+        audio_description_tts_error_is_empty_output, build_audio_description_project,
+        build_gemini_chunk_timeline, choose_slot, delete_audio_description_project_description,
         load_audio_description_character_catalog_context, load_audio_description_project,
         merge_catalog_characters, merge_catalog_description,
         normalize_audio_description_source_duration, normalize_catalog_characters,
@@ -3576,6 +3826,48 @@ mod tests {
     }
 
     #[test]
+    fn gemini_chunk_timeline_keeps_existing_valid_measurements_unchanged() {
+        let measured = vec![
+            (PathBuf::from("chunk1.mkv"), 45.25),
+            (PathBuf::from("chunk2.mkv"), 44.75),
+            (PathBuf::from("chunk3.mkv"), 10.0),
+        ];
+        let timeline = build_gemini_chunk_timeline(&measured, 100.0, false).unwrap();
+        assert!((timeline[0].start_sec - 0.0).abs() < 0.001);
+        assert!((timeline[0].end_sec - 45.25).abs() < 0.001);
+        assert!((timeline[1].start_sec - 45.25).abs() < 0.001);
+        assert!((timeline[1].end_sec - 90.0).abs() < 0.001);
+        assert!((timeline[2].start_sec - 90.0).abs() < 0.001);
+        assert!((timeline[2].end_sec - 100.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn gemini_chunk_timeline_can_reconcile_small_accumulated_duration_drift() {
+        let measured = vec![
+            (PathBuf::from("chunk1.mkv"), 50.5),
+            (PathBuf::from("chunk2.mkv"), 50.5),
+            (PathBuf::from("chunk3.mkv"), 0.1),
+        ];
+        assert!(build_gemini_chunk_timeline(&measured, 100.0, false).is_none());
+        let timeline = build_gemini_chunk_timeline(&measured, 100.0, true).unwrap();
+        assert_eq!(timeline.len(), 3);
+        assert!(timeline[0].end_sec > timeline[0].start_sec);
+        assert!(timeline[1].end_sec > timeline[1].start_sec);
+        assert!(timeline[2].end_sec > timeline[2].start_sec);
+        assert!((timeline[2].end_sec - 100.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn gemini_chunk_timeline_rejects_large_duration_mismatch_even_in_fallback() {
+        let measured = vec![
+            (PathBuf::from("chunk1.mkv"), 60.0),
+            (PathBuf::from("chunk2.mkv"), 60.0),
+            (PathBuf::from("chunk3.mkv"), 1.0),
+        ];
+        assert!(build_gemini_chunk_timeline(&measured, 100.0, true).is_none());
+    }
+
+    #[test]
     fn empty_tts_validation_rejects_silent_pcm_and_accepts_voice_signal() {
         assert!(!audio_description_samples_have_signal(&[]));
         assert!(!audio_description_samples_have_signal(&[0.0, 0.0, 0.0]));
@@ -3614,6 +3906,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: false,
             recognize_characters: true,
+            recognize_screen_text: false,
             character_catalog: None,
             save_project: false,
             tts_engine: TtsEngine::Edge,
@@ -3630,6 +3923,9 @@ mod tests {
                 custom_voice: None,
             }],
             gemini_api_key: String::new(),
+            sonarpad_ai_service_url: String::new(),
+            sonarpad_ai_access_code: String::new(),
+            sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini".to_string(),
             audiobook_bitrate_kbps: 192,
             resume_checkpoint_path: None,
@@ -3659,6 +3955,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             recognize_characters: true,
+            recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
             tts_engine: TtsEngine::Edge,
@@ -3668,6 +3965,9 @@ mod tests {
             tts_volume: 100,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
+            sonarpad_ai_service_url: String::new(),
+            sonarpad_ai_access_code: String::new(),
+            sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini".to_string(),
             audiobook_bitrate_kbps: 192,
             resume_checkpoint_path: None,
@@ -3849,6 +4149,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             recognize_characters: true,
+            recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
             tts_engine: TtsEngine::Edge,
@@ -3858,6 +4159,9 @@ mod tests {
             tts_volume: 100,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
+            sonarpad_ai_service_url: String::new(),
+            sonarpad_ai_access_code: String::new(),
+            sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini-3.5-flash-lite".to_string(),
             audiobook_bitrate_kbps: 192,
             resume_checkpoint_path: None,
@@ -3914,6 +4218,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             recognize_characters: true,
+            recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
             tts_engine: TtsEngine::Edge,
@@ -3923,6 +4228,9 @@ mod tests {
             tts_volume: 100,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
+            sonarpad_ai_service_url: String::new(),
+            sonarpad_ai_access_code: String::new(),
+            sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini".to_string(),
             audiobook_bitrate_kbps: 192,
             resume_checkpoint_path: None,
@@ -4186,6 +4494,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             recognize_characters: true,
+            recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
             tts_engine: TtsEngine::Edge,
@@ -4195,6 +4504,9 @@ mod tests {
             tts_volume: 100,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
+            sonarpad_ai_service_url: String::new(),
+            sonarpad_ai_access_code: String::new(),
+            sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini-3.5-flash-lite".to_string(),
             audiobook_bitrate_kbps: 192,
             resume_checkpoint_path: None,
@@ -4261,6 +4573,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             recognize_characters: true,
+            recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
             tts_engine: TtsEngine::Edge,
@@ -4270,6 +4583,9 @@ mod tests {
             tts_volume: 100,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
+            sonarpad_ai_service_url: String::new(),
+            sonarpad_ai_access_code: String::new(),
+            sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini-3.5-flash-lite".to_string(),
             audiobook_bitrate_kbps: 192,
             resume_checkpoint_path: None,
@@ -4303,6 +4619,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             recognize_characters: true,
+            recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
             tts_engine: TtsEngine::Edge,
@@ -4312,6 +4629,9 @@ mod tests {
             tts_volume: 100,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
+            sonarpad_ai_service_url: String::new(),
+            sonarpad_ai_access_code: String::new(),
+            sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini-3.5-flash-lite".to_string(),
             audiobook_bitrate_kbps: 192,
             resume_checkpoint_path: None,

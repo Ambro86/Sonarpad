@@ -1,5 +1,21 @@
 # Änderungsprotokoll
 
+Version 0.9.5 – 2026-09-07
+
+KI-Audiodeskription
+1. Die Robustheit wurde verbessert, wenn Gemini vorübergehend `MALFORMED_RESPONSE` ohne verwertbaren Inhalt zurückgibt. Sonarpad versucht nun exakt denselben Chunk bis zu dreimal erneut und wartet kurz zwischen den Versuchen, anstatt die gesamte Audiodeskription sofort abzubrechen. Normale Gemini-Antworten, Sicherheitsblockierungen, Tokenlimit-Fehler und das bestehende Checkpoint-Verhalten bleiben unverändert.
+
+2. Ein weiterer seltener Fall von `invalid Gemini chunk timeline` wurde behoben, der bei einigen Videos auftreten konnte, wenn von FFmpeg vorbereitete Chunks eine kleine kumulierte Abweichung der Dauer meldeten. Sonarpad lässt den bisherigen Ablauf unverändert, solange die Timeline gültig ist, und verwendet die vorsichtige Korrektur nur dann, wenn die normale Timeline fehlschlagen würde und die Gesamtabweichung klein ist; große oder verdächtige Abweichungen führen weiterhin zu einem Fehler.
+
+3. Der optionale Sonarpad-AI-Dienst für KI-Audiodeskriptionen wurde hinzugefügt. Nutzer können weiterhin ihren eigenen Gemini-API-Schlüssel verwenden oder den Sonarpad-Dienst auswählen und einen persönlichen Sonarpad-Code eingeben. Der Code wird mit Windows DPAPI geschützt. Im Dienstmodus werden vorbereitete Video-Chunks über eine temporäre Google-Upload-URL direkt vom PC des Nutzers zu Google hochgeladen; sonarpad.com empfängt oder speichert keine Videodaten. Das Backend autorisiert nur den Zugriff, erzwingt Gemini-Modell/Standard-Tier und Nutzungslimits, erfasst den Verbrauch und gibt die Gemini-Antwort zurück.
+
+4. Die Bearbeitung gespeicherter Audiodeskriptionsprojekte wurde verbessert. Mehrere Beschreibungen können nacheinander geändert werden, ohne jede Änderung sofort anwenden zu müssen. Die Änderungen bleiben im Speicher; mit „Text anwenden“ prüft Sonarpad jede geänderte Beschreibung gegen ihren gespeicherten Zeitbereich und speichert danach alle gültigen Änderungen gemeinsam. Passt eine Beschreibung nicht in ihren Bereich, kehrt der Fokus zu dieser Beschreibung zurück, ohne die anderen noch nicht angewendeten Änderungen zu verlieren.
+
+5. „Stimme anpassen“ wurde direkt vor „Audiodeskription erstellen“ hinzugefügt. Das neue Fenster bietet Auswahl für Sprachsynthese-Engine, Stimme, Geschwindigkeit und Lautstärke sowie „Stimme testen“. Nach OK kehrt der Fokus genau zu „Stimme anpassen“ zurück und die gewählten Werte werden für die zu erstellende Audiodeskription verwendet. Wird das Fenster nicht benutzt, bleibt das bisherige Syntheseverhalten unverändert.
+
+
+6. Die Sprachsteuerung in gespeicherten Audiodeskriptionsprojekten wurde erweitert. Unter Projekt bearbeiten stehen neben Engine und Stimme jetzt auch Geschwindigkeit, Lautstärke und „Stimme testen“ zur Verfügung. Beim Anwenden der Spracheinstellungen prüft Sonarpad alle vorhandenen Beschreibungen mit den neuen Syntheseparametern erneut und erstellt die MP3 nur neu, wenn weiterhin alle Beschreibungen in ihre gespeicherten Zeitbereiche passen. Dialogfreie Intervalle, Visual-Evidence-Zeitpunkte, Gemini-Beschreibungen und die Zeitanalyse des Projekts werden wiederverwendet, ohne die KI-Analyse erneut auszuführen.
+
 Version 0.9.4 – 2026-09-04
 
 KI-Audiodeskription

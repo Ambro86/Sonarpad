@@ -1337,13 +1337,61 @@ pub(crate) fn get_window_text_w_safe(hwnd: HWND, string: &mut [u16]) -> i32 {
 fn log_foreground_snapshot(tag: &str) {
     const WINDOW_TEXT_LOG_PREVIEW_CHARS: usize = 180;
 
+    fn redact_prefixed_secret(
+        text: &str,
+        prefix: &str,
+        min_secret_chars: usize,
+        replacement: &str,
+    ) -> String {
+        let mut output = String::with_capacity(text.len());
+        let mut cursor = 0usize;
+
+        while let Some(relative_start) = text[cursor..].find(prefix) {
+            let start = cursor + relative_start;
+            output.push_str(&text[cursor..start]);
+
+            let secret_start = start + prefix.len();
+            let mut secret_end = secret_start;
+            let mut secret_chars = 0usize;
+            for (relative_index, ch) in text[secret_start..].char_indices() {
+                if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' || ch == '.' {
+                    secret_end = secret_start + relative_index + ch.len_utf8();
+                    secret_chars += 1;
+                } else {
+                    break;
+                }
+            }
+
+            if secret_chars >= min_secret_chars {
+                output.push_str(replacement);
+                cursor = secret_end;
+            } else {
+                output.push_str(prefix);
+                cursor = secret_start;
+            }
+        }
+
+        output.push_str(&text[cursor..]);
+        output
+    }
+
+    fn redact_sensitive_log_text(text: &str) -> String {
+        // Keep the diagnostic text intact, but never persist credentials used by
+        // Gemini/Sonarpad AI if an edit control happens to contain them.
+        let redacted = redact_prefixed_secret(text, "AIza", 20, "[REDACTED_GEMINI_API_KEY]");
+        let redacted = redact_prefixed_secret(&redacted, "sp_", 12, "[REDACTED_SONARPAD_CODE]");
+        let redacted = redact_prefixed_secret(&redacted, "sst_", 12, "[REDACTED_SONARPAD_SESSION]");
+        redact_prefixed_secret(&redacted, "Bearer ", 12, "Bearer [REDACTED_TOKEN]")
+    }
+
     fn preview_window_text(text: &str) -> String {
-        let mut preview = text
+        let safe_text = redact_sensitive_log_text(text);
+        let mut preview = safe_text
             .chars()
             .take(WINDOW_TEXT_LOG_PREVIEW_CHARS)
             .collect::<String>();
         preview = preview.replace('\r', "\\r").replace('\n', "\\n");
-        if text.chars().count() > WINDOW_TEXT_LOG_PREVIEW_CHARS {
+        if safe_text.chars().count() > WINDOW_TEXT_LOG_PREVIEW_CHARS {
             preview.push_str("...");
         }
         preview
@@ -24165,7 +24213,8 @@ fn export_diagnostics_dialog(hwnd: HWND) {
 
         match diagnostics::export_diagnostics_zip(&path) {
             Ok(()) => {
-                let message = i18n::tr(language, "dialog.export_diagnostics_success");
+                let message = i18n::tr(language, "dialog.export_diagnostics_success")
+                    .replace("{path}", &path.to_string_lossy());
                 show_info(hwnd, language, &message);
             }
             Err(e) => {

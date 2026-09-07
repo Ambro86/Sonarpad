@@ -74,6 +74,30 @@ class WindowsAudioDescriptionMediaPreparationTests(unittest.TestCase):
         self.assertIn("if let Some(error) = segment_write_error", self.ffmpeg_source)
         self.assertIn("failed to finalize segmented output", self.ffmpeg_source)
 
+    def test_gemini_header_failure_uses_video_only_fallback_without_changing_silence_logic(self):
+        self.assertIn(
+            "pub(crate) fn segment_media_file_for_analysis_video_only(",
+            self.ffmpeg_source,
+        )
+        self.assertIn("video_only: true", self.ffmpeg_source)
+        self.assertIn(
+            'primary_error.starts_with("FFmpeg: failed to write segment header:")',
+            self.audio_source,
+        )
+        self.assertIn(
+            "retrying video-only analysis chunks",
+            self.audio_source,
+        )
+        self.assertIn(
+            "dialogue/silence analysis remains unchanged",
+            self.audio_source,
+        )
+        self.assertIn(
+            "segment_media_file_for_analysis_video_only(",
+            self.audio_source,
+        )
+        self.assertIn("ffmpeg_error_text(api, header_ret)", self.ffmpeg_source)
+
     def test_changed_chunk_layout_does_not_make_resume_fatal(self):
         self.assertIn("ignoring resume checkpoint after chunk layout change", self.audio_source)
         self.assertIn("ignoring invalid resume checkpoint", self.audio_source)

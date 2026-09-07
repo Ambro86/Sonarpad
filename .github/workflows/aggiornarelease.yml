@@ -28,33 +28,48 @@ jobs:
             env.write(f"RELEASE_VERSION=v{version}\n")
         PY
 
-    - name: Get latest successful workflow run
+    - name: Get successful CI run for this exact commit
       id: get_run
       uses: actions/github-script@v7
       with:
         script: |
+          const targetSha = context.sha;
           const runs = await github.rest.actions.listWorkflowRuns({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'ci.yml',
-            status: 'completed',
-            conclusion: 'success',
-            per_page: 1
+            head_sha: targetSha,
+            status: 'success',
+            per_page: 100
           });
 
-          if (runs.data.workflow_runs.length === 0) {
-            core.setFailed('Nessun workflow di build completato con successo trovato');
+          const eligibleRuns = runs.data.workflow_runs.filter(run =>
+            run.head_sha === targetSha &&
+            (run.event === 'push' || run.event === 'workflow_dispatch')
+          );
+
+          if (eligibleRuns.length === 0) {
+            core.setFailed(
+              `Nessuna build CI riuscita trovata per il commit ${targetSha}. ` +
+              'Esegui prima ci.yml sullo stesso commit, poi riprova la release.'
+            );
             return;
           }
 
-          const latestRun = runs.data.workflow_runs[0];
-          console.log(`Latest successful run: ${latestRun.id} from ${latestRun.created_at}`);
+          const selectedRun = eligibleRuns[0];
+          console.log(`Selected CI run: ${selectedRun.id} for commit ${selectedRun.head_sha}`);
 
-          core.setOutput('run_id', latestRun.id);
-          core.setOutput('run_date', latestRun.created_at);
-          core.setOutput('run_sha', latestRun.head_sha.substring(0, 7));
+          if (selectedRun.head_sha !== targetSha) {
+            core.setFailed(`Build SHA mismatch: expected ${targetSha}, got ${selectedRun.head_sha}`);
+            return;
+          }
 
-    - name: Download all artifacts from latest build
+          core.setOutput('run_id', String(selectedRun.id));
+          core.setOutput('run_date', selectedRun.created_at);
+          core.setOutput('run_sha', selectedRun.head_sha);
+          core.setOutput('run_sha_short', selectedRun.head_sha.substring(0, 7));
+
+    - name: Download all artifacts from matching CI build
       uses: actions/download-artifact@v4
       with:
         run-id: ${{ steps.get_run.outputs.run_id }}
@@ -120,14 +135,44 @@ jobs:
 
         echo "file_count=$file_count" >> $GITHUB_OUTPUT
 
+    - name: Verify artifact commit provenance
+      env:
+        EXPECTED_SHA: ${{ github.sha }}
+      run: |
+        python - <<'PY'
+        import os
+        import pathlib
+        import re
+
+        info_path = pathlib.Path("release_files/GITHUB_BUILD_INFO.txt")
+        if not info_path.is_file():
+            raise SystemExit("ERRORE: GITHUB_BUILD_INFO.txt mancante negli artefatti della build")
+
+        text = info_path.read_text(encoding="utf-8-sig", errors="replace")
+        match = re.search(r"^Commit SHA:\s*([0-9a-fA-F]{40})\s*$", text, re.MULTILINE)
+        if not match:
+            raise SystemExit("ERRORE: Commit SHA non trovato in GITHUB_BUILD_INFO.txt")
+
+        artifact_sha = match.group(1).lower()
+        expected_sha = os.environ["EXPECTED_SHA"].lower()
+        if artifact_sha != expected_sha:
+            raise SystemExit(
+                f"ERRORE: gli artefatti appartengono al commit {artifact_sha}, "
+                f"ma la release richiede {expected_sha}"
+            )
+
+        print(f"Artefatti verificati: commit {artifact_sha}")
+        PY
+
     - name: Create release (if missing)
       run: |
         if gh release view "${{ env.RELEASE_VERSION }}" >/dev/null 2>&1; then
           echo "Release ${RELEASE_VERSION} already exists. Skipping creation."
         else
           gh release create "${{ env.RELEASE_VERSION }}" \
+            --target "${GITHUB_SHA}" \
             --title "Sonarpad Release ${{ env.RELEASE_VERSION }}" \
-            --notes "Build: ${{ steps.get_run.outputs.run_id }} (${{ steps.get_run.outputs.run_sha }})"
+            --notes "Build: ${{ steps.get_run.outputs.run_id }} (${{ steps.get_run.outputs.run_sha_short }})"
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

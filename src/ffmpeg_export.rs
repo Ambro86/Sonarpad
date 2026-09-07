@@ -649,6 +649,7 @@ pub fn media_duration_secs(path: &Path) -> Option<u64> {
 #[derive(Clone, Copy, Default)]
 struct SegmentMediaOptions {
     audio_only: bool,
+    video_only: bool,
     tolerate_invalid_analysis_packets: bool,
     preferred_audio_stream_index: Option<i32>,
 }
@@ -692,6 +693,27 @@ pub(crate) fn segment_media_file_for_analysis(
     )
 }
 
+pub(crate) fn segment_media_file_for_analysis_video_only(
+    input_path: &Path,
+    output_pattern: &Path,
+    segment_seconds: u32,
+    start_number: u32,
+    progress: Option<&mut dyn FnMut(u32)>,
+) -> Result<(), String> {
+    segment_media_file_inner(
+        input_path,
+        output_pattern,
+        segment_seconds,
+        start_number,
+        SegmentMediaOptions {
+            video_only: true,
+            tolerate_invalid_analysis_packets: true,
+            ..SegmentMediaOptions::default()
+        },
+        progress,
+    )
+}
+
 pub fn segment_audio_file(
     input_path: &Path,
     output_pattern: &Path,
@@ -721,6 +743,7 @@ fn segment_media_file_inner(
 ) -> Result<(), String> {
     let SegmentMediaOptions {
         audio_only,
+        video_only,
         tolerate_invalid_analysis_packets,
         preferred_audio_stream_index,
     } = options;
@@ -794,6 +817,8 @@ fn segment_media_file_inner(
         let codec_type = crate::ffmpeg_source::av_codecpar_codec_type_safe(codecpar);
         let keep = if audio_only {
             codec_type == AVMediaType_AVMEDIA_TYPE_AUDIO && mapped_streams == 0
+        } else if video_only {
+            codec_type == AVMediaType_AVMEDIA_TYPE_VIDEO
         } else if codec_type == AVMediaType_AVMEDIA_TYPE_AUDIO {
             preferred_audio_stream_index.is_none_or(|preferred| preferred == i as i32)
         } else {
@@ -856,9 +881,22 @@ fn segment_media_file_inner(
     let header_ret = crate::ffmpeg_source::avformat_write_header_safe(api, out_ctx, &mut dict);
     crate::ffmpeg_source::av_dict_free_safe(api, &mut dict);
     if header_ret < 0 {
+        let error_text = ffmpeg_error_text(api, header_ret);
+        log_debug(&format!(
+            "FFmpeg: failed to write segment header: {} ({}) output={} audio_only={} video_only={} preferred_audio_stream_index={:?}",
+            error_text,
+            header_ret,
+            output_pattern.display(),
+            audio_only,
+            video_only,
+            preferred_audio_stream_index
+        ));
         crate::ffmpeg_source::avformat_free_context_safe(api, out_ctx);
         crate::ffmpeg_source::avformat_close_input_safe(api, &mut in_ctx);
-        return Err("FFmpeg: failed to write segment header".to_string());
+        return Err(format!(
+            "FFmpeg: failed to write segment header: {} ({})",
+            error_text, header_ret
+        ));
     }
 
     if let Some(cb) = progress.as_deref_mut() {

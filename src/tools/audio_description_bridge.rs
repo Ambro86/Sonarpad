@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(debug_assertions)]
 const BRIDGE_DEBUG_FILE_NAME: &str = "audio_description_bridge.exe";
-const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v2.exe";
+const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v6.exe";
 const BRIDGE_MIN_VALID_SIZE_BYTES: u64 = 5_000_000;
 const BRIDGE_DOWNLOAD_URLS: [&str; 2] = [
     "https://github.com/Ambro86/Sonarpad-Tools/releases/download/0.7/audio_description_bridge.exe",
@@ -49,8 +49,17 @@ pub struct AudioDescriptionBridgeRequest {
     pub verbosity: String,
     pub allow_extended_pauses: bool,
     pub recognize_characters: bool,
+    pub recognize_screen_text: bool,
     pub initial_character_glossary: Vec<BridgeCharacter>,
+    /// Explicit AI access mode. Never infer/fallback between personal and Sonarpad AI.
+    pub ai_access_mode: String,
     pub gemini_api_key: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sonarpad_ai_service_url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sonarpad_ai_access_code: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sonarpad_ai_device_id: String,
     pub gemini_model: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resume: Option<AudioDescriptionBridgeResume>,

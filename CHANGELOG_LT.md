@@ -1,5 +1,21 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.5 – 2026-09-07
+
+DI garso aprašymas
+1. Pagerintas atsparumas, kai Gemini laikinai grąžina `MALFORMED_RESPONSE` be tinkamo naudoti turinio. Sonarpad dabar bando lygiai tą pačią dalį dar kartą iki trijų kartų, trumpai palaukdamas tarp bandymų, užuot iš karto nutraukęs visą garso aprašymą. Įprastos Gemini reakcijos, saugos blokai, tokenų limito klaidos ir esamas kontrolinių taškų veikimas lieka nepakeisti.
+
+2. Ištaisytas dar vienas retas `invalid Gemini chunk timeline` atvejis, pasitaikantis su kai kuriais vaizdo įrašais, kai FFmpeg paruošti segmentai pateikia nedidelį kaupiamą trukmės nuokrypį. Kai laiko juosta teisinga, Sonarpad palieka įprastą veikimą nepakeistą ir konservatyvų suderinimą naudoja tik tada, kai įprasta laiko juosta nepavyktų ir bendras nuokrypis yra mažas; dideli ar įtartini neatitikimai ir toliau baigiasi klaida.
+
+3. Pridėta pasirenkama Sonarpad AI paslauga DI garso aprašymams. Naudotojai gali ir toliau naudoti savo Gemini API raktą arba pasirinkti Sonarpad paslaugą ir įvesti asmeninį Sonarpad kodą. Kodas apsaugomas naudojant Windows DPAPI. Paslaugos režimu paruošti vaizdo segmentai į Google įkeliami tiesiogiai iš naudotojo kompiuterio per laikiną Google įkėlimo URL; sonarpad.com negauna ir nesaugo vaizdo baitų. Backend tik suteikia prieigą, nustato Gemini modelį/Standard lygį ir naudojimo ribas, apskaito naudojimą bei grąžina Gemini atsakymą.
+
+4. Patobulintas išsaugotų garsinio vaizdavimo projektų redagavimas. Dabar galima iš eilės pakeisti kelis aprašymus, nereikia kiekvieno pakeitimo taikyti iš karto. Pakeitimai lieka atmintyje; paspaudus „Taikyti tekstą“, Sonarpad patikrina kiekvieną pakeistą aprašymą pagal jo išsaugotą laiko intervalą ir tada kartu išsaugo visus tinkamus pakeitimus. Jei aprašymas netelpa į savo intervalą, židinys grąžinamas į jį neprarandant kitų laukiančių pakeitimų.
+
+5. „Reguliuoti balsą“ pridėta iškart prieš „Kurti garsinį vaizdavimą“. Naujame lange galima pasirinkti sintezės variklį, balsą, greitį ir garsumą bei naudoti „Išbandyti balsą“. Paspaudus OK židinys grįžta tiksliai į „Reguliuoti balsą“, o pasirinktos reikšmės taikomos kuriamam garsiniam vaizdavimui. Jei langas nenaudojamas, sintezė lieka visiškai tokia pati kaip anksčiau.
+
+
+6. Išplėsti išsaugotų garsinio vaizdavimo projektų balso valdikliai. Projekto redagavimo lange, be variklio ir balso, dabar galima keisti greitį, garsumą ir naudoti „Išbandyti balsą“. Pritaikius balso parametrus, Sonarpad iš naujo patikrina visus esamus aprašymus su naujais sintezės parametrais ir MP3 perkuria tik jei visi aprašymai vis dar telpa į išsaugotus laiko intervalus. Intervalai be dialogo, Visual Evidence laikai, Gemini aprašymai ir projekto laiko analizė panaudojami iš naujo, nevykdant AI analizės dar kartą.
+
 Versija 0.9.4 – 2026-09-04
 
 DI garso aprašymas

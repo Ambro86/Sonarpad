@@ -160,6 +160,86 @@ class GeminiRetryTests(unittest.TestCase):
                     gemini_helpers.is_retryable_transient_error(error)
                 )
 
+    @staticmethod
+    def _malformed_response():
+        return SimpleNamespace(
+            prompt_feedback=None,
+            candidates=[
+                SimpleNamespace(
+                    content=SimpleNamespace(parts=[]),
+                    finish_reason=SimpleNamespace(name="MALFORMED_RESPONSE"),
+                )
+            ],
+        )
+
+    def test_malformed_response_without_content_retries_same_request(self):
+        malformed = self._malformed_response()
+        success = SimpleNamespace(prompt_feedback=None, candidates=[])
+        client = mock.Mock()
+        client.models.generate_content.side_effect = [malformed, success]
+
+        with mock.patch.object(
+            gemini_helpers.config_model, "get_setting", return_value=""
+        ), mock.patch.object(gemini_helpers.time, "sleep") as sleep_mock:
+            result = gemini_helpers.generate_content_with_retry(
+                client, "gemini-test", [], object()
+            )
+
+        self.assertIs(result, success)
+        self.assertEqual(client.models.generate_content.call_count, 2)
+        sleep_mock.assert_called_once_with(gemini_helpers.RETRY_DELAY_SEC)
+
+    def test_malformed_response_stops_after_three_attempts(self):
+        client = mock.Mock()
+        client.models.generate_content.return_value = self._malformed_response()
+
+        with mock.patch.object(
+            gemini_helpers.config_model, "get_setting", return_value=""
+        ), mock.patch.object(gemini_helpers.time, "sleep") as sleep_mock:
+            with self.assertRaises(gemini_helpers.GeminiMalformedResponseError):
+                gemini_helpers.generate_content_with_retry(
+                    client, "gemini-test", [], object()
+                )
+
+        self.assertEqual(client.models.generate_content.call_count, 3)
+        self.assertEqual(sleep_mock.call_count, 2)
+        self.assertTrue(
+            all(
+                call.args == (gemini_helpers.RETRY_DELAY_SEC,)
+                for call in sleep_mock.call_args_list
+            )
+        )
+
+    def test_malformed_retry_does_not_consume_prohibited_content_attempts(self):
+        malformed = self._malformed_response()
+        blocked = SimpleNamespace(
+            prompt_feedback=SimpleNamespace(
+                block_reason=SimpleNamespace(name="PROHIBITED_CONTENT"),
+                block_reason_message=None,
+            ),
+            candidates=[],
+        )
+        success = SimpleNamespace(prompt_feedback=None, candidates=[])
+        client = mock.Mock()
+        client.models.generate_content.side_effect = [
+            malformed, blocked, success
+        ]
+
+        with mock.patch.object(
+            gemini_helpers.config_model, "get_setting", return_value=""
+        ), mock.patch.object(gemini_helpers.time, "sleep") as sleep_mock:
+            result = gemini_helpers.generate_content_with_retry(
+                client,
+                "gemini-test",
+                [],
+                object(),
+                prohibited_content_max_attempts=2,
+            )
+
+        self.assertIs(result, success)
+        self.assertEqual(client.models.generate_content.call_count, 3)
+        self.assertEqual(sleep_mock.call_count, 2)
+
     def test_prohibited_content_without_candidate_retries_same_chunk(self):
         blocked = SimpleNamespace(
             prompt_feedback=SimpleNamespace(

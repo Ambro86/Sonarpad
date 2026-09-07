@@ -1,5 +1,21 @@
 # Dziennik zmian
 
+Wersja 0.9.5 – 2026-09-07
+
+Audiodeskrypcja z AI
+1. Zwiększono odporność na sytuację, gdy Gemini tymczasowo zwraca `MALFORMED_RESPONSE` bez użytecznej treści. Sonarpad ponawia teraz dokładnie ten sam fragment do trzech razy, z krótką przerwą między próbami, zamiast natychmiast przerywać całą audiodeskrypcję. Zwykłe odpowiedzi Gemini, blokady bezpieczeństwa, błędy limitu tokenów oraz dotychczasowe działanie punktów kontrolnych pozostają bez zmian.
+
+2. Naprawiono kolejny rzadki przypadek błędu `invalid Gemini chunk timeline` w niektórych filmach, gdy fragmenty przygotowane przez FFmpeg zgłaszają niewielkie skumulowane odchylenie czasu trwania. Sonarpad pozostawia dotychczasową ścieżkę bez zmian, gdy oś czasu jest prawidłowa, i stosuje ostrożne wyrównanie tylko wtedy, gdy normalna oś czasu zakończyłaby się błędem, a łączna różnica jest mała; duże lub podejrzane rozbieżności nadal powodują błąd.
+
+3. Dodano opcjonalną usługę Sonarpad AI do audiodeskrypcji z AI. Użytkownicy mogą nadal korzystać z własnego klucza API Gemini albo wybrać usługę Sonarpad i wpisać osobisty kod Sonarpad. Kod jest chroniony przez Windows DPAPI. W trybie usługi przygotowane fragmenty wideo są wysyłane bezpośrednio z komputera użytkownika do Google przez tymczasowy adres URL przesyłania Google; sonarpad.com nie otrzymuje ani nie przechowuje danych wideo. Backend jedynie autoryzuje dostęp, wymusza model Gemini/poziom Standard i limity użycia, rozlicza wykorzystanie oraz zwraca odpowiedź Gemini.
+
+4. Ulepszono edycję zapisanych projektów audiodeskrypcji. Można teraz zmieniać kilka opisów po kolei bez konieczności natychmiastowego stosowania każdej zmiany. Zmiany pozostają w pamięci; po naciśnięciu „Zastosuj tekst” Sonarpad sprawdza każdy zmodyfikowany opis względem zapisanego zakresu czasu, a następnie zapisuje wszystkie prawidłowe zmiany razem. Jeśli opis nie mieści się w swoim zakresie, fokus wraca do niego bez utraty pozostałych oczekujących zmian.
+
+5. Dodano „Dostosuj głos” bezpośrednio przed „Utwórz audiodeskrypcję”. Nowe okno pozwala wybrać silnik, głos, szybkość i głośność oraz zawiera „Testuj głos”. Po naciśnięciu OK fokus wraca dokładnie do „Dostosuj głos”, a wybrane wartości są używane podczas tworzenia audiodeskrypcji. Jeśli okno nie zostanie użyte, synteza działa dokładnie tak jak wcześniej.
+
+
+6. Rozszerzono sterowanie głosem w zapisanych projektach audiodeskrypcji. W oknie edycji projektu oprócz silnika i głosu dostępne są teraz także szybkość, głośność oraz „Testuj głos”. Po zastosowaniu ustawień głosu Sonarpad ponownie sprawdza wszystkie istniejące opisy z nowymi parametrami syntezy i przebudowuje plik MP3 tylko wtedy, gdy wszystkie nadal mieszczą się w zapisanych przedziałach czasowych. Przedziały bez dialogów, czasy Visual Evidence, opisy Gemini i analiza czasowa projektu są ponownie wykorzystywane bez ponownego uruchamiania analizy AI.
+
 Wersja 0.9.4 – 2026-09-04
 
 Audiodeskrypcja z AI
@@ -690,6 +706,8 @@ Ulepszenia
 • Dodano możliwość usuwania kanałów/stron RSS z biblioteki poprzez wybranie ich i naciśnięcie Delete.
 • Dodano menu kontekstowe w oknie RSS do edycji lub usuwania kanałów/stron RSS.
 • Usunięto ustawienie przenoszenia ustawień do bieżącego folderu; aplikacja teraz obsługuje to automatycznie na podstawie lokalizacji (jeśli folder exe nazywa się "sonarpad portable" lub exe znajduje się na dysku wymiennym, ustawienia trafiają do folderu exe w `config`, w przeciwnym razie `%APPDATA%\Sonarpad`, z fallbackiem do exe `config`, jeśli preferowany folder nie jest zapisywalny).
+
+3. Dodano opcjonalną usługę Sonarpad AI do audiodeskrypcji z AI. Użytkownicy mogą nadal korzystać z własnego klucza API Gemini albo wybrać usługę Sonarpad i wpisać osobisty kod Sonarpad. Kod jest chroniony przez Windows DPAPI. W trybie usługi przygotowane fragmenty wideo są wysyłane bezpośrednio z komputera użytkownika do Google przez tymczasowy adres URL przesyłania Google; sonarpad.com nie otrzymuje ani nie przechowuje danych wideo. Backend jedynie autoryzuje dostęp, wymusza model Gemini/poziom Standard i limity użycia, rozlicza wykorzystanie oraz zwraca odpowiedź Gemini.
 
 Version 0.5.7 - 2026-01-05
 New features

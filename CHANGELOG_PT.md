@@ -1,5 +1,21 @@
 # Changelog
 
+Versão 0.9.5 – 2026-09-07
+
+Audiodescrição com IA
+1. Melhorada a resiliência quando o Gemini devolve temporariamente `MALFORMED_RESPONSE` sem conteúdo utilizável. O Sonarpad passa agora a repetir exatamente o mesmo segmento até três vezes, com uma breve espera entre tentativas, em vez de interromper imediatamente toda a audiodescrição. As respostas normais do Gemini, os bloqueios de segurança, os erros de limite de tokens e o comportamento atual dos pontos de controlo permanecem inalterados.
+
+2. Corrigido outro caso raro de `invalid Gemini chunk timeline` em alguns vídeos cujos segmentos preparados pelo FFmpeg apresentam um pequeno desvio acumulado de duração. O Sonarpad mantém o percurso normal inalterado quando a linha temporal é válida e utiliza um reajuste conservador apenas quando a linha temporal normal falharia e a diferença total é pequena; diferenças grandes ou suspeitas continuam a produzir um erro.
+
+3. Adicionado o serviço opcional Sonarpad AI para audiodescrições com IA. Os utilizadores podem continuar a usar a sua própria chave API Gemini ou escolher o serviço Sonarpad e introduzir um código Sonarpad pessoal. O código é protegido com Windows DPAPI. No modo de serviço, os segmentos de vídeo preparados são enviados diretamente do PC do utilizador para a Google através de um URL temporário de carregamento da Google; sonarpad.com não recebe nem guarda os bytes do vídeo. O backend apenas autoriza o acesso, impõe o modelo Gemini/nível Standard e os limites de utilização, contabiliza o consumo e devolve a resposta do Gemini.
+
+4. Melhorada a edição de projetos de audiodescrição guardados. Agora é possível alterar várias descrições seguidas sem ter de aplicar cada alteração imediatamente. As alterações ficam em memória; ao premir “Aplicar texto”, o Sonarpad verifica cada descrição modificada em relação ao respetivo intervalo guardado e depois guarda em conjunto todas as alterações válidas. Se uma descrição não couber no seu intervalo, o foco volta a essa descrição sem perder as outras alterações pendentes.
+
+5. Adicionado “Ajustar voz” imediatamente antes de “Criar audiodescrição”. A nova janela permite escolher motor, voz, velocidade e volume e inclui “Testar voz”. Ao premir OK, o foco volta exatamente a “Ajustar voz” e os valores escolhidos são aplicados à audiodescrição que será criada. Se a janela não for utilizada, a síntese mantém-se exatamente como antes.
+
+
+6. Foram ampliados os controlos de voz nos projetos de audiodescrição guardados. Em Modificar projeto, além do motor e da voz, estão agora disponíveis velocidade, volume e “Testar voz”. Ao aplicar os parâmetros de voz, o Sonarpad volta a verificar todas as descrições existentes com os novos parâmetros de síntese e só reconstrói o MP3 se todas continuarem a caber nos respetivos intervalos guardados. Os intervalos sem diálogo, os tempos de Visual Evidence, as descrições Gemini e a análise temporal do projeto são reutilizados sem executar novamente a análise de IA.
+
 Versão 0.9.4 – 2026-09-04
 
 Audiodescrição com IA

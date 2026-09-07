@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, mpsc};
 use std::thread;
+use std::time::Duration;
 
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Gdi::{COLOR_WINDOW, HBRUSH, HFONT, InvalidateRect};
@@ -17,15 +18,16 @@ use windows::Win32::UI::Controls::{
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{EnableWindow, SetFocus, VK_ESCAPE};
 use windows::Win32::UI::WindowsAndMessaging::{
-    BM_GETCHECK, BM_SETCHECK, BS_AUTOCHECKBOX, BS_DEFPUSHBUTTON, CB_ADDSTRING, CB_FINDSTRINGEXACT,
-    CB_GETCOUNT, CB_GETCURSEL, CB_GETLBTEXT, CB_GETLBTEXTLEN, CB_RESETCONTENT, CB_SETCURSEL,
-    CBN_SELCHANGE, CBS_DROPDOWNLIST, CREATESTRUCTW, CreateWindowExW, DefWindowProcW, DestroyWindow,
-    ES_AUTOHSCROLL, ES_PASSWORD, GetWindowLongPtrW, HMENU, IDC_ARROW, IDNO, IDYES, IsWindowVisible,
-    LoadCursorW, MB_ICONQUESTION, MB_YESNO, MB_YESNOCANCEL, MessageBoxW, PostMessageW, SW_HIDE,
-    SW_SHOW, SendMessageW, SetForegroundWindow, SetWindowLongPtrW, ShowWindow, WINDOW_STYLE,
-    WM_APP, WM_CLOSE, WM_COMMAND, WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_NCDESTROY, WM_SETFOCUS,
-    WM_SETFONT, WNDCLASSW, WS_CAPTION, WS_CHILD, WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT,
-    WS_EX_DLGMODALFRAME, WS_SYSMENU, WS_TABSTOP, WS_VISIBLE,
+    BM_GETCHECK, BM_SETCHECK, BS_AUTOCHECKBOX, BS_AUTORADIOBUTTON, BS_DEFPUSHBUTTON, CB_ADDSTRING,
+    CB_FINDSTRINGEXACT, CB_GETCOUNT, CB_GETCURSEL, CB_GETLBTEXT, CB_GETLBTEXTLEN, CB_RESETCONTENT,
+    CB_SETCURSEL, CBN_SELCHANGE, CBS_DROPDOWNLIST, CREATESTRUCTW, CreateWindowExW, DefWindowProcW,
+    DestroyWindow, EN_KILLFOCUS, ES_AUTOHSCROLL, ES_PASSWORD, ES_READONLY, GetWindowLongPtrW,
+    HMENU, IDC_ARROW, IDNO, IDYES, IsWindowVisible, LoadCursorW, MB_ICONQUESTION, MB_YESNO,
+    MB_YESNOCANCEL, MessageBoxW, PostMessageW, SW_HIDE, SW_SHOW, SendMessageW, SetForegroundWindow,
+    SetWindowLongPtrW, ShowWindow, WINDOW_STYLE, WM_APP, WM_CLOSE, WM_COMMAND, WM_CREATE,
+    WM_DESTROY, WM_KEYDOWN, WM_NCDESTROY, WM_SETFOCUS, WM_SETFONT, WNDCLASSW, WS_CAPTION, WS_CHILD,
+    WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_GROUP, WS_SYSMENU, WS_TABSTOP,
+    WS_VISIBLE,
 };
 use windows::core::{PCWSTR, PWSTR};
 
@@ -74,7 +76,16 @@ const ID_CHARACTER_CATALOG_NAME: usize = 9672;
 const ID_CONTINUE_INTERRUPTED: usize = 9673;
 const ID_DELETE_VIDEO_AFTER: usize = 9674;
 const ID_GEMINI_SHOW_API_KEY: usize = 9675;
+const ID_AI_PERSONAL: usize = 9676;
+const ID_AI_SONARPAD: usize = 9677;
+const ID_SONARPAD_CODE: usize = 9678;
+const ID_SONARPAD_REQUEST_CODE: usize = 9679;
+const ID_SONARPAD_SHOW_CODE: usize = 9680;
+const ID_SONARPAD_BALANCE: usize = 9681;
+const ID_VOICE_SETTINGS: usize = 9682;
+const ID_RECOGNIZE_SCREEN_TEXT: usize = 9683;
 const EM_SETPASSWORDCHAR: u32 = 0x00CC;
+const SONARPAD_AI_SERVICE_URL: &str = "https://sonarpad.com/sonarpad-ai";
 
 const WM_AD_PROGRESS: u32 = WM_APP + 188;
 const WM_AD_STATUS: u32 = WM_APP + 189;
@@ -88,6 +99,7 @@ const WM_AD_SET_RESUME: u32 = WM_APP + 196;
 const WM_AD_RESET_NEW: u32 = WM_APP + 197;
 const WM_AD_OVERLOAD: u32 = WM_APP + 198;
 const WM_AD_RESTORE_RUNNING_FOCUS: u32 = WM_APP + 199;
+const WM_AD_SONARPAD_BALANCE: u32 = WM_APP + 200;
 
 struct Labels {
     title: String,
@@ -102,6 +114,7 @@ struct Labels {
     verbosity_detailed: String,
     extended: String,
     recognize_characters: String,
+    recognize_screen_text: String,
     keep_character_catalog: String,
     character_catalog_choose: String,
     character_catalog_selection_label: String,
@@ -110,6 +123,14 @@ struct Labels {
     save_project: String,
     delete_video_after: String,
     modify_project: String,
+    ai_access: String,
+    ai_personal: String,
+    ai_sonarpad: String,
+    sonarpad_code: String,
+    sonarpad_show_code: String,
+    sonarpad_balance: String,
+    sonarpad_balance_unavailable: String,
+    sonarpad_request_code: String,
     gemini_api_key: String,
     gemini_show_api_key: String,
     gemini_get_key: String,
@@ -125,6 +146,7 @@ struct Labels {
     overload_message: String,
     engine: String,
     voice: String,
+    voice_settings: String,
     start: String,
     resume_start: String,
     resume_model: String,
@@ -141,6 +163,7 @@ struct Labels {
     error_output: String,
     error_voice: String,
     error_api_key: String,
+    error_sonarpad_code: String,
     error_model: String,
     error_same_path: String,
     character_catalog_saved: String,
@@ -158,6 +181,7 @@ struct WindowState {
     verbosity_combo: HWND,
     extended_checkbox: HWND,
     recognize_characters_checkbox: HWND,
+    recognize_screen_text_checkbox: HWND,
     keep_character_catalog_checkbox: HWND,
     character_catalog_label: HWND,
     character_catalog_combo: HWND,
@@ -166,16 +190,31 @@ struct WindowState {
     character_catalogs: Vec<AudioDescriptionCharacterCatalogSummary>,
     save_project_checkbox: HWND,
     delete_video_after_checkbox: HWND,
+    ai_personal_radio: HWND,
+    ai_sonarpad_radio: HWND,
+    sonarpad_code_label: HWND,
+    sonarpad_code_edit: HWND,
+    sonarpad_show_code_checkbox: HWND,
+    sonarpad_balance_label: HWND,
+    sonarpad_balance_edit: HWND,
+    sonarpad_request_code_button: HWND,
+    gemini_api_key_label: HWND,
     gemini_api_key_edit: HWND,
+    gemini_get_key_button: HWND,
     gemini_show_api_key_checkbox: HWND,
     gemini_model_label: HWND,
     gemini_model_combo: HWND,
     gemini_refresh_models_button: HWND,
     engine_combo: HWND,
     voice_combo: HWND,
+    voice_settings_button: HWND,
+    tts_rate: i32,
+    tts_volume: i32,
     progress: HWND,
     status: HWND,
     start_button: HWND,
+    // Keep this HWND in state: validation errors for interrupted projects must restore focus here.
+    continue_interrupted_button: HWND,
     cancel_button: HWND,
     close_button: HWND,
     setup_controls: Vec<HWND>,
@@ -205,6 +244,11 @@ struct OverloadPromptRequest {
 struct AudioDescriptionDonePayload {
     result: Result<AudioDescriptionOutcome, String>,
     input_to_trash: Option<PathBuf>,
+}
+
+struct SonarpadBalancePayload {
+    access_code: String,
+    result: Result<f64, String>,
 }
 
 #[repr(C)]
@@ -351,6 +395,18 @@ pub(crate) fn blocks_parent_focus(parent: HWND, window: HWND) -> bool {
     }
 
     unsafe {
+        let foreground = windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow();
+        if foreground == window {
+            return true;
+        }
+        if foreground.0 != 0
+            && GetWindowLongPtrW(
+                foreground,
+                windows::Win32::UI::WindowsAndMessaging::GWLP_HWNDPARENT,
+            ) == window.0
+        {
+            return true;
+        }
         GetWindowLongPtrW(
             window,
             windows::Win32::UI::WindowsAndMessaging::GWLP_HWNDPARENT,
@@ -472,6 +528,7 @@ fn labels(language: Language) -> Labels {
         verbosity_detailed: i18n::tr(language, "audio_description.verbosity.detailed"),
         extended: i18n::tr(language, "audio_description.extended"),
         recognize_characters: i18n::tr(language, "audio_description.recognize_characters"),
+        recognize_screen_text: i18n::tr(language, "audio_description.recognize_screen_text"),
         keep_character_catalog: i18n::tr(language, "audio_description.keep_character_catalog"),
         character_catalog_choose: i18n::tr(
             language,
@@ -492,6 +549,17 @@ fn labels(language: Language) -> Labels {
         save_project: i18n::tr(language, "audio_description.save_project"),
         delete_video_after: i18n::tr(language, "audio_description.delete_video_after"),
         modify_project: i18n::tr(language, "audio_description.modify_project"),
+        ai_access: i18n::tr(language, "audio_description.ai_access"),
+        ai_personal: i18n::tr(language, "audio_description.ai_access.personal"),
+        ai_sonarpad: i18n::tr(language, "audio_description.ai_access.sonarpad"),
+        sonarpad_code: i18n::tr(language, "audio_description.sonarpad_code"),
+        sonarpad_show_code: i18n::tr(language, "audio_description.sonarpad_show_code"),
+        sonarpad_balance: i18n::tr(language, "audio_description.sonarpad_balance"),
+        sonarpad_balance_unavailable: i18n::tr(
+            language,
+            "audio_description.sonarpad_balance_unavailable",
+        ),
+        sonarpad_request_code: i18n::tr(language, "audio_description.sonarpad_request_code"),
         gemini_api_key: i18n::tr(language, "audio_description.gemini_api_key"),
         gemini_show_api_key: i18n::tr(language, "audio_description.show_api_key"),
         gemini_get_key: i18n::tr(language, "audio_description.gemini_get_key"),
@@ -510,6 +578,7 @@ fn labels(language: Language) -> Labels {
         overload_message: i18n::tr(language, "audio_description.overload.message"),
         engine: i18n::tr(language, "audio_description.engine"),
         voice: i18n::tr(language, "audio_description.voice"),
+        voice_settings: i18n::tr(language, "audio_description.voice_settings"),
         start: i18n::tr(language, "audio_description.start"),
         resume_start: i18n::tr(language, "audio_description.resume.start"),
         resume_model: i18n::tr(language, "audio_description.resume.model"),
@@ -526,6 +595,7 @@ fn labels(language: Language) -> Labels {
         error_output: i18n::tr(language, "audio_description.error.output"),
         error_voice: i18n::tr(language, "audio_description.error.voice"),
         error_api_key: i18n::tr(language, "audio_description.error.api_key"),
+        error_sonarpad_code: i18n::tr(language, "audio_description.error.sonarpad_code"),
         error_model: i18n::tr(language, "audio_description.error.model"),
         error_same_path: i18n::tr(language, "audio_description.error.same_path"),
         character_catalog_saved: i18n::tr(language, "audio_description.character_catalog.saved"),
@@ -665,7 +735,7 @@ fn open_window(parent: HWND) -> HWND {
             120,
             90,
             700,
-            830,
+            890,
             parent,
             HMENU(0),
             hinstance,
@@ -1010,6 +1080,112 @@ fn update_gemini_api_key_visibility(state: &WindowState) {
     }
 }
 
+fn update_sonarpad_code_visibility(state: &WindowState) {
+    let show = checkbox_checked(state.sonarpad_show_code_checkbox);
+    let password_char = if show { 0 } else { '*' as usize };
+    unsafe {
+        SendMessageW(
+            state.sonarpad_code_edit,
+            EM_SETPASSWORDCHAR,
+            WPARAM(password_char),
+            LPARAM(0),
+        );
+        if !InvalidateRect(state.sonarpad_code_edit, None, true).as_bool() {
+            crate::log_debug("Audio description: failed to redraw Sonarpad AI code field");
+        }
+    }
+}
+
+fn format_sonarpad_balance(language: Language, balance: f64) -> String {
+    let value = format!("{balance:.2}");
+    let localized = match language {
+        Language::English => value,
+        _ => value.replace('.', ","),
+    };
+    format!("{localized} €")
+}
+
+fn refresh_sonarpad_balance(hwnd: HWND, state: &WindowState) {
+    if state.running || !using_sonarpad_ai(state) {
+        return;
+    }
+    let access_code = get_text(state.sonarpad_code_edit).trim().to_string();
+    if !access_code.starts_with("sp_") {
+        set_text(
+            state.sonarpad_balance_edit,
+            &labels(state.language).sonarpad_balance_unavailable,
+        );
+        return;
+    }
+    let device_id = with_state(state.parent, |app| {
+        app.settings.sonarpad_ai_device_id.clone()
+    })
+    .unwrap_or_default();
+    if device_id.trim().is_empty() {
+        set_text(
+            state.sonarpad_balance_edit,
+            &labels(state.language).sonarpad_balance_unavailable,
+        );
+        return;
+    }
+    set_text(state.sonarpad_balance_edit, "…");
+    thread::spawn(move || {
+        let result = (|| -> Result<f64, String> {
+            let client = reqwest::blocking::Client::builder()
+                .timeout(Duration::from_secs(30))
+                .build()
+                .map_err(|err| err.to_string())?;
+            let activate_url = format!("{SONARPAD_AI_SERVICE_URL}/v1/activate");
+            let activate = client
+                .post(&activate_url)
+                .json(&serde_json::json!({
+                    "code": access_code.clone(),
+                    "device_id": device_id,
+                    "device_name": "Sonarpad Windows",
+                }))
+                .send()
+                .map_err(|err| err.to_string())?;
+            if !activate.status().is_success() {
+                return Err(format!("HTTP {}", activate.status().as_u16()));
+            }
+            let activate_json: serde_json::Value =
+                activate.json().map_err(|err| err.to_string())?;
+            let session_token = activate_json
+                .get("session_token")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .trim()
+                .to_string();
+            if !session_token.starts_with("sst_") {
+                return Err("invalid session response".to_string());
+            }
+            let account_url = format!("{SONARPAD_AI_SERVICE_URL}/v1/account");
+            let account = client
+                .get(&account_url)
+                .bearer_auth(session_token)
+                .send()
+                .map_err(|err| err.to_string())?;
+            if !account.status().is_success() {
+                return Err(format!("HTTP {}", account.status().as_u16()));
+            }
+            let account_json: serde_json::Value = account.json().map_err(|err| err.to_string())?;
+            account_json
+                .get("balance_eur")
+                .and_then(serde_json::Value::as_f64)
+                .ok_or_else(|| "missing balance".to_string())
+        })();
+        post_boxed_message(
+            hwnd,
+            WM_AD_SONARPAD_BALANCE,
+            WPARAM(0),
+            Box::new(SonarpadBalancePayload {
+                access_code,
+                result,
+            }),
+        );
+    });
+}
+
 fn selected_voice_name(state: &WindowState) -> Option<String> {
     let index = unsafe { SendMessageW(state.voice_combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0 };
     (index >= 0)
@@ -1168,7 +1344,7 @@ enum CharacterCatalogPreparation {
 }
 
 fn prepare_character_catalog(
-    _hwnd: HWND,
+    hwnd: HWND,
     state: &mut WindowState,
     labels: &Labels,
 ) -> Result<CharacterCatalogPreparation, String> {
@@ -1200,12 +1376,12 @@ fn prepare_character_catalog(
     let name_value = get_text(state.character_catalog_name_edit);
     let name = name_value.trim();
     if name.is_empty() {
-        show_error(
-            state.parent,
-            state.language,
+        show_audio_description_error_and_focus(
+            hwnd,
+            state,
             &labels.character_catalog_name_error,
+            state.character_catalog_name_edit,
         );
-        unsafe { SetFocus(state.character_catalog_name_edit) };
         return Ok(CharacterCatalogPreparation::Cancelled);
     }
     let save_folder = with_state(state.parent, |app| {
@@ -1247,17 +1423,22 @@ fn persist_audio_description_preferences(state: &WindowState) {
         unsafe { SendMessageW(state.verbosity_combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0 };
     let extended = checkbox_checked(state.extended_checkbox);
     let recognize_characters = checkbox_checked(state.recognize_characters_checkbox);
+    let recognize_screen_text = checkbox_checked(state.recognize_screen_text_checkbox);
     let keep_character_catalog =
         recognize_characters && checkbox_checked(state.keep_character_catalog_checkbox);
     let character_catalog = selected_character_catalog_name(state);
     let save_project = checkbox_checked(state.save_project_checkbox);
     let delete_video_after = checkbox_checked(state.delete_video_after_checkbox);
+    let use_sonarpad_ai = using_sonarpad_ai(state);
+    let sonarpad_ai_access_code = get_text(state.sonarpad_code_edit).trim().to_string();
     if with_state(state.parent, |app| {
         app.settings.audio_description_language = Some(description_language);
         app.settings.audio_description_tts_engine = engine;
         if let Some(voice) = voice {
             app.settings.audio_description_tts_voice = voice;
         }
+        app.settings.audio_description_tts_rate = Some(state.tts_rate);
+        app.settings.audio_description_tts_volume = Some(state.tts_volume);
         app.settings.audio_description_verbosity = if verbosity >= 0 {
             (verbosity as u8).min(2)
         } else {
@@ -1265,10 +1446,13 @@ fn persist_audio_description_preferences(state: &WindowState) {
         };
         app.settings.audio_description_extended_pauses = extended;
         app.settings.audio_description_recognize_characters = recognize_characters;
+        app.settings.audio_description_recognize_screen_text = recognize_screen_text;
         app.settings.audio_description_keep_character_catalog = keep_character_catalog;
         app.settings.audio_description_character_catalog = character_catalog;
         app.settings.audio_description_save_project = save_project;
         app.settings.audio_description_delete_video_after = delete_video_after;
+        app.settings.audio_description_use_sonarpad_ai = use_sonarpad_ai;
+        app.settings.sonarpad_ai_access_code = sonarpad_ai_access_code;
         save_settings(app.settings.clone());
     })
     .is_none()
@@ -1350,6 +1534,73 @@ fn load_voices(hwnd: HWND, engine: TtsEngine) {
         let payload = Box::new(result);
         post_boxed_message(hwnd, WM_AD_VOICES_LOADED, WPARAM(0), payload);
     });
+}
+
+fn audio_description_voice_sources(
+    state: &WindowState,
+) -> crate::app_windows::audio_description_voice_window::AudioDescriptionVoiceSources {
+    let (mut edge, mut sapi5) = with_state(state.parent, |app| {
+        (app.edge_voices.clone(), app.sapi_voices.clone())
+    })
+    .unwrap_or_default();
+    let current_engine = engine_from_combo(state.engine_combo);
+    if current_engine == TtsEngine::Edge && edge.is_empty() {
+        edge = state.voices.clone();
+    }
+    if current_engine == TtsEngine::Sapi5 && sapi5.is_empty() {
+        sapi5 = state.voices.clone();
+    }
+    crate::app_windows::audio_description_voice_window::AudioDescriptionVoiceSources {
+        edge,
+        sapi5,
+        sapi4: crate::sapi4_engine::get_voices(),
+        google: crate::google_tts::installed_voices(),
+    }
+}
+
+fn open_audio_description_voice_settings(hwnd: HWND, state: &mut WindowState) {
+    let sources = audio_description_voice_sources(state);
+    let current_voice = selected_voice_name(state)
+        .filter(|voice| !voice.trim().is_empty())
+        .unwrap_or_else(|| state.preferred_voice.clone());
+    let preview_pitch = with_state(state.parent, |app| app.settings.tts_pitch).unwrap_or(0);
+    let default =
+        crate::app_windows::audio_description_voice_window::AudioDescriptionVoiceSettings {
+            engine: engine_from_combo(state.engine_combo),
+            voice: current_voice,
+            rate: state.tts_rate,
+            volume: state.tts_volume,
+        };
+    let result = crate::app_windows::audio_description_voice_window::open_dialog(
+        hwnd,
+        state.parent,
+        state.language,
+        sources.clone(),
+        default,
+        preview_pitch,
+    );
+    if let Some(selected) = result {
+        unsafe {
+            SendMessageW(
+                state.engine_combo,
+                CB_SETCURSEL,
+                WPARAM(engine_combo_index(selected.engine)),
+                LPARAM(0),
+            );
+        }
+        state.preferred_voice = selected.voice;
+        state.tts_rate = selected.rate;
+        state.tts_volume = selected.volume;
+        refill_voice_combo(state, sources.voices_for(selected.engine));
+        persist_audio_description_preferences(state);
+        crate::log_debug(&format!(
+            "Audio description: voice adjusted engine={:?} rate={} volume={}",
+            selected.engine, selected.rate, selected.volume
+        ));
+    }
+    unsafe {
+        SetFocus(state.voice_settings_button);
+    }
 }
 
 fn refill_voice_combo(state: &mut WindowState, voices: Vec<VoiceInfo>) {
@@ -1474,11 +1725,68 @@ fn persist_gemini_settings(parent: HWND, api_key: &str, model: &str) {
     }
 }
 
+fn using_sonarpad_ai(state: &WindowState) -> bool {
+    checkbox_checked(state.ai_sonarpad_radio)
+}
+
+fn update_ai_access_visibility(state: &WindowState) {
+    let service = using_sonarpad_ai(state);
+    unsafe {
+        for control in [
+            state.gemini_api_key_label,
+            state.gemini_api_key_edit,
+            state.gemini_show_api_key_checkbox,
+            state.gemini_get_key_button,
+            state.gemini_refresh_models_button,
+        ] {
+            ShowWindow(control, if service { SW_HIDE } else { SW_SHOW });
+            EnableWindow(control, !service && !state.running);
+        }
+        for control in [
+            state.sonarpad_code_label,
+            state.sonarpad_code_edit,
+            state.sonarpad_show_code_checkbox,
+            state.sonarpad_balance_label,
+            state.sonarpad_balance_edit,
+            state.sonarpad_request_code_button,
+        ] {
+            ShowWindow(control, if service { SW_SHOW } else { SW_HIDE });
+            EnableWindow(control, service && !state.running);
+        }
+        EnableWindow(state.gemini_model_combo, !service && !state.running);
+    }
+}
+
+fn restore_audio_description_control_focus(hwnd: HWND, control: HWND) {
+    unsafe {
+        ShowWindow(hwnd, SW_SHOW);
+        SetForegroundWindow(hwnd);
+        if control.0 != 0 {
+            SetFocus(control);
+        }
+    }
+}
+
+fn show_audio_description_error_and_focus(
+    hwnd: HWND,
+    state: &WindowState,
+    message: &str,
+    control: HWND,
+) {
+    show_error(state.parent, state.language, message);
+    restore_audio_description_control_focus(hwnd, control);
+}
+
 fn refresh_gemini_models(hwnd: HWND, state: &WindowState) {
     let labels = labels(state.language);
     let api_key = get_text(state.gemini_api_key_edit).trim().to_string();
     if api_key.is_empty() {
-        show_error(state.parent, state.language, &labels.error_api_key);
+        show_audio_description_error_and_focus(
+            hwnd,
+            state,
+            &labels.error_api_key,
+            state.gemini_api_key_edit,
+        );
         return;
     }
     let selected_model = get_text(state.gemini_model_combo).trim().to_string();
@@ -1541,6 +1849,7 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
             } else {
                 update_character_catalog_visibility(state);
                 update_delete_video_visibility(state);
+                update_ai_access_visibility(state);
                 SetFocus(state.start_button);
             }
         } else {
@@ -1636,34 +1945,97 @@ fn choose_audio_description_track(
 
 fn start_job(hwnd: HWND, state: &mut WindowState) {
     let labels = labels(state.language);
+    let use_sonarpad_ai = using_sonarpad_ai(state);
     let gemini_api_key = get_text(state.gemini_api_key_edit).trim().to_string();
-    if gemini_api_key.is_empty() {
-        show_error(state.parent, state.language, &labels.error_api_key);
+    let sonarpad_ai_access_code = get_text(state.sonarpad_code_edit).trim().to_string();
+    if use_sonarpad_ai {
+        if sonarpad_ai_access_code.is_empty() {
+            show_audio_description_error_and_focus(
+                hwnd,
+                state,
+                &labels.error_sonarpad_code,
+                state.sonarpad_code_edit,
+            );
+            return;
+        }
+    } else if gemini_api_key.is_empty() {
+        show_audio_description_error_and_focus(
+            hwnd,
+            state,
+            &labels.error_api_key,
+            state.gemini_api_key_edit,
+        );
         return;
     }
+    let Some(ai_settings) = with_state(state.parent, |app| app.settings.clone()) else {
+        return;
+    };
+    let service_url = if use_sonarpad_ai {
+        SONARPAD_AI_SERVICE_URL.to_string()
+    } else {
+        String::new()
+    };
+    let service_code = if use_sonarpad_ai {
+        sonarpad_ai_access_code.clone()
+    } else {
+        String::new()
+    };
+    let service_device_id = if use_sonarpad_ai {
+        ai_settings.sonarpad_ai_device_id.clone()
+    } else {
+        String::new()
+    };
 
     let job = if let Some(checkpoint_path) = state.resume_checkpoint_path.as_ref() {
-        match audio_description_job_from_checkpoint(checkpoint_path, gemini_api_key.clone()) {
+        match audio_description_job_from_checkpoint(
+            checkpoint_path,
+            if use_sonarpad_ai {
+                String::new()
+            } else {
+                gemini_api_key.clone()
+            },
+            service_url.clone(),
+            service_code.clone(),
+            service_device_id.clone(),
+        ) {
             Ok(mut job) => {
-                let selected_model = get_text(state.gemini_model_combo).trim().to_string();
+                let selected_model = if use_sonarpad_ai {
+                    "gemini-3.8-flash".to_string()
+                } else {
+                    get_text(state.gemini_model_combo).trim().to_string()
+                };
                 if selected_model.is_empty() {
-                    show_error(state.parent, state.language, &labels.error_model);
+                    show_audio_description_error_and_focus(
+                        hwnd,
+                        state,
+                        &labels.error_model,
+                        state.gemini_model_combo,
+                    );
                     return;
                 }
                 job.gemini_model = selected_model;
-                persist_gemini_settings(state.parent, &gemini_api_key, &job.gemini_model);
+                job.recognize_screen_text = checkbox_checked(state.recognize_screen_text_checkbox);
+                if !use_sonarpad_ai {
+                    persist_gemini_settings(state.parent, &gemini_api_key, &job.gemini_model);
+                }
+                persist_audio_description_preferences(state);
                 (job, None)
             }
             Err(error) => {
                 let message = labels.resume_invalid.replace("{error}", &error);
-                show_error(state.parent, state.language, &message);
+                show_audio_description_error_and_focus(
+                    hwnd,
+                    state,
+                    &message,
+                    state.continue_interrupted_button,
+                );
                 return;
             }
         }
     } else {
         let input = PathBuf::from(get_text(state.input).trim());
         if !input.is_file() {
-            show_error(state.parent, state.language, &labels.error_input);
+            show_audio_description_error_and_focus(hwnd, state, &labels.error_input, state.input);
             return;
         }
         let mut output = PathBuf::from(get_text(state.output).trim());
@@ -1672,11 +2044,16 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
             set_path(state.output, &output);
         }
         if output.as_os_str().is_empty() {
-            show_error(state.parent, state.language, &labels.error_output);
+            show_audio_description_error_and_focus(hwnd, state, &labels.error_output, state.output);
             return;
         }
         if input == output {
-            show_error(state.parent, state.language, &labels.error_same_path);
+            show_audio_description_error_and_focus(
+                hwnd,
+                state,
+                &labels.error_same_path,
+                state.output,
+            );
             return;
         }
         let audio_stream_index = match choose_audio_description_track(hwnd, state, &input) {
@@ -1688,7 +2065,7 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
                 return;
             }
             Err(error) => {
-                show_error(state.parent, state.language, &error);
+                show_audio_description_error_and_focus(hwnd, state, &error, state.start_button);
                 return;
             }
         };
@@ -1703,18 +2080,34 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
             .flatten()
             .map(|voice| voice.short_name.clone())
         else {
-            show_error(state.parent, state.language, &labels.error_voice);
+            show_audio_description_error_and_focus(
+                hwnd,
+                state,
+                &labels.error_voice,
+                state.voice_settings_button,
+            );
             return;
         };
         let Some(settings) = with_state(state.parent, |app| app.settings.clone()) else {
             return;
         };
-        let gemini_model = get_text(state.gemini_model_combo).trim().to_string();
+        let gemini_model = if use_sonarpad_ai {
+            "gemini-3.8-flash".to_string()
+        } else {
+            get_text(state.gemini_model_combo).trim().to_string()
+        };
         if gemini_model.is_empty() {
-            show_error(state.parent, state.language, &labels.error_model);
+            show_audio_description_error_and_focus(
+                hwnd,
+                state,
+                &labels.error_model,
+                state.gemini_model_combo,
+            );
             return;
         }
-        persist_gemini_settings(state.parent, &gemini_api_key, &gemini_model);
+        if !use_sonarpad_ai {
+            persist_gemini_settings(state.parent, &gemini_api_key, &gemini_model);
+        }
 
         let description_language = language_from_combo(state.language_combo);
         let extended = checkbox_checked(state.extended_checkbox);
@@ -1724,7 +2117,7 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
             Ok(CharacterCatalogPreparation::Cancelled) => return,
             Ok(CharacterCatalogPreparation::Ready(catalog)) => Some(catalog),
             Err(error) => {
-                show_error(state.parent, state.language, &error);
+                show_audio_description_error_and_focus(hwnd, state, &error, state.start_button);
                 return;
             }
         };
@@ -1744,15 +2137,23 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
             verbosity: selected_verbosity(state.verbosity_combo),
             allow_extended_pauses: extended,
             recognize_characters,
+            recognize_screen_text: checkbox_checked(state.recognize_screen_text_checkbox),
             character_catalog,
             save_project,
             tts_engine: engine_from_combo(state.engine_combo),
             tts_voice: voice,
-            tts_rate: settings.tts_rate,
+            tts_rate: state.tts_rate,
             tts_pitch: settings.tts_pitch,
-            tts_volume: settings.tts_volume,
+            tts_volume: state.tts_volume,
             dictionary: settings.dictionary.clone(),
-            gemini_api_key,
+            gemini_api_key: if use_sonarpad_ai {
+                String::new()
+            } else {
+                gemini_api_key
+            },
+            sonarpad_ai_service_url: service_url,
+            sonarpad_ai_access_code: service_code,
+            sonarpad_ai_device_id: service_device_id,
             gemini_model,
             audiobook_bitrate_kbps: settings.audiobook_m4b_bitrate,
             resume_checkpoint_path: None,
@@ -1880,12 +2281,17 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     hfont,
                     gemini_api_key,
                     gemini_model,
+                    use_sonarpad_ai,
+                    sonarpad_ai_access_code,
                     description_language,
                     tts_engine,
                     tts_voice,
+                    tts_rate,
+                    tts_volume,
                     verbosity,
                     extended_pauses,
                     recognize_characters,
+                    recognize_screen_text,
                     keep_character_catalog,
                     selected_character_catalog,
                     audio_description_save_folder,
@@ -1897,15 +2303,26 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         state.hfont,
                         state.settings.gemini_api_key.clone(),
                         state.settings.audio_description_gemini_model.clone(),
+                        state.settings.audio_description_use_sonarpad_ai,
+                        state.settings.sonarpad_ai_access_code.clone(),
                         state
                             .settings
                             .audio_description_language
                             .unwrap_or(state.settings.language),
                         state.settings.audio_description_tts_engine,
                         state.settings.audio_description_tts_voice.clone(),
+                        state
+                            .settings
+                            .audio_description_tts_rate
+                            .unwrap_or(state.settings.tts_rate),
+                        state
+                            .settings
+                            .audio_description_tts_volume
+                            .unwrap_or(state.settings.tts_volume),
                         state.settings.audio_description_verbosity,
                         state.settings.audio_description_extended_pauses,
                         state.settings.audio_description_recognize_characters,
+                        state.settings.audio_description_recognize_screen_text,
                         state.settings.audio_description_keep_character_catalog,
                         state.settings.audio_description_character_catalog.clone(),
                         state.settings.audio_description_save_folder.clone(),
@@ -1918,12 +2335,17 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     HFONT(0),
                     String::new(),
                     DEFAULT_AUDIO_DESCRIPTION_GEMINI_MODEL.to_string(),
+                    false,
+                    String::new(),
                     Language::default(),
                     TtsEngine::Edge,
                     String::new(),
+                    0,
+                    100,
                     2,
                     false,
                     true,
+                    false,
                     false,
                     String::new(),
                     default_audio_description_save_folder(),
@@ -2253,13 +2675,38 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     LPARAM(0),
                 );
 
+                let recognize_screen_text_checkbox = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.recognize_screen_text).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
+                    16,
+                    362,
+                    650,
+                    24,
+                    hwnd,
+                    HMENU(ID_RECOGNIZE_SCREEN_TEXT as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                SendMessageW(
+                    recognize_screen_text_checkbox,
+                    BM_SETCHECK,
+                    WPARAM(if recognize_screen_text {
+                        BST_CHECKED.0 as usize
+                    } else {
+                        0
+                    }),
+                    LPARAM(0),
+                );
+
                 let delete_video_after_checkbox = CreateWindowExW(
                     Default::default(),
                     WC_BUTTON,
                     PCWSTR(to_wide(&labels.delete_video_after).as_ptr()),
                     WS_CHILD | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     16,
-                    362,
+                    390,
                     650,
                     24,
                     hwnd,
@@ -2282,8 +2729,62 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     if save_project { SW_HIDE } else { SW_SHOW },
                 );
 
+                let ai_access_label = create_label(hwnd, &labels.ai_access, 16, 424, 120, hfont);
+                let ai_personal_radio = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.ai_personal).as_ptr()),
+                    WS_CHILD
+                        | WS_VISIBLE
+                        | WS_TABSTOP
+                        | WS_GROUP
+                        | WINDOW_STYLE(BS_AUTORADIOBUTTON as u32),
+                    136,
+                    418,
+                    230,
+                    26,
+                    hwnd,
+                    HMENU(ID_AI_PERSONAL as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let ai_sonarpad_radio = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.ai_sonarpad).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTORADIOBUTTON as u32),
+                    370,
+                    418,
+                    290,
+                    26,
+                    hwnd,
+                    HMENU(ID_AI_SONARPAD as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                SendMessageW(
+                    ai_personal_radio,
+                    BM_SETCHECK,
+                    WPARAM(if use_sonarpad_ai {
+                        0
+                    } else {
+                        BST_CHECKED.0 as usize
+                    }),
+                    LPARAM(0),
+                );
+                SendMessageW(
+                    ai_sonarpad_radio,
+                    BM_SETCHECK,
+                    WPARAM(if use_sonarpad_ai {
+                        BST_CHECKED.0 as usize
+                    } else {
+                        0
+                    }),
+                    LPARAM(0),
+                );
+
                 let gemini_api_key_label =
-                    create_label(hwnd, &labels.gemini_api_key, 16, 400, 210, hfont);
+                    create_label(hwnd, &labels.gemini_api_key, 16, 452, 210, hfont);
                 let gemini_api_key_edit = CreateWindowExW(
                     WS_EX_CLIENTEDGE,
                     WC_EDIT,
@@ -2293,7 +2794,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         | WS_TABSTOP
                         | WINDOW_STYLE(ES_AUTOHSCROLL as u32 | ES_PASSWORD as u32),
                     16,
-                    420,
+                    472,
                     420,
                     24,
                     hwnd,
@@ -2307,7 +2808,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.gemini_show_api_key).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     446,
-                    418,
+                    470,
                     220,
                     24,
                     hwnd,
@@ -2327,7 +2828,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.gemini_get_key).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     446,
-                    446,
+                    498,
                     220,
                     28,
                     hwnd,
@@ -2336,15 +2837,86 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     None,
                 );
 
+                let sonarpad_code_label =
+                    create_label(hwnd, &labels.sonarpad_code, 16, 452, 210, hfont);
+                let sonarpad_code_edit = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_EDIT,
+                    PCWSTR(to_wide(&sonarpad_ai_access_code).as_ptr()),
+                    WS_CHILD
+                        | WS_TABSTOP
+                        | WINDOW_STYLE(ES_AUTOHSCROLL as u32 | ES_PASSWORD as u32),
+                    16,
+                    472,
+                    420,
+                    24,
+                    hwnd,
+                    HMENU(ID_SONARPAD_CODE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let sonarpad_show_code_checkbox = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.sonarpad_show_code).as_ptr()),
+                    WS_CHILD | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
+                    446,
+                    470,
+                    220,
+                    24,
+                    hwnd,
+                    HMENU(ID_SONARPAD_SHOW_CODE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                SendMessageW(
+                    sonarpad_show_code_checkbox,
+                    BM_SETCHECK,
+                    WPARAM(0),
+                    LPARAM(0),
+                );
+                let sonarpad_balance_label =
+                    create_label(hwnd, &labels.sonarpad_balance, 16, 504, 120, hfont);
+                let sonarpad_balance_edit = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_EDIT,
+                    PCWSTR(to_wide(&labels.sonarpad_balance_unavailable).as_ptr()),
+                    WS_CHILD
+                        | WS_TABSTOP
+                        | WINDOW_STYLE(ES_AUTOHSCROLL as u32 | ES_READONLY as u32),
+                    136,
+                    500,
+                    180,
+                    24,
+                    hwnd,
+                    HMENU(ID_SONARPAD_BALANCE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let sonarpad_request_code_button = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.sonarpad_request_code).as_ptr()),
+                    WS_CHILD | WS_TABSTOP,
+                    446,
+                    498,
+                    220,
+                    28,
+                    hwnd,
+                    HMENU(ID_SONARPAD_REQUEST_CODE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+
                 let gemini_model_label =
-                    create_label(hwnd, &labels.gemini_model, 16, 456, 210, hfont);
+                    create_label(hwnd, &labels.gemini_model, 16, 534, 210, hfont);
                 let gemini_model_combo = CreateWindowExW(
                     WS_EX_CLIENTEDGE,
                     WC_COMBOBOXW,
                     PCWSTR::null(),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
                     16,
-                    476,
+                    554,
                     420,
                     220,
                     hwnd,
@@ -2363,7 +2935,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.gemini_refresh_models).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     446,
-                    474,
+                    552,
                     203,
                     28,
                     hwnd,
@@ -2372,14 +2944,18 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     None,
                 );
 
-                let engine_label = create_label(hwnd, &labels.engine, 16, 512, 200, hfont);
+                // Engine and voice are now configured exclusively from the "Regola voce"
+                // dialog. Keep these controls hidden as the internal source of truth so the
+                // existing generation/persistence path remains unchanged and regression-free.
+                let engine_label = create_label(hwnd, &labels.engine, 16, 590, 200, hfont);
+                ShowWindow(engine_label, SW_HIDE);
                 let engine_combo = CreateWindowExW(
                     Default::default(),
                     WC_COMBOBOXW,
                     PCWSTR::null(),
-                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                    WS_CHILD | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
                     16,
-                    532,
+                    610,
                     200,
                     150,
                     hwnd,
@@ -2402,14 +2978,15 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     LPARAM(0),
                 );
 
-                let voice_label = create_label(hwnd, &labels.voice, 236, 512, 200, hfont);
+                let voice_label = create_label(hwnd, &labels.voice, 236, 590, 200, hfont);
+                ShowWindow(voice_label, SW_HIDE);
                 let voice_combo = CreateWindowExW(
                     Default::default(),
                     WC_COMBOBOXW,
                     PCWSTR::null(),
-                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                    WS_CHILD | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
                     236,
-                    532,
+                    610,
                     413,
                     220,
                     hwnd,
@@ -2425,7 +3002,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR::null(),
                     WS_CHILD | WS_VISIBLE,
                     16,
-                    576,
+                    654,
                     650,
                     20,
                     hwnd,
@@ -2440,11 +3017,25 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.ready).as_ptr()),
                     WS_CHILD | WS_VISIBLE,
                     16,
-                    606,
+                    684,
                     650,
                     48,
                     hwnd,
                     HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let voice_settings_button = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.voice_settings).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                    16,
+                    758,
+                    110,
+                    30,
+                    hwnd,
+                    HMENU(ID_VOICE_SETTINGS as isize),
                     HINSTANCE(0),
                     None,
                 );
@@ -2453,9 +3044,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     WC_BUTTON,
                     PCWSTR(to_wide(&labels.modify_project).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-                    16,
-                    680,
-                    210,
+                    136,
+                    758,
+                    180,
                     30,
                     hwnd,
                     HMENU(ID_MODIFY_PROJECT as isize),
@@ -2467,9 +3058,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     WC_BUTTON,
                     PCWSTR(to_wide(&labels.resume_title).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-                    236,
-                    680,
-                    250,
+                    326,
+                    758,
+                    180,
                     30,
                     hwnd,
                     HMENU(ID_CONTINUE_INTERRUPTED as isize),
@@ -2481,8 +3072,8 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     WC_BUTTON,
                     PCWSTR(to_wide(&labels.start).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_DEFPUSHBUTTON as u32),
-                    496,
-                    680,
+                    516,
+                    758,
                     150,
                     30,
                     hwnd,
@@ -2496,7 +3087,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.cancel).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     390,
-                    720,
+                    798,
                     100,
                     30,
                     hwnd,
@@ -2511,7 +3102,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.close).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     510,
-                    720,
+                    798,
                     100,
                     30,
                     hwnd,
@@ -2525,6 +3116,15 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     output_label,
                     language_label,
                     verbosity_label,
+                    ai_access_label,
+                    ai_personal_radio,
+                    ai_sonarpad_radio,
+                    sonarpad_code_label,
+                    sonarpad_code_edit,
+                    sonarpad_show_code_checkbox,
+                    sonarpad_balance_label,
+                    sonarpad_balance_edit,
+                    sonarpad_request_code_button,
                     gemini_api_key_label,
                     gemini_model_label,
                     engine_label,
@@ -2537,6 +3137,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     verbosity_combo,
                     extended_checkbox,
                     recognize_characters_checkbox,
+                    recognize_screen_text_checkbox,
                     keep_character_catalog_checkbox,
                     character_catalog_label,
                     character_catalog_combo,
@@ -2552,7 +3153,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     engine_combo,
                     voice_combo,
                     status,
+                    voice_settings_button,
                     start_button,
+                    continue_interrupted_button,
                     cancel_button,
                     close_button,
                     modify_project_button,
@@ -2572,6 +3175,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     verbosity_combo,
                     extended_checkbox,
                     recognize_characters_checkbox,
+                    recognize_screen_text_checkbox,
                     keep_character_catalog_checkbox,
                     character_catalog_label,
                     character_catalog_combo,
@@ -2580,16 +3184,30 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     character_catalogs,
                     save_project_checkbox,
                     delete_video_after_checkbox,
+                    ai_personal_radio,
+                    ai_sonarpad_radio,
+                    sonarpad_code_label,
+                    sonarpad_code_edit,
+                    sonarpad_show_code_checkbox,
+                    sonarpad_balance_label,
+                    sonarpad_balance_edit,
+                    sonarpad_request_code_button,
+                    gemini_api_key_label,
                     gemini_api_key_edit,
                     gemini_show_api_key_checkbox,
+                    gemini_get_key_button,
                     gemini_model_label,
                     gemini_model_combo,
                     gemini_refresh_models_button,
                     engine_combo,
                     voice_combo,
+                    voice_settings_button,
+                    tts_rate,
+                    tts_volume,
                     progress,
                     status,
                     start_button,
+                    continue_interrupted_button,
                     cancel_button,
                     close_button,
                     setup_controls: vec![
@@ -2609,6 +3227,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         verbosity_combo,
                         extended_checkbox,
                         recognize_characters_checkbox,
+                        recognize_screen_text_checkbox,
                         keep_character_catalog_checkbox,
                         character_catalog_label,
                         character_catalog_combo,
@@ -2616,6 +3235,16 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         character_catalog_name_edit,
                         save_project_checkbox,
                         delete_video_after_checkbox,
+                        ai_access_label,
+                        ai_personal_radio,
+                        ai_sonarpad_radio,
+                        sonarpad_code_label,
+                        sonarpad_code_edit,
+                        sonarpad_show_code_checkbox,
+                        sonarpad_balance_label,
+                        sonarpad_balance_edit,
+                        sonarpad_request_code_button,
+                        gemini_api_key_label,
                         gemini_api_key_edit,
                         gemini_show_api_key_checkbox,
                         gemini_get_key_button,
@@ -2625,6 +3254,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         voice_combo,
                         modify_project_button,
                         continue_interrupted_button,
+                        voice_settings_button,
                         start_button,
                         close_button,
                     ],
@@ -2645,11 +3275,17 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     state_pointer as isize,
                 );
                 update_character_catalog_visibility(&*state_pointer);
+                update_ai_access_visibility(&*state_pointer);
+                update_sonarpad_code_visibility(&*state_pointer);
+                if using_sonarpad_ai(&*state_pointer) {
+                    refresh_sonarpad_balance(hwnd, &*state_pointer);
+                }
                 set_text(status, &labels.loading_voices);
                 load_voices(hwnd, tts_engine);
-                if !get_text((*state_pointer).gemini_api_key_edit)
-                    .trim()
-                    .is_empty()
+                if !using_sonarpad_ai(&*state_pointer)
+                    && !get_text((*state_pointer).gemini_api_key_edit)
+                        .trim()
+                        .is_empty()
                 {
                     crate::log_debug(
                         "Audio description: refreshing full Gemini model list on window open",
@@ -2694,14 +3330,53 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                             SetForegroundWindow(hwnd);
                         }
                     }
+                    ID_AI_PERSONAL | ID_AI_SONARPAD if !state.running => {
+                        let use_service = id == ID_AI_SONARPAD;
+                        SendMessageW(
+                            state.ai_personal_radio,
+                            BM_SETCHECK,
+                            WPARAM((!use_service) as usize),
+                            LPARAM(0),
+                        );
+                        SendMessageW(
+                            state.ai_sonarpad_radio,
+                            BM_SETCHECK,
+                            WPARAM(use_service as usize),
+                            LPARAM(0),
+                        );
+                        update_ai_access_visibility(state);
+                        persist_audio_description_preferences(state);
+                        if use_service {
+                            refresh_sonarpad_balance(hwnd, state);
+                        }
+                    }
+                    ID_SONARPAD_SHOW_CODE if !state.running => {
+                        update_sonarpad_code_visibility(state);
+                    }
+                    ID_SONARPAD_CODE if notification == EN_KILLFOCUS && !state.running => {
+                        persist_audio_description_preferences(state);
+                        refresh_sonarpad_balance(hwnd, state);
+                    }
+                    ID_SONARPAD_REQUEST_CODE if !state.running => {
+                        if let Err(err) = crate::audio_utils::open_url_in_browser(
+                            "https://sonarpad.com/contact.php",
+                        ) {
+                            eprintln!(
+                                "Audio description: unable to open Sonarpad AI request page: {err}"
+                            );
+                        }
+                    }
                     ID_GEMINI_SHOW_API_KEY if !state.running => {
                         update_gemini_api_key_visibility(state);
                     }
                     ID_GEMINI_GET_KEY if !state.running => {
                         crate::app_windows::options_window::open_gemini_api_key_page();
                     }
-                    ID_GEMINI_REFRESH_MODELS if !state.running => {
+                    ID_GEMINI_REFRESH_MODELS if !state.running && !using_sonarpad_ai(state) => {
                         refresh_gemini_models(hwnd, state);
+                    }
+                    ID_VOICE_SETTINGS if !state.running => {
+                        open_audio_description_voice_settings(hwnd, state);
                     }
                     ID_ENGINE if notification == CBN_SELCHANGE => {
                         state.preferred_voice.clear();
@@ -2748,6 +3423,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         persist_audio_description_preferences(state);
                     }
                     ID_DELETE_VIDEO_AFTER if !state.running => {
+                        persist_audio_description_preferences(state);
+                    }
+                    ID_RECOGNIZE_SCREEN_TEXT if !state.running => {
                         persist_audio_description_preferences(state);
                     }
                     ID_MODIFY_PROJECT if !state.running => {
@@ -2808,10 +3486,11 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         persist_gemini_settings(state.parent, &api_key, &model);
                     }
                     Err(error) => {
-                        show_error(
-                            state.parent,
-                            state.language,
+                        show_audio_description_error_and_focus(
+                            hwnd,
+                            state,
                             &labels.gemini_error_models.replace("{error}", &error),
+                            state.gemini_refresh_models_button,
                         );
                     }
                 }
@@ -3037,6 +3716,46 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 );
                 LRESULT(0)
             }
+            WM_AD_SONARPAD_BALANCE => {
+                let payload = lparam.0 as *mut SonarpadBalancePayload;
+                if payload.is_null() {
+                    return LRESULT(0);
+                }
+                let SonarpadBalancePayload {
+                    access_code,
+                    result,
+                } = *Box::from_raw(payload);
+                let pointer =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut WindowState;
+                if pointer.is_null() {
+                    return LRESULT(0);
+                }
+                let state = &mut *pointer;
+                if !using_sonarpad_ai(state)
+                    || get_text(state.sonarpad_code_edit).trim() != access_code
+                {
+                    return LRESULT(0);
+                }
+                match result {
+                    Ok(balance) => {
+                        set_text(
+                            state.sonarpad_balance_edit,
+                            &format_sonarpad_balance(state.language, balance),
+                        );
+                    }
+                    Err(err) => {
+                        crate::log_debug(&format!(
+                            "Audio description: Sonarpad AI balance unavailable: {err}"
+                        ));
+                        set_text(
+                            state.sonarpad_balance_edit,
+                            &labels(state.language).sonarpad_balance_unavailable,
+                        );
+                    }
+                }
+                LRESULT(0)
+            }
             WM_AD_DONE => {
                 let payload = lparam.0 as *mut AudioDescriptionDonePayload;
                 if payload.is_null() {
@@ -3056,6 +3775,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 state.running = false;
                 state.cancel = None;
                 set_controls_enabled(state, true);
+                if using_sonarpad_ai(state) {
+                    refresh_sonarpad_balance(hwnd, state);
+                }
                 let labels = labels(state.language);
                 match result {
                     Ok(outcome) => {
@@ -3150,7 +3872,12 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     }
                     Err(error) => {
                         set_text(state.status, &error);
-                        show_error(state.parent, state.language, &error);
+                        show_audio_description_error_and_focus(
+                            hwnd,
+                            state,
+                            &error,
+                            state.start_button,
+                        );
                     }
                 }
                 LRESULT(0)
@@ -3244,6 +3971,16 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         state.recognize_characters_checkbox,
                         BM_SETCHECK,
                         WPARAM(if resume.recognize_characters {
+                            BST_CHECKED.0 as usize
+                        } else {
+                            0
+                        }),
+                        LPARAM(0),
+                    );
+                    SendMessageW(
+                        state.recognize_screen_text_checkbox,
+                        BM_SETCHECK,
+                        WPARAM(if resume.recognize_screen_text {
                             BST_CHECKED.0 as usize
                         } else {
                             0
@@ -3377,6 +4114,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     }
                     set_text((*pointer).status, &labels((*pointer).language).canceling);
                     return LRESULT(0);
+                }
+                if !pointer.is_null() {
+                    persist_audio_description_preferences(&*pointer);
                 }
                 crate::log_if_err!(
                     DestroyWindow(hwnd),

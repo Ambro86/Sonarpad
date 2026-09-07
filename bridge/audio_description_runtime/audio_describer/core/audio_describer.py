@@ -520,7 +520,16 @@ def _build_video_part(video_file_obj, start_offset_sec=None, end_offset_sec=None
         )
         return video_part
 
-    # No metadata needed - return raw file object (SDK handles conversion)
+    # The Google SDK can convert its own File object automatically. The
+    # Sonarpad service deliberately uses a tiny provider-neutral file object,
+    # so build an explicit FileData Part while preserving the personal-key path.
+    if gemini.using_sonarpad_service():
+        return types.Part(
+            file_data=types.FileData(
+                file_uri=video_file_obj.uri,
+                mime_type=video_file_obj.mime_type,
+            )
+        )
     return video_file_obj
 
 
@@ -589,7 +598,11 @@ def _prepare_video_for_gemini(client, video_path, status_callback=None,
 
     # Prefer inline for small full chunks. Time-sliced fallback requests use the
     # Files API so Gemini's videoMetadata offsets are guaranteed to be honored.
-    if size <= _INLINE_VIDEO_MAX_BYTES and not has_time_offsets:
+    if (
+        size <= _INLINE_VIDEO_MAX_BYTES
+        and not has_time_offsets
+        and not gemini.using_sonarpad_service()
+    ):
         _status(_("Sending video inline to AI (%s MB)...") % f"{size / (1024 * 1024):.1f}")
         try:
             part = _build_inline_video_part(video_path, start_offset_sec, end_offset_sec)
@@ -605,7 +618,11 @@ def _prepare_video_for_gemini(client, video_path, status_callback=None,
         part = _build_video_part(video_file_obj, start_offset_sec, end_offset_sec)
         return part, video_file_obj
     except GeminiAPIError as e:
-        if size <= _INLINE_FALLBACK_MAX_BYTES and not has_time_offsets:
+        if (
+            size <= _INLINE_FALLBACK_MAX_BYTES
+            and not has_time_offsets
+            and not gemini.using_sonarpad_service()
+        ):
             _status(
                 _("Gemini file processing failed; retrying with inline video (%s MB)...")
                 % f"{size / (1024 * 1024):.1f}"
@@ -2854,6 +2871,14 @@ def _suppress_repeated_leading_character_names(
 
 def _extract_descriptions_and_glossary_from_dict(data, status_update_callback):
     """Extracts descriptions and glossary from a parsed JSON dict."""
+    if bool(config_model.get_setting("recognize_screen_text")):
+        # Diagnostic metadata only: never creates narration or changes its timing.
+        screen_text = data.get("on_screen_text")
+        if isinstance(screen_text, list):
+            app_logger.info("Gemini on-screen text audit (response timeline): %s",
+                            json.dumps(screen_text, ensure_ascii=False))
+        else:
+            app_logger.info("Gemini on-screen text audit: missing or invalid metadata")
     descriptions_raw = data.get("audio_descriptions", [])
     descriptions = []
     if isinstance(descriptions_raw, list):
@@ -3026,6 +3051,12 @@ def _request_json_repair_from_gemini(
         if enable_glossary else
         '1. "character_glossary": an empty array. Do not identify or name characters.\n'
     )
+    screen_text_repair_rule = (
+        '3. "on_screen_text": array of objects { "text", "visual_evidence_time_seconds", '
+        '"narratively_relevant" }. Preserve complete entries from the fragment, or use [] '
+        'if unavailable. This is metadata only; do not turn it into extra narration.\n'
+        if bool(config_model.get_setting("recognize_screen_text")) else ""
+    )
     system_instruction = (
         "You are a JSON repair assistant for an audio-description app.\n"
         "Output ONLY one valid JSON object (no markdown fences, no commentary) with exactly these keys:\n"
@@ -3033,6 +3064,7 @@ def _request_json_repair_from_gemini(
         + '2. "audio_descriptions": array of objects { "start_time_mmss", "end_time_mmss", '
         '"visual_evidence_time_seconds", "description_text" } using MM:SS or MM:SS.ms times. '
         'Preserve the exact numeric visual_evidence_time_seconds value for every recovered description.\n'
+        + screen_text_repair_rule +
         "Rules:\n"
         "- The JSON MUST parse with a standard JSON parser (closed braces/brackets, escaped quotes).\n"
         "- If the previous output was truncated, keep every complete description you can recover "
@@ -3329,12 +3361,45 @@ def _build_unified_prompts(user_prompt, model_name_to_use, dialogue_free_windows
     time, do not reuse it; choose a fact that is actually visible there instead.
 """
 
+    output_keys = 'two top-level keys: "character_glossary" and "audio_descriptions"'
+    screen_text_schema = ""
+    screen_text_example = ""
+    if bool(config_model.get_setting("recognize_screen_text")):
+        output_keys = 'three top-level keys: "character_glossary", "audio_descriptions", and "on_screen_text"'
+        screen_text_schema = """
+3.  **"on_screen_text":** A compact array recording distinct legible text in the current video
+    chunk, including text visible during dialogue. Each object must contain "text" (the actual
+    visible words in their original language), "visual_evidence_time_seconds" (the exact visible
+    instant, using the same local/absolute timeline requested for descriptions), and
+    "narratively_relevant" (a JSON boolean). Exclude decorative text, persistent watermarks,
+    routine credits, and subtitles that only repeat speech. Never guess unreadable words.
+    Return [] if no qualifying text is legible. This array is evidence metadata, not narration.
+    For each relevant entry, include its readable content in audio_descriptions when it is
+    visible inside an authorized dialogue-free window and fits that window's word budget.
+    Otherwise keep it only in on_screen_text. Never move it to a later silence, overlap dialogue,
+    or change any existing timing, visual-grounding, or mandatory-slot rules to accommodate it.
+"""
+        screen_text_example = ',\n  "on_screen_text": []'
+        core_directives += """9.  **READ NARRATIVELY IMPORTANT ON-SCREEN TEXT WHEN IT IS VISUALLY PRESENT:** Treat visible text
+    as visual information when it adds story or scene information that the soundtrack does not
+    already provide. Prioritize time jumps (for example "Three years later"), dates, locations,
+    title cards, letters or messages, signs, labels, and a logo or brand only when it is relevant
+    to understanding the scene. Render the meaning naturally in the target language when useful.
+    When describing important, legible text, include what it says rather than merely saying
+    that a title, sign, or message is visible. Never guess words that you cannot read.
+    Do NOT read decorative text, persistent channel logos/watermarks, routine credits, or subtitles/
+    closed captions that merely repeat audible dialogue. This rule NEVER overrides dialogue
+    protection: the resulting description must still fit completely inside an authorized
+    dialogue-free window, and if no such window is available, omit the text rather than speaking
+    over dialogue. The text must be visible at the reported `visual_evidence_time_seconds`.
+"""
+
     # The main system instruction, now asking for a unified JSON object.
     system_instruction = f"""
 {system_mission}
 
 **OUTPUT FORMAT (Strict JSON):**
-Your entire output MUST be a single JSON object with two top-level keys: "character_glossary" and "audio_descriptions".
+Your entire output MUST be a single JSON object with {output_keys}.
 
 {glossary_schema}
 
@@ -3344,14 +3409,14 @@ Your entire output MUST be a single JSON object with two top-level keys: "charac
     *   `"visual_evidence_time_seconds"`: A JSON number giving the exact second, on the same timeline as the timestamps above, where the described visual fact is directly visible. It must fall between this object's start and end times.
     *   `"description_text"`: The concise description text, written entirely in {target_language_name} and following all core directives.
 
-{core_directives}
+{screen_text_schema}{core_directives}
 
 **EXAMPLE OUTPUT:**
 {{
   "character_glossary": {example_glossary_json},
   "audio_descriptions": [
     {{"start_time_mmss": "00:10.500", "end_time_mmss": "00:12.000", "visual_evidence_time_seconds": 11.2, "description_text": {json.dumps(description_example, ensure_ascii=False)}}}
-  ]
+  ]{screen_text_example}
 }}
 """
 

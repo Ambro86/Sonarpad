@@ -92,6 +92,18 @@ class AudioDescriptionResumeTests(unittest.TestCase):
         self.assertNotIn("post_boxed_message(hwnd, WM_AD_SET_RESUME", resume)
 
 
+
+    def test_screen_text_preference_is_saved_in_checkpoint_and_restored_on_resume(self):
+        host = (ROOT / "src" / "audio_description.rs").read_text(encoding="utf-8")
+        window = (ROOT / "src" / "app_windows" / "audio_description_window.rs").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("recognize_screen_text: job.recognize_screen_text", host)
+        self.assertIn("recognize_screen_text: checkpoint.recognize_screen_text", host)
+        self.assertIn("pub recognize_screen_text: bool", host)
+        self.assertIn("resume.recognize_screen_text", window)
+        self.assertIn("state.recognize_screen_text_checkbox", window)
+
     def test_resume_model_label_is_localized_in_all_windows_locales(self):
         i18n_dir = ROOT / "i18n"
         locales = [

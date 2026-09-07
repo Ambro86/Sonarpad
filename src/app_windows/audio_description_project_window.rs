@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -35,9 +36,10 @@ use windows::core::{PCWSTR, PWSTR};
 use crate::accessibility::to_wide;
 use crate::audio_description::{
     AudioDescriptionCallbacks, AudioDescriptionOutcome, AudioDescriptionProject,
-    AudioDescriptionProjectDescription, AudioDescriptionProjectEditError,
-    AudioDescriptionProjectEditOutcome, AudioDescriptionProjectPreviewAudio,
-    AudioDescriptionProjectVoiceError, apply_audio_description_project_edit,
+    AudioDescriptionProjectBatchEditError, AudioDescriptionProjectDescription,
+    AudioDescriptionProjectEditError, AudioDescriptionProjectEditOutcome,
+    AudioDescriptionProjectPreviewAudio, AudioDescriptionProjectVoiceError,
+    AudioDescriptionProjectVoiceSettings, apply_audio_description_project_batch_edits,
     change_audio_description_project_voice, delete_audio_description_project_description,
     load_audio_description_project, reexport_audio_description_project,
     synthesize_audio_description_project_preview,
@@ -63,6 +65,9 @@ const ID_EXPORT_SRT: usize = 9682;
 const ID_EXPORT_VTT: usize = 9683;
 const ID_SEARCH: usize = 9684;
 const ID_SEARCH_BUTTON: usize = 9685;
+const ID_RATE: usize = 9686;
+const ID_VOLUME: usize = 9687;
+const ID_TEST_VOICE: usize = 9688;
 
 const WM_PROJECT_PROGRESS: u32 = WM_APP + 192;
 const WM_PROJECT_STATUS: u32 = WM_APP + 193;
@@ -98,6 +103,9 @@ struct Labels {
     engine: String,
     voice: String,
     change_voice: String,
+    speed: String,
+    volume: String,
+    test_voice: String,
     apply: String,
     search: String,
     search_button: String,
@@ -132,7 +140,9 @@ struct Labels {
     voice_check_error: String,
     edit_saved_title: String,
     edit_saved: String,
+    edit_saved_multiple: String,
     apply_before_export: String,
+    unsaved_close: String,
 }
 
 struct WindowState {
@@ -146,6 +156,9 @@ struct WindowState {
     details: HWND,
     engine_combo: HWND,
     voice_combo: HWND,
+    rate_combo: HWND,
+    volume_combo: HWND,
+    test_voice_button: HWND,
     change_voice_button: HWND,
     voices: Vec<VoiceInfo>,
     progress: HWND,
@@ -160,6 +173,7 @@ struct WindowState {
     cancel_button: HWND,
     close_button: HWND,
     selected_index: Option<usize>,
+    drafts: HashMap<usize, String>,
     running: bool,
     cancel: Option<Arc<AtomicBool>>,
     preview_cancel: Option<Arc<AtomicBool>>,
@@ -185,6 +199,9 @@ fn labels(language: Language) -> Labels {
         engine: i18n::tr(language, "audio_description.engine"),
         voice: i18n::tr(language, "audio_description.voice"),
         change_voice: i18n::tr(language, "audio_description.project.change_voice"),
+        speed: i18n::tr(language, "tts_tuning.label_speed"),
+        volume: i18n::tr(language, "tts_tuning.label_volume"),
+        test_voice: i18n::tr(language, "audio_description.voice_settings.test"),
         apply: i18n::tr(language, "audio_description.project.apply"),
         search: i18n::tr(language, "audio_description.project.search"),
         search_button: i18n::tr(language, "audio_description.project.search_button"),
@@ -231,7 +248,9 @@ fn labels(language: Language) -> Labels {
         voice_check_error: i18n::tr(language, "audio_description.project.voice_check_error"),
         edit_saved_title: i18n::tr(language, "audio_description.project.edit_saved_title"),
         edit_saved: i18n::tr(language, "audio_description.project.edit_saved"),
+        edit_saved_multiple: i18n::tr(language, "audio_description.project.edit_saved_multiple"),
         apply_before_export: i18n::tr(language, "audio_description.project.apply_before_export"),
+        unsaved_close: i18n::tr(language, "audio_description.project.unsaved_close"),
     }
 }
 
@@ -263,6 +282,78 @@ fn engine_combo_index(engine: TtsEngine) -> usize {
         TtsEngine::Sapi4 => 2,
         TtsEngine::Google => 3,
     }
+}
+
+fn fill_project_value_combo(combo: HWND, items: &[(String, i32)], selected: i32) {
+    unsafe { SendMessageW(combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0)) };
+    let mut selected_index = 0usize;
+    let mut best_distance = i32::MAX;
+    for (index, (label, value)) in items.iter().enumerate() {
+        add_combo_item(combo, label);
+        let distance = (*value - selected).abs();
+        if distance < best_distance {
+            selected_index = index;
+            best_distance = distance;
+        }
+    }
+    if !items.is_empty() {
+        unsafe {
+            SendMessageW(combo, CB_SETCURSEL, WPARAM(selected_index), LPARAM(0));
+        }
+    }
+}
+
+fn project_combo_value(combo: HWND, items: &[(String, i32)], fallback: i32) -> i32 {
+    let selected = unsafe { SendMessageW(combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0 };
+    if selected < 0 {
+        return fallback;
+    }
+    items
+        .get(selected as usize)
+        .map(|(_, value)| *value)
+        .unwrap_or(fallback)
+}
+
+fn selected_project_voice(state: &WindowState) -> Option<String> {
+    let selected = unsafe { SendMessageW(state.voice_combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0 };
+    (selected >= 0)
+        .then(|| state.voices.get(selected as usize))
+        .flatten()
+        .map(|voice| voice.short_name.clone())
+}
+
+fn selected_project_voice_settings(state: &WindowState) -> Option<(TtsEngine, String, i32, i32)> {
+    let voice = selected_project_voice(state)?;
+    let rate_items = super::audio_description_voice_window::rate_items(state.language);
+    let volume_items = super::audio_description_voice_window::volume_items(state.language);
+    Some((
+        engine_from_combo(state.engine_combo),
+        voice,
+        project_combo_value(state.rate_combo, &rate_items, state.project.tts_rate),
+        project_combo_value(state.volume_combo, &volume_items, state.project.tts_volume),
+    ))
+}
+
+fn restore_project_voice_tuning(state: &WindowState) {
+    let rate_items = super::audio_description_voice_window::rate_items(state.language);
+    let volume_items = super::audio_description_voice_window::volume_items(state.language);
+    fill_project_value_combo(state.rate_combo, &rate_items, state.project.tts_rate);
+    fill_project_value_combo(state.volume_combo, &volume_items, state.project.tts_volume);
+}
+
+fn test_project_voice(state: &WindowState) {
+    let Some((engine, voice, rate, volume)) = selected_project_voice_settings(state) else {
+        return;
+    };
+    super::audio_description_voice_window::preview_voice_settings(
+        state.parent,
+        state.language,
+        engine,
+        voice,
+        rate,
+        state.project.tts_pitch,
+        volume,
+    );
 }
 
 fn load_project_voices(hwnd: HWND, engine: TtsEngine) {
@@ -349,16 +440,19 @@ fn refill_project_voice_combo(
     unsafe {
         if state.voices.is_empty() {
             EnableWindow(state.voice_combo, false);
+            EnableWindow(state.test_voice_button, false);
             EnableWindow(state.change_voice_button, false);
         } else {
             SendMessageW(state.voice_combo, CB_SETCURSEL, WPARAM(selected), LPARAM(0));
             EnableWindow(state.voice_combo, !state.running);
+            EnableWindow(state.test_voice_button, !state.running);
             EnableWindow(state.change_voice_button, !state.running);
         }
     }
 }
 
 fn restore_project_voice_selection(hwnd: HWND, state: &mut WindowState) {
+    restore_project_voice_tuning(state);
     let selected_engine = engine_from_combo(state.engine_combo);
     unsafe {
         SendMessageW(
@@ -373,6 +467,7 @@ fn restore_project_voice_selection(hwnd: HWND, state: &mut WindowState) {
         unsafe {
             SendMessageW(state.voice_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
             EnableWindow(state.voice_combo, false);
+            EnableWindow(state.test_voice_button, false);
             EnableWindow(state.change_voice_button, false);
         }
         set_text(state.status, &labels(state.language).loading_voices);
@@ -556,21 +651,86 @@ fn format_time(seconds: f64) -> String {
     format!("{hours:02}:{minutes:02}:{secs:02}.{millis:03}")
 }
 
-fn row_text(project: &AudioDescriptionProject, index: usize, labels: &Labels) -> String {
+fn row_text(
+    project: &AudioDescriptionProject,
+    index: usize,
+    labels: &Labels,
+    text_override: Option<&str>,
+) -> String {
     let description = &project.descriptions[index];
     let kind = if description.extended_pause {
         &labels.extended
     } else {
         &labels.normal
     };
+    let text = text_override.unwrap_or(&description.text);
     format!(
         "{}. {} - {} - {} - {}",
         index + 1,
         format_time(description.output_start_sec),
         format_time(description.output_end_sec),
         kind,
-        description.text.replace(['\r', '\n'], " ")
+        text.replace(['\r', '\n'], " ")
     )
+}
+
+fn project_description_id(state: &WindowState, index: usize) -> Option<usize> {
+    state
+        .project
+        .descriptions
+        .get(index)
+        .map(|description| description.id)
+}
+
+fn draft_text_for_index(state: &WindowState, index: usize) -> String {
+    let Some(description) = state.project.descriptions.get(index) else {
+        return String::new();
+    };
+    state
+        .drafts
+        .get(&description.id)
+        .cloned()
+        .unwrap_or_else(|| description.text.clone())
+}
+
+fn capture_current_draft(state: &mut WindowState) {
+    let Some(index) = state.selected_index else {
+        return;
+    };
+    let Some(description) = state.project.descriptions.get(index) else {
+        return;
+    };
+    let description_id = description.id;
+    let original = description.text.trim();
+    let current = get_text(state.edit).trim().to_string();
+    if current == original {
+        state.drafts.remove(&description_id);
+    } else {
+        state.drafts.insert(description_id, current);
+    }
+}
+
+fn select_project_description(state: &mut WindowState, project_index: usize) {
+    if let Some(list_index) = state
+        .display_order
+        .iter()
+        .position(|index| *index == project_index)
+    {
+        unsafe {
+            SendMessageW(state.list, LB_SETCURSEL, WPARAM(list_index), LPARAM(0));
+        }
+    }
+    state.selected_index = Some(project_index);
+    set_text(state.edit, &draft_text_for_index(state, project_index));
+    set_text(
+        state.details,
+        &details_text(
+            &state.project,
+            project_index,
+            state.language,
+            &labels(state.language),
+        ),
+    );
 }
 
 fn details_text(
@@ -629,7 +789,15 @@ fn refill_list(state: &mut WindowState, select_project_index: usize) {
     unsafe {
         SendMessageW(state.list, LB_RESETCONTENT, WPARAM(0), LPARAM(0));
         for project_index in &state.display_order {
-            let row = to_wide(&row_text(&state.project, *project_index, &labels));
+            let override_text = project_description_id(state, *project_index)
+                .and_then(|id| state.drafts.get(&id))
+                .map(String::as_str);
+            let row = to_wide(&row_text(
+                &state.project,
+                *project_index,
+                &labels,
+                override_text,
+            ));
             SendMessageW(
                 state.list,
                 LB_ADDSTRING,
@@ -646,7 +814,7 @@ fn refill_list(state: &mut WindowState, select_project_index: usize) {
             let project_index = state.display_order[list_index];
             SendMessageW(state.list, LB_SETCURSEL, WPARAM(list_index), LPARAM(0));
             state.selected_index = Some(project_index);
-            set_text(state.edit, &state.project.descriptions[project_index].text);
+            set_text(state.edit, &draft_text_for_index(state, project_index));
             set_text(
                 state.details,
                 &details_text(&state.project, project_index, state.language, &labels),
@@ -660,6 +828,7 @@ fn refill_list(state: &mut WindowState, select_project_index: usize) {
 }
 
 fn apply_description_search(state: &mut WindowState) {
+    capture_current_draft(state);
     let query = get_text(state.search_edit);
     let query = query.trim().to_lowercase();
     let current = state.selected_index.unwrap_or(0);
@@ -691,6 +860,9 @@ fn selected_edit_text(state: &WindowState) -> Result<(usize, String), String> {
 }
 
 fn has_unapplied_edit(state: &WindowState) -> bool {
+    if !state.drafts.is_empty() {
+        return true;
+    }
     let Some(index) = state.selected_index else {
         return false;
     };
@@ -698,7 +870,7 @@ fn has_unapplied_edit(state: &WindowState) -> bool {
         .project
         .descriptions
         .get(index)
-        .is_some_and(|description| get_text(state.edit).trim() != description.text)
+        .is_some_and(|description| get_text(state.edit).trim() != description.text.trim())
 }
 
 fn stop_preview(state: &mut WindowState) {
@@ -882,19 +1054,17 @@ fn play_modified_preview(
 }
 
 fn play_selected_description(hwnd: HWND, state: &mut WindowState) {
-    let Some(index) = state.selected_index else {
-        show_project_error(hwnd, state.language, &labels(state.language).no_selection);
-        return;
+    let (index, draft) = match selected_edit_text(state) {
+        Ok(values) => values,
+        Err(error) => {
+            show_project_error(hwnd, state.language, &error);
+            return;
+        }
     };
     let Some(description) = state.project.descriptions.get(index).cloned() else {
         show_project_error(hwnd, state.language, &labels(state.language).no_selection);
         return;
     };
-    let draft = get_text(state.edit).trim().to_string();
-    if draft.is_empty() {
-        show_project_error(hwnd, state.language, &labels(state.language).empty_text);
-        return;
-    }
     if draft != description.text || description.rendered_text != description.text {
         start_draft_preview(hwnd, state, index, draft);
     } else {
@@ -903,6 +1073,7 @@ fn play_selected_description(hwnd: HWND, state: &mut WindowState) {
 }
 
 fn delete_selected_description(hwnd: HWND, state: &mut WindowState) {
+    capture_current_draft(state);
     let Some(index) = state.selected_index else {
         show_error(
             state.parent,
@@ -919,6 +1090,7 @@ fn delete_selected_description(hwnd: HWND, state: &mut WindowState) {
         );
         return;
     }
+    let deleted_description_id = project_description_id(state, index);
     let language_labels = labels(state.language);
     let text = to_wide(&language_labels.delete_confirm);
     let title = to_wide(&language_labels.title);
@@ -936,6 +1108,9 @@ fn delete_selected_description(hwnd: HWND, state: &mut WindowState) {
     stop_preview(state);
     match delete_audio_description_project_description(&state.project_path, &state.project, index) {
         Ok(project) => {
+            if let Some(description_id) = deleted_description_id {
+                state.drafts.remove(&description_id);
+            }
             state.project = project;
             let next = index.min(state.project.descriptions.len().saturating_sub(1));
             refill_list(state, next);
@@ -1011,6 +1186,9 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
             state.search_edit,
             state.search_button,
             state.engine_combo,
+            state.rate_combo,
+            state.volume_combo,
+            state.test_voice_button,
             state.export_button,
             state.export_srt_button,
             state.export_vtt_button,
@@ -1020,6 +1198,7 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
         }
         let voices_available = !state.voices.is_empty();
         EnableWindow(state.voice_combo, enabled && voices_available);
+        EnableWindow(state.test_voice_button, enabled && voices_available);
         EnableWindow(state.change_voice_button, enabled && voices_available);
         EnableWindow(state.cancel_button, !enabled);
     }
@@ -1108,7 +1287,7 @@ pub fn open(parent: HWND, owner: HWND, project_path: &Path) {
             140,
             80,
             820,
-            760,
+            830,
             owner,
             HMENU(0),
             hinstance,
@@ -1143,19 +1322,28 @@ unsafe extern "system" fn window_proc(
 }
 
 fn start_apply(hwnd: HWND, state: &mut WindowState) {
-    let (index, text) = match selected_edit_text(state) {
-        Ok(values) => values,
-        Err(error) => {
-            show_error(state.parent, state.language, &error);
-            return;
+    capture_current_draft(state);
+
+    let mut edits = Vec::new();
+    let mut empty_index = None;
+    for (index, description) in state.project.descriptions.iter().enumerate() {
+        if let Some(text) = state.drafts.get(&description.id) {
+            if text.trim().is_empty() {
+                empty_index = Some(index);
+                break;
+            }
+            edits.push((index, text.clone()));
         }
-    };
-    if state
-        .project
-        .descriptions
-        .get(index)
-        .is_some_and(|description| description.text == text)
-    {
+    }
+    if let Some(index) = empty_index {
+        refill_list(state, index);
+        show_project_error(hwnd, state.language, &labels(state.language).empty_text);
+        unsafe {
+            SetFocus(state.edit);
+        }
+        return;
+    }
+    if edits.is_empty() {
         set_text(state.status, &labels(state.language).edit_saved);
         crate::accessibility::screen_reader_speak(&labels(state.language).edit_saved);
         return;
@@ -1173,24 +1361,31 @@ fn start_apply(hwnd: HWND, state: &mut WindowState) {
 
     thread::spawn(move || {
         let result =
-            apply_audio_description_project_edit(&project_path, &project, index, &text, cancel);
+            apply_audio_description_project_batch_edits(&project_path, &project, &edits, cancel);
         post_boxed_message(hwnd, WM_PROJECT_APPLY_DONE, WPARAM(0), Box::new(result));
     });
 }
 
 fn start_voice_change(hwnd: HWND, state: &mut WindowState) {
-    let selected = unsafe { SendMessageW(state.voice_combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0 };
-    let Some(candidate) = (selected >= 0)
-        .then(|| state.voices.get(selected as usize))
-        .flatten()
-        .map(|voice| voice.short_name.clone())
+    if has_unapplied_edit(state) {
+        show_project_error(
+            hwnd,
+            state.language,
+            &labels(state.language).apply_before_export,
+        );
+        restore_project_voice_selection(hwnd, state);
+        return;
+    }
+    let Some((candidate_engine, candidate, candidate_rate, candidate_volume)) =
+        selected_project_voice_settings(state)
     else {
         restore_project_voice_selection(hwnd, state);
         return;
     };
-    let candidate_engine = engine_from_combo(state.engine_combo);
     if candidate_engine == state.project.tts_engine
         && candidate.eq_ignore_ascii_case(&state.project.tts_voice)
+        && candidate_rate == state.project.tts_rate
+        && candidate_volume == state.project.tts_volume
     {
         return;
     }
@@ -1208,11 +1403,16 @@ fn start_voice_change(hwnd: HWND, state: &mut WindowState) {
     thread::spawn(move || {
         let progress_hwnd = hwnd;
         let requested_voice = candidate.clone();
+        let voice_settings = AudioDescriptionProjectVoiceSettings {
+            engine: candidate_engine,
+            voice: candidate.clone(),
+            rate: candidate_rate,
+            volume: candidate_volume,
+        };
         let result = change_audio_description_project_voice(
             &project_path,
             &project,
-            candidate_engine,
-            &candidate,
+            &voice_settings,
             cancel,
             AudioDescriptionCallbacks {
                 status: None,
@@ -1702,13 +1902,87 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     None,
                 );
                 EnableWindow(voice_combo, false);
+                let speed_label = CreateWindowExW(
+                    Default::default(),
+                    WC_STATIC,
+                    PCWSTR(to_wide(&labels.speed).as_ptr()),
+                    WS_CHILD | WS_VISIBLE,
+                    16,
+                    594,
+                    96,
+                    20,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let rate_combo = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_COMBOBOXW,
+                    PCWSTR::null(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                    120,
+                    590,
+                    250,
+                    220,
+                    hwnd,
+                    HMENU(ID_RATE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let volume_label = CreateWindowExW(
+                    Default::default(),
+                    WC_STATIC,
+                    PCWSTR(to_wide(&labels.volume).as_ptr()),
+                    WS_CHILD | WS_VISIBLE,
+                    388,
+                    594,
+                    96,
+                    20,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let volume_combo = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_COMBOBOXW,
+                    PCWSTR::null(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                    492,
+                    590,
+                    284,
+                    220,
+                    hwnd,
+                    HMENU(ID_VOLUME as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let rate_items = super::audio_description_voice_window::rate_items(language);
+                let volume_items = super::audio_description_voice_window::volume_items(language);
+                fill_project_value_combo(rate_combo, &rate_items, project.tts_rate);
+                fill_project_value_combo(volume_combo, &volume_items, project.tts_volume);
+                let test_voice_button = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.test_voice).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                    388,
+                    624,
+                    184,
+                    30,
+                    hwnd,
+                    HMENU(ID_TEST_VOICE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
                 let change_voice_button = CreateWindowExW(
                     Default::default(),
                     WC_BUTTON,
                     PCWSTR(to_wide(&labels.change_voice).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     592,
-                    556,
+                    624,
                     184,
                     30,
                     hwnd,
@@ -1717,13 +1991,14 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     None,
                 );
                 EnableWindow(change_voice_button, false);
+                EnableWindow(test_voice_button, false);
                 let progress = CreateWindowExW(
                     Default::default(),
                     PROGRESS_CLASSW,
                     PCWSTR::null(),
                     WS_CHILD | WS_VISIBLE,
                     16,
-                    594,
+                    664,
                     760,
                     20,
                     hwnd,
@@ -1738,7 +2013,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.ready).as_ptr()),
                     WS_CHILD | WS_VISIBLE,
                     16,
-                    620,
+                    690,
                     760,
                     28,
                     hwnd,
@@ -1752,7 +2027,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.export).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_DEFPUSHBUTTON as u32),
                     126,
-                    656,
+                    726,
                     180,
                     30,
                     hwnd,
@@ -1766,7 +2041,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.export_srt).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     316,
-                    656,
+                    726,
                     110,
                     30,
                     hwnd,
@@ -1780,7 +2055,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.export_vtt).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     436,
-                    656,
+                    726,
                     110,
                     30,
                     hwnd,
@@ -1794,7 +2069,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.cancel).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     556,
-                    656,
+                    726,
                     90,
                     30,
                     hwnd,
@@ -1809,7 +2084,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.close).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     656,
-                    656,
+                    726,
                     100,
                     30,
                     hwnd,
@@ -1831,6 +2106,11 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     engine_combo,
                     voice_label,
                     voice_combo,
+                    speed_label,
+                    rate_combo,
+                    volume_label,
+                    volume_combo,
+                    test_voice_button,
                     change_voice_button,
                     status,
                     export_button,
@@ -1854,6 +2134,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     details,
                     engine_combo,
                     voice_combo,
+                    rate_combo,
+                    volume_combo,
+                    test_voice_button,
                     change_voice_button,
                     voices: Vec::new(),
                     progress,
@@ -1868,6 +2151,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     cancel_button,
                     close_button,
                     selected_index: None,
+                    drafts: HashMap::new(),
                     running: false,
                     cancel: None,
                     preview_cancel: None,
@@ -1898,6 +2182,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 match id {
                     ID_LIST if notification == LBN_SELCHANGE => {
                         stop_preview(state);
+                        capture_current_draft(state);
                         let selected =
                             SendMessageW(state.list, LB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
                         if selected >= 0 {
@@ -1907,23 +2192,12 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                                 .get(list_index)
                                 .copied()
                                 .unwrap_or(list_index);
-                            state.selected_index = Some(index);
-                            if let Some(description) = state.project.descriptions.get(index) {
-                                set_text(state.edit, &description.text);
-                                set_text(
-                                    state.details,
-                                    &details_text(
-                                        &state.project,
-                                        index,
-                                        state.language,
-                                        &labels(state.language),
-                                    ),
-                                );
-                            }
+                            select_project_description(state, index);
                         }
                     }
                     ID_SEARCH if notification == EN_CHANGE && !state.running => {
                         if get_text(state.search_edit).trim().is_empty() {
+                            capture_current_draft(state);
                             let selected = state.selected_index.unwrap_or(0);
                             refill_list(state, selected);
                         }
@@ -1933,10 +2207,12 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         state.voices.clear();
                         SendMessageW(state.voice_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
                         EnableWindow(state.voice_combo, false);
+                        EnableWindow(state.test_voice_button, false);
                         EnableWindow(state.change_voice_button, false);
                         set_text(state.status, &labels(state.language).loading_voices);
                         load_project_voices(hwnd, engine_from_combo(state.engine_combo));
                     }
+                    ID_TEST_VOICE if !state.running => test_project_voice(state),
                     ID_CHANGE_VOICE if !state.running => start_voice_change(hwnd, state),
                     ID_APPLY if !state.running => start_apply(hwnd, state),
                     ID_EXPORT if !state.running => start_export(hwnd, state),
@@ -1951,8 +2227,8 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     }
                     ID_CLOSE if !state.running => {
                         crate::log_if_err!(
-                            DestroyWindow(hwnd),
-                            "Audio description project: DestroyWindow failed"
+                            PostMessageW(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0)),
+                            "Audio description project: PostMessageW failed"
                         );
                     }
                     _ => {}
@@ -2026,7 +2302,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 let payload = lparam.0
                     as *mut Result<
                         AudioDescriptionProjectEditOutcome,
-                        AudioDescriptionProjectEditError,
+                        AudioDescriptionProjectBatchEditError,
                     >;
                 if payload.is_null() {
                     return LRESULT(0);
@@ -2044,11 +2320,16 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 set_controls_enabled(state, true);
                 match result {
                     Ok(outcome) => {
+                        let applied_count = outcome.applied_count;
                         state.project = outcome.project;
+                        state.drafts.clear();
                         refill_list(state, state.selected_index.unwrap_or(0));
                         SendMessageW(state.progress, PBM_SETPOS, WPARAM(100), LPARAM(0));
                         let language_labels = labels(state.language);
-                        let message = language_labels.edit_saved;
+                        let count = applied_count.to_string();
+                        let message = language_labels
+                            .edit_saved_multiple
+                            .replace("{count}", &count);
                         set_text(state.status, &message);
                         show_project_info_with_title(
                             hwnd,
@@ -2056,26 +2337,39 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                             &message,
                         );
                     }
-                    Err(AudioDescriptionProjectEditError::Cancelled) => {
-                        set_text(state.status, &labels(state.language).ready);
-                    }
-                    Err(AudioDescriptionProjectEditError::TooLong {
-                        available_sec,
-                        synthesized_sec,
-                    }) => {
-                        let available = format!("{available_sec:.3}");
-                        let actual = format!("{synthesized_sec:.3}");
-                        let message = i18n::tr_f(
-                            state.language,
-                            "audio_description.project.error_too_long",
-                            &[("available", &available), ("actual", &actual)],
-                        );
-                        set_text(state.status, &message);
-                        show_project_error(hwnd, state.language, &message);
-                    }
-                    Err(AudioDescriptionProjectEditError::Other(error)) => {
-                        set_text(state.status, &error);
-                        show_project_error(hwnd, state.language, &error);
+                    Err(batch_error) => {
+                        if let Some(index) = batch_error.index {
+                            refill_list(state, index);
+                        }
+                        match batch_error.error {
+                            AudioDescriptionProjectEditError::Cancelled => {
+                                set_text(state.status, &labels(state.language).ready);
+                            }
+                            AudioDescriptionProjectEditError::TooLong {
+                                available_sec,
+                                synthesized_sec,
+                            } => {
+                                let available = format!("{available_sec:.3}");
+                                let actual = format!("{synthesized_sec:.3}");
+                                let message = i18n::tr_f(
+                                    state.language,
+                                    "audio_description.project.error_too_long",
+                                    &[("available", &available), ("actual", &actual)],
+                                );
+                                set_text(state.status, &message);
+                                show_project_error(hwnd, state.language, &message);
+                                if batch_error.index.is_some() {
+                                    SetFocus(state.edit);
+                                }
+                            }
+                            AudioDescriptionProjectEditError::Other(error) => {
+                                set_text(state.status, &error);
+                                show_project_error(hwnd, state.language, &error);
+                                if batch_error.index.is_some() {
+                                    SetFocus(state.edit);
+                                }
+                            }
+                        }
                     }
                 }
                 LRESULT(0)
@@ -2106,6 +2400,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     Err(error) => {
                         set_text(state.status, &error);
                         EnableWindow(state.voice_combo, false);
+                        EnableWindow(state.test_voice_button, false);
                         EnableWindow(state.change_voice_button, false);
                     }
                 }
@@ -2269,7 +2564,23 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     return LRESULT(0);
                 }
                 if !pointer.is_null() {
-                    stop_preview(&mut *pointer);
+                    let state = &mut *pointer;
+                    capture_current_draft(state);
+                    if has_unapplied_edit(state) {
+                        let language_labels = labels(state.language);
+                        let text = to_wide(&language_labels.unsaved_close);
+                        let title = to_wide(&language_labels.title);
+                        let answer = MessageBoxW(
+                            hwnd,
+                            PCWSTR(text.as_ptr()),
+                            PCWSTR(title.as_ptr()),
+                            MB_YESNO | MB_ICONQUESTION,
+                        );
+                        if answer != IDYES {
+                            return LRESULT(0);
+                        }
+                    }
+                    stop_preview(state);
                 }
                 crate::log_if_err!(
                     DestroyWindow(hwnd),

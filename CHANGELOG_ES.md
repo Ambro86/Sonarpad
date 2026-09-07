@@ -1,5 +1,21 @@
 # Changelog
 
+Versión 0.9.5 – 2026-09-07
+
+Audiodescripción con IA
+1. Mejorada la resistencia cuando Gemini devuelve temporalmente `MALFORMED_RESPONSE` sin contenido utilizable. Sonarpad ahora vuelve a intentar exactamente el mismo fragmento hasta tres veces, con una breve espera entre intentos, en lugar de detener inmediatamente toda la audiodescripción. Las respuestas normales de Gemini, los bloqueos de seguridad, los errores de límite de tokens y el comportamiento actual de los puntos de control permanecen sin cambios.
+
+2. Corregido otro caso poco frecuente de `invalid Gemini chunk timeline` con algunos vídeos cuyos fragmentos preparados por FFmpeg informan de una pequeña desviación acumulada de duración. Sonarpad mantiene sin cambios la ruta normal cuando la línea de tiempo es válida y utiliza un reajuste conservador solo cuando la línea de tiempo normal fallaría y la diferencia total es pequeña; las discrepancias grandes o sospechosas siguen produciendo un error.
+
+3. Añadido el servicio opcional Sonarpad AI para las audiodescripciones con IA. Los usuarios pueden seguir usando su propia clave API de Gemini o elegir el servicio Sonarpad e introducir un código Sonarpad personal. El código se protege con Windows DPAPI. En el modo de servicio, los fragmentos de vídeo preparados se cargan directamente desde el PC del usuario a Google mediante una URL temporal de carga de Google; sonarpad.com no recibe ni almacena los bytes del vídeo. El backend solo autoriza el acceso, impone el modelo Gemini/Standard y los límites de uso, contabiliza el consumo y devuelve la respuesta de Gemini.
+
+4. Mejorada la edición de proyectos de audiodescripción guardados. Ahora se pueden modificar varias descripciones seguidas sin tener que aplicar cada cambio inmediatamente. Los cambios permanecen en memoria; al pulsar “Aplicar texto”, Sonarpad comprueba cada descripción modificada con su intervalo guardado y después guarda juntas todas las modificaciones válidas. Si una descripción no cabe en su intervalo, el foco vuelve a ella sin perder los demás cambios pendientes.
+
+5. Añadido “Ajustar voz” inmediatamente antes de “Crear audiodescripción”. La nueva ventana permite elegir motor, voz, velocidad y volumen e incluye “Probar voz”. Al pulsar OK, el foco vuelve exactamente a “Ajustar voz” y los valores elegidos se aplican a la audiodescripción que se va a crear. Si no se usa esta ventana, la síntesis permanece exactamente como antes.
+
+
+6. Se ampliaron los controles de voz en los proyectos de audiodescripción guardados. En Modificar proyecto, además del motor y la voz, ahora están disponibles la velocidad, el volumen y “Probar voz”. Al aplicar los parámetros de voz, Sonarpad vuelve a comprobar todas las descripciones existentes con los nuevos parámetros de síntesis y reconstruye el MP3 solo si todas siguen entrando en sus intervalos guardados. Se reutilizan los intervalos sin diálogo, los tiempos de Visual Evidence, las descripciones de Gemini y el análisis temporal del proyecto sin volver a ejecutar el análisis de IA.
+
 Versión 0.9.4 – 2026-09-04
 
 Audiodescripción con IA
@@ -499,6 +515,8 @@ Correcciones de errores
 • Corregida la limpieza en desinstalación de entradas del menú contextual: "Abrir con Sonarpad" ahora se elimina de forma fiable, también en escenarios de registro heredados.
 • Corregida la fiabilidad de pausa/reanudar en SAPI5: la pausa con F4 ahora funciona correctamente y al reanudar vuelve al punto esperado en lugar de reiniciar desde el principio.
 • Corregido el flujo pausa + salto + reanudar en la reproducción multimedia: tras pausar y mover con Izquierda/Derecha, al pulsar Espacio ahora reanuda de forma fiable desde la posición actual en lugar de detenerse o reiniciar desde el inicio.
+
+3. Añadido el servicio opcional Sonarpad AI para las audiodescripciones con IA. Los usuarios pueden seguir usando su propia clave API de Gemini o elegir el servicio Sonarpad e introducir un código Sonarpad personal. El código se protege con Windows DPAPI. En el modo de servicio, los fragmentos de vídeo preparados se cargan directamente desde el PC del usuario a Google mediante una URL temporal de carga de Google; sonarpad.com no recibe ni almacena los bytes del vídeo. El backend solo autoriza el acceso, impone el modelo Gemini/Standard y los límites de uso, contabiliza el consumo y devuelve la respuesta de Gemini.
 
 Version 0.6.5 – 2026-02-07
 Mejoras

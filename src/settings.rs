@@ -848,6 +848,12 @@ pub struct AppSettings {
     pub weather_temperature_unit: WeatherTemperatureUnit,
     #[serde(default)]
     pub gemini_api_key: String,
+    #[serde(default)]
+    pub audio_description_use_sonarpad_ai: bool,
+    #[serde(default)]
+    pub sonarpad_ai_access_code: String,
+    #[serde(default)]
+    pub sonarpad_ai_device_id: String,
     #[serde(default = "default_gemini_model")]
     pub gemini_model: String,
     #[serde(default = "default_audio_description_gemini_model")]
@@ -858,12 +864,18 @@ pub struct AppSettings {
     pub audio_description_tts_engine: TtsEngine,
     #[serde(default)]
     pub audio_description_tts_voice: String,
+    #[serde(default)]
+    pub audio_description_tts_rate: Option<i32>,
+    #[serde(default)]
+    pub audio_description_tts_volume: Option<i32>,
     #[serde(default = "default_audio_description_verbosity")]
     pub audio_description_verbosity: u8,
     #[serde(default)]
     pub audio_description_extended_pauses: bool,
     #[serde(default = "default_true")]
     pub audio_description_recognize_characters: bool,
+    #[serde(default = "default_true")]
+    pub audio_description_recognize_screen_text: bool,
     #[serde(default)]
     pub audio_description_keep_character_catalog: bool,
     #[serde(default)]
@@ -1348,14 +1360,20 @@ impl Default for AppSettings {
             route_country: String::new(),
             podcast_search_provider: PodcastSearchProvider::Itunes,
             gemini_api_key: String::new(),
+            audio_description_use_sonarpad_ai: false,
+            sonarpad_ai_access_code: String::new(),
+            sonarpad_ai_device_id: format!("spdev_{}", uuid::Uuid::new_v4().simple()),
             gemini_model: default_gemini_model(),
             audio_description_gemini_model: default_audio_description_gemini_model(),
             audio_description_language: None,
             audio_description_tts_engine: TtsEngine::Edge,
             audio_description_tts_voice: String::new(),
+            audio_description_tts_rate: None,
+            audio_description_tts_volume: None,
             audio_description_verbosity: default_audio_description_verbosity(),
             audio_description_extended_pauses: false,
             audio_description_recognize_characters: true,
+            audio_description_recognize_screen_text: true,
             audio_description_keep_character_catalog: false,
             audio_description_character_catalog: String::new(),
             audio_description_save_project: false,
@@ -2559,6 +2577,14 @@ fn normalize_settings(mut settings: AppSettings) -> AppSettings {
     settings.gemini_api_key =
         decrypt_gemini_api_key(&settings.gemini_api_key).unwrap_or(settings.gemini_api_key);
     settings.gemini_api_key = settings.gemini_api_key.trim().to_string();
+    settings.sonarpad_ai_access_code =
+        decrypt_sonarpad_ai_access_code(&settings.sonarpad_ai_access_code)
+            .unwrap_or(settings.sonarpad_ai_access_code);
+    settings.sonarpad_ai_access_code = settings.sonarpad_ai_access_code.trim().to_string();
+    settings.sonarpad_ai_device_id = settings.sonarpad_ai_device_id.trim().to_string();
+    if settings.sonarpad_ai_device_id.is_empty() {
+        settings.sonarpad_ai_device_id = format!("spdev_{}", uuid::Uuid::new_v4().simple());
+    }
     settings.gemini_model = settings.gemini_model.trim().to_string();
     if settings.gemini_model.is_empty() || settings.gemini_model == LEGACY_DEFAULT_GEMINI_MODEL {
         settings.gemini_model = default_gemini_model();
@@ -2569,6 +2595,12 @@ fn normalize_settings(mut settings: AppSettings) -> AppSettings {
         settings.audio_description_gemini_model = default_audio_description_gemini_model();
     }
     settings.audio_description_tts_voice = settings.audio_description_tts_voice.trim().to_string();
+    settings.audio_description_tts_rate = settings
+        .audio_description_tts_rate
+        .map(|value| value.clamp(-100, 100));
+    settings.audio_description_tts_volume = settings
+        .audio_description_tts_volume
+        .map(|value| value.clamp(25, 200));
     settings.audio_description_character_catalog = settings
         .audio_description_character_catalog
         .trim()
@@ -2744,6 +2776,27 @@ pub fn decrypt_gemini_api_key(api_key: &str) -> Option<String> {
     let decoded = match hex::decode(api_key) {
         Ok(decoded) => decoded,
         Err(_) => return Some(api_key.to_string()),
+    };
+    let bytes = dpapi_unprotect(&decoded)?;
+    String::from_utf8(bytes).ok()
+}
+
+pub fn encrypt_sonarpad_ai_access_code(code: &str) -> String {
+    if code.trim().is_empty() {
+        return String::new();
+    }
+    dpapi_protect(code.as_bytes())
+        .map(hex::encode)
+        .unwrap_or_default()
+}
+
+pub fn decrypt_sonarpad_ai_access_code(code: &str) -> Option<String> {
+    if code.trim().is_empty() {
+        return None;
+    }
+    let decoded = match hex::decode(code) {
+        Ok(decoded) => decoded,
+        Err(_) => return Some(code.to_string()),
     };
     let bytes = dpapi_unprotect(&decoded)?;
     String::from_utf8(bytes).ok()
@@ -3089,6 +3142,8 @@ pub fn save_settings(settings: AppSettings) {
         delete_rai_luce_backup();
     }
     persisted.gemini_api_key = encrypt_gemini_api_key(&persisted.gemini_api_key);
+    persisted.sonarpad_ai_access_code =
+        encrypt_sonarpad_ai_access_code(&persisted.sonarpad_ai_access_code);
     let path = get_settings_path();
     if let Some(parent) = path.parent()
         && let Err(e) = std::fs::create_dir_all(parent)
@@ -3791,6 +3846,7 @@ mod audio_description_save_folder_tests {
         assert!(settings.audio_description_recent_project_folders.is_empty());
         assert!(!settings.audio_description_extended_pauses);
         assert!(settings.audio_description_recognize_characters);
+        assert!(settings.audio_description_recognize_screen_text);
         assert!(!settings.audio_description_keep_character_catalog);
         assert!(settings.audio_description_character_catalog.is_empty());
         assert!(!settings.audio_description_save_project);

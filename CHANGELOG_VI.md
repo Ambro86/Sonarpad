@@ -1,5 +1,21 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.5 – 2026-09-07
+
+Mô tả âm thanh bằng AI
+1. Cải thiện độ ổn định khi Gemini tạm thời trả về `MALFORMED_RESPONSE` mà không có nội dung sử dụng được. Sonarpad giờ sẽ thử lại đúng đoạn đó tối đa ba lần, với một khoảng chờ ngắn giữa các lần thử, thay vì dừng toàn bộ quá trình mô tả âm thanh ngay lập tức. Các phản hồi Gemini bình thường, chặn an toàn, lỗi giới hạn token và cách hoạt động hiện tại của checkpoint vẫn không thay đổi.
+
+2. Đã sửa thêm một trường hợp hiếm gặp của lỗi `invalid Gemini chunk timeline` với một số video có các đoạn do FFmpeg chuẩn bị báo cáo độ lệch thời lượng tích lũy nhỏ. Sonarpad giữ nguyên luồng xử lý hiện tại khi timeline hợp lệ và chỉ dùng cơ chế căn chỉnh thận trọng khi timeline thông thường sẽ thất bại và tổng độ lệch nhỏ; các sai lệch lớn hoặc đáng ngờ vẫn tiếp tục báo lỗi.
+
+3. Đã thêm dịch vụ Sonarpad AI tùy chọn cho mô tả âm thanh bằng AI. Người dùng vẫn có thể dùng khóa API Gemini của riêng mình hoặc chọn dịch vụ Sonarpad và nhập mã Sonarpad cá nhân. Mã được bảo vệ bằng Windows DPAPI. Trong chế độ dịch vụ, các đoạn video đã chuẩn bị được tải trực tiếp từ PC của người dùng lên Google thông qua URL tải lên Google tạm thời; sonarpad.com không nhận hoặc lưu trữ dữ liệu video. Backend chỉ xác thực quyền truy cập, áp dụng mô hình Gemini/cấp Standard và giới hạn sử dụng, ghi nhận mức tiêu thụ và trả về phản hồi Gemini.
+
+4. Cải thiện việc chỉnh sửa dự án thuyết minh âm thanh đã lưu. Giờ đây có thể sửa nhiều mô tả liên tiếp mà không cần áp dụng từng thay đổi ngay lập tức. Các thay đổi được giữ trong bộ nhớ; khi nhấn “Áp dụng văn bản”, Sonarpad kiểm tra từng mô tả đã sửa với khoảng thời gian đã lưu rồi lưu tất cả thay đổi hợp lệ cùng lúc. Nếu một mô tả không vừa trong khoảng của nó, tiêu điểm sẽ quay lại mô tả đó mà không làm mất các thay đổi đang chờ khác.
+
+5. Đã thêm “Điều chỉnh giọng nói” ngay trước “Tạo thuyết minh âm thanh”. Cửa sổ mới cho phép chọn công cụ tổng hợp, giọng nói, tốc độ và âm lượng, đồng thời có “Thử giọng”. Khi nhấn OK, tiêu điểm quay lại chính xác “Điều chỉnh giọng nói” và các giá trị đã chọn được áp dụng cho thuyết minh âm thanh sắp tạo. Nếu không dùng cửa sổ này, cách tổng hợp vẫn giữ nguyên như trước.
+
+
+6. Đã mở rộng các điều khiển giọng nói trong dự án mô tả âm thanh đã lưu. Trong Sửa dự án, ngoài bộ máy và giọng nói, giờ đây còn có tốc độ, âm lượng và “Thử giọng”. Khi áp dụng các tham số giọng nói, Sonarpad kiểm tra lại toàn bộ mô tả hiện có bằng các tham số tổng hợp mới và chỉ tạo lại MP3 nếu tất cả mô tả vẫn nằm trong các khoảng thời gian đã lưu. Các khoảng không có hội thoại, thời điểm Visual Evidence, mô tả Gemini và phân tích thời gian của dự án được tái sử dụng mà không chạy lại phân tích AI.
+
 Phiên bản 0.9.4 – 2026-09-04
 
 Mô tả âm thanh bằng AI

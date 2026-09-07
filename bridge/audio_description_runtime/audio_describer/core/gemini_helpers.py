@@ -173,6 +173,10 @@ class GeminiRetryCancelledError(GeminiAPIError):
     """Raised when the user explicitly stops a request waiting on quota."""
 
 
+class GeminiMalformedResponseError(GeminiAPIError):
+    """Raised when Gemini returns a transient MALFORMED_RESPONSE with no content."""
+
+
 def set_quota_decision_handler(handler):
     """Set the process-wide quota callback used by the desktop worker.
 
@@ -210,13 +214,45 @@ def reset_gemini_client():
         app_logger.info("Resetting Gemini API client due to settings change.")
         _GEMINI_CLIENT = None
 
+def using_sonarpad_service():
+    return bool(str(config_model.get_setting("sonarpad_ai_service_url") or "").strip())
+
+
 def get_gemini_client():
-    """Gets or initializes the global Gemini client."""
+    """Gets or initializes the Gemini transport.
+
+    Personal-key mode uses Google's SDK directly. Sonarpad AI mode uses a
+    constrained transport where media uploads go PC -> Google and only
+    authorization/generation metadata goes through sonarpad.com.
+    """
     global _GEMINI_CLIENT
     _lazy_import_gemini_sdk()
 
     if _GEMINI_CLIENT:
         return _GEMINI_CLIENT
+
+    service_url = str(config_model.get_setting("sonarpad_ai_service_url") or "").strip()
+    if service_url:
+        access_code = str(config_model.get_setting("sonarpad_ai_access_code") or "").strip()
+        device_id = str(config_model.get_setting("sonarpad_ai_device_id") or "").strip()
+        try:
+            from audio_describer.core.sonarpad_service import SonarpadServiceClient
+            app_logger.info("Initializing Sonarpad AI service transport...")
+            _GEMINI_CLIENT = SonarpadServiceClient(
+                service_url, access_code, device_id, "Sonarpad Windows"
+            )
+            settings = config_model.load_settings()
+            settings["gemini_model_override"] = _GEMINI_CLIENT.model
+            config_model.save_settings(settings)
+            app_logger.info(
+                "Sonarpad AI service active: model=%s balance_eur=%.4f",
+                _GEMINI_CLIENT.model, _GEMINI_CLIENT.balance_eur,
+            )
+            return _GEMINI_CLIENT
+        except Exception as e:
+            _GEMINI_CLIENT = None
+            app_logger.error("Failed to initialize Sonarpad AI service: %s", e, exc_info=True)
+            raise GeminiAPIError(_("Failed to initialize Sonarpad AI service: %s") % e) from e
 
     api_key = config_model.get_setting("user_gemini_api_key") or config.GEMINI_API_KEY
     if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
@@ -603,25 +639,34 @@ def is_prepaid_credits_depleted_error(exc: BaseException) -> bool:
 
 
 def _single_exception_is_permanent_invalid_argument(exc: BaseException) -> bool:
-    """True for Gemini HTTP 400 INVALID_ARGUMENT request-validation failures."""
+    """True for permanent HTTP 400 request-validation failures.
+
+    A structured 400 from Sonarpad AI/Gemini cannot recover by retrying the
+    identical payload, even when Google's message says "Invalid value" rather
+    than the literal INVALID_ARGUMENT status string.
+    """
     status_candidates = [
         getattr(exc, "code", None),
         getattr(exc, "status_code", None),
         getattr(getattr(exc, "response", None), "status_code", None),
     ]
-    structured_400 = False
     for candidate in status_candidates:
         try:
-            structured_400 = int(candidate) == 400
+            if int(candidate) == 400:
+                return True
         except (TypeError, ValueError):
             continue
-        if structured_400:
-            break
 
     message = str(exc).casefold()
     return (
-        (structured_400 or re.search(r"(?<!\d)400(?!\d)", message) is not None)
-        and ("invalid_argument" in message or "invalid argument" in message)
+        re.search(r"(?<!\d)400(?!\d)", message) is not None
+        and (
+            "invalid_argument" in message
+            or "invalid argument" in message
+            or "invalid value" in message
+            or "unknown name" in message
+            or "cannot find field" in message
+        )
     )
 
 
@@ -775,6 +820,33 @@ def _call_generate_content(client, model, contents, config, status_callback=None
         )
         raise ContentBlockedError(message, reason="PROHIBITED_CONTENT")
 
+    # Gemini can occasionally return HTTP 200 but finish with
+    # MALFORMED_RESPONSE and no usable content. This is a server-side/transient
+    # response failure rather than a safety decision or malformed client
+    # request. Raise it inside the retry boundary so the exact same chunk can be
+    # retried without losing checkpoint progress.
+    candidates = getattr(response, "candidates", None) or []
+    if candidates:
+        candidate = candidates[0]
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) if content is not None else None
+        finish_reason = get_response_finish_reason(response).strip().upper()
+        if (
+            not parts
+            and (
+                finish_reason == "MALFORMED_RESPONSE"
+                or finish_reason.endswith(".MALFORMED_RESPONSE")
+            )
+        ):
+            message = _(
+                "Gemini returned a temporary malformed response with no content."
+            )
+            app_logger.warning(
+                "Gemini returned MALFORMED_RESPONSE with no content; "
+                "the same request is eligible for a bounded retry."
+            )
+            raise GeminiMalformedResponseError(message)
+
     if status_callback:
         fr = get_response_finish_reason(response)
         if fr:
@@ -785,7 +857,8 @@ def _call_generate_content(client, model, contents, config, status_callback=None
 
 
 def generate_content_with_retry(client, model, contents, config, status_callback=None,
-                                prohibited_content_max_attempts=1):
+                                prohibited_content_max_attempts=1,
+                                malformed_response_max_attempts=3):
     """Call Gemini, retrying transient errors every five seconds.
 
     When the desktop UI installs a quota decision handler, the first quota
@@ -799,6 +872,7 @@ def generate_content_with_retry(client, model, contents, config, status_callback
     quota_prompted_models = set()
     overload_failures = 0
     overload_wait_forever = False
+    malformed_response_failures = 0
     attempt = 0
 
     while True:
@@ -813,6 +887,40 @@ def generate_content_with_retry(client, model, contents, config, status_callback
                 client, current_model, contents, config, status_callback
             )
         except Exception as exc:
+            if isinstance(exc, GeminiMalformedResponseError):
+                malformed_response_failures += 1
+                max_malformed_attempts = max(
+                    1, int(malformed_response_max_attempts or 1)
+                )
+                if malformed_response_failures >= max_malformed_attempts:
+                    app_logger.warning(
+                        "Gemini MALFORMED_RESPONSE persisted for %d attempt(s); "
+                        "stopping this request and preserving existing checkpoint progress.",
+                        malformed_response_failures,
+                    )
+                    raise
+                retry_msg = _(
+                    "Gemini returned an invalid temporary response "
+                    "(attempt %(attempt)d/%(max_attempts)d). "
+                    "Retrying in %(delay)d seconds..."
+                ) % {
+                    "attempt": malformed_response_failures,
+                    "max_attempts": max_malformed_attempts,
+                    "delay": RETRY_DELAY_SEC,
+                }
+                app_logger.warning(
+                    "Retrying the same Gemini request after MALFORMED_RESPONSE "
+                    "(%d/%d) in %ds...",
+                    malformed_response_failures, max_malformed_attempts, RETRY_DELAY_SEC,
+                )
+                if status_callback:
+                    status_callback(retry_msg)
+                # Keep this bounded server-response retry independent from the
+                # existing transient/prohibited-content attempt counters.
+                attempt -= 1
+                time.sleep(RETRY_DELAY_SEC)
+                continue
+
             if is_prepaid_credits_depleted_error(exc):
                 app_logger.error(
                     "Permanent Gemini prepaid-billing error on model %s: %s",
@@ -971,6 +1079,15 @@ def process_gemini_response(response, status_callback):
                 status_callback(block_msg)
             app_logger.warning("Response candidate finished with reason 'MAX_TOKENS' and had no content parts.")
             raise TokenLimitError(block_msg, reason=finish_reason_name)
+
+        if str(finish_reason_name).upper().endswith('MALFORMED_RESPONSE'):
+            message = _("Gemini returned a temporary malformed response with no content.")
+            if status_callback:
+                status_callback(message)
+            app_logger.warning(
+                "Response candidate finished with MALFORMED_RESPONSE and had no content parts."
+            )
+            raise GeminiMalformedResponseError(message)
 
         if finish_reason_name != 'STOP':
             block_msg = _("AI content generation was stopped. Reason: %s") % finish_reason_name

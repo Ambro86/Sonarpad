@@ -1,5 +1,21 @@
 # Přehled změn
 
+Verze 0.9.5 – 2026-09-07
+
+Audiopopis s AI
+1. Zvýšena odolnost při dočasné odpovědi Gemini `MALFORMED_RESPONSE` bez použitelného obsahu. Sonarpad nyní zopakuje přesně stejný segment až třikrát s krátkou prodlevou mezi pokusy, místo aby okamžitě ukončil celý audiopopis. Běžné odpovědi Gemini, bezpečnostní blokace, chyby limitu tokenů i stávající chování kontrolních bodů zůstávají beze změny.
+
+2. Opraven další vzácný případ chyby `invalid Gemini chunk timeline` u některých videí, jejichž chunky připravené pomocí FFmpeg vykazují malou kumulovanou odchylku délky. Sonarpad ponechává dosavadní postup beze změny, pokud je časová osa platná, a opatrné vyrovnání použije pouze tehdy, když by běžná časová osa selhala a celková odchylka je malá; velké nebo podezřelé rozdíly nadále skončí chybou.
+
+3. Přidána volitelná služba Sonarpad AI pro audiopopis s AI. Uživatelé mohou nadále používat vlastní klíč Gemini API nebo zvolit službu Sonarpad a zadat osobní kód Sonarpad. Kód je chráněn pomocí Windows DPAPI. V režimu služby se připravené video segmenty nahrávají přímo z počítače uživatele do Googlu přes dočasnou adresu Google pro nahrávání; sonarpad.com nepřijímá ani neukládá data videa. Backend pouze autorizuje přístup, vynucuje model Gemini/úroveň Standard a limity použití, eviduje spotřebu a vrací odpověď Gemini.
+
+4. Vylepšena úprava uložených projektů audiopopisu. Nyní lze upravit více popisů za sebou bez nutnosti každou změnu ihned použít. Změny zůstávají v paměti; po stisknutí „Použít text“ Sonarpad ověří každý upravený popis vůči jeho uloženému časovému rozsahu a poté uloží všechny platné změny společně. Pokud se některý popis do rozsahu nevejde, fokus se vrátí na tento popis a ostatní čekající změny se neztratí.
+
+5. Přidáno „Upravit hlas“ bezprostředně před „Vytvořit audiopopis“. Nové okno umožňuje zvolit systém syntézy, hlas, rychlost a hlasitost a obsahuje „Vyzkoušet hlas“. Po stisknutí OK se fokus vrátí přesně na „Upravit hlas“ a zvolené hodnoty se použijí pro vytvářený audiopopis. Pokud okno nepoužijete, syntéza zůstane přesně jako dříve.
+
+
+6. Bylo rozšířeno nastavení hlasu v uložených projektech audiopopisu. V úpravě projektu jsou nyní kromě enginu a hlasu k dispozici také rychlost, hlasitost a „Vyzkoušet hlas“. Při použití hlasových parametrů Sonarpad znovu ověří všechny existující popisy s novými parametry syntézy a MP3 znovu vytvoří pouze tehdy, pokud se všechny popisy stále vejdou do uložených časových intervalů. Intervaly bez dialogu, časy Visual Evidence, popisy Gemini a časová analýza projektu se znovu použijí bez opětovného spuštění analýzy AI.
+
 Verze 0.9.4 – 2026-09-04
 
 Audiopopis s AI

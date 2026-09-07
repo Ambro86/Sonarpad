@@ -154,8 +154,26 @@ def _validate_request(request: dict) -> None:
     if wav_value and not Path(wav_value).is_file():
         raise FileNotFoundError(f"Prepared Pyannote WAV not found: {wav_value}")
     api_key = str(request.get("gemini_api_key") or "").strip()
-    if not api_key:
-        raise ValueError("Gemini API key is not configured in Sonarpad.")
+    service_url = str(request.get("sonarpad_ai_service_url") or "").strip()
+    service_code = str(request.get("sonarpad_ai_access_code") or "").strip()
+    service_device = str(request.get("sonarpad_ai_device_id") or "").strip()
+    mode = str(request.get("ai_access_mode") or ("sonarpad" if service_url else "personal")).strip().lower()
+    if mode not in {"personal", "sonarpad"}:
+        raise ValueError("Unsupported AI access mode.")
+    if mode == "sonarpad":
+        if api_key:
+            raise ValueError("Sonarpad AI mode must not receive a personal Gemini API key.")
+        if not service_url.startswith("https://"):
+            raise ValueError("Sonarpad AI service URL must use HTTPS.")
+        if not service_code.startswith("sp_"):
+            raise ValueError("Sonarpad AI access code is not configured.")
+        if not service_device:
+            raise ValueError("Sonarpad AI device identifier is not configured.")
+    else:
+        if service_url or service_code or service_device:
+            raise ValueError("Personal Gemini mode must not receive Sonarpad AI service credentials.")
+        if not api_key:
+            raise ValueError("Gemini API key is not configured in Sonarpad.")
     verbosity = str(request.get("verbosity") or "detailed")
     if verbosity not in {"short", "standard", "detailed"}:
         raise ValueError(f"Unsupported verbosity: {verbosity}")
@@ -211,6 +229,9 @@ def _configure_omni(request: dict) -> None:
     config_model.configure(
         {
             "user_gemini_api_key": str(request.get("gemini_api_key") or ""),
+            "sonarpad_ai_service_url": str(request.get("sonarpad_ai_service_url") or "").strip(),
+            "sonarpad_ai_access_code": str(request.get("sonarpad_ai_access_code") or "").strip(),
+            "sonarpad_ai_device_id": str(request.get("sonarpad_ai_device_id") or "").strip(),
             "gemini_description_verbosity": str(request.get("verbosity") or "detailed"),
             "gemini_model_override": model,
             "gemini_disable_safety_block_none": True,
@@ -229,11 +250,18 @@ def _configure_omni(request: dict) -> None:
             "enable_character_glossary": bool(
                 request.get("recognize_characters", True)
             ),
+            "recognize_screen_text": bool(request.get("recognize_screen_text", False)),
             "verify_chunk_timing_with_gemini": True,
         }
     )
     audio_describer.reset_gemini_client()
-    gemini_helpers.set_quota_decision_handler(_quota_decision_handler)
+    if str(request.get("sonarpad_ai_service_url") or "").strip():
+        # The service fixes the model and cost tier server-side. A quota/rate-limit
+        # event must never invite the user to switch model; let the existing retry
+        # policy retry the same request or preserve the checkpoint on final failure.
+        gemini_helpers.set_quota_decision_handler(lambda _model, _exc: None)
+    else:
+        gemini_helpers.set_quota_decision_handler(_quota_decision_handler)
     gemini_helpers.set_overload_decision_handler(_overload_decision_handler)
 
 

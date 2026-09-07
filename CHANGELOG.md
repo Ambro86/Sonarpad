@@ -1,5 +1,21 @@
 # Changelog
 
+Version 0.9.5 – 2026-09-07
+
+AI Audio Description
+1. Improved resilience when Gemini returns a temporary `MALFORMED_RESPONSE` with no usable content. Sonarpad now retries the exact same chunk up to three times, waiting briefly between attempts, instead of stopping the whole audio description immediately. Normal Gemini responses, safety blocks, token-limit errors and existing checkpoint behavior remain unchanged.
+
+2. Fixed another rare `invalid Gemini chunk timeline` case with some videos whose FFmpeg-prepared chunks report a small cumulative duration drift. Sonarpad keeps the existing timeline path unchanged whenever it is valid and uses a conservative reconciliation fallback only when the normal timeline would fail and the total discrepancy is small; large or suspicious mismatches still stop with an error.
+
+3. Added the optional Sonarpad AI service for AI audio descriptions. Users can keep using their own Gemini API key or choose the Sonarpad service and enter a personal Sonarpad code. The code is protected with Windows DPAPI. In service mode, prepared video chunks are uploaded directly from the user’s PC to Google through a temporary Google upload URL; sonarpad.com never receives or stores the video bytes. The backend only authorizes access, enforces the Gemini model/Standard tier and usage limits, accounts usage, and returns the Gemini response.
+
+4. Improved editing of saved audio-description projects. Users can now change multiple descriptions one after another without having to apply each one immediately. The edits remain pending in memory; pressing “Apply text” validates every modified description against its saved timing range and then saves all valid changes together. If one description does not fit, Sonarpad returns focus to that description without losing the other pending edits.
+
+5. Added “Adjust voice” immediately before “Create audio description”. The new dialog provides speech engine, voice, speed and volume controls plus “Test voice”. Pressing OK returns focus exactly to “Adjust voice” and applies those values to the audio description being created. If the dialog is never used, synthesis behavior remains exactly as before.
+
+
+6. Expanded voice controls in saved audio-description projects. The project editor now also provides speed, volume and “Test voice” alongside engine and voice. Applying the voice settings rechecks every existing description with the selected synthesis parameters and rebuilds the MP3 only if all descriptions still fit their saved timing ranges. Existing speech-free intervals, Visual Evidence timestamps, Gemini descriptions and project timing analysis are reused without running AI analysis again.
+
 Version 0.9.4 – 2026-09-04
 
 AI Audio Description

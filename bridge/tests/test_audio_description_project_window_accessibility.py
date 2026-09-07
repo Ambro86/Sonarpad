@@ -129,7 +129,7 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertNotIn("save_audio_description_project", preview)
         synthesis = AUDIO[
             AUDIO.index("pub fn synthesize_audio_description_project_preview"):
-            AUDIO.index("pub fn apply_audio_description_project_edit")
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits")
         ]
         self.assertIn("synthesize_description(", synthesis)
         self.assertIn("modified_description_preview.wav", synthesis)
@@ -155,10 +155,10 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         ]
         self.assertIn("description.rendered_text.is_empty()", loader)
         apply_fn = AUDIO[
-            AUDIO.index("pub fn apply_audio_description_project_edit"):
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits"):
             AUDIO.index("pub fn delete_audio_description_project_description")
         ]
-        self.assertIn("description.text = normalized_text.to_string()", apply_fn)
+        self.assertIn("description.text = text.clone()", apply_fn)
         self.assertNotIn("description.rendered_text =", apply_fn)
         builder = AUDIO[
             AUDIO.index("fn build_audio_description_project"):
@@ -177,9 +177,9 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertIn("updated.descriptions.remove(index)", delete)
         self.assertIn("save_audio_description_project(project_path, &updated)?", delete)
 
-    def test_apply_synthesizes_checks_duration_then_saves_immediately(self):
+    def test_apply_synthesizes_checks_duration_then_saves_batch_once(self):
         apply_fn = AUDIO[
-            AUDIO.index("pub fn apply_audio_description_project_edit"):
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits"):
             AUDIO.index("pub fn delete_audio_description_project_description")
         ]
         synthesis = apply_fn.index("synthesize_description(")
@@ -289,15 +289,46 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertIn("focus_descriptions_list(hwnd)", helper)
         self.assertNotIn("show_info(", helper)
 
-    def test_selection_change_does_not_silently_save_unapplied_text(self):
+    def test_selection_change_keeps_unapplied_text_in_memory_without_saving(self):
         command = PROJECT[PROJECT.index("WM_COMMAND =>"):PROJECT.index("WM_CONTEXTMENU =>")]
         selection = command[
             command.index("ID_LIST if notification == LBN_SELCHANGE"):
             command.index("ID_APPLY if !state.running")
         ]
-        self.assertNotIn("description.text = text", selection)
-        self.assertIn("set_text(state.edit, &description.text)", selection)
+        self.assertIn("capture_current_draft(state)", selection)
+        self.assertIn("select_project_description(state, index)", selection)
+        self.assertNotIn("save_audio_description_project", selection)
+        self.assertNotIn("apply_audio_description_project_batch_edits", selection)
+        self.assertIn("drafts: HashMap<usize, String>", PROJECT)
         self.assertIn("apply_before_export", PROJECT)
+
+    def test_apply_text_validates_all_drafts_and_saves_once(self):
+        apply = PROJECT[
+            PROJECT.index("fn start_apply"):
+            PROJECT.index("fn start_voice_change")
+        ]
+        self.assertIn("capture_current_draft(state)", apply)
+        self.assertIn("state.drafts.get(&description.id)", apply)
+        self.assertIn("apply_audio_description_project_batch_edits", apply)
+        batch = AUDIO[
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits"):
+            AUDIO.index("pub fn change_audio_description_project_voice")
+        ]
+        self.assertIn("for (index, text) in &normalized_edits", batch)
+        self.assertIn("validate_audio_description_project_edit_duration(", batch)
+        self.assertEqual(batch.count("save_audio_description_project(project_path, &updated)"), 1)
+        self.assertIn("applied_count: normalized_edits.len()", batch)
+
+    def test_batch_apply_focuses_invalid_description_and_keeps_other_drafts(self):
+        done = PROJECT[
+            PROJECT.index("WM_PROJECT_APPLY_DONE =>"):
+            PROJECT.index("WM_PROJECT_VOICES_LOADED =>")
+        ]
+        self.assertIn("if let Some(index) = batch_error.index", done)
+        self.assertIn("refill_list(state, index)", done)
+        self.assertIn("SetFocus(state.edit)", done)
+        self.assertIn("state.drafts.clear()", done)
+        self.assertIn("edit_saved_multiple", done)
 
     def test_output_player_return_focuses_close_not_start(self):
         returned = WINDOW[
@@ -416,7 +447,8 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
             WINDOW.index('fn persist_audio_description_preferences')
         ]
         self.assertIn('get_text(state.character_catalog_name_edit)', prepare)
-        self.assertIn('SetFocus(state.character_catalog_name_edit)', prepare)
+        self.assertIn('state.character_catalog_name_edit', prepare)
+        self.assertIn('show_audio_description_error_and_focus', prepare)
         self.assertNotIn('prompt_user(', prepare)
 
     def test_project_voice_change_reuses_real_scheduler_and_rebuilds_mp3_atomically(self):
@@ -439,7 +471,7 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertLess(project_save, commit)
         self.assertIn('if let Some(first) = dropped.first()', validation)
         self.assertIn('AudioDescriptionProjectVoiceError::DoesNotFit', validation)
-        self.assertIn('job.tts_engine = engine;', validation)
+        self.assertIn('job.tts_engine = settings.engine;', validation)
         self.assertIn('job.tts_voice = voice.to_string();', validation)
         self.assertIn('let mix_cues: Vec<AudioDescriptionMixCue> = scheduled', validation)
         self.assertIn('temporary_sibling_path(&project.output_mp3_path, "voice")', validation)
@@ -475,6 +507,38 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertIn('ID_CHANGE_VOICE if !state.running => start_voice_change(hwnd, state)', command)
         self.assertNotIn('ID_VOICE if notification == CBN_SELCHANGE', command)
         self.assertIn('ID_ENGINE if notification == CBN_SELCHANGE', command)
+
+    def test_project_voice_controls_include_speed_volume_and_preview(self):
+        create = PROJECT[PROJECT.index('WM_CREATE =>'):PROJECT.index('WM_COMMAND =>')]
+        engine_combo = create.index('let engine_combo = CreateWindowExW(')
+        voice_combo = create.index('let voice_combo = CreateWindowExW(')
+        rate_combo = create.index('let rate_combo = CreateWindowExW(')
+        volume_combo = create.index('let volume_combo = CreateWindowExW(')
+        test_button = create.index('let test_voice_button = CreateWindowExW(')
+        change_button = create.index('let change_voice_button = CreateWindowExW(')
+        self.assertLess(engine_combo, voice_combo)
+        self.assertLess(voice_combo, rate_combo)
+        self.assertLess(rate_combo, volume_combo)
+        self.assertLess(volume_combo, test_button)
+        self.assertLess(test_button, change_button)
+        self.assertIn('tts_tuning.label_speed', PROJECT)
+        self.assertIn('tts_tuning.label_volume', PROJECT)
+        self.assertIn('audio_description.voice_settings.test', PROJECT)
+        command = PROJECT[PROJECT.index('WM_COMMAND =>'):PROJECT.index('WM_CONTEXTMENU =>')]
+        self.assertIn('ID_TEST_VOICE if !state.running => test_project_voice(state)', command)
+
+    def test_project_voice_change_applies_and_persists_rate_and_volume_without_rerunning_ai(self):
+        validation = AUDIO[
+            AUDIO.index('pub fn change_audio_description_project_voice'):
+            AUDIO.index('pub fn delete_audio_description_project_description')
+        ]
+        self.assertIn('job.tts_rate = settings.rate;', validation)
+        self.assertIn('job.tts_volume = settings.volume;', validation)
+        self.assertIn('.protected_intervals', validation)
+        self.assertIn('visual_evidence_time_sec: description.visual_evidence_time_sec', validation)
+        self.assertIn('build_audio_description_project(', validation)
+        self.assertNotIn('run_audio_description_bridge', validation)
+        self.assertNotIn('Gemini', validation)
 
     def test_project_engine_selection_only_reloads_voices_until_change_button_is_pressed(self):
         command = PROJECT[PROJECT.index('WM_COMMAND =>'):PROJECT.index('WM_CONTEXTMENU =>')]

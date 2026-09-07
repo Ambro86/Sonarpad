@@ -1,4 +1,5 @@
 import unittest
+import json
 from unittest import mock
 from types import SimpleNamespace
 
@@ -528,6 +529,85 @@ class ChunkTimestampTests(unittest.TestCase):
         self.assertIn("never pull an action from a preceding or following scene", prompt)
         self.assertIn("including a logo or title card", prompt)
         self.assertIn("Temporal correctness is more important", prompt)
+
+    def test_prompt_reads_narrative_on_screen_text_without_bypassing_silences(self):
+        settings = {
+            "application_language": "it",
+            "enable_character_glossary": False,
+            "gemini_description_verbosity": "standard",
+            "recognize_screen_text": True,
+        }
+        with mock.patch(
+            "audio_describer.core.audio_describer.config_model.get_setting",
+            side_effect=lambda key: settings.get(key),
+        ):
+            system, prompt = _build_unified_prompts(
+                "", "gemini-test", dialogue_free_windows="10.000-13.000"
+            )
+
+        self.assertIn("READ NARRATIVELY IMPORTANT ON-SCREEN TEXT", system)
+        self.assertIn("Three years later", system)
+        self.assertIn("dates, locations", system)
+        self.assertIn("letters or messages", system)
+        self.assertIn("persistent channel logos/watermarks", system)
+        self.assertIn("subtitles/", system)
+        self.assertIn("repeat audible dialogue", system)
+        self.assertIn("NEVER overrides dialogue", system)
+        self.assertIn("dialogue-free window", system)
+        self.assertIn("visual_evidence_time_seconds", system)
+        self.assertIn("Authoritative dialogue-free windows", prompt)
+        self.assertIn("never place a description outside them", prompt)
+        self.assertIn('three top-level keys:', system)
+        self.assertIn('"on_screen_text"', system)
+        self.assertIn('"narratively_relevant"', system)
+        self.assertIn("including text visible during dialogue", system)
+        self.assertIn("Otherwise keep it only in on_screen_text", system)
+        example = json.loads(system.split("**EXAMPLE OUTPUT:**", 1)[1])
+        self.assertEqual(example["on_screen_text"], [])
+
+    def test_prompt_keeps_legacy_behavior_when_screen_text_recognition_is_disabled(self):
+        settings = {
+            "application_language": "it",
+            "enable_character_glossary": False,
+            "gemini_description_verbosity": "standard",
+            "recognize_screen_text": False,
+        }
+        with mock.patch(
+            "audio_describer.core.audio_describer.config_model.get_setting",
+            side_effect=lambda key: settings.get(key),
+        ):
+            system, _prompt = _build_unified_prompts(
+                "", "gemini-test", dialogue_free_windows="10.000-13.000"
+            )
+
+        self.assertNotIn("READ NARRATIVELY IMPORTANT ON-SCREEN TEXT", system)
+        self.assertNotIn("Three years later", system)
+        self.assertNotIn("persistent channel logos/watermarks", system)
+        self.assertNotIn("on_screen_text", system)
+        self.assertIn("two top-level keys:", system)
+        example = json.loads(system.split("**EXAMPLE OUTPUT:**", 1)[1])
+        self.assertEqual(set(example), {"character_glossary", "audio_descriptions"})
+
+    def test_screen_text_metadata_never_changes_narration_or_parse_success(self):
+        description = {"start_time_mmss": "00:10.000", "end_time_mmss": "00:12.000",
+                       "visual_evidence_time_seconds": 11.25, "description_text": "Una libreria"}
+        metadata_cases = [None, "invalid", [], [None], [
+            {"text": "LIBRI", "visual_evidence_time_seconds": 8.0,
+             "narratively_relevant": True}]]
+        for enabled in (False, True):
+            for metadata in metadata_cases:
+                with self.subTest(enabled=enabled, metadata=metadata), mock.patch(
+                    "audio_describer.core.audio_describer.config_model.get_setting",
+                    return_value=enabled,
+                ), mock.patch("audio_describer.core.audio_describer.app_logger.info") as log:
+                    response = {"character_glossary": [], "audio_descriptions": [description]}
+                    if metadata is not None:
+                        response["on_screen_text"] = metadata
+                    descs, glossary, ok = _parse_unified_response(json.dumps(response), None)
+                    self.assertTrue(ok)
+                    self.assertEqual(descs, [("00:10.000", "00:12.000", "Una libreria")])
+                    self.assertEqual(glossary, [])
+                    self.assertEqual(log.called, enabled)
 
     def test_recent_descriptions_preserve_subject_flow_across_chunk_boundary(self):
         recent = _format_recent_description_context([
