@@ -1,5 +1,13 @@
 # Dnevnik izmena
 
+Verzija 0.9.6 – 2026-09-09
+
+1. Ispravljeno je blokiranje nekih SAPI4 glasova kada je praćenje kursora uključeno. Bridge sada čeka stvarni završetak sinteze, dok praćenje kursora ostaje aktivno.
+
+2. Ispravljeni su sinhronizacija mikrofona i sistemskog zvuka i pucketanje izazvano zaokruživanjem vremenskih oznaka pri snimanju podkasta. Ispravke važe i za odvojeno čuvanje izvora.
+
+3. SAPI5 sinteza audio-opisa sada radi u zasebnim procesima. Posle greške pokušava ponovo sa manjim brojem paralelnih procesa, čuva uspešne opise i pamti odgovarajuće ograničenje za glas.
+
 Verzija 0.9.5 – 2026-09-07
 
 Аудио-дескрипција уз AI

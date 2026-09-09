@@ -1,5 +1,13 @@
 # Changelog
 
+Versión 0.9.6 – 2026-09-09
+
+1. Corregidos los bloqueos de algunas voces SAPI4 con el seguimiento del cursor activado. El puente espera ahora a que la síntesis termine realmente, manteniendo activo el seguimiento.
+
+2. Corregidos la sincronización entre micrófono y audio del sistema y los clics causados por el redondeo de las marcas de tiempo al grabar podcasts. También se aplica al guardar las fuentes por separado.
+
+3. La síntesis SAPI5 de audiodescripciones se ejecuta ahora en procesos separados. Si falla, se reintenta con menos concurrencia, conservando las descripciones correctas y recordando el límite que funciona para esa voz.
+
 Versión 0.9.5 – 2026-09-07
 
 Audiodescripción con IA

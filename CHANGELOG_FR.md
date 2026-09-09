@@ -1,5 +1,13 @@
 # Journal des modifications
 
+Version 0.9.6 – 2026-09-09
+
+1. Correction des blocages de certaines voix SAPI4 lorsque le suivi du curseur est activé. Le bridge attend désormais la fin réelle de la synthèse, sans désactiver le suivi.
+
+2. Correction de la synchronisation entre microphone et audio système et des clics dus aux arrondis des horodatages pendant les enregistrements de podcasts. Ces corrections concernent aussi les sources enregistrées séparément.
+
+3. La synthèse SAPI5 des audiodescriptions utilise désormais des processus séparés. En cas d’échec, elle reprend avec moins de processus simultanés, conserve les descriptions réussies et mémorise la limite fonctionnelle pour la voix.
+
 Version 0.9.5 – 2026-09-07
 
 Audiodescription avec IA

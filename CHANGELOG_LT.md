@@ -1,5 +1,13 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.6 – 2026-09-09
+
+1. Ištaisytas kai kurių SAPI4 balsų strigimas įjungus žymeklio sekimą. Jungiamasis procesas dabar laukia tikrosios sintezės pabaigos, o žymeklio sekimas lieka įjungtas.
+
+2. Ištaisyta mikrofono ir sistemos garso sinchronizacija bei spragsėjimas dėl laiko žymų apvalinimo įrašant tinklalaides. Pataisos taikomos ir atskirai išsaugant garso šaltinius.
+
+3. SAPI5 garsinių aprašymų sintezė dabar vyksta atskiruose procesuose. Nepavykus sintezė kartojama su mažesniu lygiagretumu, išsaugomi sėkmingi aprašymai ir įsimenama tinkama balso riba.
+
 Versija 0.9.5 – 2026-09-07
 
 DI garso aprašymas

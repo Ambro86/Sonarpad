@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+Wersja 0.9.6 – 2026-09-09
+
+1. Naprawiono zawieszanie się niektórych głosów SAPI4 przy włączonym śledzeniu kursora. Mostek czeka teraz na rzeczywiste zakończenie syntezy, zachowując śledzenie kursora.
+
+2. Poprawiono synchronizację mikrofonu i dźwięku systemowego oraz usunięto trzaski powodowane zaokrąglaniem znaczników czasu podczas nagrywania podcastów. Poprawki dotyczą także oddzielnego zapisywania źródeł.
+
+3. Synteza audiodeskrypcji SAPI5 działa teraz w osobnych procesach. Po błędzie jest ponawiana z mniejszą równoległością, zachowuje udane opisy i zapamiętuje działający limit dla głosu.
+
 Wersja 0.9.5 – 2026-09-07
 
 Audiodeskrypcja z AI

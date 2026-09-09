@@ -1,5 +1,13 @@
 # Changelog
 
+Version 0.9.6 – 2026-09-09
+
+1. Fixed freezes with some SAPI4 voices when cursor tracking was enabled. The bridge now waits for actual synthesis completion while keeping cursor tracking active.
+
+2. Fixed microphone/system-audio synchronization and clicks caused by timestamp rounding in podcast recording. Corrections also apply when saving the sources separately.
+
+3. Isolated SAPI5 audio-description synthesis in child processes. Failed synthesis is retried with reduced concurrency while retaining successful descriptions; the working limit is remembered for the voice.
+
 Version 0.9.5 – 2026-09-07
 
 AI Audio Description

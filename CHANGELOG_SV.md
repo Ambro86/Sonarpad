@@ -1,5 +1,13 @@
 # Ändringslogg
 
+Version 0.9.6 – 2026-09-09
+
+1. Åtgärdat låsningar med vissa SAPI4-röster när markörföljning är aktiverad. Bryggan väntar nu tills syntesen verkligen är klar, med markörföljningen fortsatt aktiv.
+
+2. Åtgärdat synkronisering mellan mikrofon och systemljud samt klick orsakade av avrundade tidsstämplar vid poddinspelning. Korrigeringarna gäller även när ljudkällorna sparas separat.
+
+3. SAPI5-syntes för syntolkning körs nu i separata processer. Vid fel görs nya försök med färre samtidiga processer, färdiga beskrivningar behålls och den fungerande gränsen sparas för rösten.
+
 Version 0.9.5 – 2026-09-07
 
 AI-ljudbeskrivning

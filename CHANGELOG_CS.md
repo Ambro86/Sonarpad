@@ -1,5 +1,13 @@
 # Přehled změn
 
+Verze 0.9.6 – 2026-09-09
+
+1. Opraveno zamrzání některých hlasů SAPI4 při zapnutém sledování kurzoru. Bridge nyní čeká na skutečné dokončení syntézy a sledování kurzoru zůstává zapnuté.
+
+2. Opravena synchronizace mikrofonu a systémového zvuku a praskání způsobené zaokrouhlováním časových značek při nahrávání podcastů. Opravy platí i při samostatném ukládání zdrojů.
+
+3. Syntéza audiopopisů pomocí SAPI5 nyní běží v oddělených procesech. Při selhání se opakuje s menším počtem souběžných procesů, zachová dokončené popisy a uloží funkční limit pro daný hlas.
+
 Verze 0.9.5 – 2026-09-07
 
 Audiopopis s AI

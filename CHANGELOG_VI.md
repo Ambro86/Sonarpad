@@ -1,5 +1,13 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.6 – 2026-09-09
+
+1. Đã sửa lỗi treo ở một số giọng SAPI4 khi bật tính năng di chuyển con trỏ theo lời đọc. Cầu nối giờ chờ tổng hợp giọng nói hoàn tất thực sự và vẫn giữ tính năng theo dõi con trỏ.
+
+2. Đã sửa đồng bộ giữa micrô và âm thanh hệ thống cùng tiếng lách tách do làm tròn dấu thời gian khi ghi podcast. Các bản sửa cũng áp dụng khi lưu riêng từng nguồn âm thanh.
+
+3. Tổng hợp thuyết minh âm thanh SAPI5 giờ chạy trong các tiến trình riêng. Khi thất bại, hệ thống thử lại với ít tiến trình đồng thời hơn, giữ các mô tả đã hoàn tất và ghi nhớ giới hạn hoạt động cho giọng đó.
+
 Phiên bản 0.9.5 – 2026-09-07
 
 Mô tả âm thanh bằng AI

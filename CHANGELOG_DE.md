@@ -1,5 +1,13 @@
 # Änderungsprotokoll
 
+Version 0.9.6 – 2026-09-09
+
+1. Blockierungen einiger SAPI4-Stimmen bei aktivierter Cursorverfolgung behoben. Die Bridge wartet jetzt auf den tatsächlichen Abschluss der Synthese; die Cursorverfolgung bleibt aktiv.
+
+2. Synchronisierung von Mikrofon und Systemaudio sowie durch Zeitstempelrundung verursachtes Knacken bei Podcast-Aufnahmen korrigiert. Die Korrekturen gelten auch beim getrennten Speichern der Quellen.
+
+3. Die SAPI5-Synthese für Audiodeskriptionen läuft jetzt in separaten Prozessen. Fehlgeschlagene Synthesen werden mit weniger parallelen Prozessen wiederholt; erfolgreiche Beschreibungen bleiben erhalten und die funktionierende Grenze wird für die Stimme gespeichert.
+
 Version 0.9.5 – 2026-09-07
 
 KI-Audiodeskription
