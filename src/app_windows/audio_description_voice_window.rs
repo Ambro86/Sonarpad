@@ -20,6 +20,8 @@ use windows::core::PCWSTR;
 use crate::settings::{Language, TtsEngine, VoiceInfo};
 use crate::{i18n, to_wide, with_state};
 
+const ID_LANGUAGE: i32 = 1206;
+const ID_LANGUAGE_LABEL: i32 = 1207;
 const ID_ENGINE: i32 = 1201;
 const ID_VOICE: i32 = 1202;
 const ID_RATE: i32 = 1203;
@@ -65,6 +67,7 @@ struct DialogData {
     sources: AudioDescriptionVoiceSources,
     default: AudioDescriptionVoiceSettings,
     preview_pitch: i32,
+    voice_languages: Vec<String>,
     result: Option<AudioDescriptionVoiceSettings>,
 }
 
@@ -134,6 +137,64 @@ fn fill_engine_combo(hwnd: HWND, language: Language, selected: TtsEngine) {
     }
 }
 
+fn voice_language_code(voice: &VoiceInfo) -> String {
+    voice
+        .locale
+        .split(['-', '_'])
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase()
+}
+
+fn fill_language_combo(hwnd: HWND, data: &DialogData) {
+    let combo = unsafe { GetDlgItem(hwnd, ID_LANGUAGE) };
+    add_combo_item(
+        combo,
+        &i18n::tr(data.language, "google_tts.voices.all_languages"),
+        -1,
+    );
+    let preferred = data
+        .sources
+        .edge
+        .iter()
+        .find(|voice| voice.short_name.eq_ignore_ascii_case(&data.default.voice))
+        .map(voice_language_code)
+        .unwrap_or_else(|| super::locale_display_names::app_locale(data.language).to_string());
+    let mut selected = 0;
+    for (index, code) in data.voice_languages.iter().enumerate() {
+        let key = format!("voice.lang.{code}");
+        let translated = i18n::tr(data.language, &key);
+        let label = if translated != key {
+            translated
+        } else {
+            super::locale_display_names::language_name(data.language, code)
+                .unwrap_or_else(|| code.to_ascii_uppercase())
+        };
+        add_combo_item(combo, &label, index as isize);
+        if code == &preferred {
+            selected = index + 1;
+        }
+    }
+    unsafe {
+        SendMessageW(combo, CB_SETCURSEL, WPARAM(selected), LPARAM(0));
+    }
+}
+
+fn selected_language(hwnd: HWND, data: &DialogData) -> Option<&str> {
+    let combo = unsafe { GetDlgItem(hwnd, ID_LANGUAGE) };
+    let selected = unsafe { SendMessageW(combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0 };
+    if selected < 0 {
+        return None;
+    }
+    let index =
+        unsafe { SendMessageW(combo, CB_GETITEMDATA, WPARAM(selected as usize), LPARAM(0)).0 };
+    if index < 0 {
+        return None;
+    }
+    data.voice_languages.get(index as usize).map(String::as_str)
+}
+
 fn fill_voice_combo(hwnd: HWND, preferred: &str) {
     let pointer = unsafe { GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut DialogData };
     if pointer.is_null() {
@@ -144,8 +205,24 @@ fn fill_voice_combo(hwnd: HWND, preferred: &str) {
     let combo = unsafe { GetDlgItem(hwnd, ID_VOICE) };
     unsafe { SendMessageW(combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0)) };
     let voices = data.sources.voices(engine);
+    let filter = if engine == TtsEngine::Edge {
+        selected_language(hwnd, data)
+    } else {
+        None
+    };
+    unsafe {
+        EnableWindow(GetDlgItem(hwnd, ID_LANGUAGE), engine == TtsEngine::Edge);
+        EnableWindow(
+            GetDlgItem(hwnd, ID_LANGUAGE_LABEL),
+            engine == TtsEngine::Edge,
+        );
+    }
+    let mut visible_count = 0;
     let mut selected_index = 0usize;
     for (index, voice) in voices.iter().enumerate() {
+        if filter.is_some_and(|code| voice_language_code(voice) != code) {
+            continue;
+        }
         let label = if voice.locale.trim().is_empty() {
             voice.short_name.clone()
         } else {
@@ -153,10 +230,11 @@ fn fill_voice_combo(hwnd: HWND, preferred: &str) {
         };
         add_combo_item(combo, &label, index as isize);
         if voice.short_name.eq_ignore_ascii_case(preferred) {
-            selected_index = index;
+            selected_index = visible_count;
         }
+        visible_count += 1;
     }
-    if !voices.is_empty() {
+    if visible_count > 0 {
         unsafe {
             SendMessageW(combo, CB_SETCURSEL, WPARAM(selected_index), LPARAM(0));
         }
@@ -459,6 +537,22 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 );
                 let engine_combo = create_combo(ID_ENGINE, y);
                 y += 38;
+                CreateWindowExW(
+                    WINDOW_EX_STYLE(0),
+                    WC_STATIC,
+                    PCWSTR(to_wide(&i18n::tr(language, "options.label.voice_language")).as_ptr()),
+                    WS_CHILD | WS_VISIBLE,
+                    label_x,
+                    y,
+                    label_width,
+                    height,
+                    hwnd,
+                    HMENU(ID_LANGUAGE_LABEL as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                create_combo(ID_LANGUAGE, y);
+                y += 38;
                 create_label(
                     i18n::tr(language, "audio_description.voice_settings.voice"),
                     y,
@@ -519,6 +613,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 );
 
                 fill_engine_combo(hwnd, language, data.default.engine);
+                fill_language_combo(hwnd, data);
                 fill_voice_combo(hwnd, &data.default.voice);
                 fill_value_combo(
                     GetDlgItem(hwnd, ID_RATE),
@@ -538,6 +633,11 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 let notification = ((wparam.0 >> 16) & 0xffff) as u16;
                 if id == ID_ENGINE && notification as u32 == CBN_SELCHANGE {
                     fill_voice_combo(hwnd, "");
+                    return LRESULT(0);
+                }
+                if id == ID_LANGUAGE && notification as u32 == CBN_SELCHANGE {
+                    let preferred = selected_voice(hwnd);
+                    fill_voice_combo(hwnd, &preferred);
                     return LRESULT(0);
                 }
                 if id == ID_TEST {
@@ -625,12 +725,21 @@ pub fn open_dialog(
             RegisterClassW(&class);
         });
 
+        let mut voice_languages: Vec<String> = sources
+            .edge
+            .iter()
+            .map(voice_language_code)
+            .filter(|code| !code.is_empty())
+            .collect();
+        voice_languages.sort();
+        voice_languages.dedup();
         let mut data = DialogData {
             language,
             main_parent,
             sources,
             default,
             preview_pitch,
+            voice_languages,
             result: None,
         };
         let hwnd = CreateWindowExW(
@@ -641,7 +750,7 @@ pub fn open_dialog(
             CW_USEDEFAULT,
             CW_USEDEFAULT,
             550,
-            285,
+            323,
             parent,
             HMENU(0),
             hinstance,

@@ -1628,7 +1628,7 @@ fn synthesize_description_tasks_parallel<F>(
     job: &AudioDescriptionJob,
     cache_dir: &Path,
     cancel: Arc<AtomicBool>,
-    mut on_completed: F,
+    on_completed: F,
 ) -> Result<Vec<SynthesizedDescription>, String>
 where
     F: FnMut(usize, usize),
@@ -1646,61 +1646,133 @@ where
         parallelism
     ));
 
-    let mut synthesized = Vec::with_capacity(tasks.len());
+    let (synthesized, final_limit) = run_description_batches(
+        tasks.len(),
+        job.tts_engine,
+        parallelism,
+        cancel.as_ref(),
+        |batch_indices| {
+            std::thread::scope(|scope| {
+                let mut handles = Vec::with_capacity(batch_indices.len());
+                for &index in batch_indices {
+                    let task = &tasks[index];
+                    let cancel = cancel.clone();
+                    handles.push(scope.spawn(move || {
+                        let (samples, sample_rate, channels) = synthesize_description(
+                            &task.text,
+                            task.synthesis_index,
+                            job,
+                            cache_dir,
+                            cancel,
+                        )?;
+                        Ok::<SynthesizedDescription, String>(SynthesizedDescription {
+                            original_index: task.original_index,
+                            text: task.text.clone(),
+                            desired_start_sec: task.desired_start_sec,
+                            visual_start_sec: task.visual_start_sec,
+                            visual_evidence_time_sec: task.visual_evidence_time_sec,
+                            mandatory: task.mandatory,
+                            slot_start_sec: task.slot_start_sec,
+                            slot_end_sec: task.slot_end_sec,
+                            samples,
+                            sample_rate,
+                            channels,
+                        })
+                    }));
+                }
+                handles
+                    .into_iter()
+                    .map(|handle| {
+                        handle.join().unwrap_or_else(|_| {
+                            Err("Audio description: parallel TTS worker panicked".to_string())
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })
+        },
+        on_completed,
+    )?;
+    if final_limit < parallelism {
+        crate::tts_engine::remember_audio_description_sapi5_limit(&job.tts_voice, final_limit);
+        crate::log_debug(&format!(
+            "Audio description: SAPI5 export completed; remembering concurrency={final_limit} voice={:?}",
+            job.tts_voice
+        ));
+    }
+    Ok(synthesized)
+}
+
+fn run_description_batches<T, B, P>(
+    count: usize,
+    engine: TtsEngine,
+    mut parallelism: usize,
+    cancel: &AtomicBool,
+    mut synthesize_batch: B,
+    mut on_completed: P,
+) -> Result<(Vec<T>, usize), String>
+where
+    B: FnMut(&[usize]) -> Vec<Result<T, String>>,
+    P: FnMut(usize, usize),
+{
+    let mut synthesized: Vec<Option<T>> = (0..count).map(|_| None).collect();
+    let mut pending: std::collections::VecDeque<usize> = (0..count).collect();
     let mut completed = 0_usize;
-    for batch_start in (0..tasks.len()).step_by(parallelism) {
+    while !pending.is_empty() {
         if cancel.load(Ordering::Relaxed) {
             return Err("cancelled".to_string());
         }
-        let batch_end = std::cmp::min(batch_start + parallelism, tasks.len());
-        let batch = &tasks[batch_start..batch_end];
-        let batch_results = std::thread::scope(|scope| {
-            let mut handles = Vec::with_capacity(batch.len());
-            for task in batch {
-                let cancel = cancel.clone();
-                handles.push(scope.spawn(move || {
-                    let (samples, sample_rate, channels) = synthesize_description(
-                        &task.text,
-                        task.synthesis_index,
-                        job,
-                        cache_dir,
-                        cancel,
-                    )?;
-                    Ok::<SynthesizedDescription, String>(SynthesizedDescription {
-                        original_index: task.original_index,
-                        text: task.text.clone(),
-                        desired_start_sec: task.desired_start_sec,
-                        visual_start_sec: task.visual_start_sec,
-                        visual_evidence_time_sec: task.visual_evidence_time_sec,
-                        mandatory: task.mandatory,
-                        slot_start_sec: task.slot_start_sec,
-                        slot_end_sec: task.slot_end_sec,
-                        samples,
-                        sample_rate,
-                        channels,
-                    })
-                }));
-            }
-            handles
-                .into_iter()
-                .map(|handle| {
-                    handle.join().unwrap_or_else(|_| {
-                        Err("Audio description: parallel TTS worker panicked".to_string())
-                    })
-                })
-                .collect::<Vec<_>>()
-        });
+        let batch_indices: Vec<usize> = pending.drain(..pending.len().min(parallelism)).collect();
+        let batch_results = synthesize_batch(&batch_indices);
+        if batch_results.len() != batch_indices.len() {
+            return Err("Audio description: incomplete synthesis batch".to_string());
+        }
 
-        for result in batch_results {
+        let mut worker_error = None;
+        for (index, result) in batch_indices.into_iter().zip(batch_results) {
             if cancel.load(Ordering::Relaxed) {
                 return Err("cancelled".to_string());
             }
-            synthesized.push(result?);
-            completed = completed.saturating_add(1);
-            on_completed(completed, tasks.len());
+            match result {
+                Ok(description) => {
+                    synthesized[index] = Some(description);
+                    completed += 1;
+                    on_completed(completed, count);
+                }
+                Err(error)
+                    if audio_description_sapi5_retry_limit(engine, parallelism, &error)
+                        .is_some() =>
+                {
+                    pending.push_front(index);
+                    worker_error = Some(error);
+                }
+                Err(error) => return Err(error),
+            }
+        }
+        if let Some(error) = worker_error {
+            let previous = parallelism;
+            parallelism = (parallelism / 2).max(1);
+            crate::log_debug(&format!(
+                "Audio description: isolated SAPI5 failure; concurrency={previous} retry_concurrency={parallelism} completed={completed} pending={} error={error}",
+                pending.len()
+            ));
         }
     }
-    Ok(synthesized)
+    let result = synthesized
+        .into_iter()
+        .map(|item| item.ok_or_else(|| "Audio description: missing synthesis result".to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((result, parallelism))
+}
+
+fn audio_description_sapi5_retry_limit(
+    engine: TtsEngine,
+    current: usize,
+    error: &str,
+) -> Option<usize> {
+    (engine == TtsEngine::Sapi5
+        && current > 1
+        && error.contains("SAPI5 isolated synthesis failed:"))
+    .then(|| (current / 2).max(1))
 }
 
 fn normalize_intervals(intervals: &[BridgeInterval], duration_sec: f64) -> Vec<(f64, f64)> {
@@ -4677,6 +4749,111 @@ mod tests {
         crate::log_if_err!(
             std::fs::remove_file(path),
             "Audio description cleanup operation failed"
+        );
+    }
+}
+
+#[cfg(test)]
+mod isolated_sapi5_description_tests {
+    use super::audio_description_sapi5_retry_limit;
+    use crate::settings::TtsEngine;
+
+    #[test]
+    fn batch_recovery_keeps_successes_and_original_order() -> Result<(), String> {
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        let mut attempts = [0; 10];
+        let mut progress = Vec::new();
+        let (results, limit) = super::run_description_batches(
+            10,
+            TtsEngine::Sapi5,
+            8,
+            &cancel,
+            |indices| {
+                indices
+                    .iter()
+                    .map(|&index| {
+                        attempts[index] += 1;
+                        if (index == 1 || index == 3) && attempts[index] == 1 {
+                            Err("SAPI5 isolated synthesis failed: simulated native crash"
+                                .to_string())
+                        } else {
+                            Ok(index)
+                        }
+                    })
+                    .collect()
+            },
+            |done, total| progress.push((done, total)),
+        )?;
+        assert_eq!(results, (0..10).collect::<Vec<_>>());
+        assert_eq!(limit, 4);
+        assert_eq!(attempts, [1, 2, 1, 2, 1, 1, 1, 1, 1, 1]);
+        assert_eq!(progress, (1..=10).map(|n| (n, 10)).collect::<Vec<_>>());
+        Ok(())
+    }
+
+    #[test]
+    fn persistent_worker_failure_stops_at_one_and_cancel_does_not_retry() {
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        let mut calls = 0;
+        let result = super::run_description_batches::<usize, _, _>(
+            1,
+            TtsEngine::Sapi5,
+            8,
+            &cancel,
+            |_| {
+                calls += 1;
+                vec![Err("SAPI5 isolated synthesis failed: crash".to_string())]
+            },
+            |_, _| {},
+        );
+        assert!(result.is_err());
+        assert_eq!(calls, 4);
+        cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        let result = super::run_description_batches::<usize, _, _>(
+            1,
+            TtsEngine::Sapi5,
+            8,
+            &cancel,
+            |_| {
+                calls += 1;
+                vec![Ok(0)]
+            },
+            |_, _| {},
+        );
+        assert_eq!(result, Err("cancelled".to_string()));
+        assert_eq!(calls, 4);
+    }
+
+    #[test]
+    fn only_isolated_sapi5_failures_reduce_concurrency_and_retries_are_bounded() {
+        let crash = "SAPI5 isolated synthesis failed: worker terminated unexpectedly";
+        assert_eq!(
+            audio_description_sapi5_retry_limit(TtsEngine::Sapi5, 8, crash),
+            Some(4)
+        );
+        assert_eq!(
+            audio_description_sapi5_retry_limit(TtsEngine::Sapi5, 4, crash),
+            Some(2)
+        );
+        assert_eq!(
+            audio_description_sapi5_retry_limit(TtsEngine::Sapi5, 2, crash),
+            Some(1)
+        );
+        assert_eq!(
+            audio_description_sapi5_retry_limit(TtsEngine::Sapi5, 1, crash),
+            None
+        );
+        assert_eq!(
+            audio_description_sapi5_retry_limit(TtsEngine::Edge, 8, crash),
+            None
+        );
+        assert_eq!(
+            audio_description_sapi5_retry_limit(TtsEngine::Sapi5, 8, "disk full"),
+            None
+        );
+        assert_eq!(
+            audio_description_sapi5_retry_limit(TtsEngine::Sapi5, 8, "cancelled"),
+            None
         );
     }
 }

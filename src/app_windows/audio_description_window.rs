@@ -2013,6 +2013,35 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
                     );
                     return;
                 }
+                let Some(voice) =
+                    selected_voice_name(state).filter(|voice| !voice.trim().is_empty())
+                else {
+                    show_audio_description_error_and_focus(
+                        hwnd,
+                        state,
+                        &labels.error_voice,
+                        state.voice_settings_button,
+                    );
+                    return;
+                };
+                let engine = engine_from_combo(state.engine_combo);
+                crate::log_debug(&format!(
+                    "Audio description: resume voice selection checkpoint_engine={:?} checkpoint_voice={:?} selected_engine={:?} selected_voice={:?} rate={} pitch={} volume={}",
+                    job.tts_engine,
+                    job.tts_voice,
+                    engine,
+                    voice,
+                    state.tts_rate,
+                    ai_settings.tts_pitch,
+                    state.tts_volume
+                ));
+                // The checkpoint supplies completed analysis; the visible controls
+                // supply the voice used for this export, just as for a new job.
+                job.tts_engine = engine;
+                job.tts_voice = voice;
+                job.tts_rate = state.tts_rate;
+                job.tts_pitch = ai_settings.tts_pitch;
+                job.tts_volume = state.tts_volume;
                 job.gemini_model = selected_model;
                 job.recognize_screen_text = checkbox_checked(state.recognize_screen_text_checkbox);
                 if !use_sonarpad_ai {

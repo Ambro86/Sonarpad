@@ -1127,6 +1127,7 @@ fn synthesize_sapi4_bytes(
     Ok(bytes)
 }
 
+#[derive(Clone)]
 struct SynthesisConfig {
     engine: TtsEngine,
     voice: String,
@@ -1253,7 +1254,15 @@ async fn synthesize_segment_to_wav(
     target: TargetAudio,
 ) -> Result<PathBuf, String> {
     let wav_path = temp_wav_path("mix");
-    let bytes = synthesize_segment_bytes(text, config).await?;
+    let bytes = if config.engine == TtsEngine::Sapi5 {
+        let text = text.to_string();
+        let config = config.clone();
+        tokio::task::spawn_blocking(move || synthesize_sapi5_isolated_bytes(&text, &config))
+            .await
+            .map_err(|error| format!("SAPI5 isolated synthesis failed: {error}"))??
+    } else {
+        synthesize_segment_bytes(text, config).await?
+    };
     let (samples, src_rate, src_channels) = if config.engine == TtsEngine::Edge {
         match decode_mp3_to_pcm(&bytes) {
             Ok(v) => v,
@@ -8858,11 +8867,72 @@ fn run_sapi5_unit_subprocess(
         return Err("Isolated SAPI5 worker exited without returning a result".to_string());
     }
 
+    if unit
+        .output
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("wav"))
+    {
+        let bytes = std::fs::read(&unit.output).map_err(|error| error.to_string())?;
+        let (samples, rate, channels) = decode_wav_to_pcm(&bytes)?;
+        if samples.is_empty() || rate == 0 || channels == 0 {
+            return Err("Isolated SAPI5 worker produced an empty WAV".to_string());
+        }
+        return Ok(Sapi5PartMetrics {
+            bytes: bytes.len() as u64,
+            size_duration_ms: 0,
+            decoded_duration_ms: Some(
+                samples.len() as u64 * 1000 / u64::from(rate) / u64::from(channels),
+            ),
+            minimum_duration_ms: 0,
+            suspicious_reason: None,
+        });
+    }
     Ok(validate_sapi5_parallel_output(
         unit,
         context.audiobook_bitrate_kbps,
         context.rate,
     ))
+}
+
+// Reuse the existing child-process protocol for short mixed-export segments too.
+// The child dispatch calls speak_sapi_to_file directly, never this parent helper.
+fn synthesize_sapi5_isolated_bytes(
+    text: &str,
+    config: &SynthesisConfig,
+) -> Result<Vec<u8>, String> {
+    let output = temp_wav_path("sapi5_isolated");
+    let unit = Sapi5ParallelUnit {
+        index: 0,
+        start_chunk: 0,
+        end_chunk: 1,
+        chunks: vec![text.to_string()],
+        output: output.clone(),
+        text_chars: text.chars().count(),
+    };
+    let context = Sapi5ProcessWorkerContext {
+        voice: config.voice.clone(),
+        language: config.language,
+        rate: config.rate,
+        pitch: config.pitch,
+        volume: config.volume,
+        audiobook_bitrate_kbps: 128,
+        cancel: config.cancel.clone(),
+        attempt_abort: Arc::new(AtomicBool::new(false)),
+        progress_hwnd: HWND(0),
+        progress_counter: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+        report_progress: false,
+    };
+    let result = run_sapi5_unit_subprocess(&unit, 0, 1, 1, &context)
+        .and_then(|_| std::fs::read(&output).map_err(|error| error.to_string()));
+    if output.exists() {
+        crate::log_if_err!(std::fs::remove_file(&output));
+    }
+    result.map_err(|error| format!("SAPI5 isolated synthesis failed: {error}"))
+}
+
+pub(crate) fn remember_audio_description_sapi5_limit(voice: &str, limit: usize) {
+    let previous = load_sapi5_worker_limit(voice).unwrap_or(SAPI5_MAX_PARALLEL_WORKERS);
+    save_sapi5_worker_limit(voice, previous.min(limit));
 }
 
 fn run_sapi5_unit_batch(
@@ -10544,6 +10614,9 @@ async fn synthesize_mixed_chunk_with_retry(
                     preview_for_log(&chunk.text_to_read, 120),
                     err
                 ));
+                if err.contains("SAPI5 isolated synthesis failed:") {
+                    return Err(err);
+                }
                 let should_retry = should_retry_audiobook_segment(synth.engine, attempt, &err);
                 if !should_retry {
                     crate::log_debug(&format!(

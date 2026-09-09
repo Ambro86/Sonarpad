@@ -4,21 +4,25 @@ use crate::mf_encoder;
 use crate::settings;
 use crate::settings::{PODCAST_DEVICE_DEFAULT, PodcastFormat};
 use chrono::Local;
-use std::collections::VecDeque;
+#[path = "podcast_timeline.rs"]
+mod timeline;
 use std::ffi::OsString;
 use std::mem::ManuallyDrop;
 use std::mem::size_of;
 use std::os::windows::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
+use timeline::{TICKS_PER_SECOND, TimedQueue, Timeline, frame_ticks};
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::CloseHandle;
 use windows::Win32::Media::Audio::{
-    AUDCLNT_BUFFERFLAGS_SILENT, AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM,
-    AUDCLNT_STREAMFLAGS_LOOPBACK, AUDIOCLIENT_ACTIVATION_PARAMS, AUDIOCLIENT_ACTIVATION_PARAMS_0,
+    AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY, AUDCLNT_BUFFERFLAGS_SILENT,
+    AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR, AUDCLNT_SHAREMODE_SHARED,
+    AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM, AUDCLNT_STREAMFLAGS_LOOPBACK,
+    AUDIOCLIENT_ACTIVATION_PARAMS, AUDIOCLIENT_ACTIVATION_PARAMS_0,
     AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK, AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS,
     ActivateAudioInterfaceAsync, AudioSessionStateActive, DEVICE_STATE_ACTIVE, EDataFlow,
     IActivateAudioInterfaceAsyncOperation, IActivateAudioInterfaceCompletionHandler,
@@ -308,6 +312,7 @@ pub enum RecorderStatus {
 
 pub struct RecorderHandle {
     shared: Arc<SharedState>,
+    buffer: Arc<MixBuffer>,
     stop: Arc<AtomicBool>,
     paused: Arc<AtomicBool>,
     single_app_process_id: Option<Arc<AtomicU32>>,
@@ -444,7 +449,7 @@ pub fn start_recording(config: RecorderConfig) -> Result<RecorderHandle, String>
     } else {
         0
     };
-    let mix_buffer = Arc::new(MixBuffer::new(system_stream_count));
+    let mix_buffer = Arc::new(MixBuffer::new(system_stream_count)?);
     let mut threads = Vec::new();
 
     if config.include_mic {
@@ -456,7 +461,9 @@ pub fn start_recording(config: RecorderConfig) -> Result<RecorderHandle, String>
         let device_id = config.mic_device_id.clone();
         let device_name = config.mic_device_name.clone();
         let mic_gain = config.mic_gain;
+        let completion = CaptureCompletion::new(buffer.clone());
         threads.push(thread::spawn(move || {
+            let _completion = completion;
             crate::log_debug("Microphone capture thread started");
             let result = capture_source(CaptureOptions {
                 kind: SourceKind::Microphone,
@@ -522,7 +529,9 @@ pub fn start_recording(config: RecorderConfig) -> Result<RecorderHandle, String>
             } else {
                 None
             };
+            let completion = CaptureCompletion::new(buffer.clone());
             threads.push(thread::spawn(move || {
+                let _completion = completion;
                 crate::log_debug("System audio capture thread started");
                 let result = capture_source(CaptureOptions {
                     kind: SourceKind::System,
@@ -612,6 +621,7 @@ pub fn start_recording(config: RecorderConfig) -> Result<RecorderHandle, String>
 
     Ok(RecorderHandle {
         shared,
+        buffer: mix_buffer,
         stop,
         paused,
         single_app_process_id,
@@ -629,6 +639,7 @@ pub fn start_recording(config: RecorderConfig) -> Result<RecorderHandle, String>
 impl RecorderHandle {
     pub fn pause(&self) {
         if !self.paused.swap(true, Ordering::SeqCst) {
+            self.buffer.pause();
             if let Ok(mut paused_at) = self.shared.paused_at.lock() {
                 *paused_at = Some(Instant::now());
             }
@@ -640,6 +651,7 @@ impl RecorderHandle {
 
     pub fn resume(&self) {
         if self.paused.swap(false, Ordering::SeqCst) {
+            self.buffer.resume();
             let now = Instant::now();
             if let Ok(mut paused_at) = self.shared.paused_at.lock()
                 && let Some(start) = paused_at.take()
@@ -684,7 +696,8 @@ impl RecorderHandle {
     {
         crate::log_debug("Stopping podcast recording");
 
-        // Signal encoder to stop (so it knows to drain queues and exit)
+        // Freeze the timeline before draining capture and encoder queues.
+        self.buffer.finish();
         self.stop.store(true, Ordering::SeqCst);
         crate::log_debug("Signaled encoder to stop");
 
@@ -859,36 +872,226 @@ enum SourceKind {
 struct MixBuffer {
     inner: Mutex<MixQueues>,
     condvar: Condvar,
+    origin_qpc: u64,
+    origin: Instant,
+    captures: AtomicUsize,
 }
 
 struct MixQueues {
-    mic: VecDeque<f32>,
-    system: Vec<VecDeque<f32>>,
+    mic: TimedQueue,
+    system: Vec<TimedQueue>,
+    timeline: Timeline,
+    cursor: u64,
+}
+
+// The writer waits for every capture worker, including one unwinding after a panic.
+struct CaptureCompletion(Arc<MixBuffer>);
+impl CaptureCompletion {
+    fn new(buffer: Arc<MixBuffer>) -> Self {
+        buffer.captures.fetch_add(1, Ordering::SeqCst);
+        Self(buffer)
+    }
+}
+impl Drop for CaptureCompletion {
+    fn drop(&mut self) {
+        self.0.captures.fetch_sub(1, Ordering::SeqCst);
+        self.0.condvar.notify_one();
+    }
 }
 
 impl MixBuffer {
-    fn new(system_stream_count: usize) -> Self {
-        MixBuffer {
+    fn new(system_stream_count: usize) -> Result<Self, String> {
+        use windows::Win32::System::Performance::{
+            QueryPerformanceCounter, QueryPerformanceFrequency,
+        };
+        let mut frequency = 0;
+        let mut counter = 0;
+        unsafe { QueryPerformanceFrequency(&mut frequency) }.map_err(|e| e.to_string())?;
+        unsafe { QueryPerformanceCounter(&mut counter) }.map_err(|e| e.to_string())?;
+        if frequency <= 0 || counter < 0 {
+            return Err("Invalid recording clock".to_string());
+        }
+        let origin = Instant::now();
+        let origin_qpc =
+            ((counter as u128 * u128::from(TICKS_PER_SECOND)) / frequency as u128) as u64;
+        crate::log_debug(
+            "Podcast synchronization: shared QPC timeline; delayed packets buffered up to 1000 ms; capture queues drained on stop",
+        );
+        Ok(Self {
             inner: Mutex::new(MixQueues {
-                mic: VecDeque::new(),
-                system: (0..system_stream_count).map(|_| VecDeque::new()).collect(),
+                mic: TimedQueue::default(),
+                system: (0..system_stream_count)
+                    .map(|_| TimedQueue::default())
+                    .collect(),
+                timeline: Timeline::new(origin_qpc),
+                cursor: 0,
             }),
             condvar: Condvar::new(),
-        }
+            origin_qpc,
+            origin,
+            captures: AtomicUsize::new(0),
+        })
     }
 
-    fn push(&self, source: SourceKind, system_stream_index: usize, samples: Vec<f32>) {
+    fn now(&self) -> u64 {
+        self.origin_qpc + (self.origin.elapsed().as_nanos() / 100) as u64
+    }
+
+    fn pause(&self) {
+        self.inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .timeline
+            .pause(self.now());
+    }
+
+    fn resume(&self) {
+        self.inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .timeline
+            .resume(self.now());
+    }
+
+    fn finish(&self) {
         let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
-        match source {
-            SourceKind::Microphone => inner.mic.extend(samples),
-            SourceKind::System => {
-                if let Some(queue) = inner.system.get_mut(system_stream_index) {
-                    queue.extend(samples);
-                }
-            }
+        if inner.timeline.end.is_none() {
+            inner.timeline.end = Some(self.now());
         }
         self.condvar.notify_one();
     }
+
+    #[cfg(test)]
+    fn push(&self, source: SourceKind, system_stream_index: usize, qpc: u64, samples: Vec<f32>) {
+        self.push_capture(source, system_stream_index, qpc, samples, false);
+    }
+
+    fn push_capture(
+        &self,
+        source: SourceKind,
+        system_stream_index: usize,
+        qpc: u64,
+        samples: Vec<f32>,
+        continuous: bool,
+    ) {
+        let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+        for (offset, count, start) in
+            inner
+                .timeline
+                .segments(qpc, samples.len() / 2, TARGET_SAMPLE_RATE)
+        {
+            let queue = match source {
+                SourceKind::Microphone => &mut inner.mic,
+                SourceKind::System => {
+                    let Some(queue) = inner.system.get_mut(system_stream_index) else {
+                        continue;
+                    };
+                    queue
+                }
+            };
+            queue.push_clocked(
+                start,
+                samples[offset * 2..(offset + count) * 2].to_vec(),
+                continuous && offset == 0,
+            );
+        }
+        self.condvar.notify_one();
+    }
+
+    fn next_chunk(&self, stop: &AtomicBool) -> Option<(Vec<f32>, Vec<f32>)> {
+        let mut inner = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+        loop {
+            let stopping = stop.load(Ordering::SeqCst);
+            if stopping && inner.timeline.end.is_none() {
+                inner.timeline.end = Some(self.now());
+            }
+            // Allow up to one second for delayed device delivery before filling a gap.
+            let horizon = if stopping {
+                inner.timeline.end.unwrap_or_else(|| self.now())
+            } else {
+                self.now().saturating_sub(TICKS_PER_SECOND)
+            };
+            let total = inner.timeline.elapsed_frames(horizon, TARGET_SAMPLE_RATE);
+            let remaining = total.saturating_sub(inner.cursor);
+            let drained = stopping && self.captures.load(Ordering::SeqCst) == 0;
+            if drained && remaining == 0 {
+                crate::log_debug(&format!(
+                    "Podcast packet continuity: mic_gap_frames={} mic_overlap_frames={} mic_max_gap={} mic_corrected={} system_gap_overlap_max_corrected={:?}",
+                    inner.mic.packet_gap_frames,
+                    inner.mic.packet_overlap_frames,
+                    inner.mic.max_packet_gap,
+                    inner.mic.corrected_boundaries,
+                    inner
+                        .system
+                        .iter()
+                        .map(|q| (
+                            q.packet_gap_frames,
+                            q.packet_overlap_frames,
+                            q.max_packet_gap,
+                            q.corrected_boundaries
+                        ))
+                        .collect::<Vec<_>>()
+                ));
+                crate::log_debug(&format!(
+                    "Podcast sync: written_frames={} mic_missing_frames={} mic_late_frames={} system_missing_frames={:?} system_late_frames={:?}",
+                    inner.cursor,
+                    inner.mic.silent_frames,
+                    inner.mic.late_frames,
+                    inner
+                        .system
+                        .iter()
+                        .map(|q| q.silent_frames)
+                        .collect::<Vec<_>>(),
+                    inner
+                        .system
+                        .iter()
+                        .map(|q| q.late_frames)
+                        .collect::<Vec<_>>()
+                ));
+                return None;
+            }
+            if (!stopping && remaining >= MIX_CHUNK_FRAMES as u64) || (drained && remaining > 0) {
+                let frames = remaining.min(MIX_CHUNK_FRAMES as u64) as usize;
+                let cursor = inner.cursor;
+                let mic = inner.mic.read(cursor, frames);
+                let mut system = vec![0.0; frames * 2];
+                let streams = inner.system.len().max(1) as f32;
+                for queue in &mut inner.system {
+                    for (mixed, sample) in system.iter_mut().zip(queue.read(cursor, frames)) {
+                        *mixed += sample / streams;
+                    }
+                }
+                inner.cursor += frames as u64;
+                return Some((mic, system));
+            }
+            inner = self
+                .condvar
+                .wait_timeout(inner, Duration::from_millis(20))
+                .unwrap_or_else(|e| e.into_inner())
+                .0;
+        }
+    }
+}
+
+fn mixed_chunk(mic: Vec<f32>, system: Vec<f32>, shared: &SharedState, streams: usize) -> Vec<f32> {
+    let gain = if shared.include_mic && shared.include_system {
+        0.5
+    } else {
+        1.0
+    };
+    mic.into_iter()
+        .zip(system)
+        .map(|(mic, system)| {
+            // Preserve the existing multiple-application mixing gain.
+            let mic = if shared.include_mic {
+                mic / streams.max(1) as f32
+            } else {
+                0.0
+            };
+            let system = if shared.include_system { system } else { 0.0 };
+            ((mic + system) * gain).clamp(-1.0, 1.0)
+        })
+        .collect()
 }
 
 struct WriterConfig {
@@ -922,88 +1125,23 @@ fn write_mixed_audio_wav(
     buffer: Arc<MixBuffer>,
     shared: Arc<SharedState>,
     stop: Arc<AtomicBool>,
-    paused: Arc<AtomicBool>,
+    _paused: Arc<AtomicBool>,
 ) -> Result<(), String> {
     let mut writer =
         audio_utils::WavWriter::create(&path, TARGET_SAMPLE_RATE, TARGET_CHANNELS, TARGET_BITS)
             .map_err(|e| e.to_string())?;
 
-    let mut last_write = Instant::now();
-    loop {
-        if stop.load(Ordering::SeqCst) {
-            break;
-        }
-        if paused.load(Ordering::SeqCst) {
-            thread::sleep(Duration::from_millis(30));
-            continue;
-        }
-
-        let mixed = {
-            let mut inner = buffer.inner.lock().unwrap_or_else(|e| e.into_inner());
-            let (need_mic, need_sys) = (shared.include_mic, shared.include_system);
-            let available_mic = inner.mic.len() / TARGET_CHANNELS as usize;
-            let available_sys = inner
-                .system
-                .iter()
-                .map(|queue| queue.len() / TARGET_CHANNELS as usize)
-                .min()
-                .unwrap_or(0);
-            let can_mix = if need_mic && need_sys {
-                available_mic >= MIX_CHUNK_FRAMES && available_sys >= MIX_CHUNK_FRAMES
-            } else if need_mic {
-                available_mic >= MIX_CHUNK_FRAMES
-            } else {
-                available_sys >= MIX_CHUNK_FRAMES
-            };
-
-            if !can_mix {
-                crate::log_if_err!(
-                    buffer
-                        .condvar
-                        .wait_timeout(inner, Duration::from_millis(40))
-                );
-                continue;
-            }
-
-            let frames = MIX_CHUNK_FRAMES;
-            let mut mixed = Vec::with_capacity(frames * TARGET_CHANNELS as usize);
-            for _ in 0..frames {
-                let mut left = 0.0f32;
-                let mut right = 0.0f32;
-                if need_mic {
-                    left += inner.mic.pop_front().unwrap_or(0.0);
-                    right += inner.mic.pop_front().unwrap_or(0.0);
-                }
-                if need_sys {
-                    let system_streams = inner.system.len();
-                    for queue in &mut inner.system {
-                        left += queue.pop_front().unwrap_or(0.0);
-                        right += queue.pop_front().unwrap_or(0.0);
-                    }
-                    if system_streams > 1 {
-                        left /= system_streams as f32;
-                        right /= system_streams as f32;
-                    }
-                }
-                if need_mic && need_sys {
-                    left *= 0.5;
-                    right *= 0.5;
-                }
-                mixed.push(left.clamp(-1.0, 1.0));
-                mixed.push(right.clamp(-1.0, 1.0));
-            }
-            mixed
-        };
-
+    while let Some((mic, system)) = buffer.next_chunk(&stop) {
+        let streams = buffer
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .system
+            .len();
+        let mixed = mixed_chunk(mic, system, &shared, streams);
         writer
             .write_samples_f32(&mixed)
             .map_err(|e| e.to_string())?;
-
-        let elapsed = last_write.elapsed();
-        if elapsed < Duration::from_millis(10) {
-            thread::sleep(Duration::from_millis(5));
-        }
-        last_write = Instant::now();
     }
     writer.finalize().map_err(|e| e.to_string())?;
     Ok(())
@@ -1015,7 +1153,7 @@ fn write_mixed_audio_mp3(
     buffer: Arc<MixBuffer>,
     shared: Arc<SharedState>,
     stop: Arc<AtomicBool>,
-    paused: Arc<AtomicBool>,
+    _paused: Arc<AtomicBool>,
 ) -> Result<(), String> {
     let mut writer = mf_encoder::Mp3StreamWriter::create(
         &path,
@@ -1023,85 +1161,19 @@ fn write_mixed_audio_mp3(
         TARGET_SAMPLE_RATE,
         TARGET_CHANNELS,
     )?;
-    let mut last_write = Instant::now();
-    loop {
-        if stop.load(Ordering::SeqCst) {
-            break;
-        }
-        if paused.load(Ordering::SeqCst) {
-            thread::sleep(Duration::from_millis(30));
-            continue;
-        }
-
-        let mixed = {
-            let mut inner = buffer.inner.lock().unwrap_or_else(|e| e.into_inner());
-            let (need_mic, need_sys) = (shared.include_mic, shared.include_system);
-            let available_mic = inner.mic.len() / TARGET_CHANNELS as usize;
-            let available_sys = inner
-                .system
-                .iter()
-                .map(|queue| queue.len() / TARGET_CHANNELS as usize)
-                .min()
-                .unwrap_or(0);
-            let can_mix = if need_mic && need_sys {
-                available_mic >= MIX_CHUNK_FRAMES && available_sys >= MIX_CHUNK_FRAMES
-            } else if need_mic {
-                available_mic >= MIX_CHUNK_FRAMES
-            } else {
-                available_sys >= MIX_CHUNK_FRAMES
-            };
-
-            if !can_mix {
-                crate::log_if_err!(
-                    buffer
-                        .condvar
-                        .wait_timeout(inner, Duration::from_millis(40))
-                );
-                continue;
-            }
-
-            let frames = MIX_CHUNK_FRAMES;
-            let mut mixed = Vec::with_capacity(frames * TARGET_CHANNELS as usize);
-            for _ in 0..frames {
-                let mut left = 0.0f32;
-                let mut right = 0.0f32;
-                if need_mic {
-                    left += inner.mic.pop_front().unwrap_or(0.0);
-                    right += inner.mic.pop_front().unwrap_or(0.0);
-                }
-                if need_sys {
-                    let system_streams = inner.system.len();
-                    for queue in &mut inner.system {
-                        left += queue.pop_front().unwrap_or(0.0);
-                        right += queue.pop_front().unwrap_or(0.0);
-                    }
-                    if system_streams > 1 {
-                        left /= system_streams as f32;
-                        right /= system_streams as f32;
-                    }
-                }
-                if need_mic && need_sys {
-                    left *= 0.5;
-                    right *= 0.5;
-                }
-                mixed.push(left.clamp(-1.0, 1.0));
-                mixed.push(right.clamp(-1.0, 1.0));
-            }
-            mixed
-        };
-
-        let mut pcm = Vec::with_capacity(mixed.len());
-        for sample in mixed {
-            let v = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
-            pcm.push(v);
-        }
+    while let Some((mic, system)) = buffer.next_chunk(&stop) {
+        let streams = buffer
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .system
+            .len();
+        let mixed = mixed_chunk(mic, system, &shared, streams);
+        let pcm: Vec<i16> = mixed
+            .into_iter()
+            .map(|sample| (sample * i16::MAX as f32) as i16)
+            .collect();
         writer.write_i16(&pcm)?;
-
-        let elapsed = last_write.elapsed();
-        if elapsed < Duration::from_millis(10) {
-            thread::sleep(Duration::from_millis(5));
-        }
-        last_write = Instant::now();
     }
     writer.finalize()?;
     Ok(())
@@ -1135,54 +1207,12 @@ fn write_split_audio(
     }
 }
 
-fn take_split_chunks(buffer: &Arc<MixBuffer>) -> Option<(Vec<f32>, Vec<f32>)> {
-    let mut inner = buffer.inner.lock().unwrap_or_else(|e| e.into_inner());
-    let available_mic = inner.mic.len() / TARGET_CHANNELS as usize;
-    let available_sys = inner
-        .system
-        .iter()
-        .map(|queue| queue.len() / TARGET_CHANNELS as usize)
-        .min()
-        .unwrap_or(0);
-    if available_mic < MIX_CHUNK_FRAMES || available_sys < MIX_CHUNK_FRAMES {
-        crate::log_if_err!(
-            buffer
-                .condvar
-                .wait_timeout(inner, Duration::from_millis(40))
-        );
-        return None;
-    }
-
-    let samples_per_chunk = MIX_CHUNK_FRAMES * TARGET_CHANNELS as usize;
-    let mut mic = Vec::with_capacity(samples_per_chunk);
-    let mut system = Vec::with_capacity(samples_per_chunk);
-    let system_streams = inner.system.len();
-    for _ in 0..MIX_CHUNK_FRAMES {
-        mic.push(inner.mic.pop_front().unwrap_or(0.0).clamp(-1.0, 1.0));
-        mic.push(inner.mic.pop_front().unwrap_or(0.0).clamp(-1.0, 1.0));
-
-        let mut left = 0.0f32;
-        let mut right = 0.0f32;
-        for queue in &mut inner.system {
-            left += queue.pop_front().unwrap_or(0.0);
-            right += queue.pop_front().unwrap_or(0.0);
-        }
-        if system_streams > 1 {
-            left /= system_streams as f32;
-            right /= system_streams as f32;
-        }
-        system.push(left.clamp(-1.0, 1.0));
-        system.push(right.clamp(-1.0, 1.0));
-    }
-    Some((mic, system))
-}
-
 fn write_split_audio_wav(
     mic_path: PathBuf,
     system_path: PathBuf,
     buffer: Arc<MixBuffer>,
     stop: Arc<AtomicBool>,
-    paused: Arc<AtomicBool>,
+    _paused: Arc<AtomicBool>,
 ) -> Result<(), String> {
     let mut mic_writer =
         audio_utils::WavWriter::create(&mic_path, TARGET_SAMPLE_RATE, TARGET_CHANNELS, TARGET_BITS)
@@ -1195,14 +1225,7 @@ fn write_split_audio_wav(
     )
     .map_err(|e| e.to_string())?;
 
-    while !stop.load(Ordering::SeqCst) {
-        if paused.load(Ordering::SeqCst) {
-            thread::sleep(Duration::from_millis(30));
-            continue;
-        }
-        let Some((mic, system)) = take_split_chunks(&buffer) else {
-            continue;
-        };
+    while let Some((mic, system)) = buffer.next_chunk(&stop) {
         mic_writer
             .write_samples_f32(&mic)
             .map_err(|e| e.to_string())?;
@@ -1221,7 +1244,7 @@ fn write_split_audio_mp3(
     mp3_bitrate: u32,
     buffer: Arc<MixBuffer>,
     stop: Arc<AtomicBool>,
-    paused: Arc<AtomicBool>,
+    _paused: Arc<AtomicBool>,
 ) -> Result<(), String> {
     let mut mic_writer = mf_encoder::Mp3StreamWriter::create(
         &mic_path,
@@ -1236,14 +1259,7 @@ fn write_split_audio_mp3(
         TARGET_CHANNELS,
     )?;
 
-    while !stop.load(Ordering::SeqCst) {
-        if paused.load(Ordering::SeqCst) {
-            thread::sleep(Duration::from_millis(30));
-            continue;
-        }
-        let Some((mic, system)) = take_split_chunks(&buffer) else {
-            continue;
-        };
+    while let Some((mic, system)) = buffer.next_chunk(&stop) {
         let mic_pcm: Vec<i16> = mic
             .into_iter()
             .map(|sample| (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
@@ -1383,6 +1399,9 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
     if matches!(options.kind, SourceKind::Microphone) {
         crate::log_debug("Microphone capture: client initialized");
     }
+    if input_rate == 0 || input_channels == 0 {
+        return Err("Invalid capture sample rate or channel count".to_string());
+    }
 
     let capture: IAudioCaptureClient = unsafe {
         client
@@ -1416,14 +1435,20 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
         TARGET_SAMPLE_RATE,
         TARGET_CHANNELS
     ));
+    let mut expected_position: Option<u64> = None;
+    let mut next_packet_qpc: Option<u64> = None;
+    let mut gain_clipped_samples = 0u64;
+    let mut discontinuities = 0u64;
+    let mut timestamp_errors = 0u64;
     let mut packet_counter: u64 = 0;
     let mut total_input_frames: u64 = 0;
     let mut total_output_frames: u64 = 0;
     let mut last_packet_log = Instant::now();
 
     loop {
-        if options.stop.load(Ordering::SeqCst) {
-            break;
+        let stopping = options.stop.load(Ordering::SeqCst);
+        if stopping {
+            unsafe { client.Stop() }.map_err(|e| format!("Stop capture failed: {e}"))?;
         }
         if let (Some(dynamic_target), Some(target_process_id)) = (
             options.dynamic_target_process_id.as_ref(),
@@ -1436,10 +1461,6 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
             ));
             break;
         }
-        if options.paused.load(Ordering::SeqCst) {
-            thread::sleep(Duration::from_millis(15));
-            continue;
-        }
 
         let mut packet_len = unsafe {
             capture
@@ -1450,9 +1471,17 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
             let mut data_ptr: *mut u8 = std::ptr::null_mut();
             let mut frames = 0u32;
             let mut flags = 0u32;
+            let mut device_position = 0u64;
+            let mut packet_qpc = 0u64;
             unsafe {
                 capture
-                    .GetBuffer(&mut data_ptr, &mut frames, &mut flags, None, None)
+                    .GetBuffer(
+                        &mut data_ptr,
+                        &mut frames,
+                        &mut flags,
+                        Some(&mut device_position),
+                        Some(&mut packet_qpc),
+                    )
                     .map_err(|e| format!("GetBuffer failed: {e}"))?;
             }
             let samples = if flags & (AUDCLNT_BUFFERFLAGS_SILENT.0 as u32) != 0 {
@@ -1466,7 +1495,41 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
                     .map_err(|e| format!("ReleaseBuffer failed: {e}"))?;
             }
 
-            update_peak(&options.shared, &options.kind, &samples);
+            if !options.paused.load(Ordering::SeqCst) {
+                update_peak(&options.shared, &options.kind, &samples);
+            }
+            let discontinuity = expected_position
+                .is_some_and(|expected| expected != device_position)
+                || flags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY.0 as u32 != 0;
+            if discontinuity {
+                discontinuities += 1;
+                // Do not interpolate across an interval of missing input audio.
+                resampler =
+                    LinearResampler::new(input_rate, TARGET_SAMPLE_RATE, input_channels as usize);
+            }
+            expected_position = Some(device_position + u64::from(frames));
+            let now = options.buffer.now();
+            if flags & AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR.0 as u32 != 0
+                || packet_qpc == 0
+                || packet_qpc > now + TICKS_PER_SECOND
+            {
+                timestamp_errors += 1;
+                // A timestamp error also makes the device position untrustworthy.
+                // Preserve continuity unless there was a gap; then use arrival time.
+                packet_qpc = next_packet_qpc
+                    .filter(|_| !discontinuity)
+                    .unwrap_or_else(|| {
+                        now.saturating_sub(frame_ticks(u64::from(frames), input_rate))
+                    });
+            }
+            next_packet_qpc = Some(packet_qpc + frame_ticks(u64::from(frames), input_rate));
+            // The interpolator may retain part of the preceding packet; timestamp its first output.
+            let buffered_frames =
+                resampler.buffer.len() as f64 / input_channels as f64 - resampler.pos;
+            let buffered_ticks = (buffered_frames.max(0.0) * TICKS_PER_SECOND as f64
+                / input_rate as f64)
+                .round() as u64;
+            let output_qpc = packet_qpc.saturating_sub(buffered_ticks);
             let resampled = resampler.push(&samples);
             let mut stereo = to_stereo(&resampled, input_channels as usize);
             packet_counter += 1;
@@ -1497,18 +1560,29 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
             // Apply gain
             if options.gain != 1.0 {
                 for sample in stereo.iter_mut() {
-                    *sample = (*sample * options.gain).clamp(-1.0, 1.0);
+                    let amplified = *sample * options.gain;
+                    if amplified.abs() > 1.0 {
+                        gain_clipped_samples += 1;
+                    }
+                    *sample = amplified.clamp(-1.0, 1.0);
                 }
             }
 
-            options
-                .buffer
-                .push(options.kind, options.system_stream_index, stereo);
+            options.buffer.push_capture(
+                options.kind,
+                options.system_stream_index,
+                output_qpc,
+                stereo,
+                !discontinuity,
+            );
             packet_len = unsafe {
                 capture
                     .GetNextPacketSize()
                     .map_err(|e| format!("GetNextPacketSize failed: {e}"))?
             };
+        }
+        if stopping {
+            break;
         }
         thread::sleep(Duration::from_millis(10));
     }
@@ -1516,6 +1590,20 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
     unsafe {
         crate::log_if_err!(client.Stop());
     }
+    crate::log_debug(&format!(
+        "Podcast capture sync: source={} packets={} input_frames={} output_frames={} discontinuities={} timestamp_errors={} gain_clipped_samples={}",
+        if matches!(options.kind, SourceKind::Microphone) {
+            "microphone"
+        } else {
+            "system"
+        },
+        packet_counter,
+        total_input_frames,
+        total_output_frames,
+        discontinuities,
+        timestamp_errors,
+        gain_clipped_samples
+    ));
     Ok(())
 }
 
@@ -1932,5 +2020,146 @@ fn process_image_name(process_id: u32) -> Option<String> {
                 .to_string_lossy()
                 .to_string(),
         )
+    }
+}
+
+#[cfg(test)]
+mod synchronization_tests {
+    use super::*;
+
+    fn stopped_buffer(frames: u64, systems: usize) -> Result<Arc<MixBuffer>, String> {
+        let buffer = Arc::new(MixBuffer::new(systems)?);
+        buffer
+            .inner
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .timeline
+            .end = Some(buffer.origin_qpc + frame_ticks(frames, TARGET_SAMPLE_RATE));
+        Ok(buffer)
+    }
+
+    #[test]
+    fn silent_system_does_not_stall_microphone_or_shorten_recording() -> Result<(), String> {
+        let buffer = stopped_buffer(1027, 1)?;
+        buffer.push(
+            SourceKind::Microphone,
+            0,
+            buffer.origin_qpc,
+            vec![0.25; 1027 * 2],
+        );
+        let stop = AtomicBool::new(true);
+        let mut count = 0;
+        while let Some((mic, system)) = buffer.next_chunk(&stop) {
+            assert!(mic.iter().all(|v| *v == 0.25));
+            assert!(system.iter().all(|v| *v == 0.0));
+            assert_eq!(mic.len(), system.len());
+            count += mic.len() / 2;
+        }
+        assert_eq!(count, 1027, "partial final chunk must be saved");
+        Ok(())
+    }
+
+    #[test]
+    fn resumed_system_packet_keeps_its_time_in_both_tracks() -> Result<(), String> {
+        let buffer = stopped_buffer(2000, 1)?;
+        buffer.push(
+            SourceKind::Microphone,
+            0,
+            buffer.origin_qpc,
+            vec![0.25; 4000],
+        );
+        buffer.push(
+            SourceKind::System,
+            0,
+            buffer.origin_qpc + frame_ticks(1500, TARGET_SAMPLE_RATE),
+            vec![0.75; 1000],
+        );
+        let mut system_track = Vec::new();
+        while let Some((_, system)) = buffer.next_chunk(&AtomicBool::new(true)) {
+            system_track.extend(system);
+        }
+        assert_eq!(system_track, [vec![0.0; 3000], vec![0.75; 1000]].concat());
+        Ok(())
+    }
+
+    #[test]
+    fn packets_crossing_pause_are_cut_at_the_same_time_for_both_sources() -> Result<(), String> {
+        let buffer = stopped_buffer(44100 * 3, 1)?;
+        {
+            let mut inner = buffer.inner.lock().unwrap_or_else(|e| e.into_inner());
+            let end = inner.timeline.end.take();
+            inner.timeline.pause(buffer.origin_qpc + TICKS_PER_SECOND);
+            inner
+                .timeline
+                .resume(buffer.origin_qpc + 2 * TICKS_PER_SECOND);
+            inner.timeline.end = end;
+        }
+        for source in [SourceKind::Microphone, SourceKind::System] {
+            buffer.push(
+                source,
+                0,
+                buffer.origin_qpc,
+                [vec![0.25; 88200], vec![0.5; 88200], vec![0.75; 88200]].concat(),
+            );
+        }
+        let mut recorded = Vec::new();
+        while let Some((mic, system)) = buffer.next_chunk(&AtomicBool::new(true)) {
+            assert_eq!(mic, system);
+            recorded.extend(mic);
+        }
+        assert_eq!(recorded.len(), 176400);
+        assert!(recorded[..88200].iter().all(|value| *value == 0.25));
+        assert!(recorded[88200..].iter().all(|value| *value == 0.75));
+        Ok(())
+    }
+
+    #[test]
+    fn resampling_different_packet_sizes_preserves_shared_impulse_time() -> Result<(), String> {
+        let buffer = stopped_buffer(44100, 1)?;
+        for (kind, channels, chunk) in [
+            (SourceKind::Microphone, 1, 480),
+            (SourceKind::System, 2, 960),
+        ] {
+            let mut resampler = LinearResampler::new(48000, TARGET_SAMPLE_RATE, channels);
+            for offset in (0..48000).step_by(chunk) {
+                let mut samples = vec![0.0; chunk * channels];
+                if (offset..offset + chunk).contains(&24000) {
+                    for channel in 0..channels {
+                        samples[(24000 - offset) * channels + channel] = 1.0;
+                    }
+                }
+                let buffered = resampler.buffer.len() as f64 / channels as f64 - resampler.pos;
+                let qpc = buffer.origin_qpc + frame_ticks(offset as u64, 48000)
+                    - (buffered.max(0.0) * TICKS_PER_SECOND as f64 / 48000.0).round() as u64;
+                let converted = to_stereo(&resampler.push(&samples), channels);
+                buffer.push(kind, 0, qpc, converted);
+            }
+        }
+        let mut microphone = Vec::new();
+        let mut system_track = Vec::new();
+        while let Some((mic, system)) = buffer.next_chunk(&AtomicBool::new(true)) {
+            microphone.extend(mic);
+            system_track.extend(system);
+        }
+        let peak = |samples: &[f32]| {
+            samples
+                .iter()
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a.total_cmp(b))
+                .map(|(index, _)| index / 2)
+                .unwrap_or(usize::MAX)
+        };
+        assert!(peak(&microphone).abs_diff(22050) <= 1);
+        assert!(peak(&microphone).abs_diff(peak(&system_track)) <= 1);
+        Ok(())
+    }
+
+    #[test]
+    fn multiple_system_streams_keep_existing_mix_levels() {
+        let shared = SharedState::new(true, true);
+        assert_eq!(
+            mixed_chunk(vec![0.8, 0.8], vec![0.2, 0.2], &shared, 2),
+            vec![0.3, 0.3]
+        );
     }
 }

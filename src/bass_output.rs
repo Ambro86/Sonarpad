@@ -11,6 +11,7 @@ use std::ffi::c_void;
 use std::path::Path;
 use std::ptr;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 pub struct BassOutput {
     api: &'static BassApi,
@@ -19,6 +20,8 @@ pub struct BassOutput {
     _ffmpeg_stream: Option<FfmpegBassStream>,
     /// Offset in seconds for FFmpeg streams (seek position)
     start_offset_secs: f64,
+    diagnostic_started: Instant,
+    diagnostic_last: Mutex<Option<(Instant, Dword)>>,
 }
 
 static BASS_INIT: OnceLock<Result<(), String>> = OnceLock::new();
@@ -199,6 +202,10 @@ impl BassOutput {
             log_debug(&format!("BASS: plugin load failed: {}", err));
         }
 
+        log_debug(&format!(
+            "BASS diagnostic: open path={} start={start_seconds:.3}s speed={speed} pitch={pitch} volume={volume} paused={paused}",
+            path.display()
+        ));
         let want_tempo = (speed != 1.0 || pitch != 0.0) && fx_api.is_some();
         let mut flags = BASS_STREAM_PRESCAN | BASS_SAMPLE_FLOAT;
         if want_tempo {
@@ -254,6 +261,10 @@ impl BassOutput {
             source
         };
 
+        log_debug(&format!(
+            "BASS diagnostic: opened handle={handle} path={}",
+            path.display()
+        ));
         let volume = volume.clamp(0.0, 3.0);
         let set_ok = bass_channel_set_attribute_safe(api, handle, BASS_ATTRIB_VOL, volume);
         if set_ok == 0 {
@@ -289,6 +300,8 @@ impl BassOutput {
             handle: Mutex::new(handle),
             _ffmpeg_stream: None,
             start_offset_secs: 0.0,
+            diagnostic_started: Instant::now(),
+            diagnostic_last: Mutex::new(None),
         }))
     }
 
@@ -354,6 +367,10 @@ impl BassOutput {
             source_handle
         };
 
+        log_debug(&format!(
+            "BASS diagnostic: opened handle={handle} path={}",
+            path.display()
+        ));
         let volume = volume.clamp(0.0, 3.0);
         let set_ok = bass_channel_set_attribute_safe(api, handle, BASS_ATTRIB_VOL, volume);
         if set_ok == 0 {
@@ -374,12 +391,55 @@ impl BassOutput {
             handle: Mutex::new(handle),
             _ffmpeg_stream: Some(ffmpeg_stream),
             start_offset_secs: start_seconds,
+            diagnostic_started: Instant::now(),
+            diagnostic_last: Mutex::new(None),
         }))
+    }
+
+    // Read-only snapshots, throttled to five seconds unless the channel state changes.
+    fn log_playback_snapshot(&self, reason: &str, force: bool) {
+        let handle = *self.handle.lock().unwrap_or_else(|e| e.into_inner());
+        let state = bass_channel_is_active_safe(self.api, handle);
+        let state_error = bass_error(self.api);
+        let now = Instant::now();
+        let mut last = self
+            .diagnostic_last
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        if !force
+            && last.is_some_and(|(time, previous)| {
+                previous == state && now.duration_since(time) < Duration::from_secs(5)
+            })
+        {
+            return;
+        }
+        *last = Some((now, state));
+        let pos = bass_channel_get_position_safe(self.api, handle, BASS_POS_BYTE);
+        let pos_error = bass_error(self.api);
+        let len = bass_channel_get_length_safe(self.api, handle, BASS_POS_BYTE);
+        let len_error = bass_error(self.api);
+        let seconds = if pos == u64::MAX {
+            None
+        } else {
+            Some(bass_channel_bytes2seconds_safe(self.api, handle, pos))
+        };
+        log_debug(&format!(
+            "BASS diagnostic: {reason} handle={handle} backend={} elapsed={:.3}s state={state} state_error={state_error} pos_bytes={pos} pos_error={pos_error} pos_secs={seconds:?} length_bytes={len} length_error={len_error} offset={:.3}s",
+            if self._ffmpeg_stream.is_some() {
+                "ffmpeg"
+            } else {
+                "direct"
+            },
+            self.diagnostic_started.elapsed().as_secs_f64(),
+            self.start_offset_secs
+        ));
     }
 
     pub fn play(&self) -> bool {
         let handle = *self.handle.lock().unwrap_or_else(|e| e.into_inner());
-        play_channel(self.api, handle, 0, "BASS_ChannelPlay").is_ok()
+        let result = play_channel(self.api, handle, 0, "BASS_ChannelPlay").is_ok();
+        self.log_playback_snapshot("play", true);
+        result
     }
 
     pub fn pause(&self) -> bool {
@@ -393,6 +453,7 @@ impl BassOutput {
     }
 
     pub fn stop(&self) {
+        self.log_playback_snapshot("stop requested", true);
         let handle = *self.handle.lock().unwrap_or_else(|e| e.into_inner());
         let ok = bass_channel_stop_safe(self.api, handle);
         if ok == 0 {
@@ -424,6 +485,7 @@ impl BassOutput {
             }
         }
         let bass_pos = bass_channel_bytes2seconds_safe(self.api, handle, pos).max(0.0);
+        self.log_playback_snapshot("position poll", false);
         // Add start offset for FFmpeg streams that were seeked
         Some(bass_pos + self.start_offset_secs)
     }
@@ -453,6 +515,10 @@ impl BassOutput {
     }
 
     pub fn seek_to_seconds(&self, absolute_seconds: f64) -> bool {
+        log_debug(&format!(
+            "BASS diagnostic: seek requested target={absolute_seconds:.3}s"
+        ));
+        self.log_playback_snapshot("before seek", true);
         // FFmpeg streaming starts from `start_offset_secs`. If caller asks to seek
         // before this offset, we must fail here so the caller can reopen at the
         // real absolute position.
@@ -476,6 +542,7 @@ impl BassOutput {
         let ok = bass_channel_set_position_safe(self.api, handle, pos, BASS_POS_BYTE);
         if ok == 0 {
             log_bass_error(self.api, "BASS_ChannelSetPosition");
+            self.log_playback_snapshot("seek failed", true);
             return false;
         }
         true
@@ -485,6 +552,7 @@ impl BassOutput {
         const BASS_ACTIVE_STOPPED: Dword = 0;
         let handle = *self.handle.lock().unwrap_or_else(|e| e.into_inner());
         let state = bass_channel_is_active_safe(self.api, handle);
+        self.log_playback_snapshot("state poll", false);
         state == BASS_ACTIVE_STOPPED
     }
 

@@ -5,6 +5,9 @@
 #![allow(non_snake_case)]
 #![allow(clippy::upper_case_acronyms)]
 
+mod buffer_notify;
+use buffer_notify::{BufferOwner, IID_ITTSBUFNOTIFYSINK};
+
 use std::collections::VecDeque;
 use std::env;
 use std::io::{self, BufRead, Read};
@@ -357,6 +360,8 @@ struct ITTSAttributes {
 
 struct SpeakState {
     done: AtomicBool,
+    buffer_completion: bool,
+    generation: AtomicU32,
     current_text: Mutex<Option<U16CString>>,
     queue: Mutex<VecDeque<SpeakItem>>,
 }
@@ -364,14 +369,34 @@ impl SpeakState {
     fn new() -> Self {
         Self {
             done: AtomicBool::new(true),
+            buffer_completion: false,
+            generation: AtomicU32::new(0),
             current_text: Mutex::new(None),
             queue: Mutex::new(VecDeque::new()),
         }
+    }
+    fn for_file() -> Self {
+        Self {
+            buffer_completion: true,
+            ..Self::new()
+        }
+    }
+    fn finish_buffer(&self, generation: u32) -> bool {
+        let mut text = self.current_text.lock().unwrap_or_else(|e| e.into_inner());
+        if self.generation.load(Ordering::Acquire) != generation
+            || self.done.load(Ordering::Acquire)
+        {
+            return false;
+        }
+        *text = None;
+        self.mark_done();
+        true
     }
     fn mark_done(&self) {
         self.done.store(true, Ordering::Release);
     }
     fn mark_running(&self) {
+        self.generation.fetch_add(1, Ordering::AcqRel);
         self.done.store(false, Ordering::Release);
     }
 }
@@ -449,6 +474,9 @@ unsafe extern "system" fn notify_audio_start(_this: *mut ITTSNotifySink, _ts: QW
 unsafe extern "system" fn notify_audio_stop(this: *mut ITTSNotifySink, _ts: QWORD) -> i32 {
     if !this.is_null() {
         let sink = &*this;
+        if sink.state.buffer_completion {
+            return S_OK;
+        }
         sink.state.mark_done();
         let mut guard = match sink.state.current_text.lock() {
             Ok(g) => g,
@@ -553,14 +581,18 @@ unsafe extern "system" fn audio_file_notify_file_end(
 ) -> i32 {
     if !this.is_null() {
         let sink = &*this;
-        sink.state.mark_done();
+        if !sink.state.buffer_completion {
+            sink.state.mark_done();
+        }
     }
     S_OK
 }
 unsafe extern "system" fn audio_file_notify_queue_empty(this: *mut IAudioFileNotifySink) -> i32 {
     if !this.is_null() {
         let sink = &*this;
-        sink.state.mark_done();
+        if !sink.state.buffer_completion {
+            sink.state.mark_done();
+        }
     }
     S_OK
 }
@@ -1959,7 +1991,10 @@ fn split_text_for_recording(text: &str, max_chars: usize) -> Vec<String> {
     let mut start = 0usize;
 
     while start < text.len() {
-        let mut end = (start + max_chars).min(text.len());
+        let mut end = (start + max_chars.max(4)).min(text.len());
+        while !text.is_char_boundary(end) {
+            end -= 1;
+        }
 
         // Taglio preferenziale: newline -> fine frase -> spazio
         let mut cut: Option<usize> = None;
@@ -2021,38 +2056,37 @@ unsafe fn try_start_next_recording_chunk(
     central_ptr: *mut ITTSCentral,
     state: &Arc<SpeakState>,
     flags: DWORD,
-) {
+    buffers: &mut Vec<BufferOwner>,
+) -> Result<(), String> {
     if !state.done.load(Ordering::Acquire) {
-        return;
+        return Ok(());
     }
-
-    let next = match pop_next_item(state) {
-        Some(t) => t,
-        None => return,
+    let Some(next) = pop_next_item(state) else {
+        return Ok(());
     };
-
     let next = match next {
         SpeakItem::Text(text) => text,
         SpeakItem::Pause(ms) => {
             std::thread::sleep(Duration::from_millis(u64::from(ms)));
-            state.mark_done();
-            return;
+            return Ok(());
         }
     };
-
     state.mark_running();
-    set_current_text(state, next);
-
-    let hr = speak_from_state_with_flags(central_ptr, state, flags);
+    set_current_text(state, next.clone());
+    let owner = BufferOwner::new(state.clone(), next);
+    let data = owner.data();
+    let notify = owner.as_void_ptr();
+    buffers.push(owner);
+    let central_vtbl = &*(*central_ptr).lpVtbl;
+    eprintln!(
+        "SAPI4 DIAG: TextData start chunk={} completion=TextDataDone",
+        state.generation.load(Ordering::Acquire)
+    );
+    let hr = (central_vtbl.text_data)(central_ptr, 0, flags, data, notify, IID_ITTSBUFNOTIFYSINK);
     if !hr_ok(hr) {
-        eprintln!("TextData failed, hr={:#x}", hr);
-        state.mark_done();
-        let mut guard = match state.current_text.lock() {
-            Ok(g) => g,
-            Err(poisoned) => poisoned.into_inner(),
-        };
-        *guard = None;
+        return Err(format!("SAPI4 TextData failed: hr={:#x}", hr));
     }
+    Ok(())
 }
 
 fn speak_to_file(
@@ -2066,6 +2100,8 @@ fn speak_to_file(
     let _com = ComGuard::init_mta()?;
 
     unsafe {
+        // Must outlive the engine: some legacy voices retain or over-release callback pointers.
+        let mut buffers: Vec<BufferOwner> = Vec::new();
         let mut audio_file_raw: *mut IAudioFile = ptr::null_mut();
         let hr = CoCreateInstance(
             &CLSID_AUDIODESTFILE,
@@ -2124,7 +2160,7 @@ fn speak_to_file(
 
         apply_tts_attributes(central_ptr.as_ptr(), rate, pitch, volume);
 
-        let state = Arc::new(SpeakState::new());
+        let state = Arc::new(SpeakState::for_file());
 
         // --- TTS notify sink ---
         let tts_sink_box = Box::new(ITTSNotifySink {
@@ -2198,7 +2234,12 @@ fn speak_to_file(
         }
 
         state.mark_done();
-        try_start_next_recording_chunk(central_ptr.as_ptr(), &state, TTSDATAFLAG_TAGGED);
+        try_start_next_recording_chunk(
+            central_ptr.as_ptr(),
+            &state,
+            TTSDATAFLAG_TAGGED,
+            &mut buffers,
+        )?;
 
         let mut msg: MSG = std::mem::zeroed();
         let start_wait = std::time::Instant::now();
@@ -2210,7 +2251,12 @@ fn speak_to_file(
                 DispatchMessageW(&msg);
             }
 
-            try_start_next_recording_chunk(central_ptr.as_ptr(), &state, TTSDATAFLAG_TAGGED);
+            try_start_next_recording_chunk(
+                central_ptr.as_ptr(),
+                &state,
+                TTSDATAFLAG_TAGGED,
+                &mut buffers,
+            )?;
 
             if state.done.load(Ordering::Acquire) {
                 let queue_empty = state.queue.lock().map(|q| q.is_empty()).unwrap_or(true);
@@ -2225,7 +2271,11 @@ fn speak_to_file(
             }
 
             if start_wait.elapsed() >= timeout {
-                break;
+                let reset = (central_vtbl.audio_reset)(central_ptr.as_ptr());
+                if !hr_ok(reset) {
+                    eprintln!("SAPI4 timeout AudioReset failed: {reset:#x}");
+                }
+                return Err("SAPI4 synthesis timed out waiting for TextDataDone".to_string());
             }
             // Ridotto lo sleep per non frenare l'engine se è veloce
             std::thread::sleep(std::time::Duration::from_millis(1));
@@ -2233,7 +2283,18 @@ fn speak_to_file(
 
         let hr_flush = (audio_vtbl.flush)(audio_file_ptr.as_ptr());
         if hr_flush != S_OK {
-            eprintln!("Warning: audio flush failed: {hr_flush:x}");
+            return Err(format!("SAPI4 audio flush failed: {hr_flush:#x}"));
+        }
+        let output_size = std::fs::metadata(&wav_path)
+            .map_err(|e| format!("SAPI4 output missing: {e}"))?
+            .len();
+        eprintln!(
+            "SAPI4 DIAG: file synthesis complete chunks={} bytes={} completion=TextDataDone",
+            buffers.len(),
+            output_size
+        );
+        if output_size <= 44 {
+            return Err("SAPI4 synthesis completed but produced no audio data".to_string());
         }
 
         if registered {
