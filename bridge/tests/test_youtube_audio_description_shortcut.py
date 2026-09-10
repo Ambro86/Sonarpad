@@ -50,9 +50,9 @@ class YouTubeAudioDescriptionShortcutTests(unittest.TestCase):
             WINDOW.index("WM_AD_SET_INPUT =>"):
             WINDOW.index("WM_AD_SET_INPUT =>") + 3000
         ]
-        self.assertIn(
-            "&default_output((*pointer).parent,&input_path,checkbox_checked((*pointer).create_video_checkbox))",
+        self.assertRegex(
             "".join(set_input.split()),
+            r"&default_output\(\(\*pointer\)\.parent,&input_path,checkbox_checked\(\(\*pointer\)\.create_video_checkbox\),?\)",
         )
 
     def test_local_video_prefills_window_without_downloading(self):

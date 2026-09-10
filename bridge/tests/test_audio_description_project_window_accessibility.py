@@ -204,7 +204,7 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
             apply_fn.index("prepare_audio_description_project_batch_edits("),
             apply_fn.index("save_audio_description_project(project_path, &outcome.project)"),
         )
-        self.assertIn("None,\n    )?;", apply_fn)
+        self.assertRegex("".join(apply_fn.split()), r"None,?\)\?;")
         self.assertIn("AudioDescriptionProjectEditError::TooLong", AUDIO)
         self.assertIn("start_apply(hwnd, state)", PROJECT)
         self.assertIn("WM_PROJECT_APPLY_DONE", PROJECT)

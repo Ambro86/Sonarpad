@@ -409,7 +409,7 @@
   "edit.indent": "&Öka indrag för rad/block\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Infoga ellips",
   "edit.join_lines": "&Slå ihop rader\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "Slå ihop &brutna rader",
+  "edit.join_wrapped_lines": "S&lå ihop brutna rader",
   "edit.keep_unique_items": "Behåll uni&ka objekt\tAlt+Shift+K",
   "edit.next_spelling_error": "Nästa sta&vningsfel\tF8",
   "edit.normalize_whitespace": "&Normalisera blanksteg\tCtrl+Shift+Enter",

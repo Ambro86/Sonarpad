@@ -409,7 +409,7 @@
   "edit.indent": "Zeile/Block e&inrücken\tStrg+Umschalt+.",
   "edit.insert_ellipsis": "Auslassungspunkte einfügen",
   "edit.join_lines": "Zeilen &verbinden\tStrg+Umschalt+J",
-  "edit.join_wrapped_lines": "Umgebrochene Zeilen &verbinden",
+  "edit.join_wrapped_lines": "Umge&brochene Zeilen verbinden",
   "edit.keep_unique_items": "Nur einmali&ge Elemente behalten\tAlt+Umschalt+K",
   "edit.next_spelling_error": "&Nächster Rechtschreibfehler\tF8",
   "edit.normalize_whitespace": "&Leerraum vereinheitlichen\tStrg+Umschalt+Eingabe",

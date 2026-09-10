@@ -409,7 +409,7 @@
   "edit.indent": "Povećaj uvlačenje reda/&bloka\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Umetni tri tačke",
   "edit.join_lines": "&Spoji redove\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "Spoji &prelomljene redove",
+  "edit.join_wrapped_lines": "Spoji pre&lomljene redove",
   "edit.keep_unique_items": "Zadrži &jedinstvene stavke\tAlt+Shift+K",
   "edit.next_spelling_error": "S&ledeća pravopisna greška\tF8",
   "edit.normalize_whitespace": "&Normalizuj razmake\tCtrl+Shift+Enter",

@@ -36,8 +36,8 @@ class WindowsAudioDescriptionMediaPreparationTests(unittest.TestCase):
         self.assertIn(mp4_fallback, self.audio_source)
         self.assertLess(self.audio_source.index(normal_call), self.audio_source.index(smaller_fallback))
         self.assertLess(self.audio_source.index(smaller_fallback), self.audio_source.index(mp4_fallback))
-        self.assertIn('"mkv",\n            false,', self.audio_source)
-        self.assertIn('"mp4",\n            true,', self.audio_source)
+        self.assertIn('"mkv",false,', "".join(self.audio_source.split()))
+        self.assertIn('"mp4",true,', "".join(self.audio_source.split()))
         self.assertIn("fallback_request.resume = None;", self.audio_source)
 
     def test_non_media_errors_do_not_activate_gemini_compatibility_fallback(self):

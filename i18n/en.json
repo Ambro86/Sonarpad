@@ -409,7 +409,7 @@
   "edit.indent": "I&ndent Line/Block\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Insert ellipsis",
   "edit.join_lines": "&Join Lines\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "&Join wrapped lines",
+  "edit.join_wrapped_lines": "Join wra&pped lines",
   "edit.keep_unique_items": "Keep Uni&que Items\tAlt+Shift+K",
   "edit.next_spelling_error": "N&ext Spelling Error\tF8",
   "edit.normalize_whitespace": "Normalize &Whitespace\tCtrl+Shift+Enter",

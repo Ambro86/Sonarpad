@@ -409,7 +409,7 @@
   "edit.indent": "У&величить отступ строки/блока\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Вставить многоточие",
   "edit.join_lines": "&Объединить строки\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "Объединить &перенесённые строки",
+  "edit.join_wrapped_lines": "Об&ъединить перенесённые строки",
   "edit.keep_unique_items": "Сохранить у&никальные элементы\tAlt+Shift+K",
   "edit.next_spelling_error": "С&ледующая орфографическая ошибка\tF8",
   "edit.normalize_whitespace": "Нормализовать &пробелы\tCtrl+Shift+Enter",

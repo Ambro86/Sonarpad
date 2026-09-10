@@ -409,7 +409,7 @@
   "edit.indent": "&Augmenter le retrait de la ligne/du bloc\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Insérer des points de suspension",
   "edit.join_lines": "&Joindre les lignes\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "Joindre les lignes &coupées",
+  "edit.join_wrapped_lines": "Jo&indre les lignes coupées",
   "edit.keep_unique_items": "&Garder les éléments uniques\tAlt+Shift+K",
   "edit.next_spelling_error": "Erreur d'&orthographe suivante\tF8",
   "edit.normalize_whitespace": "Normaliser les &espaces\tCtrl+Shift+Enter",

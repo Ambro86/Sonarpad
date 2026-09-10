@@ -409,7 +409,7 @@
   "edit.indent": "Zw&iększ wcięcie wiersza/bloku\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Wstaw wielokropek",
   "edit.join_lines": "Połącz &linie\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "Połącz &złamane wiersze",
+  "edit.join_wrapped_lines": "&Połącz złamane wiersze",
   "edit.keep_unique_items": "Zachowaj &unikalne elementy\tAlt+Shift+K",
   "edit.next_spelling_error": "Następny &błąd pisowni\tF8",
   "edit.normalize_whitespace": "Normalizuj &białe znaki\tCtrl+Shift+Enter",

@@ -409,7 +409,7 @@
   "edit.indent": "Tăng thụt &lề dòng/khối\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Chèn dấu ba chấm",
   "edit.join_lines": "&Nối các dòng\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "Nối các dòng bị &ngắt",
+  "edit.join_wrapped_lines": "N&ối các dòng bị ngắt",
   "edit.keep_unique_items": "Giữ lại các mục &duy nhất\tAlt+Shift+K",
   "edit.next_spelling_error": "Lỗ&i chính tả tiếp theo\tF8",
   "edit.normalize_whitespace": "Chuẩn hóa &khoảng trắng\tCtrl+Shift+Enter",

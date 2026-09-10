@@ -409,7 +409,7 @@
   "edit.indent": "&Įtraukos eilutė/blokas Ctrl+Shift+.",
   "edit.insert_ellipsis": "Įterpti daugtaškį",
   "edit.join_lines": "&Sujungti eilutes Ctrl+Shift+J",
-  "edit.join_wrapped_lines": "Sujungti &laužytas eilutes",
+  "edit.join_wrapped_lines": "Su&jungti laužytas eilutes",
   "edit.keep_unique_items": "&Išsaugoti unikalius elementus Alt+Shift+K",
   "edit.next_spelling_error": "Ne&xt rašybos klaida F8",
   "edit.normalize_whitespace": "&Normalizuoti ir tarpai Ctrl+Shift+Enter",

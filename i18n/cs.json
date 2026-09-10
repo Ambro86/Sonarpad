@@ -409,7 +409,7 @@
   "edit.indent": "&Zvětšit odsazení řádku/bloku\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Vložit výpustku",
   "edit.join_lines": "&Spojit řádky\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "Spojit &zalomené řádky",
+  "edit.join_wrapped_lines": "Spoj&it zalomené řádky",
   "edit.keep_unique_items": "Ponechat &jedinečné položky\tAlt+Shift+K",
   "edit.next_spelling_error": "D&alší pravopisná chyba\tF8",
   "edit.normalize_whitespace": "&Normalizovat mezery\tCtrl+Shift+Enter",

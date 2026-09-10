@@ -409,7 +409,7 @@
   "edit.indent": "&Aumentar recuo da linha/bloco\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Inserir reticências",
   "edit.join_lines": "Unir linhas (&J)\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "Unir linhas &quebradas",
+  "edit.join_wrapped_lines": "&Unir linhas quebradas",
   "edit.keep_unique_items": "Manter itens &únicos\tAlt+Shift+K",
   "edit.next_spelling_error": "Erro ortográfico &próximo\tF8",
   "edit.normalize_whitespace": "Normalizar e&spaços\tCtrl+Shift+Enter",

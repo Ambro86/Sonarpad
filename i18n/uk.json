@@ -409,7 +409,7 @@
   "edit.indent": "&Збільшити відступ рядка/блоку\\\tCtrl+Shift+.",
   "edit.insert_ellipsis": "Вставити три крапки",
   "edit.join_lines": "&Об'єднати рядки\tCtrl+Shift+J",
-  "edit.join_wrapped_lines": "Об’єднати &перенесені рядки",
+  "edit.join_wrapped_lines": "Об’&єднати перенесені рядки",
   "edit.keep_unique_items": "Видалити &дублікати\tAlt+Shift+K",
   "edit.next_spelling_error": "&Наступна помилка правопису\tF8",
   "edit.normalize_whitespace": "&Нормалізувати пробіли\tCtrl+Shift+Enter",

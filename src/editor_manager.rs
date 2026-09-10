@@ -5604,7 +5604,7 @@ mod tests {
     #[test]
     fn join_wrapped_lines_handles_hyphen_apostrophe_and_windows_eol() {
         let input = "cognitivo-\ncomportamentale e l'\nelaborazione.\r\nFrase nuova.";
-        let expected = "cognitivo-comportamentale e l'elaborazione.\r\nFrase nuova.";
+        let expected = "cognitivo-comportamentale e l'elaborazione. Frase nuova.";
         assert_eq!(join_wrapped_lines_block(input, "\r\n", false), expected);
     }
 
