@@ -10034,7 +10034,7 @@ fn handle_retry_now(hwnd: HWND) {
     } else {
         rss::RssFetchConfig::default()
     };
-    let language = { with_state(parent, |ps| ps.settings.language) }.unwrap_or_default();
+    let language = news_language_as_app_language(&active_news_language_code(parent));
     if parent.0 != 0 {
         ensure_rss_http(parent);
     }

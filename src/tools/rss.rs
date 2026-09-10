@@ -355,6 +355,123 @@ fn is_legacy_il_giornale_feed_url(value: &str) -> bool {
         && url.query().is_none()
 }
 
+fn google_news_locale(language: Language) -> (&'static str, &'static str, &'static str) {
+    match language {
+        Language::Italian => ("it", "IT", "it"),
+        Language::English => ("en", "US", "en"),
+        Language::German => ("de", "DE", "de"),
+        Language::Spanish => ("es", "ES", "es"),
+        Language::Portuguese => ("pt", "PT", "pt-150"),
+        Language::PortugueseBrazilian => ("pt-BR", "BR", "pt-419"),
+        Language::Swedish => ("sv", "SE", "sv"),
+        Language::Vietnamese => ("vi", "VN", "vi"),
+        Language::Czech => ("cs", "CZ", "cs"),
+        Language::Polish => ("pl", "PL", "pl"),
+        Language::French => ("fr", "FR", "fr"),
+        Language::Serbian => ("sr", "RS", "sr"),
+        Language::Ukrainian => ("uk", "UA", "uk"),
+        Language::Lithuanian => ("lt", "LT", "lt"),
+        Language::Russian => ("ru", "RU", "ru"),
+        Language::Chinese => ("zh-CN", "CN", "zh-Hans"),
+        Language::Hindi => ("hi", "IN", "hi"),
+    }
+}
+
+fn is_google_news_feed_url(value: &str) -> bool {
+    Url::parse(value)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_ascii_lowercase))
+        .is_some_and(|host| host == "news.google.com")
+}
+
+fn google_news_site_for_feed_url(value: &str) -> Option<String> {
+    let url = Url::parse(value).ok()?;
+    let mut host = url.host_str()?.trim().to_ascii_lowercase();
+    if host.is_empty() || host == "news.google.com" {
+        return None;
+    }
+
+    // Match the Mobile fallback for feeds hosted on technical domains that do
+    // not identify the publisher site correctly.
+    host = match host.as_str() {
+        "xml2.corriereobjects.it" => "corriere.it".to_string(),
+        "feeds.bbci.co.uk" => "bbc.co.uk".to_string(),
+        "feeds.nytimes.com" | "rss.nytimes.com" => "nytimes.com".to_string(),
+        "feeds.skynews.com" => "news.sky.com".to_string(),
+        "feeds.content.dowjones.io" | "feeds.a.dj.com" => "wsj.com".to_string(),
+        "feeds.weblogssl.com" if url.path().trim_matches('/').eq_ignore_ascii_case("xataka2") => {
+            "xataka.com".to_string()
+        }
+        "estaticos.elmundo.es" => "elmundo.es".to_string(),
+        "naxos.ilfoglio.it" => "ilfoglio.it".to_string(),
+        "rssexport.rbc.ru" => "rbc.ru".to_string(),
+        "feeds.feedburner.com" | "feedburner.com" => {
+            match url.path().trim_matches('/').to_ascii_lowercase().as_str() {
+                "publicorss" => "publico.pt".to_string(),
+                "asbeiras" => "asbeiras.pt".to_string(),
+                "netzincz" => "netzin.cz".to_string(),
+                "svetandroida" => "svetandroida.cz".to_string(),
+                "ndtvkhabar" => "ndtv.com".to_string(),
+                "gadgets360-latest" => "gadgets360.com".to_string(),
+                _ => return None,
+            }
+        }
+        _ => host,
+    };
+
+    for prefix in ["www.", "rss.", "feeds.", "feed.", "newsfeed.", "services."] {
+        if host.starts_with(prefix) && host.len() > prefix.len() {
+            host = host[prefix.len()..].to_string();
+            break;
+        }
+    }
+
+    if host.is_empty() || host == "feedburner.com" || host.ends_with(".feedburner.com") {
+        None
+    } else {
+        Some(host)
+    }
+}
+
+fn google_news_fallback_url(value: &str, language: Language) -> Option<String> {
+    if is_google_news_feed_url(value) {
+        return None;
+    }
+    let site = google_news_site_for_feed_url(value)?;
+    let (hl, gl, ceid_language) = google_news_locale(language);
+    let mut url = Url::parse("https://news.google.com/rss/search").ok()?;
+    url.query_pairs_mut()
+        .append_pair("q", &format!("site:{site}"))
+        .append_pair("hl", hl)
+        .append_pair("gl", gl)
+        .append_pair("ceid", &format!("{gl}:{ceid_language}"));
+    Some(url.to_string())
+}
+
+static GOOGLE_NEWS_FALLBACK_SITES: OnceLock<std::sync::Mutex<HashSet<String>>> = OnceLock::new();
+
+fn google_news_fallback_sites() -> &'static std::sync::Mutex<HashSet<String>> {
+    GOOGLE_NEWS_FALLBACK_SITES.get_or_init(|| std::sync::Mutex::new(HashSet::new()))
+}
+
+fn google_news_fallback_active(key: &str) -> bool {
+    google_news_fallback_sites()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .contains(key)
+}
+
+fn set_google_news_fallback_active(key: &str, active: bool) {
+    let mut sites = google_news_fallback_sites()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if active {
+        sites.insert(key.to_string());
+    } else {
+        sites.remove(key);
+    }
+}
+
 const CORRIERE_HOME_FEED_URL: &str =
     "https://xml2.corriereobjects.it/feed-hp/homepage-restyle-2025.xml";
 
@@ -1330,7 +1447,7 @@ struct FetchBytesOutcome {
     not_modified: bool,
 }
 
-pub async fn fetch_and_parse(
+async fn fetch_and_parse_direct(
     url: &str,
     _source_kind: RssSourceType,
     cache: RssFeedCache,
@@ -1468,6 +1585,171 @@ pub async fn fetch_and_parse(
         message: "Parsing failed".to_string(),
         cache: Box::new(cache),
     })
+}
+
+pub async fn fetch_and_parse(
+    url: &str,
+    source_kind: RssSourceType,
+    cache: RssFeedCache,
+    fetch_config: RssFetchConfig,
+    override_cooldown: bool,
+    language: Language,
+) -> Result<RssFetchOutcome, FeedFetchError> {
+    let normalized = normalize_url(url);
+
+    // The automatic Google News safety net is only for RSS/Atom feeds.
+    // Website/article sources keep their existing discovery/error behavior.
+    if source_kind != RssSourceType::Feed {
+        return fetch_and_parse_direct(
+            &normalized,
+            source_kind,
+            cache,
+            fetch_config,
+            override_cooldown,
+            language,
+        )
+        .await;
+    }
+
+    // Keep the explicit Il Giornale migration: old saved subscriptions still
+    // go straight to the working localized Google News feed.
+    if is_legacy_il_giornale_feed_url(&normalized) {
+        return fetch_and_parse_direct(
+            IL_GIORNALE_FEED_URL,
+            source_kind,
+            cache,
+            fetch_config,
+            override_cooldown,
+            language,
+        )
+        .await;
+    }
+
+    let fallback_url = google_news_fallback_url(&normalized, language);
+    let fallback_site = google_news_site_for_feed_url(&normalized);
+    let fallback_key = fallback_site.as_ref().map(|site| {
+        let (hl, _, _) = google_news_locale(language);
+        format!("{hl}|{site}")
+    });
+
+    if let (Some(fallback_url), Some(fallback_key)) = (&fallback_url, &fallback_key)
+        && google_news_fallback_active(fallback_key)
+    {
+        crate::log_debug(&format!(
+            "rss_google_news_session_fallback primary=\"{}\" fallback=\"{}\"",
+            normalized, fallback_url
+        ));
+        match fetch_and_parse_direct(
+            fallback_url,
+            source_kind.clone(),
+            RssFeedCache::default(),
+            fetch_config,
+            override_cooldown,
+            language,
+        )
+        .await
+        {
+            Ok(mut outcome) if outcome.not_modified || !outcome.items.is_empty() => {
+                outcome.cache = cache;
+                outcome.cache.etag = None;
+                outcome.cache.last_modified = None;
+                outcome.cache.last_fetch = Some(now_unix());
+                outcome.cache.last_status = Some(200);
+                outcome.cache.consecutive_failures = 0;
+                return Ok(outcome);
+            }
+            Ok(_) => {
+                crate::log_debug(&format!(
+                    "rss_google_news_session_fallback_empty fallback=\"{}\"; retrying primary",
+                    fallback_url
+                ));
+            }
+            Err(err) => {
+                crate::log_debug(&format!(
+                    "rss_google_news_session_fallback_failed fallback=\"{}\" error=\"{}\"; retrying primary",
+                    fallback_url, err
+                ));
+            }
+        }
+        set_google_news_fallback_active(fallback_key, false);
+    }
+
+    let primary_result = fetch_and_parse_direct(
+        &normalized,
+        source_kind.clone(),
+        cache.clone(),
+        fetch_config,
+        override_cooldown,
+        language,
+    )
+    .await;
+
+    let primary_error = match primary_result {
+        Ok(outcome) if outcome.not_modified || !outcome.items.is_empty() => return Ok(outcome),
+        Ok(outcome) => {
+            crate::log_debug(&format!(
+                "rss_primary_empty url=\"{}\"; trying localized Google News fallback",
+                normalized
+            ));
+            FeedFetchError::Network {
+                message: "RSS feed contains no articles".to_string(),
+                cache: Box::new(outcome.cache),
+            }
+        }
+        Err(err) => {
+            crate::log_debug(&format!(
+                "rss_primary_failed url=\"{}\" error=\"{}\"; trying localized Google News fallback",
+                normalized, err
+            ));
+            err
+        }
+    };
+
+    let Some(fallback_url) = fallback_url else {
+        return Err(primary_error);
+    };
+    let Some(fallback_key) = fallback_key else {
+        return Err(primary_error);
+    };
+
+    match fetch_and_parse_direct(
+        &fallback_url,
+        source_kind,
+        RssFeedCache::default(),
+        fetch_config,
+        override_cooldown,
+        language,
+    )
+    .await
+    {
+        Ok(mut outcome) if outcome.not_modified || !outcome.items.is_empty() => {
+            set_google_news_fallback_active(&fallback_key, true);
+            crate::log_debug(&format!(
+                "rss_google_news_fallback_enabled primary=\"{}\" fallback=\"{}\" items={}",
+                normalized,
+                fallback_url,
+                outcome.items.len()
+            ));
+            outcome.cache = match primary_error {
+                FeedFetchError::HttpStatus { cache, .. }
+                | FeedFetchError::Network { cache, .. } => *cache,
+            };
+            outcome.cache.etag = None;
+            outcome.cache.last_modified = None;
+            outcome.cache.last_fetch = Some(now_unix());
+            outcome.cache.last_status = Some(200);
+            outcome.cache.consecutive_failures = 0;
+            Ok(outcome)
+        }
+        Ok(_) => Err(primary_error),
+        Err(fallback_error) => {
+            crate::log_debug(&format!(
+                "rss_google_news_fallback_failed primary=\"{}\" fallback=\"{}\" error=\"{}\"",
+                normalized, fallback_url, fallback_error
+            ));
+            Err(primary_error)
+        }
+    }
 }
 
 pub async fn fetch_url_bytes(
@@ -1671,6 +1953,114 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn google_news_fallback_uses_the_feed_language() {
+        let italian = google_news_fallback_url("https://www.testata.it/rss.xml", Language::Italian)
+            .expect("missing Italian fallback");
+        let italian = Url::parse(&italian).expect("invalid Italian fallback URL");
+        assert_eq!(italian.host_str(), Some("news.google.com"));
+        assert_eq!(
+            italian
+                .query_pairs()
+                .find(|(key, _)| key == "q")
+                .map(|(_, value)| value.into_owned()),
+            Some("site:testata.it".to_string())
+        );
+        assert_eq!(
+            italian
+                .query_pairs()
+                .find(|(key, _)| key == "hl")
+                .map(|(_, value)| value.into_owned()),
+            Some("it".to_string())
+        );
+        assert_eq!(
+            italian
+                .query_pairs()
+                .find(|(key, _)| key == "gl")
+                .map(|(_, value)| value.into_owned()),
+            Some("IT".to_string())
+        );
+        assert_eq!(
+            italian
+                .query_pairs()
+                .find(|(key, _)| key == "ceid")
+                .map(|(_, value)| value.into_owned()),
+            Some("IT:it".to_string())
+        );
+
+        let german = google_news_fallback_url("https://www.beispiel.de/feed.xml", Language::German)
+            .expect("missing German fallback");
+        let german = Url::parse(&german).expect("invalid German fallback URL");
+        assert_eq!(
+            german
+                .query_pairs()
+                .find(|(key, _)| key == "hl")
+                .map(|(_, value)| value.into_owned()),
+            Some("de".to_string())
+        );
+        assert_eq!(
+            german
+                .query_pairs()
+                .find(|(key, _)| key == "ceid")
+                .map(|(_, value)| value.into_owned()),
+            Some("DE:de".to_string())
+        );
+    }
+
+    #[test]
+    fn google_news_fallback_maps_known_technical_feed_hosts() {
+        assert_eq!(
+            google_news_site_for_feed_url(
+                "https://xml2.corriereobjects.it/feed-hp/homepage-restyle-2025.xml"
+            )
+            .as_deref(),
+            Some("corriere.it")
+        );
+        assert_eq!(
+            google_news_site_for_feed_url("https://feeds.bbci.co.uk/news/rss.xml").as_deref(),
+            Some("bbc.co.uk")
+        );
+        assert_eq!(
+            google_news_site_for_feed_url("https://feeds.feedburner.com/PublicoRSS").as_deref(),
+            Some("publico.pt")
+        );
+        assert!(
+            google_news_site_for_feed_url("https://news.google.com/rss?hl=it&gl=IT&ceid=IT:it")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn google_news_fallback_supports_portuguese_brazil_locale() {
+        let fallback = google_news_fallback_url(
+            "https://www.exemplo.com.br/feed/",
+            Language::PortugueseBrazilian,
+        )
+        .expect("missing Brazilian Portuguese fallback");
+        let fallback = Url::parse(&fallback).expect("invalid fallback URL");
+        assert_eq!(
+            fallback
+                .query_pairs()
+                .find(|(key, _)| key == "hl")
+                .map(|(_, value)| value.into_owned()),
+            Some("pt-BR".to_string())
+        );
+        assert_eq!(
+            fallback
+                .query_pairs()
+                .find(|(key, _)| key == "gl")
+                .map(|(_, value)| value.into_owned()),
+            Some("BR".to_string())
+        );
+        assert_eq!(
+            fallback
+                .query_pairs()
+                .find(|(key, _)| key == "ceid")
+                .map(|(_, value)| value.into_owned()),
+            Some("BR:pt-419".to_string())
+        );
+    }
 
     #[test]
     fn decode_html_bytes_preserves_spanish_accents_from_elmundo_fixture() {
