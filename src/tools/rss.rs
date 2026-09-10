@@ -342,6 +342,19 @@ fn canonicalize_url(u: &str) -> String {
     s
 }
 
+const IL_GIORNALE_FEED_URL: &str =
+    "https://news.google.com/rss/search?q=site%3Ailgiornale.it&hl=it&gl=IT&ceid=IT:it";
+
+fn is_legacy_il_giornale_feed_url(value: &str) -> bool {
+    let Ok(url) = Url::parse(value) else {
+        return false;
+    };
+    matches!(url.scheme(), "http" | "https")
+        && matches!(url.host_str(), Some("ilgiornale.it" | "www.ilgiornale.it"))
+        && url.path() == "/rss.xml"
+        && url.query().is_none()
+}
+
 const CORRIERE_HOME_FEED_URL: &str =
     "https://xml2.corriereobjects.it/feed-hp/homepage-restyle-2025.xml";
 
@@ -1342,6 +1355,16 @@ pub async fn fetch_and_parse(
         cache.last_modified = None;
     }
 
+    // Match Mobile Starter and repair subscriptions saved with the defunct publisher feed.
+    if is_legacy_il_giornale_feed_url(&url) {
+        crate::log_debug(&format!(
+            "rss_il_giornale_feed_override from={url} to={IL_GIORNALE_FEED_URL}"
+        ));
+        url = IL_GIORNALE_FEED_URL.to_string();
+        cache.etag = None;
+        cache.last_modified = None;
+    }
+
     let out_result = fetch_bytes_with_retries(http, &url, true, language, Some(&mut cache)).await;
 
     let out = match out_result {
@@ -1627,6 +1650,26 @@ pub fn fetch_config_from_settings(settings: &crate::settings::AppSettings) -> Rs
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn il_giornale_legacy_feed_matches_only_the_retired_endpoint() {
+        for url in [
+            "https://www.ilgiornale.it/rss.xml",
+            "http://ilgiornale.it/rss.xml",
+        ] {
+            assert!(super::is_legacy_il_giornale_feed_url(url));
+        }
+        for url in [
+            super::IL_GIORNALE_FEED_URL,
+            "https://www.ilgiornale.it/news/article.html",
+            "https://blog.ilgiornale.it/rss.xml",
+            "https://ilgiornale.it.example.org/rss.xml",
+            "https://www.ilgiornale.it/rss.xml?section=sport",
+        ] {
+            assert!(!super::is_legacy_il_giornale_feed_url(url));
+        }
+        assert!(include_str!("../../i18n/feed_it.txt").contains(super::IL_GIORNALE_FEED_URL));
+    }
+
     use super::*;
 
     #[test]

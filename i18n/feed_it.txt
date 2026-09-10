@@ -35,7 +35,7 @@ StartMag | https://www.startmag.it/feed/
 Formiche | https://www.formiche.net/feed/
 Linkiesta | https://www.linkiesta.it/feed/
 Il Foglio | https://naxos.ilfoglio.it/api/v5/rss/stories/latest
-Il Giornale | https://www.ilgiornale.it/rss.xml
+Il Giornale | https://news.google.com/rss/search?q=site%3Ailgiornale.it&hl=it&gl=IT&ceid=IT:it
 Il Riformista | https://www.ilriformista.it/feed/
 Quotidiano.net | https://www.quotidiano.net/rss
 Viterbo Today | https://www.viterbotoday.it/rss
