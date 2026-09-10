@@ -135,6 +135,10 @@ O Sonarpad guarda no catálogo as informações sobre as personagens para melhor
 
 Prima novamente Tab para encontrar Guardar também o projeto para futuras modificações. Ative esta opção quando souber que mais tarde pretende rever a audiodescrição, corrigir descrições ou mudar a voz.
 
+A caixa Criar audiodescrição no ficheiro de vídeo original permite obter diretamente um ficheiro de vídeo com a audiodescrição já inserida, em vez de apenas um ficheiro MP3. Quando esta opção está ativa, o Sonarpad mantém o vídeo original e acrescenta as descrições geradas à respetiva faixa de áudio sem recodificar desnecessariamente o vídeo. O formato predefinido é MP4, mas na janela de gravação também pode escolher MKV. O ficheiro de vídeo original nunca é substituído.
+
+Quando cria diretamente o vídeo audiodescrito, as pausas estendidas não são utilizadas, porque alterariam a duração e a sincronização do filme. O Sonarpad insere, portanto, as descrições apenas nos espaços disponíveis da faixa de áudio original.
+
 A caixa Mover o ficheiro de vídeo para a Reciclagem depois da audiodescrição é útil se não quiser conservar o vídeo original depois de criar o MP3 audiodescrito. Está desativada por predefinição e fica disponível quando a gravação do projeto não está ativa, porque um projeto editável continua a precisar do vídeo original.
 
 Depois encontra Chave API Gemini. Introduza aqui a sua chave API. A chave pode ser criada gratuitamente. Com Tab chega ao botão Obter chave API, que abre no navegador a página da Google onde, depois de iniciar sessão com a sua conta, pode criar a chave. Normalmente é um procedimento muito rápido.
@@ -144,6 +148,12 @@ Depois da chave API encontra Modelo Gemini e o botão Atualizar lista de modelos
 Prima novamente Tab para encontrar Motor de síntese de voz e Voz, que pode alterar de acordo com as suas preferências.
 
 Mais adiante encontra Modificar projeto de audiodescrição. Esta função permite reabrir e modificar um projeto que tenha guardado anteriormente. Atenção: para modificar o projeto, o ficheiro de vídeo original tem de continuar disponível.
+
+Na janela Modificar projeto de audiodescrição também está disponível Reanalisar segmento. Esta função é útil quando uma ou mais descrições de uma parte do filme não lhe agradam e pretende pedir ao Gemini que analise novamente essa zona sem ter de recriar toda a audiodescrição.
+
+Selecione uma descrição pertencente à zona que pretende rever e ative Reanalisar segmento. O Sonarpad analisa novamente o segmento de vídeo que contém essa descrição e propõe novos textos, mantendo os tempos e os espaços já guardados no projeto. No final da reanálise, as novas pré-visualizações de voz do segmento já estão preparadas: pode deslocar-se entre as descrições e premir Espaço para as ouvir imediatamente juntamente com o áudio original.
+
+As descrições afetadas são assinaladas como segmento reanalisado. A reanálise permanece apenas uma proposta até escolher Aplicar segmento e reexportar MP3. Só nesse momento o Sonarpad aplica as novas descrições ao projeto e volta a criar o ficheiro audiodescrito. Se não aplicar o segmento, o projeto guardado permanece inalterado.
 
 Em seguida encontra Continuar audiodescrição interrompida. O Sonarpad foi concebido para não perder o trabalho já realizado: se durante a criação a ligação cair, o Gemini tiver um problema ou o processo for interrompido, o Sonarpad guarda periodicamente pontos de progresso. Com esta função pode retomar um trabalho iniciado sem voltar ao princípio.
 

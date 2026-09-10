@@ -672,6 +672,10 @@ Sonarpad speichert Informationen zu den Figuren im Katalog, um die Kontinuität 
 
 Drücken Sie erneut Tab, um Projekt auch für spätere Bearbeitung speichern zu erreichen. Aktivieren Sie diese Option, wenn Sie die Audiodeskription später noch überarbeiten, Beschreibungen korrigieren oder die Stimme ändern möchten.
 
+Das Kontrollkästchen Audiodeskription im ursprünglichen Video speichern ermöglicht es, direkt eine Videodatei mit bereits eingefügter Audiodeskription zu erhalten, statt nur eine MP3-Datei. Wenn diese Option aktiviert ist, behält Sonarpad das Originalvideo bei und fügt die erzeugten Beschreibungen seiner Audiospur hinzu, ohne das Video unnötig neu zu kodieren. Das Standardformat ist MP4; im Speicherfenster kann aber auch MKV gewählt werden. Die ursprüngliche Videodatei wird niemals überschrieben.
+
+Wenn Sie direkt ein Video mit Audiodeskription erstellen, werden erweiterte Pausen nicht verwendet, da sie die Dauer und Synchronisation des Films verändern würden. Sonarpad fügt die Beschreibungen daher nur in die verfügbaren Bereiche der ursprünglichen Audiospur ein.
+
 Die Option Videodatei nach der Audiodeskription in den Papierkorb verschieben ist für den Fall gedacht, dass Sie das Originalvideo nach der Erstellung der audiodeskribierten MP3 nicht behalten möchten. Sie ist standardmäßig ausgeschaltet und steht zur Verfügung, wenn das Speichern des Projekts nicht aktiviert ist, da ein bearbeitbares Projekt weiterhin das Originalvideo benötigt.
 
 Anschließend finden Sie Gemini-API-Schlüssel. Geben Sie hier Ihren API-Schlüssel ein. Der Schlüssel kann kostenlos erstellt werden. Mit Tab erreichen Sie die Schaltfläche API-Schlüssel abrufen, die im Browser die Google-Seite öffnet, auf der Sie nach der Anmeldung mit Ihrem Konto einen Schlüssel erstellen können. Der Vorgang ist normalerweise sehr schnell.
@@ -681,6 +685,12 @@ Nach dem API-Schlüssel finden Sie Gemini-Modell und die Schaltfläche Modelllis
 Drücken Sie erneut Tab, um Sprachsynthese-Engine und Stimme zu erreichen. Beide können Sie nach Ihren persönlichen Vorlieben ändern.
 
 Weiter unten finden Sie Audiodeskriptionsprojekt bearbeiten. Damit können Sie ein zuvor gespeichertes Projekt erneut öffnen und verändern. Wichtig: Zum Bearbeiten des Projekts muss die ursprüngliche Videodatei weiterhin vorhanden sein.
+
+Im Fenster Audiodeskriptionsprojekt bearbeiten steht außerdem Segment neu analysieren zur Verfügung. Diese Funktion ist nützlich, wenn Sie mit einer oder mehreren Beschreibungen in einem Teil des Films nicht zufrieden sind und Gemini diesen Bereich erneut analysieren soll, ohne die gesamte Audiodeskription neu erstellen zu müssen.
+
+Wählen Sie eine Beschreibung aus dem Bereich, den Sie überprüfen möchten, und aktivieren Sie Segment neu analysieren. Sonarpad analysiert das Videosegment, das diese Beschreibung enthält, erneut und schlägt neue Texte vor, wobei die im Projekt bereits gespeicherten Zeiten und verfügbaren Bereiche beibehalten werden. Nach Abschluss der Neuanalyse sind die neuen Sprachvorschauen des Segments bereits vorbereitet: Sie können zwischen den Beschreibungen wechseln und die Leertaste drücken, um sie sofort zusammen mit dem Originalton anzuhören.
+
+Die betroffenen Beschreibungen werden als Segment neu analysiert gekennzeichnet. Die Neuanalyse bleibt ein Vorschlag, bis Sie Segment anwenden und MP3 erneut exportieren wählen. Erst dann übernimmt Sonarpad die neuen Beschreibungen in das Projekt und erstellt die audiodeskribierte Datei neu. Wenn Sie das Segment nicht anwenden, bleibt das gespeicherte Projekt unverändert.
 
 Danach finden Sie Unterbrochene Audiodeskription fortsetzen. Sonarpad ist so ausgelegt, dass bereits erledigte Arbeit nicht verloren geht: Wenn während der Erstellung die Verbindung abbricht, Gemini ein Problem hat oder der Vorgang unterbrochen wird, speichert Sonarpad regelmäßig Fortschrittspunkte. Mit dieser Funktion können Sie eine begonnene Arbeit fortsetzen, ohne wieder von vorn anfangen zu müssen.
 

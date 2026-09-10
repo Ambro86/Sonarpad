@@ -25,6 +25,27 @@ class WindowsAudioDescriptionMediaPreparationTests(unittest.TestCase):
         self.assertIn("max_chunk_bytes <= GEMINI_INLINE_TARGET_CHUNK_BYTES", self.audio_source)
         self.assertIn("file_size >= GEMINI_MAX_CHUNK_BYTES", self.audio_source)
 
+    def test_gemini_invalid_argument_uses_fallbacks_only_after_normal_attempt(self):
+        normal_call = "let mut analysis_result = run_bridge_once(&bridge_request);"
+        smaller_fallback = "activating smaller-MKV fallback only after failure"
+        mp4_fallback = "activating MP4 Gemini compatibility fallback"
+        self.assertIn(normal_call, self.audio_source)
+        self.assertIn("const GEMINI_COMPAT_TARGET_CHUNK_BYTES: u64 = 15 * 1024 * 1024;", self.audio_source)
+        self.assertIn("gemini_media_invalid_argument(primary_error)", self.audio_source)
+        self.assertIn(smaller_fallback, self.audio_source)
+        self.assertIn(mp4_fallback, self.audio_source)
+        self.assertLess(self.audio_source.index(normal_call), self.audio_source.index(smaller_fallback))
+        self.assertLess(self.audio_source.index(smaller_fallback), self.audio_source.index(mp4_fallback))
+        self.assertIn('"mkv",\n            false,', self.audio_source)
+        self.assertIn('"mp4",\n            true,', self.audio_source)
+        self.assertIn("fallback_request.resume = None;", self.audio_source)
+
+    def test_non_media_errors_do_not_activate_gemini_compatibility_fallback(self):
+        self.assertIn("looks_like_credentials", self.audio_source)
+        self.assertIn('lower.contains("api key")', self.audio_source)
+        self.assertIn('lower.contains("permission denied")', self.audio_source)
+        self.assertIn("is_http_400 && is_invalid_argument && !looks_like_credentials", self.audio_source)
+
     def test_large_source_is_split_instead_of_rejected_wholesale(self):
         self.assertIn("if input_size == 0 {", self.audio_source)
         self.assertNotIn(

@@ -978,6 +978,10 @@ pub struct FfmpegSource {
     stream_start_us: i64,
     fmt_start_us: i64,
     pts_offset_us: Option<i64>,
+    // Requested media position for an exact post-demux seek trim. FFmpeg may
+    // seek to an earlier packet/keyframe, so decoded samples before this point
+    // must never be exposed to the player.
+    seek_target_us: Option<i64>,
     pts_clock: Option<Arc<AtomicI64>>,
     total_duration: Option<Duration>,
     eof: bool,
@@ -1262,6 +1266,7 @@ impl FfmpegSource {
             stream_start_us,
             fmt_start_us,
             pts_offset_us: None,
+            seek_target_us: None,
             pts_clock,
             total_duration,
             eof: false,
@@ -1406,6 +1411,10 @@ impl FfmpegSource {
             }
         };
 
+        // Capture the real decoded timestamp before av_frame_unref(). After unref
+        // AVFrame::pts is no longer reliable, which previously made an early seek
+        // landing look as if it began exactly at the requested position.
+        let decoded_frame_pts_us = self.frame_pts_us();
         let converted = unsafe {
             (self.api.swr_convert)(self.swr_ctx, out_ptrs, out_samples, in_data, in_samples)
         };
@@ -1423,7 +1432,11 @@ impl FfmpegSource {
         if produced == 0 {
             return Ok(false);
         }
-        let mut pts_us = self.frame_pts_us().unwrap_or(self.next_pts_us);
+        let mut pts_us = if self.seek_target_us.is_some() {
+            decoded_frame_pts_us.unwrap_or(self.next_pts_us)
+        } else {
+            self.next_pts_us
+        };
         if self.pts_offset_us.is_none() {
             let mut offset = 0i64;
             if self.stream_start_us > 0 && pts_us >= 0 && pts_us < self.stream_start_us / 2 {
@@ -1443,14 +1456,68 @@ impl FfmpegSource {
             pts_us = pts_us.saturating_add(offset);
         }
         out_buffer.truncate(produced);
+
+        // avformat_seek_file is allowed to land before the requested position.
+        // Keep decoding, but discard every sample before the exact seek target.
+        if let Some(requested_target_us) = self.seek_target_us {
+            // pts_us is normalized with the same stream/container offset used by
+            // the playback clock, so put the requested target on that timeline too.
+            let target_us = requested_target_us.saturating_add(self.pts_offset_us.unwrap_or(0));
+            let frame_count = out_buffer.len() / channels;
+            let frame_duration_us = (frame_count as i128)
+                .saturating_mul(1_000_000)
+                .saturating_div(self.sample_rate as i128)
+                as i64;
+            let frame_end_us = pts_us.saturating_add(frame_duration_us);
+
+            if frame_end_us <= target_us {
+                self.next_pts_us = frame_end_us;
+                return Ok(false);
+            }
+
+            if pts_us < target_us {
+                let delta_us = target_us.saturating_sub(pts_us) as i128;
+                let skip_frames = delta_us
+                    .saturating_mul(self.sample_rate as i128)
+                    .saturating_add(999_999)
+                    .saturating_div(1_000_000)
+                    .min(frame_count as i128) as usize;
+                let skip_samples = skip_frames.saturating_mul(channels);
+                if skip_samples >= out_buffer.len() {
+                    self.next_pts_us = frame_end_us;
+                    return Ok(false);
+                }
+                if skip_samples > 0 {
+                    out_buffer.drain(..skip_samples);
+                    let skipped_us = (skip_frames as i128)
+                        .saturating_mul(1_000_000)
+                        .saturating_div(self.sample_rate as i128)
+                        as i64;
+                    pts_us = pts_us.saturating_add(skipped_us);
+                    log_debug(&format!(
+                        "FFmpeg: precise seek trimmed {} frame(s); first output {:.6}s, target {:.6}s",
+                        skip_frames,
+                        pts_us as f64 / 1_000_000.0,
+                        target_us as f64 / 1_000_000.0
+                    ));
+                }
+            }
+            log_debug(&format!(
+                "FFmpeg: precise seek ready; first output {:.6}s, target {:.6}s",
+                pts_us as f64 / 1_000_000.0,
+                target_us as f64 / 1_000_000.0
+            ));
+            self.seek_target_us = None;
+        }
+
         self.buffer.extend_from_slice(&out_buffer);
         self.buffer_start_pts_us = Some(pts_us);
-        self.buffer_frame_count = produced / channels;
+        self.buffer_frame_count = out_buffer.len() / channels;
         let duration_us = (self.buffer_frame_count as i128)
             .saturating_mul(1_000_000)
             .saturating_div(self.sample_rate as i128) as i64;
         self.next_pts_us = pts_us.saturating_add(duration_us);
-        Ok(true)
+        Ok(!out_buffer.is_empty())
     }
 
     fn flush_resampler(&mut self) -> bool {
@@ -1645,6 +1712,7 @@ impl Source for FfmpegSource {
             next_pts = next_pts.saturating_add(offset);
         }
         self.next_pts_us = next_pts;
+        self.seek_target_us = Some(pos_us);
         if let Some(clock) = &self.pts_clock {
             clock.store(next_pts, Ordering::Release);
         }

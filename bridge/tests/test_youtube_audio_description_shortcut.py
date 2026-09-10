@@ -46,7 +46,14 @@ class YouTubeAudioDescriptionShortcutTests(unittest.TestCase):
         )
         self.assertIn("const WM_AD_SET_INPUT", WINDOW)
         self.assertIn("set_path((*pointer).input, &input_path);", WINDOW)
-        self.assertIn("&default_output((*pointer).parent, &input_path)", WINDOW)
+        set_input = WINDOW[
+            WINDOW.index("WM_AD_SET_INPUT =>"):
+            WINDOW.index("WM_AD_SET_INPUT =>") + 3000
+        ]
+        self.assertIn(
+            "&default_output((*pointer).parent,&input_path,checkbox_checked((*pointer).create_video_checkbox))",
+            "".join(set_input.split()),
+        )
 
     def test_local_video_prefills_window_without_downloading(self):
         self.assertIn("fn open_audio_description_from_current_context", MAIN)

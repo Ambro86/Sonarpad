@@ -155,6 +155,10 @@ Sonarpad ukládá do katalogu informace o postavách, aby zlepšil návaznost ro
 
 Dalším stiskem Tab najdete Uložit také projekt pro budoucí úpravy. Zapněte tuto možnost, pokud víte, že budete chtít audiopopis později zkontrolovat, opravit popisy nebo změnit hlas.
 
+Zaškrtávací políčko Vytvořit audiopopis v původním videosouboru umožňuje získat přímo video s již vloženým audiopopisem místo samotného souboru MP3. Když je tato možnost zapnutá, Sonarpad zachová původní video a přidá vytvořené popisy do jeho zvukové stopy bez zbytečného překódování videa. Výchozí formát je MP4, ale v okně pro uložení lze zvolit také MKV. Původní videosoubor se nikdy nepřepíše.
+
+Při přímém vytváření videa s audiopopisem se nepoužívají rozšířené pauzy, protože by změnily délku a synchronizaci filmu. Sonarpad proto vkládá popisy pouze do dostupných míst původní zvukové stopy.
+
 Volba Přesunout soubor videa do Koše po vytvoření audiopopisu je určena pro případ, kdy nechcete po vytvoření MP3 s audiopopisem uchovat původní video. Ve výchozím nastavení je vypnutá a je dostupná tehdy, když není zapnuté ukládání projektu, protože upravitelný projekt stále potřebuje původní video.
 
 Dále najdete Klíč API Gemini. Zde zadejte svůj klíč API. Klíč lze vytvořit zdarma. Pomocí Tab přejdete na tlačítko Získat klíč API, které v prohlížeči otevře stránku Google, kde po přihlášení ke svému účtu můžete klíč vytvořit. Postup je obvykle velmi rychlý.
@@ -164,6 +168,12 @@ Za klíčem API najdete Model Gemini a tlačítko Aktualizovat seznam modelů. O
 Dalším stiskem Tab najdete Modul syntézy řeči a Hlas, které můžete změnit podle svých preferencí.
 
 Dále najdete Upravit projekt audiopopisu. Tato funkce umožňuje znovu otevřít a upravit dříve uložený projekt. Upozornění: pro úpravu projektu musí být původní video stále k dispozici.
+
+V okně Upravit projekt audiopopisu je k dispozici také Znovu analyzovat segment. Tato funkce je užitečná, když nejste spokojeni s jedním nebo více popisy v určité části filmu a chcete požádat Gemini, aby tuto oblast znovu analyzovalo, aniž by bylo nutné vytvářet celý audiopopis znovu.
+
+Vyberte popis patřící do oblasti, kterou chcete zkontrolovat, a aktivujte Znovu analyzovat segment. Sonarpad znovu analyzuje videosegment obsahující tento popis a navrhne nové texty, přičemž zachová časy a dostupná místa již uložená v projektu. Po dokončení nové analýzy jsou nové hlasové náhledy segmentu již připravené: můžete se pohybovat mezi popisy a stisknutím mezerníku je okamžitě poslouchat společně s původním zvukem.
+
+Dotčené popisy jsou označeny jako segment znovu analyzován. Nová analýza zůstává pouze návrhem, dokud nezvolíte Použít segment a znovu exportovat MP3. Teprve potom Sonarpad použije nové popisy v projektu a znovu vytvoří soubor s audiopopisem. Pokud segment nepoužijete, uložený projekt zůstane beze změny.
 
 Poté najdete Pokračovat v přerušeném audiopopisu. Sonarpad je navržen tak, aby neztratil již vykonanou práci: pokud během vytváření vypadne připojení, Gemini narazí na problém nebo je proces přerušen, Sonarpad pravidelně ukládá body postupu. Pomocí této funkce můžete pokračovat v rozpracované práci, aniž byste museli začínat od začátku.
 

@@ -141,6 +141,10 @@ Sonarpad u katalogu čuva podatke o likovima da bi poboljšao kontinuitet prepoz
 
 Sledećim pritiskom na Tab dolazi se do opcije Sačuvaj i projekat za buduće izmene. Uključite je ako znate da ćete kasnije želeti da pregledate audio-deskripciju, ispravite opise ili promenite glas.
 
+Opcija Napravi audio opis u originalnoj video datoteci omogućava da odmah dobijete video datoteku sa već umetnutom audio-deskripcijom, umesto samo MP3 datoteke. Kada je ova opcija uključena, Sonarpad zadržava originalni video i dodaje generisane opise njegovoj audio stazi bez nepotrebnog ponovnog kodiranja videa. Podrazumevani format je MP4, ali u prozoru za čuvanje možete izabrati i MKV. Originalna video datoteka se nikada ne prepisuje.
+
+Kada direktno pravite video sa audio-deskripcijom, proširene pauze se ne koriste jer bi promenile trajanje i sinhronizaciju filma. Sonarpad zato umeće opise samo u raspoložive prostore originalne audio staze.
+
 Opcija Premesti video fajl u korpu nakon audio-deskripcije služi ako ne želite da zadržite originalni video nakon izrade MP3 fajla sa audio-deskripcijom. Podrazumevano je isključena i dostupna je kada čuvanje projekta nije uključeno, jer je za projekat koji se može uređivati i dalje potreban originalni video.
 
 Zatim ćete pronaći Gemini API ključ. Ovde unesite svoj API ključ. Ključ može da se napravi besplatno. Tasterom Tab dolazi se do dugmeta Preuzmi API ključ, koje u pregledaču otvara Google stranicu na kojoj, nakon prijavljivanja na nalog, možete napraviti ključ. Postupak je obično veoma brz.
@@ -150,6 +154,12 @@ Posle API ključa nalaze se Gemini model i dugme Osveži listu modela. U većini
 Sledećim pritiskom na Tab dolazi se do opcija Motor sinteze govora i Glas, koje možete promeniti prema svojim željama.
 
 Dalje se nalazi Izmeni projekat audio-deskripcije. Ova funkcija omogućava da ponovo otvorite i izmenite ranije sačuvan projekat. Važno: originalni video fajl mora i dalje biti dostupan da bi projekat mogao da se menja.
+
+U prozoru Izmeni projekat audio-deskripcije dostupna je i opcija Ponovo analiziraj segment. Ova funkcija je korisna kada niste zadovoljni jednim ili više opisa u delu filma i želite da Gemini ponovo analizira tu oblast bez ponovnog pravljenja cele audio-deskripcije.
+
+Izaberite opis koji pripada oblasti koju želite da pregledate i aktivirajte Ponovo analiziraj segment. Sonarpad ponovo analizira video segment koji sadrži taj opis i predlaže nove tekstove, zadržavajući vremena i raspoložive prostore koji su već sačuvani u projektu. Kada se ponovna analiza završi, novi glasovni pregledi segmenta već su pripremljeni: možete se kretati između opisa i pritisnuti razmak da ih odmah čujete zajedno sa originalnim zvukom.
+
+Obuhvaćeni opisi označavaju se kao segment ponovo analiziran. Ponovna analiza ostaje samo predlog dok ne izaberete Primeni segment i ponovo izvezi MP3. Tek tada Sonarpad primenjuje nove opise na projekat i ponovo pravi datoteku sa audio-deskripcijom. Ako ne primenite segment, sačuvani projekat ostaje nepromenjen.
 
 Zatim se nalazi Nastavi prekinutu audio-deskripciju. Sonarpad je napravljen tako da ne gubi već obavljen posao: ako tokom izrade nestane veza, Gemini ima problem ili se proces prekine, Sonarpad periodično čuva tačke napretka. Pomoću ove funkcije možete nastaviti započeti posao bez ponovnog kretanja od početka.
 

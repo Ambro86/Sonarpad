@@ -1,5 +1,29 @@
 # Dziennik zmian
 
+Wersja 0.9.7 – 2026-09-11
+
+Audiodeskrypcja AI
+1. Dodano opcjonalną możliwość tworzenia audiodeskrypcji w oryginalnym pliku wideo. Po jej włączeniu Sonarpad preferuje teraz MP4: kopiuje oryginalny strumień wideo bez ponownego kodowania i dodaje zmiksowaną ścieżkę audiodeskrypcji. Jeśli podczas tworzenia MP4 FFmpeg zgłosi niezgodność kontenera lub zapisu pakietów, Sonarpad automatycznie ponawia ten sam eksport jako MKV, nadal bez ponownego kodowania wideo. MKV można też wybrać bezpośrednio. W tym trybie rozszerzone pauzy są ignorowane, aby zachować synchronizację dźwięku i obrazu.
+
+2. Ulepszono ponowną analizę segmentów w zapisanych projektach audiodeskrypcji. Okno korzysta teraz z dostępu do AI skonfigurowanego wcześniej w głównym oknie Tworzenie audiodeskrypcji, więc nie powiela klucza API, salda Sonarpad AI ani wyboru modelu. Ponownie analizowany segment zachowuje teraz całą grupę opisów projektu należących do tego fragmentu analizy zamiast tylko pierwszego lub najbliższego opisu; wszystkie opisy w grupie są oznaczane jako ponownie przeanalizowane, a „Zastosuj segment i ponownie wyeksportuj MP3” stosuje całą grupę jednocześnie. Podglądy rozszerzonych pauz są teraz syntetyzowane bezpośrednio zamiast wyszukiwania pozycji w wyeksportowanym MP3, co zapobiega rozpoczynaniu podglądu od dźwięku filmu lub ucinaniu opisu.
+
+3. Rozszerzono ostrożny mechanizm awaryjny multimediów Gemini bez zmiany już działającej ścieżki. HTTP 400 `INVALID_ARGUMENT` nadal uruchamia mniejsze fragmenty MKV (około 15 MB), a następnie zgodne fragmenty MP4. Jeśli Gemini przyjmie wysłany fragment, ale jego przetwarzanie zakończy się stanem `FAILED`, Sonarpad ponownie wysyła dokładnie ten sam fragment jeden raz i dopiero potem przechodzi do MP4; ponowienia dla serwerowego Code 13 są ograniczone do trzech, aby uniknąć nieskończonego oczekiwania. Błędy sieci, limitu, uwierzytelniania i syntezy nie uruchamiają tej ścieżki.
+
+4. Poprawiono zapisywanie danych dostępu AI podczas przełączania trybu. Osobisty klucz API Gemini i kod dostępu Sonarpad AI są teraz zapisywane niezależnie: przełączanie między osobistym kluczem API a Sonarpad AI nie usuwa już nieaktywnego poświadczenia. Klucz Gemini jest także zapisywany po opuszczeniu jego pola.
+
+5. Dodano prawdziwy przycisk Anuluj dla „Ponownie przeanalizuj segment” oraz „Zastosuj segment i ponownie wyeksportuj MP3”. Pasek postępu pozostaje aktywny, a Anuluj przerywa teraz przygotowanie segmentu przez FFmpeg, proces roboczy AI, weryfikację TTS i końcowy eksport, gdy tylko bieżący etap może zostać bezpiecznie zatrzymany. Zastosowanie ponownie przeanalizowanego segmentu jest teraz transakcyjne: istniejący projekt i plik wynikowy są zastępowane dopiero po pomyślnym ponownym eksporcie; po anulowaniu poprzednie pliki pozostają bez zmian, a propozycja ponownej analizy jest nadal dostępna do kolejnej próby.
+
+6. Naprawiono ponowną analizę segmentów dla opisów znajdujących się poza pierwszym fragmentem Gemini. Izolowany fragment jest teraz wysyłany do istniejącego workera z lokalną osią czasu zaczynającą się od 0, a następnie mapowany z powrotem na bezwzględną pozycję w projekcie, co zapobiega błędowi `Invalid prepared chunk timeline at chunk 1` bez zmiany standardowego potoku audiodeskrypcji.
+
+7. Ponowna analiza segmentów w zapisanych projektach korzysta teraz z tych samych kontroli bezpieczeństwa co pełne tworzenie audiodeskrypcji. Wybrany fragment przechodzi tę samą ekstrakcję dźwięku mono 16 kHz i analizę dialogów/ciszy Pyannote, te same reguły czasowe i mechanizmy awaryjne Gemini, tę samą rzeczywistą syntezę TTS głosem projektu oraz ten sam końcowy harmonogram bezpiecznego umieszczania i wydłużonych pauz. Przy zastosowaniu segmentu Sonarpad zachowuje nowe, zweryfikowane czasy bezwzględne i odświeża ochronę Pyannote dla tego fragmentu; usunięto wcześniejsze specjalne obejście podglądu dla zbyt długiego tekstu.
+
+8. Poprawiono strukturalną wymianę segmentu po pełnej ponownej analizie. Sonarpad nie wymaga już, aby nowo zweryfikowany segment zawierał dokładnie tyle samo opisów co zapisany projekt: stare opisy danego fragmentu są zastępowane całym bezpiecznym wynikiem pełnego potoku, więc segment z 10 opisami może poprawnie zmienić się w 9 (lub 11). Edytor projektu od razu pokazuje nową liczbę i czasy do odsłuchu, a zapisany projekt i plik multimedialny pozostają bez zmian do pomyślnego zakończenia zastosowania segmentu i ponownego eksportu MP3.
+
+9. Przebudowano ponowną analizę segmentu tak, aby wybrany fizyczny fragment był traktowany jak prawdziwy, samodzielny mini-film. Sonarpad przekazuje teraz ten mini-film bezpośrednio do dokładnie tej samej funkcji `create_audio_description`, której używa zwykłe pełne tworzenie, dzięki czemu obraz i ścieżka dźwiękowa mają tę samą lokalną oś czasu, a standardowe kontrole Pyannote, Gemini, rzeczywistego TTS, harmonogramowania i bezpieczeństwa działają bez osobnej implementacji ponownej analizy. Dopiero po zakończeniu normalnego procesu wynikowe czasy lokalne są przesuwane z powrotem na pierwotną pozycję w filmie.
+
+Edycja tekstu
+1. Ulepszono funkcję „Połącz zawinięte wiersze” w Edycja > Tekst. Bez zaznaczenia przetwarza cały dokument, a z zaznaczeniem tylko wybrane wiersze. Teraz odtwarza pełne akapity, łącząc kolejne wiersze także wtedy, gdy zdanie kończy się znakiem interpunkcyjnym; puste wiersze pozostają separatorami akapitów, a listy numerowane i punktowane są zachowywane.
+
 Wersja 0.9.6 – 2026-09-09
 
 1. Naprawiono zawieszanie się niektórych głosów SAPI4 przy włączonym śledzeniu kursora. Mostek czeka teraz na rzeczywiste zakończenie syntezy, zachowując śledzenie kursora.
@@ -790,3 +814,6 @@ Improvements
 
 ## 0.1.0 - 2025-12-25
 - Initial release: project structure and README.
+
+10. Fixed segment reanalysis timing when mapping an independently analyzed mini-film back to the original movie. Sonarpad now applies the same small chunk-duration reconciliation used by the normal full analysis to descriptions, visual-evidence timestamps, and protected dialogue intervals, preventing progressive sub-second drift near the end of a chunk from moving narration onto speech.
+

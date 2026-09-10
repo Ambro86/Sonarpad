@@ -241,12 +241,16 @@ def _is_permission_denied_error(exc):
     return False
 
 
-class _TransientGeminiFileProcessingError(GeminiAPIError):
-    """Gemini accepted an upload but transiently failed to process it."""
+class _GeminiFileProcessingError(GeminiAPIError):
+    """Gemini accepted an upload but failed while processing it."""
 
     def __init__(self, message, video_file_obj):
         super().__init__(message)
         self.video_file_obj = video_file_obj
+
+
+# Backward-compatible alias used by existing tests/imports.
+_TransientGeminiFileProcessingError = _GeminiFileProcessingError
 
 # --- PUBLIC API ---
 
@@ -401,11 +405,9 @@ def _upload_and_wait_for_active_once(client, video_path, status_callback=None):
                 video_file_obj,
             )
             _status(err_msg)
-            if str(_file_error_code(video_file_obj)) == "13":
-                raise _TransientGeminiFileProcessingError(
-                    err_msg, video_file_obj
-                )
-            raise GeminiAPIError(err_msg)
+            # Surface every terminal FAILED state with the uploaded-file object.
+            # The wrapper below decides whether a conservative re-upload is safe.
+            raise _GeminiFileProcessingError(err_msg, video_file_obj)
         if state_name not in ("PROCESSING", "STATE_UNSPECIFIED", "UNKNOWN"):
             # Unexpected terminal state — do not spin for minutes.
             err_msg = _("Video processing failed. Unexpected state: %s") % state_name
@@ -436,26 +438,50 @@ def _upload_and_wait_for_active_once(client, video_path, status_callback=None):
 
 
 def _upload_and_wait_for_active(client, video_path, status_callback=None):
-    """Upload until ACTIVE, retrying Gemini's transient Code=13 forever."""
+    """Upload until ACTIVE with bounded retries only after a terminal FAILED state.
+
+    Normal ACTIVE uploads are unchanged. A generic Gemini processing failure gets
+    one fresh upload of the exact same chunk. Server Code 13 keeps the historical
+    retry behavior but is capped at three re-uploads so the Rust compatibility
+    fallback can take over instead of leaving the user in an endless loop.
+    """
     retry_number = 0
     while True:
         try:
             return _upload_and_wait_for_active_once(
                 client, video_path, status_callback
             )
-        except _TransientGeminiFileProcessingError as exc:
+        except _GeminiFileProcessingError as exc:
             retry_number += 1
+            error_code = str(_file_error_code(exc.video_file_obj) or "")
+            is_code_13 = error_code == "13" or "code 13" in str(exc).lower()
+            retry_limit = 3 if is_code_13 else 1
             _cleanup_uploaded_file(
                 client, exc.video_file_obj, status_callback
             )
-            message = _(
-                "Gemini could not process this video chunk (server Code 13). "
-                "Retrying upload indefinitely; retry %d…"
-            ) % retry_number
+
+            if retry_number > retry_limit:
+                app_logger.warning(
+                    "Gemini file-processing failure for %s persisted after %d re-upload(s); "
+                    "returning the error so Sonarpad can activate its media compatibility fallback.",
+                    os.path.basename(video_path), retry_limit,
+                )
+                raise GeminiAPIError(str(exc)) from exc
+
+            if is_code_13:
+                message = _(
+                    "Gemini could not process this video chunk (server Code 13). "
+                    "Retrying the same upload; retry %d of %d…"
+                ) % (retry_number, retry_limit)
+            else:
+                message = _(
+                    "Gemini could not process this video chunk. "
+                    "Retrying the same upload once before using a compatibility fallback…"
+                )
             app_logger.warning(
-                "Transient Gemini file-processing failure for %s; "
-                "retrying indefinitely (retry=%d).",
-                os.path.basename(video_path), retry_number,
+                "Gemini file-processing failure for %s; retrying same upload "
+                "(retry=%d/%d, code=%s).",
+                os.path.basename(video_path), retry_number, retry_limit, error_code or "none",
             )
             if status_callback:
                 status_callback(message)

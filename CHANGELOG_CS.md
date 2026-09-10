@@ -1,5 +1,29 @@
 # Přehled změn
 
+Verze 0.9.7 – 2026-09-11
+
+AI audiopopis
+1. Přidána volitelná možnost vytvořit audiopopis v původním videosouboru. Je-li aktivní, Sonarpad nyní upřednostní MP4: zkopíruje původní video stream bez překódování a vloží smíchanou stopu audiopopisu. Pokud FFmpeg při vytváření MP4 oznámí nekompatibilitu kontejneru nebo zápisu paketů, Sonarpad automaticky zopakuje stejný export do MKV, stále bez překódování videa. MKV lze také zvolit ručně. Rozšířené pauzy se v tomto režimu ignorují, aby zůstaly zvuk a video synchronizované.
+
+2. Vylepšena opětovná analýza segmentů v uložených projektech audiopopisu. Okno nyní používá přístup k AI již nastavený v hlavním okně Vytvořit audiopopis, takže již neduplikuje klíč API, kredit Sonarpad AI ani výběr modelu. Znovu analyzovaný segment nyní zachovává celou skupinu popisů projektu patřících do stejného analytického úseku místo pouze prvního nebo nejbližšího popisu; všechny popisy ve skupině jsou označeny jako znovu analyzované a „Použít segment a znovu exportovat MP3“ použije celou skupinu najednou. Náhledy rozšířených pauz se nyní syntetizují přímo místo hledání pozice v exportovaném MP3, takže náhled nezačne zvukem filmu ani neusekne popis.
+
+3. Konzervativní záložní postup pro média Gemini byl rozšířen bez změny stávajícího funkčního postupu. HTTP 400 `INVALID_ARGUMENT` nadále spouští menší bloky MKV (přibližně 15 MB) a poté kompatibilní bloky MP4. Pokud Gemini přijatý blok zpracuje do stavu `FAILED`, Sonarpad nahraje přesně tentýž blok ještě jednou a teprve potom přejde na MP4; opakování při serverovém Code 13 je omezeno na tři, aby nevznikalo nekonečné čekání. Chyby sítě, kvóty, ověření nebo syntézy tento postup nespouštějí.
+
+4. Opravena trvalost přihlašovacích údajů AI při přepínání režimu přístupu. Osobní klíč API Gemini a přístupový kód Sonarpad AI se nyní ukládají nezávisle: přepnutí mezi osobním klíčem API a Sonarpad AI již nesmaže neaktivní přihlašovací údaj. Klíč Gemini se také uloží při opuštění jeho pole.
+
+5. Pro „Znovu analyzovat segment“ a „Použít segment a znovu exportovat MP3“ bylo přidáno skutečné tlačítko Zrušit. Ukazatel průběhu zůstává aktivní a Zrušit nyní ukončí přípravu segmentu ve FFmpegu, AI worker, kontrolu TTS i závěrečný export, jakmile lze právě probíhající krok bezpečně zastavit. Použití znovu analyzovaného segmentu je nyní transakční: stávající projekt a výstupní médium se nahradí až po úspěšném opětovném exportu; při zrušení zůstanou předchozí soubory beze změny a návrh znovu analyzovaného segmentu zůstane k dispozici pro další pokus.
+
+6. Opravena opětovná analýza segmentů pro popisy mimo první chunk Gemini. Izolovaný chunk se nyní odesílá stávajícímu workeru s místní časovou osou začínající od 0 a poté se znovu mapuje na absolutní pozici v projektu, čímž se zabrání chybě `Invalid prepared chunk timeline at chunk 1` bez změny běžné pipeline audiopopisu.
+
+7. Opětovná analýza segmentů v uložených projektech nyní používá stejné bezpečnostní kontroly jako úplné vytvoření audiopopisu. Vybraný úsek prochází stejnou extrakcí mono zvuku 16 kHz a analýzou dialogů/ticha pomocí Pyannote, stejnými časovými pravidly a záložními postupy Gemini, stejnou skutečnou syntézou TTS hlasem projektu a stejným konečným plánovačem bezpečného umístění a prodloužených pauz. Při použití segmentu Sonarpad zachová nové ověřené absolutní časy a aktualizuje ochranu Pyannote pro daný úsek; předchozí speciální obcházení náhledu pro příliš dlouhý znovu analyzovaný text bylo odstraněno.
+
+8. Opravena strukturální náhrada segmentu po úplné nové analýze. Sonarpad již nevyžaduje, aby nově ověřený segment obsahoval přesně stejný počet popisů jako uložený projekt: staré popisy daného chunku jsou nahrazeny celým bezpečným výsledkem úplné pipeline, takže segment s 10 popisy může správně přejít na 9 (nebo 11). Editor projektu okamžitě zobrazí nový počet a nové časy pro náhled, zatímco uložený projekt a mediální soubor zůstanou beze změny až do úspěšného dokončení použití segmentu a opětovného exportu MP3.
+
+9. Přepracována opětovná analýza segmentu tak, aby se vybraný fyzický úsek zpracoval jako skutečný samostatný minifilm. Sonarpad nyní tento minifilm předává přímo přesně stejné funkci `create_audio_description`, která se používá při běžném úplném vytvoření, takže obraz a zvuková stopa sdílejí stejnou místní časovou osu a běžné kontroly Pyannote, Gemini, skutečného TTS, plánování a bezpečnosti proběhnou bez samostatné implementace opětovné analýzy. Teprve po dokončení této běžné pipeline se výsledné místní časy posunou zpět na původní pozici ve filmu.
+
+Úpravy textu
+1. Vylepšena funkce „Spojit zalomené řádky“ v nabídce Úpravy > Text. Bez výběru zpracuje celý dokument, s výběrem pouze označené řádky. Nyní rekonstruuje celé odstavce spojením po sobě jdoucích řádků i tehdy, když věta končí interpunkcí; prázdné řádky zůstávají oddělovači odstavců a číslované i odrážkové seznamy jsou zachovány.
+
 Verze 0.9.6 – 2026-09-09
 
 1. Opraveno zamrzání některých hlasů SAPI4 při zapnutém sledování kurzoru. Bridge nyní čeká na skutečné dokončení syntézy a sledování kurzoru zůstává zapnuté.
@@ -832,3 +856,6 @@ Verze 0.5 - 2025-12-27
 
 Verze 0.1.0 - 2025-12-25
 • První vydání: struktura projektu a README.
+
+10. Fixed segment reanalysis timing when mapping an independently analyzed mini-film back to the original movie. Sonarpad now applies the same small chunk-duration reconciliation used by the normal full analysis to descriptions, visual-evidence timestamps, and protected dialogue intervals, preventing progressive sub-second drift near the end of a chunk from moving narration onto speech.
+

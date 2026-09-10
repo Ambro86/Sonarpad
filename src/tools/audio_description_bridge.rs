@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(debug_assertions)]
 const BRIDGE_DEBUG_FILE_NAME: &str = "audio_description_bridge.exe";
-const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v6.exe";
+const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v7.exe";
 const BRIDGE_MIN_VALID_SIZE_BYTES: u64 = 5_000_000;
 const BRIDGE_DOWNLOAD_URLS: [&str; 2] = [
     "https://github.com/Ambro86/Sonarpad-Tools/releases/download/0.7/audio_description_bridge.exe",
@@ -345,6 +345,66 @@ fn download_bridge(
     }
 }
 
+fn bridge_cache_version(name: &str) -> Option<u32> {
+    let version = name
+        .strip_prefix("audio_description_bridge_v")?
+        .strip_suffix(".exe")?;
+    if version.is_empty() || !version.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    version.parse().ok()
+}
+
+fn remove_old_bridge_caches(current: &Path) {
+    let Some(directory) = current.parent() else {
+        return;
+    };
+    let Some(current_version) = current
+        .file_name()
+        .and_then(|name| name.to_str())
+        .and_then(bridge_cache_version)
+    else {
+        return;
+    };
+    let entries = match fs::read_dir(directory) {
+        Ok(entries) => entries,
+        Err(error) => {
+            crate::log_debug(&format!(
+                "Audio description: old worker cleanup skipped: {error}"
+            ));
+            return;
+        }
+    };
+    for entry in entries {
+        let Ok(entry) = entry else { continue };
+        let name = entry.file_name();
+        let Some(version) = name.to_str().and_then(bridge_cache_version) else {
+            continue;
+        };
+        if version >= current_version || !entry.file_type().is_ok_and(|kind| kind.is_file()) {
+            continue;
+        }
+        // Only regular, older, versioned files directly in the cache directory.
+        // Never recurse, follow links, stop a process or retry a failed deletion.
+        if let Err(error) = fs::remove_file(entry.path()) {
+            crate::log_debug(&format!(
+                "Audio description: old worker {} retained: {error}",
+                entry.path().display()
+            ));
+        } else {
+            crate::log_debug(&format!(
+                "Audio description: removed old worker {}",
+                entry.path().display()
+            ));
+        }
+    }
+}
+
+fn cleanup_old_bridge_caches_once(current: &Path) {
+    static CLEANUP: std::sync::Once = std::sync::Once::new();
+    CLEANUP.call_once(|| remove_old_bridge_caches(current));
+}
+
 fn ensure_bridge(
     cancel: &Arc<AtomicBool>,
     download_progress: &mut Option<Box<dyn FnMut(i32) + Send>>,
@@ -371,6 +431,7 @@ fn ensure_bridge(
                     "Audio description: using cached worker {}",
                     cached.display()
                 ));
+                cleanup_old_bridge_caches_once(&cached);
                 return Ok(cached);
             }
             Ok(false) => {
@@ -391,6 +452,7 @@ fn ensure_bridge(
         }
     }
     download_bridge(&cached, cancel, download_progress)?;
+    cleanup_old_bridge_caches_once(&cached);
     crate::log_debug(&format!(
         "Audio description: worker ready at {}",
         cached.display()
@@ -739,4 +801,57 @@ pub fn run_audio_description_bridge(
         "Audio description: remove temporary worker request failed"
     );
     run_result
+}
+
+#[cfg(test)]
+mod cache_cleanup_tests {
+    use super::*;
+    use std::os::windows::fs::OpenOptionsExt;
+
+    #[test]
+    fn cleanup_preserves_current_future_unrelated_and_locked_files() {
+        let dir = std::env::temp_dir().join(format!(
+            "sonarpad-cache-cleanup-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos()
+        ));
+        fs::create_dir(&dir).expect("test directory");
+        for name in [
+            "audio_description_bridge_v4.exe",
+            "audio_description_bridge_v6.exe",
+            "audio_description_bridge_v7.exe",
+            "audio_description_bridge_v8.exe",
+            "audio_description_bridge.exe",
+            "sapi4_bridge_32.exe",
+            "audio_description_bridge_v3.exe.backup",
+        ] {
+            fs::write(dir.join(name), b"test").expect("fixture");
+        }
+        fs::create_dir(dir.join("audio_description_bridge_v2.exe")).expect("directory fixture");
+        {
+            let _locked = fs::OpenOptions::new()
+                .read(true)
+                .share_mode(0)
+                .open(dir.join("audio_description_bridge_v6.exe"))
+                .expect("lock fixture");
+            remove_old_bridge_caches(&dir.join("audio_description_bridge_v7.exe"));
+            assert!(!dir.join("audio_description_bridge_v4.exe").exists());
+            for name in [
+                "audio_description_bridge_v6.exe",
+                "audio_description_bridge_v7.exe",
+                "audio_description_bridge_v8.exe",
+                "audio_description_bridge.exe",
+                "sapi4_bridge_32.exe",
+                "audio_description_bridge_v3.exe.backup",
+                "audio_description_bridge_v2.exe",
+            ] {
+                assert!(dir.join(name).exists(), "must preserve {name}");
+            }
+        }
+        fs::remove_dir_all(&dir).expect("remove isolated test directory");
+        remove_old_bridge_caches(&dir.join("audio_description_bridge_v7.exe"));
+    }
 }

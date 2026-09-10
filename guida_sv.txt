@@ -142,6 +142,10 @@ Sonarpad sparar information om personerna i katalogen för att förbättra konti
 
 Tryck på Tab igen för att hitta Spara även projektet för framtida redigering. Aktivera alternativet om du vet att du senare vill granska syntolkningen, rätta beskrivningar eller byta röst.
 
+Kryssrutan Skapa syntolkning i den ursprungliga videofilen gör att du direkt kan få en videofil där syntolkningen redan är infogad, i stället för enbart en MP3-fil. När alternativet är aktiverat behåller Sonarpad originalvideon och lägger till de genererade beskrivningarna i dess ljudspår utan att koda om videon i onödan. Standardformatet är MP4, men i fönstret för att spara kan du även välja MKV. Den ursprungliga videofilen skrivs aldrig över.
+
+När du skapar den syntolkade videon direkt används inte utökade pauser, eftersom de skulle ändra filmens längd och synkronisering. Sonarpad lägger därför bara in beskrivningar i de lediga utrymmena i det ursprungliga ljudspåret.
+
 Kryssrutan Flytta videofilen till papperskorgen efter syntolkningen är till för dig som inte vill behålla originalvideon efter att den syntolkade MP3-filen har skapats. Den är avstängd som standard och är tillgänglig när projektsparning inte är aktiverad, eftersom ett redigerbart projekt fortfarande behöver originalvideon.
 
 Därefter hittar du Gemini API-nyckel. Ange din API-nyckel här. Nyckeln kan skapas kostnadsfritt. Med Tab kommer du till knappen Hämta API-nyckel, som öppnar Googles sida i webbläsaren. Där kan du skapa nyckeln efter att ha loggat in på ditt konto. Förfarandet är normalt mycket snabbt.
@@ -151,6 +155,12 @@ Efter API-nyckeln hittar du Gemini-modell och knappen Uppdatera modellista. I de
 Tryck på Tab igen för att hitta Talsyntesmotor och Röst, som du kan ändra efter dina önskemål.
 
 Längre fram hittar du Redigera syntolkningsprojekt. Funktionen gör det möjligt att öppna och ändra ett projekt som du tidigare har sparat. Viktigt: originalvideofilen måste fortfarande finnas tillgänglig för att projektet ska kunna redigeras.
+
+I fönstret Redigera syntolkningsprojekt finns också Analysera segment igen. Funktionen är användbar när en eller flera beskrivningar i en del av filmen inte känns bra och du vill be Gemini analysera området på nytt utan att skapa om hela syntolkningen.
+
+Välj en beskrivning som hör till området du vill granska och aktivera Analysera segment igen. Sonarpad analyserar videosegmentet som innehåller beskrivningen på nytt och föreslår nya texter samtidigt som tiderna och de tillgängliga utrymmena som redan sparats i projektet behålls. När analysen är klar är de nya röstförhandslyssningarna för segmentet redan förberedda: du kan flytta mellan beskrivningarna och trycka på Mellanslag för att höra dem direkt tillsammans med originalljudet.
+
+De berörda beskrivningarna markeras som segment analyserat igen. Den nya analysen är bara ett förslag tills du väljer Tillämpa segment och exportera MP3 igen. Först då tillämpar Sonarpad de nya beskrivningarna i projektet och skapar den syntolkade filen på nytt. Om du inte tillämpar segmentet förblir det sparade projektet oförändrat.
 
 Därefter hittar du Fortsätt avbruten syntolkning. Sonarpad är utformat för att inte förlora arbete som redan har gjorts: om anslutningen bryts under skapandet, Gemini får ett problem eller processen avbryts sparar Sonarpad regelbundet kontrollpunkter för framstegen. Med den här funktionen kan du återuppta ett påbörjat arbete utan att börja om från början.
 

@@ -156,6 +156,10 @@ Sonarpad zapisuje w katalogu informacje o postaciach, aby poprawić ciągłość
 
 Kolejne naciśnięcie Tab prowadzi do opcji Zapisz także projekt do przyszłej edycji. Włącz ją, jeśli wiesz, że później będziesz chcieć przejrzeć audiodeskrypcję, poprawić opisy lub zmienić głos.
 
+Pole wyboru Utwórz audiodeskrypcję w oryginalnym pliku wideo pozwala od razu uzyskać plik wideo z już wstawioną audiodeskrypcją zamiast samego pliku MP3. Po włączeniu tej opcji Sonarpad zachowuje oryginalne wideo i dodaje wygenerowane opisy do jego ścieżki dźwiękowej bez niepotrzebnego ponownego kodowania obrazu. Domyślnym formatem jest MP4, ale w oknie zapisu można również wybrać MKV. Oryginalny plik wideo nigdy nie jest nadpisywany.
+
+Podczas bezpośredniego tworzenia wideo z audiodeskrypcją rozszerzone pauzy nie są używane, ponieważ zmieniłyby czas trwania i synchronizację filmu. Sonarpad wstawia więc opisy wyłącznie w dostępne miejsca oryginalnej ścieżki dźwiękowej.
+
 Opcja Przenieś plik wideo do Kosza po utworzeniu audiodeskrypcji jest przeznaczona dla sytuacji, gdy nie chcesz zachować oryginalnego filmu po utworzeniu MP3 z audiodeskrypcją. Domyślnie jest wyłączona i jest dostępna, gdy zapisywanie projektu nie jest włączone, ponieważ edytowalny projekt nadal wymaga oryginalnego filmu.
 
 Następnie znajdziesz Klucz API Gemini. Wpisz tutaj swój klucz API. Klucz można utworzyć bezpłatnie. Klawiszem Tab przejdziesz do przycisku Pobierz klucz API, który otwiera w przeglądarce stronę Google, gdzie po zalogowaniu na konto możesz utworzyć klucz. Zwykle jest to bardzo szybka procedura.
@@ -165,6 +169,12 @@ Po kluczu API znajdziesz Model Gemini i przycisk Odśwież listę modeli. Zwykle
 Kolejne naciśnięcie Tab prowadzi do ustawień Silnik syntezy mowy i Głos, które można zmienić zgodnie z własnymi preferencjami.
 
 Dalej znajdziesz Modyfikuj projekt audiodeskrypcji. Funkcja pozwala ponownie otworzyć i zmienić wcześniej zapisany projekt. Uwaga: aby zmodyfikować projekt, oryginalny plik wideo musi nadal być dostępny.
+
+W oknie Modyfikuj projekt audiodeskrypcji dostępna jest również funkcja Ponownie przeanalizuj segment. Jest ona przydatna, gdy jeden lub kilka opisów w części filmu nie jest satysfakcjonujących i chcesz poprosić Gemini o ponowne przeanalizowanie tego obszaru bez tworzenia całej audiodeskrypcji od początku.
+
+Wybierz opis należący do obszaru, który chcesz ponownie sprawdzić, i uruchom Ponownie przeanalizuj segment. Sonarpad ponownie analizuje segment wideo zawierający ten opis i proponuje nowe teksty, zachowując czasy i dostępne miejsca już zapisane w projekcie. Po zakończeniu ponownej analizy nowe podglądy głosowe segmentu są już przygotowane: możesz poruszać się między opisami i nacisnąć Spację, aby natychmiast odsłuchać je razem z oryginalnym dźwiękiem.
+
+Odpowiednie opisy są oznaczane jako segment ponownie przeanalizowany. Ponowna analiza pozostaje propozycją, dopóki nie wybierzesz Zastosuj segment i ponownie wyeksportuj MP3. Dopiero wtedy Sonarpad stosuje nowe opisy w projekcie i ponownie tworzy plik z audiodeskrypcją. Jeśli segment nie zostanie zastosowany, zapisany projekt pozostaje bez zmian.
 
 Następnie znajdziesz Kontynuuj przerwaną audiodeskrypcję. Sonarpad został zaprojektowany tak, aby nie tracić już wykonanej pracy: jeśli podczas tworzenia zerwie się połączenie, Gemini napotka problem lub proces zostanie przerwany, Sonarpad okresowo zapisuje punkty postępu. Dzięki tej funkcji można wznowić rozpoczęte zadanie bez rozpoczynania od początku.
 

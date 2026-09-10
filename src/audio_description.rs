@@ -1,5 +1,6 @@
 use crate::ffmpeg_export::{
     AudioDescriptionExportOptions, AudioDescriptionMixCue, export_audio_description_mp3,
+    remux_media_file_to_mp4_with_external_audio_stream,
 };
 use crate::settings::{
     AudiobookPartAnnouncementMode, AudiobookPartNamingMode, DictionaryEntry, Language, TtsEngine,
@@ -16,6 +17,7 @@ use crate::tts_engine::{
 };
 use rodio::Source;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -35,6 +37,9 @@ const GEMINI_MAX_CHUNK_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const GEMINI_INLINE_TARGET_CHUNK_BYTES: u64 = 40 * 1024 * 1024;
 const GEMINI_MIN_SEGMENT_SECONDS: u32 = 30;
 const GEMINI_SEGMENT_RETRY_LIMIT: usize = 5;
+const GEMINI_COMPAT_TARGET_CHUNK_BYTES: u64 = 15 * 1024 * 1024;
+const GEMINI_COMPAT_MIN_SEGMENT_SECONDS: u32 = 10;
+const GEMINI_COMPAT_SEGMENT_RETRY_LIMIT: usize = 6;
 const AUDIO_DESCRIPTION_DUCKING_DB: f32 = -12.0;
 const AUDIO_DESCRIPTION_FADE_MS: u32 = 280;
 const AUDIO_DESCRIPTION_PRE_DUCK_MS: u32 = 180;
@@ -82,6 +87,7 @@ pub struct AudioDescriptionJob {
     pub recognize_screen_text: bool,
     pub character_catalog: Option<AudioDescriptionCharacterCatalogContext>,
     pub save_project: bool,
+    pub create_video_output: bool,
     pub tts_engine: TtsEngine,
     pub tts_voice: String,
     pub tts_rate: i32,
@@ -136,6 +142,8 @@ struct AudioDescriptionPartialCheckpoint {
     #[serde(default)]
     recognize_screen_text: bool,
     save_project: bool,
+    #[serde(default)]
+    create_video_output: bool,
     tts_engine: TtsEngine,
     tts_voice: String,
     tts_rate: i32,
@@ -165,6 +173,7 @@ pub struct AudioDescriptionResumeSettings {
     pub recognize_characters: bool,
     pub recognize_screen_text: bool,
     pub save_project: bool,
+    pub create_video_output: bool,
     pub tts_engine: TtsEngine,
     pub tts_voice: String,
     pub gemini_model: String,
@@ -661,6 +670,8 @@ pub struct AudioDescriptionProject {
     pub source_path: PathBuf,
     pub output_mp3_path: PathBuf,
     #[serde(default)]
+    pub output_is_video: bool,
+    #[serde(default)]
     pub audio_stream_index: Option<i32>,
     pub source_duration_sec: f64,
     pub output_duration_sec: f64,
@@ -670,6 +681,8 @@ pub struct AudioDescriptionProject {
     pub allow_extended_pauses: bool,
     #[serde(default = "default_true")]
     pub recognize_characters: bool,
+    #[serde(default = "default_true")]
+    pub recognize_screen_text: bool,
     pub gemini_model: String,
     pub tts_engine: TtsEngine,
     pub tts_voice: String,
@@ -699,10 +712,32 @@ pub struct AudioDescriptionProjectBatchEditError {
 }
 
 #[derive(Debug)]
+struct AudioDescriptionProjectPreviewCacheDir {
+    path: PathBuf,
+}
+
+impl Drop for AudioDescriptionProjectPreviewCacheDir {
+    fn drop(&mut self) {
+        crate::log_if_err!(
+            fs::remove_dir_all(&self.path),
+            "Audio description cleanup operation failed"
+        );
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct AudioDescriptionProjectPreviewAudio {
     path: PathBuf,
-    cache_dir: PathBuf,
+    _cache_dir: Arc<AudioDescriptionProjectPreviewCacheDir>,
     duration_sec: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct AudioDescriptionProjectSegmentReanalysis {
+    pub focus_index: usize,
+    pub project: AudioDescriptionProject,
+    pub segment_description_ids: Vec<usize>,
+    pub preview_audio: HashMap<usize, AudioDescriptionProjectPreviewAudio>,
 }
 
 impl AudioDescriptionProjectPreviewAudio {
@@ -712,15 +747,6 @@ impl AudioDescriptionProjectPreviewAudio {
 
     pub fn duration_sec(&self) -> f64 {
         self.duration_sec
-    }
-}
-
-impl Drop for AudioDescriptionProjectPreviewAudio {
-    fn drop(&mut self) {
-        crate::log_if_err!(
-            fs::remove_dir_all(&self.cache_dir),
-            "Audio description cleanup operation failed"
-        );
     }
 }
 
@@ -1111,9 +1137,13 @@ fn prepare_gemini_chunks(
             segment_seconds,
             1,
             preferred_audio_stream_index,
+            cancel,
             None,
         );
         if let Err(primary_error) = primary_segment_result {
+            if primary_error == "cancelled" {
+                return Err(primary_error);
+            }
             if !primary_error.starts_with("FFmpeg: failed to write segment header:") {
                 return Err(format!(
                     "Audio description: FFmpeg chunk preparation failed: {primary_error}"
@@ -1129,12 +1159,17 @@ fn prepare_gemini_chunks(
                 &output_pattern,
                 segment_seconds,
                 1,
+                cancel,
                 None,
             )
             .map_err(|fallback_error| {
-                format!(
-                    "Audio description: FFmpeg chunk preparation failed: {primary_error}; video-only fallback failed: {fallback_error}"
-                )
+                if fallback_error == "cancelled" {
+                    fallback_error
+                } else {
+                    format!(
+                        "Audio description: FFmpeg chunk preparation failed: {primary_error}; video-only fallback failed: {fallback_error}"
+                    )
+                }
             })?;
             crate::log_debug(
                 "Audio description: video-only Gemini chunk fallback succeeded; dialogue/silence analysis remains unchanged.",
@@ -1285,6 +1320,269 @@ fn prepare_gemini_chunks(
     }
 
     Err("Audio description: invalid Gemini chunk timeline".to_string())
+}
+
+fn gemini_media_invalid_argument(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    let is_invalid_argument = lower.contains("invalid_argument")
+        || lower.contains("invalid argument")
+        || lower.contains("invalid value");
+    let is_http_400 =
+        lower.contains("400") || lower.contains("code': 400") || lower.contains("\"code\":400");
+    let looks_like_credentials = lower.contains("api key")
+        || lower.contains("api_key")
+        || lower.contains("permission denied")
+        || lower.contains("unauthenticated");
+    is_http_400 && is_invalid_argument && !looks_like_credentials
+}
+
+fn gemini_media_processing_failed(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    let looks_like_terminal_file_failure = (lower
+        .contains("video processing failed on gemini's servers")
+        && lower.contains("final state: failed"))
+        || lower.contains("file_verification_failed");
+    let looks_like_credentials = lower.contains("api key")
+        || lower.contains("api_key")
+        || lower.contains("permission denied")
+        || lower.contains("unauthenticated")
+        || lower.contains("invalid_session");
+    looks_like_terminal_file_failure && !looks_like_credentials
+}
+
+fn prepare_gemini_compatibility_chunks(
+    input_path: &Path,
+    duration_sec: f64,
+    cache_dir: &Path,
+    preferred_audio_stream_index: Option<i32>,
+    cancel: &Arc<AtomicBool>,
+    extension: &str,
+    video_only_on_any_mux_error: bool,
+) -> Result<Vec<AudioDescriptionPreparedChunk>, String> {
+    if cancel.load(Ordering::Relaxed) {
+        return Err("cancelled".to_string());
+    }
+    if cache_dir.exists() {
+        fs::remove_dir_all(cache_dir).map_err(|error| {
+            format!("Audio description: remove Gemini compatibility folder failed: {error}")
+        })?;
+    }
+    fs::create_dir_all(cache_dir).map_err(|error| {
+        format!("Audio description: create Gemini compatibility folder failed: {error}")
+    })?;
+
+    let extension = extension.trim_start_matches('.').to_ascii_lowercase();
+    if extension != "mkv" && extension != "mp4" {
+        return Err(format!(
+            "Audio description: unsupported Gemini compatibility container: {extension}"
+        ));
+    }
+    let output_pattern = cache_dir.join(format!("gemini_compat_%04d.{extension}"));
+    let mut segment_seconds = duration_sec
+        .ceil()
+        .max(1.0)
+        .min(GEMINI_CHUNK_SECONDS as f64) as u32;
+    let mut attempt = 1usize;
+
+    let paths = loop {
+        if cancel.load(Ordering::Relaxed) {
+            return Err("cancelled".to_string());
+        }
+        for entry in fs::read_dir(cache_dir).map_err(|error| {
+            format!("Audio description: read Gemini compatibility folder failed: {error}")
+        })? {
+            let path = entry
+                .map_err(|error| {
+                    format!("Audio description: read Gemini compatibility entry failed: {error}")
+                })?
+                .path();
+            if path.is_file() {
+                fs::remove_file(&path).map_err(|error| {
+                    format!(
+                        "Audio description: remove stale Gemini compatibility chunk {} failed: {error}",
+                        path.display()
+                    )
+                })?;
+            }
+        }
+
+        let primary_result = crate::ffmpeg_export::segment_media_file_for_analysis(
+            input_path,
+            &output_pattern,
+            segment_seconds,
+            1,
+            preferred_audio_stream_index,
+            cancel,
+            None,
+        );
+        if let Err(primary_error) = primary_result {
+            if primary_error == "cancelled" {
+                return Err(primary_error);
+            }
+            let may_drop_audio = video_only_on_any_mux_error
+                || primary_error.starts_with("FFmpeg: failed to write segment header:");
+            if !may_drop_audio {
+                return Err(format!(
+                    "Audio description: Gemini compatibility chunk preparation failed: {primary_error}"
+                ));
+            }
+            crate::log_debug(&format!(
+                "Audio description: Gemini compatibility {extension} mux failed; retrying video-only. error={primary_error}"
+            ));
+            for entry in fs::read_dir(cache_dir).map_err(|error| {
+                format!("Audio description: read Gemini compatibility folder failed: {error}")
+            })? {
+                let path = entry
+                    .map_err(|error| {
+                        format!(
+                            "Audio description: read Gemini compatibility entry failed: {error}"
+                        )
+                    })?
+                    .path();
+                if path.is_file() {
+                    crate::log_if_err!(
+                        fs::remove_file(path),
+                        "Audio description: failed to remove Gemini compatibility chunk"
+                    );
+                }
+            }
+            crate::ffmpeg_export::segment_media_file_for_analysis_video_only(
+                input_path,
+                &output_pattern,
+                segment_seconds,
+                1,
+                cancel,
+                None,
+            )
+            .map_err(|fallback_error| {
+                if fallback_error == "cancelled" {
+                    fallback_error
+                } else {
+                    format!(
+                        "Audio description: Gemini compatibility chunk preparation failed: {primary_error}; video-only fallback failed: {fallback_error}"
+                    )
+                }
+            })?;
+        }
+
+        let mut prepared_paths = fs::read_dir(cache_dir)
+            .map_err(|error| {
+                format!("Audio description: read Gemini compatibility folder failed: {error}")
+            })?
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| {
+                        name.starts_with("gemini_compat_")
+                            && name.ends_with(&format!(".{extension}"))
+                    })
+            })
+            .collect::<Vec<_>>();
+        prepared_paths.sort();
+        if prepared_paths.is_empty() {
+            return Err(
+                "Audio description: FFmpeg produced no Gemini compatibility chunks".to_string(),
+            );
+        }
+
+        let max_chunk_bytes = prepared_paths
+            .iter()
+            .map(|path| {
+                fs::metadata(path)
+                    .map(|metadata| metadata.len())
+                    .map_err(|error| {
+                        format!(
+                            "Audio description: read compatibility chunk metadata failed: {error}"
+                        )
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .max()
+            .unwrap_or(0);
+        if max_chunk_bytes == 0 {
+            return Err(
+                "Audio description: FFmpeg produced an empty compatibility chunk".to_string(),
+            );
+        }
+        if max_chunk_bytes <= GEMINI_COMPAT_TARGET_CHUNK_BYTES {
+            crate::log_debug(&format!(
+                "Audio description: Gemini compatibility chunks ready container={extension} segment_seconds={} max_chunk_mb={:.1}",
+                segment_seconds,
+                max_chunk_bytes as f64 / (1024.0 * 1024.0)
+            ));
+            break prepared_paths;
+        }
+
+        if attempt >= GEMINI_COMPAT_SEGMENT_RETRY_LIMIT
+            || segment_seconds <= GEMINI_COMPAT_MIN_SEGMENT_SECONDS
+        {
+            return Err(format!(
+                "Audio description: Gemini compatibility chunks remain too large: container={extension} segment_seconds={segment_seconds} max_chunk_mb={:.1}",
+                max_chunk_bytes as f64 / (1024.0 * 1024.0)
+            ));
+        }
+
+        let ratio = GEMINI_COMPAT_TARGET_CHUNK_BYTES as f64 / max_chunk_bytes as f64;
+        let proposed = (segment_seconds as f64 * ratio * 0.80).floor() as u32;
+        let next_segment_seconds = proposed.max(GEMINI_COMPAT_MIN_SEGMENT_SECONDS).min(
+            segment_seconds
+                .saturating_sub(1)
+                .max(GEMINI_COMPAT_MIN_SEGMENT_SECONDS),
+        );
+        crate::log_debug(&format!(
+            "Audio description: Gemini compatibility chunk retry container={extension} segment_seconds={} next_segment_seconds={} max_chunk_mb={:.1}",
+            segment_seconds,
+            next_segment_seconds,
+            max_chunk_bytes as f64 / (1024.0 * 1024.0)
+        ));
+        segment_seconds = next_segment_seconds;
+        attempt = attempt.saturating_add(1);
+    };
+
+    let path_count = paths.len();
+    let mut measured_chunks = Vec::with_capacity(path_count);
+    for path in paths {
+        if cancel.load(Ordering::Relaxed) {
+            return Err("cancelled".to_string());
+        }
+        let file_size = fs::metadata(&path)
+            .map_err(|error| {
+                format!("Audio description: read compatibility chunk metadata failed: {error}")
+            })?
+            .len();
+        if file_size == 0 || file_size >= GEMINI_MAX_CHUNK_BYTES {
+            return Err(format!(
+                "Audio description: Gemini compatibility chunk has unsupported size: {}",
+                path.display()
+            ));
+        }
+        let (raw_measured, format_start_sec) =
+            crate::ffmpeg_export::media_duration_and_start_seconds(&path)
+                .unwrap_or((segment_seconds as f64, 0.0));
+        let measured = normalize_prepared_gemini_chunk_duration(
+            raw_measured,
+            format_start_sec,
+            segment_seconds,
+        )
+        .max(0.001);
+        measured_chunks.push((path, measured));
+    }
+
+    if let Some(chunks) = build_gemini_chunk_timeline(&measured_chunks, duration_sec, false) {
+        return Ok(chunks);
+    }
+    if let Some(chunks) = build_gemini_chunk_timeline(&measured_chunks, duration_sec, true) {
+        crate::log_debug(&format!(
+            "Audio description: Gemini compatibility timeline reconciled container={extension} chunks={path_count}"
+        ));
+        return Ok(chunks);
+    }
+    Err(format!(
+        "Audio description: invalid Gemini compatibility chunk timeline ({extension})"
+    ))
 }
 
 fn read_wav_as_f32(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
@@ -2077,6 +2375,7 @@ fn save_audio_description_partial_checkpoint(
         recognize_characters: job.recognize_characters,
         recognize_screen_text: job.recognize_screen_text,
         save_project: job.save_project,
+        create_video_output: job.create_video_output,
         tts_engine: job.tts_engine,
         tts_voice: job.tts_voice.clone(),
         tts_rate: job.tts_rate,
@@ -2132,6 +2431,7 @@ pub fn load_audio_description_resume_settings(
         recognize_characters: checkpoint.recognize_characters,
         recognize_screen_text: checkpoint.recognize_screen_text,
         save_project: checkpoint.save_project,
+        create_video_output: checkpoint.create_video_output,
         tts_engine: checkpoint.tts_engine,
         tts_voice: checkpoint.tts_voice,
         gemini_model: checkpoint.gemini_model,
@@ -2168,6 +2468,7 @@ pub fn audio_description_job_from_checkpoint(
         recognize_screen_text: checkpoint.recognize_screen_text,
         character_catalog,
         save_project: checkpoint.save_project,
+        create_video_output: checkpoint.create_video_output,
         tts_engine: checkpoint.tts_engine,
         tts_voice: checkpoint.tts_voice,
         tts_rate: checkpoint.tts_rate,
@@ -2255,6 +2556,7 @@ fn build_audio_description_project(
         updated_at_utc: now,
         source_path: job.input_path.clone(),
         output_mp3_path: job.output_path.clone(),
+        output_is_video: job.create_video_output,
         audio_stream_index: job.audio_stream_index,
         source_duration_sec,
         output_duration_sec,
@@ -2263,6 +2565,7 @@ fn build_audio_description_project(
         verbosity: job.verbosity.as_bridge_value().to_string(),
         allow_extended_pauses: job.allow_extended_pauses,
         recognize_characters: job.recognize_characters,
+        recognize_screen_text: job.recognize_screen_text,
         gemini_model: job.gemini_model.clone(),
         tts_engine: job.tts_engine,
         tts_voice: job.tts_voice.clone(),
@@ -2282,6 +2585,201 @@ fn build_audio_description_project(
             .collect(),
         descriptions,
         excluded_descriptions,
+    }
+}
+
+fn export_audio_description_output(
+    input_path: &Path,
+    output_path: &Path,
+    preferred_audio_stream_index: Option<i32>,
+    cues: &[AudioDescriptionMixCue],
+    options: &AudioDescriptionExportOptions,
+    create_video_output: bool,
+    mut progress: Option<&mut dyn FnMut(u32)>,
+) -> Result<(), String> {
+    if !create_video_output {
+        return export_audio_description_mp3(
+            input_path,
+            output_path,
+            preferred_audio_stream_index,
+            cues,
+            options,
+            progress,
+        );
+    }
+    if cues.iter().any(|cue| cue.extended_pause) {
+        return Err(
+            "Audio description: fast video output cannot contain extended pauses because they would desynchronize the copied video stream"
+                .to_string(),
+        );
+    }
+
+    let mut temp_audio = temporary_sibling_path(output_path, "mixed_audio");
+    temp_audio.set_extension("mp3");
+    let audio_result = {
+        let mut audio_progress = |pct: u32| {
+            if let Some(callback) = progress.as_deref_mut() {
+                callback(pct.saturating_mul(85) / 100);
+            }
+        };
+        export_audio_description_mp3(
+            input_path,
+            &temp_audio,
+            preferred_audio_stream_index,
+            cues,
+            options,
+            Some(&mut audio_progress),
+        )
+    };
+    if let Err(error) = audio_result {
+        crate::log_if_err!(
+            fs::remove_file(&temp_audio),
+            "Audio description cleanup operation failed"
+        );
+        return Err(error);
+    }
+
+    let mux_result = {
+        let mut mux_progress = |pct: u32| {
+            if let Some(callback) = progress.as_deref_mut() {
+                callback(85 + pct.saturating_mul(15) / 100);
+            }
+        };
+        remux_media_file_to_mp4_with_external_audio_stream(
+            input_path,
+            &temp_audio,
+            output_path,
+            Some(options.cancel.clone()),
+            Some(&mut mux_progress),
+        )
+    };
+    crate::log_if_err!(
+        fs::remove_file(&temp_audio),
+        "Audio description cleanup operation failed"
+    );
+    mux_result
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct AudioDescriptionVideoExportResult {
+    output_path: PathBuf,
+    used_mkv_fallback: bool,
+}
+
+fn audio_description_mkv_fallback_path(path: &Path) -> PathBuf {
+    let mut fallback = path.to_path_buf();
+    fallback.set_extension("mkv");
+    if !fallback.exists() {
+        return fallback;
+    }
+
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("audio_description");
+    for index in 1..=9_999 {
+        let candidate = parent.join(format!("{stem}_fallback_{index}.mkv"));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    parent.join(format!("{stem}_fallback_{}.mkv", std::process::id()))
+}
+
+fn audio_description_mp4_mux_error_allows_mkv_fallback(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    if lower.contains("saving canceled")
+        || lower.contains("cancelled")
+        || lower.contains("canceled")
+        || lower.contains("no space left")
+        || lower.contains("permission denied")
+        || lower.contains("access is denied")
+    {
+        return false;
+    }
+    lower.contains("failed to write header") || lower.contains("av_interleaved_write_frame")
+}
+
+fn export_audio_description_output_with_video_fallback(
+    input_path: &Path,
+    output_path: &Path,
+    preferred_audio_stream_index: Option<i32>,
+    cues: &[AudioDescriptionMixCue],
+    options: &AudioDescriptionExportOptions,
+    create_video_output: bool,
+    mut progress: Option<&mut dyn FnMut(u32)>,
+) -> Result<AudioDescriptionVideoExportResult, String> {
+    let mut forward_progress = |pct: u32| {
+        if let Some(callback) = progress.as_mut() {
+            callback(pct);
+        }
+    };
+
+    let primary_result = export_audio_description_output(
+        input_path,
+        output_path,
+        preferred_audio_stream_index,
+        cues,
+        options,
+        create_video_output,
+        Some(&mut forward_progress),
+    );
+    match primary_result {
+        Ok(()) => Ok(AudioDescriptionVideoExportResult {
+            output_path: output_path.to_path_buf(),
+            used_mkv_fallback: false,
+        }),
+        Err(primary_error) => {
+            let wants_mp4 = create_video_output
+                && output_path
+                    .extension()
+                    .and_then(|value| value.to_str())
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("mp4"));
+            if !wants_mp4
+                || !audio_description_mp4_mux_error_allows_mkv_fallback(&primary_error)
+                || options.cancel.load(Ordering::Relaxed)
+            {
+                return Err(primary_error);
+            }
+
+            if output_path.exists() {
+                crate::log_if_err!(
+                    fs::remove_file(output_path),
+                    "Audio description: cleanup partial MP4 before MKV fallback failed"
+                );
+            }
+            let fallback_path = audio_description_mkv_fallback_path(output_path);
+            crate::log_debug(&format!(
+                "Audio description: MP4 mux failed with a container/packet compatibility error; retrying the same export as MKV without re-encoding the video. error={primary_error} fallback={}",
+                fallback_path.display()
+            ));
+            match export_audio_description_output(
+                input_path,
+                &fallback_path,
+                preferred_audio_stream_index,
+                cues,
+                options,
+                create_video_output,
+                Some(&mut forward_progress),
+            ) {
+                Ok(()) => Ok(AudioDescriptionVideoExportResult {
+                    output_path: fallback_path,
+                    used_mkv_fallback: true,
+                }),
+                Err(fallback_error) => {
+                    if fallback_path.exists() {
+                        crate::log_if_err!(
+                            fs::remove_file(&fallback_path),
+                            "Audio description: cleanup failed MKV fallback output failed"
+                        );
+                    }
+                    Err(format!(
+                        "Audio description: MP4 video export failed: {primary_error}; MKV fallback also failed: {fallback_error}"
+                    ))
+                }
+            }
+        }
     }
 }
 
@@ -2444,9 +2942,10 @@ fn audio_description_job_from_project(project: &AudioDescriptionProject) -> Audi
         verbosity: verbosity_from_project(&project.verbosity),
         allow_extended_pauses: project.allow_extended_pauses,
         recognize_characters: project.recognize_characters,
-        recognize_screen_text: false,
+        recognize_screen_text: project.recognize_screen_text,
         character_catalog: None,
         save_project: true,
+        create_video_output: project.output_is_video,
         tts_engine: project.tts_engine,
         tts_voice: project.tts_voice.clone(),
         tts_rate: project.tts_rate,
@@ -2605,18 +3104,21 @@ pub fn synthesize_audio_description_project_preview(
     }
     Ok(AudioDescriptionProjectPreviewAudio {
         path,
-        cache_dir,
+        _cache_dir: Arc::new(AudioDescriptionProjectPreviewCacheDir { path: cache_dir }),
         duration_sec,
     })
 }
 
-pub fn apply_audio_description_project_batch_edits(
-    project_path: &Path,
+fn prepare_audio_description_project_batch_edits(
     project: &AudioDescriptionProject,
     edits: &[(usize, String)],
     cancel: Arc<AtomicBool>,
+    mut progress: Option<&mut dyn FnMut(u32)>,
 ) -> Result<AudioDescriptionProjectEditOutcome, AudioDescriptionProjectBatchEditError> {
     if edits.is_empty() {
+        if let Some(callback) = progress.as_deref_mut() {
+            callback(100);
+        }
         return Ok(AudioDescriptionProjectEditOutcome {
             project: project.clone(),
             applied_count: 0,
@@ -2662,6 +3164,9 @@ pub fn apply_audio_description_project_batch_edits(
     }
 
     if normalized_edits.is_empty() {
+        if let Some(callback) = progress.as_deref_mut() {
+            callback(100);
+        }
         return Ok(AudioDescriptionProjectEditOutcome {
             project: project.clone(),
             applied_count: 0,
@@ -2675,7 +3180,8 @@ pub fn apply_audio_description_project_batch_edits(
     })?;
 
     let validation_result = (|| {
-        for (index, text) in &normalized_edits {
+        let total = normalized_edits.len().max(1);
+        for (position, (index, text)) in normalized_edits.iter().enumerate() {
             if cancel.load(Ordering::Relaxed) {
                 return Err(AudioDescriptionProjectBatchEditError {
                     index: Some(*index),
@@ -2725,6 +3231,9 @@ pub fn apply_audio_description_project_batch_edits(
                 index: Some(*index),
                 error,
             })?;
+            if let Some(callback) = progress.as_deref_mut() {
+                callback(((position + 1) as u32).saturating_mul(100) / total as u32);
+            }
         }
         Ok(())
     })();
@@ -2734,6 +3243,13 @@ pub fn apply_audio_description_project_batch_edits(
         "Audio description cleanup operation failed"
     );
     validation_result?;
+
+    if cancel.load(Ordering::Relaxed) {
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Cancelled,
+        });
+    }
 
     let mut updated = project.clone();
     for (index, text) in &normalized_edits {
@@ -2749,16 +3265,424 @@ pub fn apply_audio_description_project_batch_edits(
         description.modified = description.text != description.original_text;
     }
     updated.updated_at_utc = chrono::Utc::now().to_rfc3339();
-    save_audio_description_project(project_path, &updated).map_err(|error| {
+
+    Ok(AudioDescriptionProjectEditOutcome {
+        project: updated,
+        applied_count: normalized_edits.len(),
+    })
+}
+
+pub fn apply_audio_description_project_batch_edits(
+    project_path: &Path,
+    project: &AudioDescriptionProject,
+    edits: &[(usize, String)],
+    cancel: Arc<AtomicBool>,
+) -> Result<AudioDescriptionProjectEditOutcome, AudioDescriptionProjectBatchEditError> {
+    let outcome =
+        prepare_audio_description_project_batch_edits(project, edits, cancel.clone(), None)?;
+    if cancel.load(Ordering::Relaxed) {
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Cancelled,
+        });
+    }
+    save_audio_description_project(project_path, &outcome.project).map_err(|error| {
         AudioDescriptionProjectBatchEditError {
             index: None,
             error: AudioDescriptionProjectEditError::Other(error),
         }
     })?;
+    Ok(outcome)
+}
 
-    Ok(AudioDescriptionProjectEditOutcome {
-        project: updated,
-        applied_count: normalized_edits.len(),
+pub fn apply_reanalyzed_audio_description_project_segment_and_reexport(
+    project_path: &Path,
+    project: &AudioDescriptionProject,
+    edits: &[(usize, String)],
+    cancel: Arc<AtomicBool>,
+    mut callbacks: AudioDescriptionCallbacks,
+) -> Result<AudioDescriptionOutcome, AudioDescriptionProjectBatchEditError> {
+    if project.descriptions.is_empty() {
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Other(
+                "Audio description: the reanalyzed project contains no descriptions".to_string(),
+            ),
+        });
+    }
+    if cancel.load(Ordering::Relaxed) {
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Cancelled,
+        });
+    }
+
+    // A reanalyzed segment is a fixed-timeline text replacement. Manual edits made
+    // after reanalysis may change the text, but must never change any saved timing.
+    let mut prepared_project = project.clone();
+    for (index, text) in edits {
+        let normalized_text = text.trim();
+        if normalized_text.is_empty() {
+            return Err(AudioDescriptionProjectBatchEditError {
+                index: Some(*index),
+                error: AudioDescriptionProjectEditError::Other(
+                    "Audio description: description text cannot be empty".to_string(),
+                ),
+            });
+        }
+        let description = prepared_project
+            .descriptions
+            .get_mut(*index)
+            .ok_or_else(|| AudioDescriptionProjectBatchEditError {
+                index: Some(*index),
+                error: AudioDescriptionProjectEditError::Other(
+                    "Audio description: selected project description does not exist".to_string(),
+                ),
+            })?;
+        description.text = normalized_text.to_string();
+        description.rendered_text = normalized_text.to_string();
+        description.modified = description.text != description.original_text;
+    }
+    prepared_project.updated_at_utc = chrono::Utc::now().to_rfc3339();
+
+    if !prepared_project.source_path.is_file() {
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Other(format!(
+                "Audio description: source file not found: {}",
+                prepared_project.source_path.display()
+            )),
+        });
+    }
+    if prepared_project.tts_voice.trim().is_empty() {
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Other(
+                "Audio description: project has no synthesis voice".to_string(),
+            ),
+        });
+    }
+
+    let job = audio_description_job_from_project(&prepared_project);
+    notify_status(
+        &mut callbacks,
+        "tts_edit",
+        "Synthesizing the reanalyzed project at the saved fixed timings...",
+    );
+    notify_progress(&mut callbacks, 0);
+
+    let cache_dir = temporary_job_dir().map_err(|error| AudioDescriptionProjectBatchEditError {
+        index: None,
+        error: AudioDescriptionProjectEditError::Other(error),
+    })?;
+    let tasks = prepared_project
+        .descriptions
+        .iter()
+        .enumerate()
+        .map(|(index, description)| AudioDescriptionSynthesisTask {
+            synthesis_index: index,
+            original_index: description.id,
+            text: description.text.clone(),
+            desired_start_sec: description.source_start_sec,
+            visual_start_sec: description.gemini_start_sec,
+            visual_evidence_time_sec: description.visual_evidence_time_sec,
+            mandatory: false,
+            slot_start_sec: None,
+            slot_end_sec: None,
+        })
+        .collect::<Vec<_>>();
+    let synthesis_result = synthesize_description_tasks_parallel(
+        &tasks,
+        &job,
+        &cache_dir,
+        cancel.clone(),
+        |completed, total| {
+            notify_progress(
+                &mut callbacks,
+                (completed as u32).saturating_mul(60) / total.max(1) as u32,
+            );
+        },
+    );
+    crate::log_if_err!(
+        fs::remove_dir_all(&cache_dir),
+        "Audio description cleanup operation failed"
+    );
+    let synthesized = synthesis_result.map_err(|error| AudioDescriptionProjectBatchEditError {
+        index: None,
+        error: if error == "cancelled" || cancel.load(Ordering::Relaxed) {
+            AudioDescriptionProjectEditError::Cancelled
+        } else {
+            AudioDescriptionProjectEditError::Other(error)
+        },
+    })?;
+    if cancel.load(Ordering::Relaxed) {
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Cancelled,
+        });
+    }
+
+    // Do NOT run schedule_synthesized_descriptions here. The saved source_start_sec
+    // values are authoritative. Validate each real TTS duration against the exact
+    // saved speech-free window, then build cues at those exact starts.
+    notify_status(
+        &mut callbacks,
+        "schedule_edit",
+        "Checking every reanalyzed sentence against its original saved silence...",
+    );
+    let mut scheduled = Vec::with_capacity(prepared_project.descriptions.len());
+    for (index, description) in prepared_project.descriptions.iter().enumerate() {
+        if cancel.load(Ordering::Relaxed) {
+            return Err(AudioDescriptionProjectBatchEditError {
+                index: Some(index),
+                error: AudioDescriptionProjectEditError::Cancelled,
+            });
+        }
+        let rendered = synthesized
+            .iter()
+            .find(|candidate| candidate.original_index == description.id)
+            .ok_or_else(|| AudioDescriptionProjectBatchEditError {
+                index: Some(index),
+                error: AudioDescriptionProjectEditError::Other(
+                    "Audio description: synthesized fixed-slot description is missing".to_string(),
+                ),
+            })?;
+        let frames = rendered.samples.len() / rendered.channels.max(1) as usize;
+        let synthesized_duration_sec = frames as f64 / rendered.sample_rate.max(1) as f64;
+        let available_duration_sec =
+            audio_description_project_edit_available_duration(&prepared_project, index).map_err(
+                |error| AudioDescriptionProjectBatchEditError {
+                    index: Some(index),
+                    error: AudioDescriptionProjectEditError::Other(error),
+                },
+            )?;
+        validate_audio_description_project_edit_duration(
+            available_duration_sec,
+            synthesized_duration_sec,
+        )
+        .map_err(|error| AudioDescriptionProjectBatchEditError {
+            index: Some(index),
+            error,
+        })?;
+        scheduled.push(ScheduledDescription {
+            original_index: description.id,
+            text: description.text.clone(),
+            desired_start_sec: description.gemini_start_sec,
+            visual_evidence_time_sec: description.visual_evidence_time_sec,
+            start_sec: description.source_start_sec,
+            samples: rendered.samples.clone(),
+            sample_rate: rendered.sample_rate,
+            channels: rendered.channels,
+            extended_pause: description.extended_pause,
+        });
+    }
+    crate::log_debug(&format!(
+        "Audio description segment apply: fixed timeline validated for {} description(s); no scheduler repositioning will be performed",
+        scheduled.len()
+    ));
+    notify_progress(&mut callbacks, 65);
+
+    let mix_cues: Vec<AudioDescriptionMixCue> = scheduled
+        .iter()
+        .map(|description| AudioDescriptionMixCue {
+            start_sec: description.start_sec,
+            samples: description.samples.clone(),
+            sample_rate: description.sample_rate,
+            channels: description.channels,
+            extended_pause: description.extended_pause,
+        })
+        .collect();
+    let export_target =
+        temporary_sibling_path(&prepared_project.output_mp3_path, "reanalyzed_fixed");
+    let export_options = AudioDescriptionExportOptions {
+        ducking_db: prepared_project.ducking_db,
+        fade_ms: prepared_project.fade_ms,
+        bitrate_kbps: prepared_project.bitrate_kbps,
+        cancel: cancel.clone(),
+    };
+    notify_status(
+        &mut callbacks,
+        "export_edit",
+        if prepared_project.output_is_video {
+            "Creating the reanalyzed video at the original saved timings..."
+        } else {
+            "Exporting the reanalyzed MP3 at the original saved timings..."
+        },
+    );
+    let mut export_progress = |pct: u32| {
+        notify_progress(&mut callbacks, 65 + pct.saturating_mul(35) / 100);
+    };
+    if let Err(error) = export_audio_description_output(
+        &prepared_project.source_path,
+        &export_target,
+        prepared_project.audio_stream_index,
+        &mix_cues,
+        &export_options,
+        prepared_project.output_is_video,
+        Some(&mut export_progress),
+    ) {
+        if export_target.exists() {
+            crate::log_if_err!(
+                fs::remove_file(&export_target),
+                "Audio description cleanup operation failed"
+            );
+        }
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: if error == "cancelled" || cancel.load(Ordering::Relaxed) {
+                AudioDescriptionProjectEditError::Cancelled
+            } else {
+                AudioDescriptionProjectEditError::Other(error)
+            },
+        });
+    }
+    let output_metadata =
+        fs::metadata(&export_target).map_err(|error| AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Other(format!(
+                "Audio description: reanalyzed output validation failed: {error}"
+            )),
+        })?;
+    if output_metadata.len() == 0 {
+        crate::log_if_err!(
+            fs::remove_file(&export_target),
+            "Audio description cleanup operation failed"
+        );
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Other(
+                "Audio description: reanalyzed output is empty".to_string(),
+            ),
+        });
+    }
+    if cancel.load(Ordering::Relaxed) {
+        crate::log_if_err!(
+            fs::remove_file(&export_target),
+            "Audio description cleanup operation failed"
+        );
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Cancelled,
+        });
+    }
+
+    let calculated_output_duration = prepared_project.source_duration_sec
+        + scheduled
+            .iter()
+            .filter(|description| description.extended_pause)
+            .map(scheduled_duration_sec)
+            .sum::<f64>();
+    let output_duration_sec = crate::ffmpeg_export::media_duration_seconds(&export_target)
+        .unwrap_or(calculated_output_duration);
+    let protected_intervals: Vec<BridgeInterval> = prepared_project
+        .protected_intervals
+        .iter()
+        .map(|interval| BridgeInterval {
+            start_sec: interval.start_sec,
+            end_sec: interval.end_sec,
+        })
+        .collect();
+    let mut updated = build_audio_description_project(
+        &job,
+        prepared_project.source_duration_sec,
+        output_duration_sec,
+        &protected_intervals,
+        &scheduled,
+        &[],
+    );
+    updated.created_at_utc = prepared_project.created_at_utc.clone();
+    updated.updated_at_utc = chrono::Utc::now().to_rfc3339();
+    updated.bitrate_kbps = prepared_project.bitrate_kbps;
+    updated.ducking_db = prepared_project.ducking_db;
+    updated.fade_ms = prepared_project.fade_ms;
+    updated.excluded_descriptions = prepared_project.excluded_descriptions.clone();
+    for description in &mut updated.descriptions {
+        if let Some(previous) = prepared_project
+            .descriptions
+            .iter()
+            .find(|candidate| candidate.id == description.id)
+        {
+            // Preserve every timing/evidence field from the candidate. Only text,
+            // rendered duration and the derived output timeline may change.
+            description.original_text = previous.original_text.clone();
+            description.rendered_text = previous.rendered_text.clone();
+            description.modified = description.text != description.original_text;
+            description.gemini_start_sec = previous.gemini_start_sec;
+            description.visual_evidence_time_sec = previous.visual_evidence_time_sec;
+            description.source_start_sec = previous.source_start_sec;
+            description.extended_pause = previous.extended_pause;
+        }
+    }
+
+    let temporary_project = temporary_sibling_path(project_path, "reanalyzed_fixed");
+    if let Err(error) = save_audio_description_project(&temporary_project, &updated) {
+        crate::log_if_err!(
+            fs::remove_file(&export_target),
+            "Audio description cleanup operation failed"
+        );
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Other(error),
+        });
+    }
+    if cancel.load(Ordering::Relaxed) {
+        crate::log_if_err!(
+            fs::remove_file(&export_target),
+            "Audio description cleanup operation failed"
+        );
+        crate::log_if_err!(
+            fs::remove_file(&temporary_project),
+            "Audio description cleanup operation failed"
+        );
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Cancelled,
+        });
+    }
+    if let Err(error) = commit_audio_description_pair(
+        &export_target,
+        &prepared_project.output_mp3_path,
+        &temporary_project,
+        project_path,
+    ) {
+        crate::log_if_err!(
+            fs::remove_file(&export_target),
+            "Audio description cleanup operation failed"
+        );
+        crate::log_if_err!(
+            fs::remove_file(&temporary_project),
+            "Audio description cleanup operation failed"
+        );
+        return Err(AudioDescriptionProjectBatchEditError {
+            index: None,
+            error: AudioDescriptionProjectEditError::Other(error),
+        });
+    }
+
+    let normal_descriptions = scheduled
+        .iter()
+        .filter(|description| !description.extended_pause)
+        .count();
+    let extended_pauses = scheduled
+        .iter()
+        .filter(|description| description.extended_pause)
+        .count();
+    notify_progress(&mut callbacks, 100);
+    notify_status(
+        &mut callbacks,
+        "complete_edit",
+        "Reanalyzed segment exported at the original saved timings.",
+    );
+    Ok(AudioDescriptionOutcome {
+        output_path: prepared_project.output_mp3_path.clone(),
+        project_path: Some(project_path.to_path_buf()),
+        project_warning: None,
+        character_catalog_path: None,
+        character_catalog_warning: None,
+        generated_descriptions: prepared_project.descriptions.len(),
+        normal_descriptions,
+        extended_pauses,
+        dropped_after_tts: 0,
     })
 }
 
@@ -2914,12 +3838,13 @@ pub fn change_audio_description_project_voice(
     let mut export_progress = |pct: u32| {
         notify_progress(&mut callbacks, 90 + pct.saturating_mul(10) / 100);
     };
-    if let Err(error) = export_audio_description_mp3(
+    if let Err(error) = export_audio_description_output(
         &project.source_path,
         &export_target,
         project.audio_stream_index,
         &mix_cues,
         &export_options,
+        project.output_is_video,
         Some(&mut export_progress),
     ) {
         if export_target.exists() {
@@ -3078,6 +4003,615 @@ fn verbosity_from_project(value: &str) -> AudioDescriptionVerbosity {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+pub fn reanalyze_audio_description_project_segment(
+    project: &AudioDescriptionProject,
+    index: usize,
+    gemini_api_key: String,
+    sonarpad_ai_service_url: String,
+    sonarpad_ai_access_code: String,
+    sonarpad_ai_device_id: String,
+    gemini_model: String,
+    cancel: Arc<AtomicBool>,
+    callbacks: AudioDescriptionCallbacks,
+) -> Result<AudioDescriptionProjectSegmentReanalysis, String> {
+    let selected = project.descriptions.get(index).ok_or_else(|| {
+        "Audio description: selected project description does not exist".to_string()
+    })?;
+    if !project.source_path.exists() {
+        return Err(format!(
+            "Audio description: source media file does not exist: {}",
+            project.source_path.display()
+        ));
+    }
+    if cancel.load(Ordering::Relaxed) {
+        return Err("cancelled".to_string());
+    }
+
+    let cache_dir = temporary_job_dir()?;
+    let result = (|| -> Result<AudioDescriptionProjectSegmentReanalysis, String> {
+        let source_duration_sec = if project.source_duration_sec > 0.0 {
+            project.source_duration_sec
+        } else {
+            crate::ffmpeg_export::media_duration_and_start_seconds(&project.source_path)
+                .map(|(duration, _)| duration)
+                .ok_or_else(|| "Audio description: source duration probe failed".to_string())?
+        };
+
+        let callback_state = Arc::new(std::sync::Mutex::new(callbacks));
+        if let Ok(mut callbacks) = callback_state.lock() {
+            notify_status(
+                &mut callbacks,
+                "reanalyze_segment",
+                "Preparing the selected part as an independent mini-film...",
+            );
+            notify_progress(&mut callbacks, 0);
+        }
+
+        // Recreate the same physical chunk layout used by normal creation and select
+        // the chunk containing the chosen description. The selected chunk itself is
+        // then treated as a completely independent movie starting at 00:00.
+        let segment_cache_dir = cache_dir.join("mini_film_source");
+        fs::create_dir_all(&segment_cache_dir)
+            .map_err(|error| format!("Audio description: create cache failed: {error}"))?;
+        let chunks = prepare_gemini_chunks(
+            &project.source_path,
+            source_duration_sec,
+            &segment_cache_dir,
+            project.audio_stream_index,
+            &cancel,
+        )?;
+        let target_sec = if selected.gemini_start_sec.is_finite() {
+            selected.gemini_start_sec.max(0.0)
+        } else {
+            selected.source_start_sec.max(0.0)
+        };
+        let chosen = chunks
+            .iter()
+            .find(|chunk| target_sec >= chunk.start_sec && target_sec < chunk.end_sec)
+            .or_else(|| {
+                chunks.iter().min_by(|left, right| {
+                    let left_distance = if target_sec < left.start_sec {
+                        left.start_sec - target_sec
+                    } else if target_sec > left.end_sec {
+                        target_sec - left.end_sec
+                    } else {
+                        0.0
+                    };
+                    let right_distance = if target_sec < right.start_sec {
+                        right.start_sec - target_sec
+                    } else if target_sec > right.end_sec {
+                        target_sec - right.end_sec
+                    } else {
+                        0.0
+                    };
+                    left_distance
+                        .partial_cmp(&right_distance)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+            })
+            .cloned()
+            .ok_or_else(|| "Audio description: no analysis segment is available".to_string())?;
+        let segment_start_sec = chosen.start_sec;
+        let segment_end_sec = chosen.end_sec;
+        let mini_film_path = PathBuf::from(&chosen.path);
+
+        // A normal film with audio is analysed from one self-contained media file.
+        // Do the same here. Never combine a separately-seeked WAV with a video chunk:
+        // packet/keyframe boundaries can make the two local timelines drift.
+        let source_has_audio = !crate::ffmpeg_source::list_audio_streams(&project.source_path)
+            .map_err(|error| {
+                format!("Audio description: FFmpeg stream inspection failed: {error}")
+            })?
+            .is_empty();
+        let mini_has_audio = !crate::ffmpeg_source::list_audio_streams(&mini_film_path)
+            .map_err(|error| {
+                format!("Audio description: FFmpeg mini-film inspection failed: {error}")
+            })?
+            .is_empty();
+        if source_has_audio && !mini_has_audio {
+            return Err(
+                "Audio description: Sonarpad could not create a self-contained reanalysis segment with its soundtrack. The segment was not changed."
+                    .to_string(),
+            );
+        }
+        if cancel.load(Ordering::Relaxed) {
+            return Err("cancelled".to_string());
+        }
+
+        let use_sonarpad_ai = !sonarpad_ai_service_url.trim().is_empty();
+        if use_sonarpad_ai {
+            if sonarpad_ai_access_code.trim().is_empty() {
+                return Err("Audio description: Sonarpad AI access code is empty".to_string());
+            }
+            if sonarpad_ai_device_id.trim().is_empty() {
+                return Err("Audio description: Sonarpad AI device id is empty".to_string());
+            }
+            if !gemini_api_key.trim().is_empty() {
+                return Err(
+                    "Audio description: invalid AI configuration: Sonarpad AI mode must not include a personal Gemini API key"
+                        .to_string(),
+                );
+            }
+        } else if gemini_api_key.trim().is_empty() {
+            return Err("Audio description: Gemini API key is empty".to_string());
+        }
+
+        // This is the key point: do NOT reproduce the creation pipeline here.
+        // Build a normal job whose input is the mini-film and call the exact same
+        // create_audio_description() function used by "Create audio description".
+        let mut mini_job = audio_description_job_from_project(project);
+        mini_job.input_path = mini_film_path.clone();
+        mini_job.output_path = cache_dir.join("reanalyzed_mini_film_audiodescritto.mp3");
+        // The mini-film already contains only the soundtrack selected when the
+        // original chunk was prepared; let normal creation pick that local stream.
+        mini_job.audio_stream_index = None;
+        mini_job.save_project = true;
+        mini_job.create_video_output = false;
+        mini_job.gemini_api_key = gemini_api_key;
+        mini_job.sonarpad_ai_service_url = sonarpad_ai_service_url;
+        mini_job.sonarpad_ai_access_code = sonarpad_ai_access_code;
+        mini_job.sonarpad_ai_device_id = sonarpad_ai_device_id;
+        if !gemini_model.trim().is_empty() {
+            mini_job.gemini_model = gemini_model;
+        }
+        mini_job.resume_checkpoint_path = None;
+
+        if let Ok(mut callbacks) = callback_state.lock() {
+            notify_status(
+                &mut callbacks,
+                "reanalyze_segment",
+                "Analyzing the mini-film with the exact normal audio-description pipeline...",
+            );
+        }
+
+        let progress_state = callback_state.clone();
+        let status_state = callback_state.clone();
+        let quota_state = callback_state.clone();
+        let overload_state = callback_state.clone();
+        let mini_outcome = create_audio_description(
+            &mini_job,
+            cancel.clone(),
+            AudioDescriptionCallbacks {
+                status: Some(Box::new(move |stage, message| {
+                    if let Ok(mut callbacks) = status_state.lock()
+                        && let Some(callback) = callbacks.status.as_mut()
+                    {
+                        if stage == "complete" {
+                            callback(
+                                "reanalyze_segment",
+                                "Mini-film analysis complete. Preparing the reanalyzed segment...",
+                            );
+                        } else {
+                            callback(stage, message);
+                        }
+                    }
+                })),
+                progress: Some(Box::new(move |pct| {
+                    if let Ok(mut callbacks) = progress_state.lock()
+                        && let Some(callback) = callbacks.progress.as_mut()
+                    {
+                        callback(pct.min(100).saturating_mul(95) / 100);
+                    }
+                })),
+                quota: Some(Box::new(move |model, error| {
+                    let Ok(mut callbacks) = quota_state.lock() else {
+                        return AudioDescriptionQuotaDecision::Stop;
+                    };
+                    callbacks
+                        .quota
+                        .as_mut()
+                        .map(|callback| callback(model, error))
+                        .unwrap_or(AudioDescriptionQuotaDecision::Stop)
+                })),
+                overload: Some(Box::new(move |model, error| {
+                    let Ok(mut callbacks) = overload_state.lock() else {
+                        return AudioDescriptionOverloadDecision::Stop;
+                    };
+                    callbacks
+                        .overload
+                        .as_mut()
+                        .map(|callback| callback(model, error))
+                        .unwrap_or(AudioDescriptionOverloadDecision::Stop)
+                })),
+            },
+        )?;
+        if cancel.load(Ordering::Relaxed) {
+            return Err("cancelled".to_string());
+        }
+
+        let mini_project_path = mini_outcome.project_path.ok_or_else(|| {
+            "Audio description: the mini-film analysis did not produce a project".to_string()
+        })?;
+        let mini_project = load_audio_description_project(&mini_project_path)?;
+        if mini_project.descriptions.is_empty() {
+            return Err(
+                "Audio description: the mini-film analysis produced no safe descriptions"
+                    .to_string(),
+            );
+        }
+
+        let segment_span_sec = (segment_end_sec - segment_start_sec).max(0.0);
+        let mini_duration_sec = mini_project.source_duration_sec;
+        if !segment_span_sec.is_finite()
+            || segment_span_sec <= 0.0
+            || !mini_duration_sec.is_finite()
+            || mini_duration_sec <= 0.0
+        {
+            return Err(
+                "Audio description: invalid mini-film timing; the segment was not changed"
+                    .to_string(),
+            );
+        }
+
+        // The mini-film timeline is used ONLY to decide which newly generated text
+        // corresponds to which saved description. It is never written back to the
+        // project. Saved source/Gemini times and saved Pyannote intervals are the
+        // immutable authority for segment reanalysis.
+        let mini_to_source_scale = segment_span_sec / mini_duration_sec;
+        if !mini_to_source_scale.is_finite() || !(0.98..=1.02).contains(&mini_to_source_scale) {
+            return Err(format!(
+                "Audio description: mini-film timing drift is too large ({:.6}); the segment was not changed",
+                mini_to_source_scale
+            ));
+        }
+        let map_mini_time_for_matching = |time_sec: f64| {
+            let local = time_sec.max(0.0).min(mini_duration_sec);
+            (segment_start_sec + local * mini_to_source_scale).min(segment_end_sec)
+        };
+
+        let mut segment_indices = project
+            .descriptions
+            .iter()
+            .enumerate()
+            .filter(|(_, description)| {
+                let time = description.source_start_sec.max(0.0);
+                time + 0.001 >= segment_start_sec && time < segment_end_sec + 0.001
+            })
+            .map(|(project_index, _)| project_index)
+            .collect::<Vec<_>>();
+        segment_indices.sort_by(|left, right| {
+            project.descriptions[*left]
+                .source_start_sec
+                .total_cmp(&project.descriptions[*right].source_start_sec)
+        });
+        if segment_indices.is_empty() {
+            return Err(
+                "Audio description: the selected analysis segment contains no saved descriptions"
+                    .to_string(),
+            );
+        }
+
+        let mut mini_indices = (0..mini_project.descriptions.len()).collect::<Vec<_>>();
+        mini_indices.sort_by(|left, right| {
+            mini_project.descriptions[*left]
+                .source_start_sec
+                .total_cmp(&mini_project.descriptions[*right].source_start_sec)
+        });
+
+        // Sequence alignment is used only to associate fresh text with the nearest
+        // existing saved slot. Missing fresh entries leave the old text untouched;
+        // extra fresh entries are ignored. This prevents any structural/timing
+        // change when Gemini returns 9 items for a segment that already has 10.
+        let old_count = segment_indices.len();
+        let new_count = mini_indices.len();
+        let skip_penalty = 4.0_f64;
+        let mut cost = vec![vec![f64::INFINITY; new_count + 1]; old_count + 1];
+        let mut step = vec![vec![0_u8; new_count + 1]; old_count + 1];
+        cost[0][0] = 0.0;
+        for old_pos in 0..=old_count {
+            for new_pos in 0..=new_count {
+                let current_cost = cost[old_pos][new_pos];
+                if !current_cost.is_finite() {
+                    continue;
+                }
+                if old_pos < old_count {
+                    let candidate_cost = current_cost + skip_penalty;
+                    if candidate_cost < cost[old_pos + 1][new_pos] {
+                        cost[old_pos + 1][new_pos] = candidate_cost;
+                        step[old_pos + 1][new_pos] = 1;
+                    }
+                }
+                if new_pos < new_count {
+                    let candidate_cost = current_cost + skip_penalty;
+                    if candidate_cost < cost[old_pos][new_pos + 1] {
+                        cost[old_pos][new_pos + 1] = candidate_cost;
+                        step[old_pos][new_pos + 1] = 2;
+                    }
+                }
+                if old_pos < old_count && new_pos < new_count {
+                    let old_time = project.descriptions[segment_indices[old_pos]].source_start_sec;
+                    let new_time = map_mini_time_for_matching(
+                        mini_project.descriptions[mini_indices[new_pos]].source_start_sec,
+                    );
+                    let distance = (old_time - new_time).abs();
+                    if distance <= 12.0 {
+                        let candidate_cost = current_cost + distance;
+                        if candidate_cost < cost[old_pos + 1][new_pos + 1] {
+                            cost[old_pos + 1][new_pos + 1] = candidate_cost;
+                            step[old_pos + 1][new_pos + 1] = 3;
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut associations = Vec::new();
+        let (mut old_pos, mut new_pos) = (old_count, new_count);
+        while old_pos > 0 || new_pos > 0 {
+            match step[old_pos][new_pos] {
+                3 => {
+                    associations.push((old_pos - 1, new_pos - 1));
+                    old_pos -= 1;
+                    new_pos -= 1;
+                }
+                1 => old_pos -= 1,
+                2 => new_pos -= 1,
+                _ if old_pos > 0 => old_pos -= 1,
+                _ if new_pos > 0 => new_pos -= 1,
+                _ => break,
+            }
+        }
+        associations.reverse();
+
+        let mut candidate = project.clone();
+        let mut accepted = 0_usize;
+        let mut changed = 0_usize;
+        let mut rejected_too_long = 0_usize;
+        for (saved_pos, fresh_pos) in associations {
+            let project_index = segment_indices[saved_pos];
+            let fresh = &mini_project.descriptions[mini_indices[fresh_pos]];
+            let available =
+                audio_description_project_edit_available_duration(project, project_index)?;
+            if let Some(available_sec) = available
+                && fresh.tts_duration_sec > available_sec + 0.010
+            {
+                rejected_too_long += 1;
+                crate::log_debug(&format!(
+                    "Audio description segment reanalysis: keeping saved slot id={} at {:.3}s because fresh TTS is too long ({:.3}s > {:.3}s)",
+                    project.descriptions[project_index].id,
+                    project.descriptions[project_index].source_start_sec,
+                    fresh.tts_duration_sec,
+                    available_sec
+                ));
+                continue;
+            }
+
+            accepted += 1;
+            let saved = &mut candidate.descriptions[project_index];
+            let fresh_text = fresh.text.trim();
+            if fresh_text.is_empty() {
+                continue;
+            }
+            if saved.text != fresh_text {
+                changed += 1;
+            }
+            saved.text = fresh_text.to_string();
+            saved.rendered_text = if fresh.rendered_text.trim().is_empty() {
+                fresh_text.to_string()
+            } else {
+                fresh.rendered_text.clone()
+            };
+            saved.tts_duration_sec = fresh.tts_duration_sec;
+            saved.modified = saved.text != saved.original_text;
+            // Deliberately preserve: id, gemini_start_sec, visual evidence,
+            // source_start_sec, extended_pause and all saved timing metadata.
+        }
+
+        if accepted == 0 {
+            return Err(
+                "Audio description: no fresh description could be matched safely to the saved segment slots; the segment was not changed"
+                    .to_string(),
+            );
+        }
+
+        // Pre-synthesize every description in this reanalyzed segment now, while
+        // the reanalysis operation is still running. Space must never start Edge
+        // synthesis for an unchanged reanalysis proposal: it should only play a
+        // WAV that is already ready in this temporary segment cache.
+        if let Ok(mut callbacks) = callback_state.lock() {
+            notify_status(
+                &mut callbacks,
+                "reanalyze_segment",
+                "Preparing instant previews for the reanalyzed segment...",
+            );
+            notify_progress(&mut callbacks, 95);
+        }
+        let preview_cache_dir = temporary_job_dir()?;
+        let preview_job = audio_description_job_from_project(&candidate);
+        let preview_tasks = segment_indices
+            .iter()
+            .map(|project_index| {
+                let description = &candidate.descriptions[*project_index];
+                AudioDescriptionSynthesisTask {
+                    synthesis_index: description.id,
+                    original_index: description.id,
+                    text: description.text.clone(),
+                    desired_start_sec: description.gemini_start_sec,
+                    visual_start_sec: description.gemini_start_sec,
+                    visual_evidence_time_sec: description.visual_evidence_time_sec,
+                    mandatory: false,
+                    slot_start_sec: None,
+                    slot_end_sec: None,
+                }
+            })
+            .collect::<Vec<_>>();
+        let preview_progress_state = callback_state.clone();
+        let preview_synthesized = match synthesize_description_tasks_parallel(
+            &preview_tasks,
+            &preview_job,
+            &preview_cache_dir,
+            cancel.clone(),
+            move |completed, total| {
+                if let Ok(mut callbacks) = preview_progress_state.lock() {
+                    let pct = 95 + (completed as u32).saturating_mul(5) / total.max(1) as u32;
+                    notify_progress(&mut callbacks, pct.min(100));
+                }
+            },
+        ) {
+            Ok(value) => value,
+            Err(error) => {
+                crate::log_if_err!(
+                    fs::remove_dir_all(&preview_cache_dir),
+                    "Audio description reanalysis preview cache cleanup failed"
+                );
+                return Err(error);
+            }
+        };
+        if cancel.load(Ordering::Relaxed) {
+            crate::log_if_err!(
+                fs::remove_dir_all(&preview_cache_dir),
+                "Audio description reanalysis preview cache cleanup failed"
+            );
+            return Err("cancelled".to_string());
+        }
+
+        let mut preview_audio = HashMap::with_capacity(preview_synthesized.len());
+        for rendered in preview_synthesized {
+            let Some(project_index) = candidate
+                .descriptions
+                .iter()
+                .position(|description| description.id == rendered.original_index)
+            else {
+                crate::log_if_err!(
+                    fs::remove_dir_all(&preview_cache_dir),
+                    "Audio description reanalysis preview cache cleanup failed"
+                );
+                return Err(
+                    "Audio description: cached reanalysis preview no longer matches the project"
+                        .to_string(),
+                );
+            };
+            let frames = rendered.samples.len() / rendered.channels.max(1) as usize;
+            let duration_sec = frames as f64 / rendered.sample_rate.max(1) as f64;
+            let available =
+                audio_description_project_edit_available_duration(&candidate, project_index)?;
+            if let Err(error) =
+                validate_audio_description_project_edit_duration(available, duration_sec)
+            {
+                crate::log_if_err!(
+                    fs::remove_dir_all(&preview_cache_dir),
+                    "Audio description reanalysis preview cache cleanup failed"
+                );
+                return Err(format!(
+                    "Audio description: cached preview for saved slot {} failed the final duration check: {}",
+                    rendered.original_index, error
+                ));
+            }
+            candidate.descriptions[project_index].tts_duration_sec = duration_sec;
+            let path = preview_cache_dir.join(format!(
+                "reanalyzed_preview_{:05}.wav",
+                rendered.original_index
+            ));
+            if let Err(error) = write_audio_description_preview_wav(
+                &path,
+                rendered.samples.as_ref(),
+                rendered.sample_rate,
+                rendered.channels,
+            ) {
+                crate::log_if_err!(
+                    fs::remove_dir_all(&preview_cache_dir),
+                    "Audio description reanalysis preview cache cleanup failed"
+                );
+                return Err(error);
+            }
+            preview_audio.insert(rendered.original_index, (path, duration_sec));
+        }
+        let preview_cache_owner = Arc::new(AudioDescriptionProjectPreviewCacheDir {
+            path: preview_cache_dir,
+        });
+        let preview_audio = preview_audio
+            .into_iter()
+            .map(|(description_id, (path, duration_sec))| {
+                (
+                    description_id,
+                    AudioDescriptionProjectPreviewAudio {
+                        path,
+                        _cache_dir: preview_cache_owner.clone(),
+                        duration_sec,
+                    },
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        crate::log_debug(&format!(
+            "Audio description segment reanalysis: cached {} instant preview WAV(s); Space will not invoke TTS for unchanged reanalyzed descriptions",
+            preview_audio.len()
+        ));
+
+        // Recompute only derived output positions. Source positions and saved
+        // Pyannote intervals remain bit-for-bit unchanged from the loaded project.
+        let mut output_offset_sec = 0.0_f64;
+        for description in &mut candidate.descriptions {
+            let duration = description.tts_duration_sec.max(0.0);
+            description.output_start_sec = description.source_start_sec + output_offset_sec;
+            description.output_end_sec = description.output_start_sec + duration;
+            if description.extended_pause {
+                description.extended_pause_duration_sec = duration;
+                description.duck_start_sec = None;
+                description.duck_end_sec = None;
+                output_offset_sec += duration;
+            } else {
+                description.extended_pause_duration_sec = 0.0;
+                description.duck_start_sec = Some(
+                    (description.output_start_sec
+                        - (AUDIO_DESCRIPTION_FADE_MS + AUDIO_DESCRIPTION_PRE_DUCK_MS) as f64
+                            / 1000.0)
+                        .max(0.0),
+                );
+                description.duck_end_sec =
+                    Some(description.output_end_sec + AUDIO_DESCRIPTION_RELEASE_MS as f64 / 1000.0);
+            }
+        }
+        candidate.output_duration_sec = candidate.source_duration_sec + output_offset_sec;
+        candidate.gemini_model = mini_project.gemini_model.clone();
+        candidate.updated_at_utc = chrono::Utc::now().to_rfc3339();
+
+        let segment_description_ids = segment_indices
+            .iter()
+            .map(|project_index| project.descriptions[*project_index].id)
+            .collect::<Vec<_>>();
+        let selected_id = selected.id;
+        let focus_index = candidate
+            .descriptions
+            .iter()
+            .position(|description| description.id == selected_id)
+            .unwrap_or_else(|| index.min(candidate.descriptions.len().saturating_sub(1)));
+
+        crate::log_debug(&format!(
+            "Audio description segment reanalysis: FIXED SAVED TIMELINE; saved_slots={} fresh_descriptions={} matched={} changed={} kept_old_unmatched={} kept_old_too_long={} source_range={:.3}-{:.3}s; protected_intervals_unchanged={}",
+            old_count,
+            new_count,
+            accepted,
+            changed,
+            old_count.saturating_sub(accepted + rejected_too_long),
+            rejected_too_long,
+            segment_start_sec,
+            segment_end_sec,
+            true
+        ));
+        if let Ok(mut callbacks) = callback_state.lock() {
+            notify_progress(&mut callbacks, 100);
+            notify_status(
+                &mut callbacks,
+                "reanalyze_segment",
+                "Segment reanalysis complete. Original saved timings and silences were preserved.",
+            );
+        }
+
+        Ok(AudioDescriptionProjectSegmentReanalysis {
+            focus_index,
+            project: candidate,
+            segment_description_ids,
+            preview_audio,
+        })
+    })();
+    crate::log_if_err!(
+        fs::remove_dir_all(&cache_dir),
+        "Audio description cleanup operation failed"
+    );
+    result
+}
+
 pub fn reexport_audio_description_project(
     project_path: &Path,
     project: &AudioDescriptionProject,
@@ -3148,6 +4682,9 @@ pub fn reexport_audio_description_project(
         "Audio description cleanup operation failed"
     );
     let synthesized = synthesis_result?;
+    if cancel.load(Ordering::Relaxed) {
+        return Err("cancelled".to_string());
+    }
 
     let protected_intervals: Vec<BridgeInterval> = project
         .protected_intervals
@@ -3192,17 +4729,22 @@ pub fn reexport_audio_description_project(
     notify_status(
         &mut callbacks,
         "export_edit",
-        "Exporting the edited MP3 with Sonarpad's Rust FFmpeg libraries...",
+        if project.output_is_video {
+            "Creating the edited audio-described video without re-encoding the video stream..."
+        } else {
+            "Exporting the edited MP3 with Sonarpad's Rust FFmpeg libraries..."
+        },
     );
     let mut export_progress = |pct: u32| {
         notify_progress(&mut callbacks, 65 + pct.saturating_mul(35) / 100);
     };
-    if let Err(error) = export_audio_description_mp3(
+    if let Err(error) = export_audio_description_output(
         &project.source_path,
         &export_target,
         project.audio_stream_index,
         &mix_cues,
         &export_options,
+        project.output_is_video,
         Some(&mut export_progress),
     ) {
         if export_target.exists() {
@@ -3214,13 +4756,20 @@ pub fn reexport_audio_description_project(
         return Err(error);
     }
     let output_metadata = fs::metadata(&export_target)
-        .map_err(|error| format!("Audio description: edited MP3 validation failed: {error}"))?;
+        .map_err(|error| format!("Audio description: edited output validation failed: {error}"))?;
     if output_metadata.len() == 0 {
         crate::log_if_err!(
             fs::remove_file(&export_target),
             "Audio description cleanup operation failed"
         );
-        return Err("Audio description: edited MP3 is empty".to_string());
+        return Err("Audio description: edited output is empty".to_string());
+    }
+    if cancel.load(Ordering::Relaxed) {
+        crate::log_if_err!(
+            fs::remove_file(&export_target),
+            "Audio description cleanup operation failed"
+        );
+        return Err("cancelled".to_string());
     }
 
     let calculated_output_duration = project.source_duration_sec
@@ -3279,6 +4828,17 @@ pub fn reexport_audio_description_project(
         );
         return Err(error);
     }
+    if cancel.load(Ordering::Relaxed) {
+        crate::log_if_err!(
+            fs::remove_file(&export_target),
+            "Audio description cleanup operation failed"
+        );
+        crate::log_if_err!(
+            fs::remove_file(&temporary_project),
+            "Audio description cleanup operation failed"
+        );
+        return Err("cancelled".to_string());
+    }
     if let Err(error) = commit_audio_description_pair(
         &export_target,
         &project.output_mp3_path,
@@ -3308,7 +4868,11 @@ pub fn reexport_audio_description_project(
     notify_status(
         &mut callbacks,
         "complete_edit",
-        "Edited audio-description MP3 export complete.",
+        if project.output_is_video {
+            "Edited audio-described video export complete."
+        } else {
+            "Edited audio-description MP3 export complete."
+        },
     );
     Ok(AudioDescriptionOutcome {
         output_path: project.output_mp3_path.clone(),
@@ -3510,81 +5074,210 @@ pub fn create_audio_description(
         resume,
     };
     let callback_state = Arc::new(std::sync::Mutex::new(callbacks));
-    let download_state = callback_state.clone();
-    let progress_state = callback_state.clone();
-    let status_state = callback_state.clone();
-    let quota_state = callback_state.clone();
-    let overload_state = callback_state.clone();
-    let checkpoint_job = job.clone();
-    let checkpoint_target = checkpoint_path.clone();
-    let analysis_result = run_audio_description_bridge(
-        &bridge_request,
-        cancel.clone(),
-        AudioDescriptionBridgeCallbacks {
-            download: Some(Box::new(move |pct| {
-                if let Ok(mut callbacks) = download_state.lock() {
-                    notify_status(
-                        &mut callbacks,
-                        "download",
-                        "Downloading the audio-description analysis module...",
-                    );
-                    notify_progress(&mut callbacks, (pct.max(0) as u32).saturating_mul(10) / 100);
+    let analysis_result = {
+        let run_bridge_once = |request: &AudioDescriptionBridgeRequest| {
+            let download_state = callback_state.clone();
+            let progress_state = callback_state.clone();
+            let status_state = callback_state.clone();
+            let quota_state = callback_state.clone();
+            let overload_state = callback_state.clone();
+            let checkpoint_job = job.clone();
+            let checkpoint_target = checkpoint_path.clone();
+            run_audio_description_bridge(
+                request,
+                cancel.clone(),
+                AudioDescriptionBridgeCallbacks {
+                    download: Some(Box::new(move |pct| {
+                        if let Ok(mut callbacks) = download_state.lock() {
+                            notify_status(
+                                &mut callbacks,
+                                "download",
+                                "Downloading the audio-description analysis module...",
+                            );
+                            notify_progress(
+                                &mut callbacks,
+                                (pct.max(0) as u32).saturating_mul(10) / 100,
+                            );
+                        }
+                    })),
+                    progress: Some(Box::new(move |pct| {
+                        if let Ok(mut callbacks) = progress_state.lock() {
+                            notify_progress(
+                                &mut callbacks,
+                                10 + (pct.max(0) as u32).saturating_mul(45) / 100,
+                            );
+                        }
+                    })),
+                    status: Some(Box::new(move |stage, message| {
+                        if let Ok(mut callbacks) = status_state.lock() {
+                            notify_status(&mut callbacks, stage, message);
+                        }
+                    })),
+                    quota: Some(Box::new(move |model, error| {
+                        let Ok(mut callbacks) = quota_state.lock() else {
+                            return AudioDescriptionQuotaDecision::Stop;
+                        };
+                        callbacks
+                            .quota
+                            .as_mut()
+                            .map(|callback| callback(model, error))
+                            .unwrap_or(AudioDescriptionQuotaDecision::Wait)
+                    })),
+                    overload: Some(Box::new(move |model, error| {
+                        let Ok(mut callbacks) = overload_state.lock() else {
+                            return AudioDescriptionOverloadDecision::Stop;
+                        };
+                        callbacks
+                            .overload
+                            .as_mut()
+                            .map(|callback| callback(model, error))
+                            .unwrap_or(AudioDescriptionOverloadDecision::Wait)
+                    })),
+                    checkpoint: Some(Box::new(move |checkpoint| {
+                        if let Err(error) = save_audio_description_partial_checkpoint(
+                            &checkpoint_target,
+                            &checkpoint_job,
+                            duration_sec,
+                            checkpoint,
+                        ) {
+                            crate::log_debug(&format!(
+                                "Audio description: partial checkpoint save failed: {error}"
+                            ));
+                        } else {
+                            crate::log_debug(&format!(
+                                "Audio description: saved partial checkpoint after chunk {}/{} to {}",
+                                checkpoint.completed_chunks,
+                                checkpoint.total_chunks,
+                                checkpoint_target.display()
+                            ));
+                        }
+                    })),
+                },
+            )
+        };
+
+        // Keep the historical path byte-for-byte in behavior: the normal prepared
+        // chunks and worker request are attempted first. Compatibility media is
+        // prepared only after a media-specific Gemini rejection or terminal file
+        // processing failure, so already-working files never enter the fallback path.
+        let mut analysis_result = run_bridge_once(&bridge_request);
+        let mut try_mp4_fallback = false;
+
+        if let Err(primary_error) = &analysis_result
+            && gemini_media_processing_failed(primary_error)
+            && !cancel.load(Ordering::Relaxed)
+        {
+            crate::log_debug(&format!(
+                "Audio description: Gemini accepted the normal video chunk but failed while processing it; MP4 fallback is now eligible after the worker's bounded same-chunk re-upload. error={primary_error}"
+            ));
+            if let Ok(mut callbacks) = callback_state.lock() {
+                notify_status(
+                    &mut callbacks,
+                    "analysis_prepare",
+                    "Gemini could not process the video segment. Retrying with MP4 compatibility segments...",
+                );
+            }
+            try_mp4_fallback = true;
+        }
+
+        if let Err(primary_error) = &analysis_result
+            && gemini_media_invalid_argument(primary_error)
+            && !cancel.load(Ordering::Relaxed)
+        {
+            crate::log_debug(&format!(
+                "Audio description: Gemini rejected the normal media request; activating smaller-MKV fallback only after failure. error={primary_error}"
+            ));
+            if let Ok(mut callbacks) = callback_state.lock() {
+                notify_status(
+                    &mut callbacks,
+                    "analysis_prepare",
+                    "Gemini rejected the current video segment. Retrying with smaller compatibility segments...",
+                );
+            }
+
+            let fallback_dir = analysis_cache_dir.join("gemini_fallback_small_mkv");
+            match prepare_gemini_compatibility_chunks(
+                &job.input_path,
+                duration_sec,
+                &fallback_dir,
+                job.audio_stream_index,
+                &cancel,
+                "mkv",
+                false,
+            ) {
+                Ok(fallback_chunks) => {
+                    let mut fallback_request = bridge_request.clone();
+                    fallback_request.chunks = fallback_chunks;
+                    // Chunk layout changed; an old completed-chunk index cannot be
+                    // safely mapped onto the compatibility layout.
+                    fallback_request.resume = None;
+                    analysis_result = run_bridge_once(&fallback_request);
+                    if let Err(fallback_error) = &analysis_result
+                        && (gemini_media_invalid_argument(fallback_error)
+                            || gemini_media_processing_failed(fallback_error))
+                        && !cancel.load(Ordering::Relaxed)
+                    {
+                        crate::log_debug(&format!(
+                            "Audio description: smaller-MKV Gemini fallback was also rejected; MP4 fallback is now eligible. error={fallback_error}"
+                        ));
+                        try_mp4_fallback = true;
+                    }
                 }
-            })),
-            progress: Some(Box::new(move |pct| {
-                if let Ok(mut callbacks) = progress_state.lock() {
-                    notify_progress(
-                        &mut callbacks,
-                        10 + (pct.max(0) as u32).saturating_mul(45) / 100,
-                    );
-                }
-            })),
-            status: Some(Box::new(move |stage, message| {
-                if let Ok(mut callbacks) = status_state.lock() {
-                    notify_status(&mut callbacks, stage, message);
-                }
-            })),
-            quota: Some(Box::new(move |model, error| {
-                let Ok(mut callbacks) = quota_state.lock() else {
-                    return AudioDescriptionQuotaDecision::Stop;
-                };
-                callbacks
-                    .quota
-                    .as_mut()
-                    .map(|callback| callback(model, error))
-                    .unwrap_or(AudioDescriptionQuotaDecision::Wait)
-            })),
-            overload: Some(Box::new(move |model, error| {
-                let Ok(mut callbacks) = overload_state.lock() else {
-                    return AudioDescriptionOverloadDecision::Stop;
-                };
-                callbacks
-                    .overload
-                    .as_mut()
-                    .map(|callback| callback(model, error))
-                    .unwrap_or(AudioDescriptionOverloadDecision::Wait)
-            })),
-            checkpoint: Some(Box::new(move |checkpoint| {
-                if let Err(error) = save_audio_description_partial_checkpoint(
-                    &checkpoint_target,
-                    &checkpoint_job,
-                    duration_sec,
-                    checkpoint,
-                ) {
+                Err(error) => {
                     crate::log_debug(&format!(
-                        "Audio description: partial checkpoint save failed: {error}"
+                        "Audio description: smaller-MKV fallback preparation failed; MP4 fallback is now eligible. error={error}"
                     ));
-                } else {
-                    crate::log_debug(&format!(
-                        "Audio description: saved partial checkpoint after chunk {}/{} to {}",
-                        checkpoint.completed_chunks,
-                        checkpoint.total_chunks,
-                        checkpoint_target.display()
-                    ));
+                    try_mp4_fallback = true;
                 }
-            })),
-        },
-    );
+            }
+        }
+
+        if try_mp4_fallback && !cancel.load(Ordering::Relaxed) {
+            if let Ok(mut callbacks) = callback_state.lock() {
+                notify_status(
+                    &mut callbacks,
+                    "analysis_prepare",
+                    "Gemini could not use the current video segment. Retrying with MP4 compatibility segments...",
+                );
+            }
+            let fallback_dir = analysis_cache_dir.join("gemini_fallback_mp4");
+            match prepare_gemini_compatibility_chunks(
+                &job.input_path,
+                duration_sec,
+                &fallback_dir,
+                job.audio_stream_index,
+                &cancel,
+                "mp4",
+                true,
+            ) {
+                Ok(fallback_chunks) => {
+                    crate::log_debug(
+                        "Audio description: activating MP4 Gemini compatibility fallback after two rejected/failed media preparations.",
+                    );
+                    let mut fallback_request = bridge_request.clone();
+                    fallback_request.chunks = fallback_chunks;
+                    fallback_request.resume = None;
+                    analysis_result = run_bridge_once(&fallback_request);
+                }
+                Err(mp4_error) => {
+                    crate::log_debug(&format!(
+                        "Audio description: MP4 compatibility fallback preparation failed: {mp4_error}"
+                    ));
+                    let combined_error = match &analysis_result {
+                        Err(previous_error) => Some(format!(
+                            "{previous_error}\nGemini MP4 compatibility fallback could not be prepared: {mp4_error}"
+                        )),
+                        Ok(_) => None,
+                    };
+                    if let Some(combined_error) = combined_error {
+                        analysis_result = Err(combined_error);
+                    }
+                }
+            }
+        }
+
+        analysis_result
+    };
     crate::log_if_err!(
         fs::remove_dir_all(&analysis_cache_dir),
         "Audio description cleanup operation failed"
@@ -3682,7 +5375,11 @@ pub fn create_audio_description(
     notify_status(
         &mut callbacks,
         "export",
-        "Applying ducking and exporting MP3 with Sonarpad's Rust FFmpeg libraries...",
+        if job.create_video_output {
+            "Applying ducking and creating the audio-described video without re-encoding the video stream..."
+        } else {
+            "Applying ducking and exporting MP3 with Sonarpad's Rust FFmpeg libraries..."
+        },
     );
     let export_options = AudioDescriptionExportOptions {
         // Ducking is a Sonarpad export policy, not a worker setting.
@@ -3699,31 +5396,45 @@ pub fn create_audio_description(
     let mut export_progress = |pct: u32| {
         notify_progress(&mut callbacks, 80 + pct.saturating_mul(20) / 100);
     };
-    let export_result = export_audio_description_mp3(
+    let export_result = match export_audio_description_output_with_video_fallback(
         &job.input_path,
         &export_target,
         job.audio_stream_index,
         &mix_cues,
         &export_options,
+        job.create_video_output,
         Some(&mut export_progress),
-    );
-    if let Err(error) = export_result {
-        if export_target.exists() {
-            crate::log_if_err!(
-                fs::remove_file(&export_target),
-                "Audio description cleanup operation failed"
-            );
+    ) {
+        Ok(result) => result,
+        Err(error) => {
+            if export_target.exists() {
+                crate::log_if_err!(
+                    fs::remove_file(&export_target),
+                    "Audio description cleanup operation failed"
+                );
+            }
+            return Err(error);
         }
-        return Err(error);
-    }
-    let output_metadata = fs::metadata(&export_target)
-        .map_err(|error| format!("Audio description: exported MP3 validation failed: {error}"))?;
+    };
+    let exported_target = export_result.output_path;
+    let final_output_path = if job.save_project {
+        if export_result.used_mkv_fallback {
+            audio_description_mkv_fallback_path(&job.output_path)
+        } else {
+            job.output_path.clone()
+        }
+    } else {
+        exported_target.clone()
+    };
+    let output_metadata = fs::metadata(&exported_target).map_err(|error| {
+        format!("Audio description: exported output validation failed: {error}")
+    })?;
     if output_metadata.len() == 0 {
         crate::log_if_err!(
-            fs::remove_file(&export_target),
+            fs::remove_file(&exported_target),
             "Audio description cleanup operation failed"
         );
-        return Err("Audio description: exported MP3 is empty".to_string());
+        return Err("Audio description: exported output is empty".to_string());
     }
 
     let mut project_path = None;
@@ -3732,9 +5443,9 @@ pub fn create_audio_description(
         notify_status(
             &mut callbacks,
             "project",
-            "Saving the descriptions actually inserted in the exported MP3...",
+            "Saving the descriptions actually inserted in the exported output...",
         );
-        let path = audio_description_project_path(&job.output_path);
+        let path = audio_description_project_path(&final_output_path);
         let temporary_project = temporary_sibling_path(&path, "new");
         let calculated_output_duration = analysis.duration_sec
             + scheduled
@@ -3742,10 +5453,12 @@ pub fn create_audio_description(
                 .filter(|description| description.extended_pause)
                 .map(scheduled_duration_sec)
                 .sum::<f64>();
-        let output_duration_sec = crate::ffmpeg_export::media_duration_seconds(&export_target)
+        let output_duration_sec = crate::ffmpeg_export::media_duration_seconds(&exported_target)
             .unwrap_or(calculated_output_duration);
+        let mut project_job = effective_job.clone();
+        project_job.output_path = final_output_path.clone();
         let project = build_audio_description_project(
-            &effective_job,
+            &project_job,
             analysis.duration_sec,
             output_duration_sec,
             &analysis.protected_intervals,
@@ -3754,19 +5467,19 @@ pub fn create_audio_description(
         );
         if let Err(error) = save_audio_description_project(&temporary_project, &project) {
             crate::log_if_err!(
-                fs::remove_file(&export_target),
+                fs::remove_file(&exported_target),
                 "Audio description cleanup operation failed"
             );
             return Err(error);
         }
         if let Err(error) = commit_audio_description_pair(
-            &export_target,
-            &job.output_path,
+            &exported_target,
+            &final_output_path,
             &temporary_project,
             &path,
         ) {
             crate::log_if_err!(
-                fs::remove_file(&export_target),
+                fs::remove_file(&exported_target),
                 "Audio description cleanup operation failed"
             );
             crate::log_if_err!(
@@ -3792,7 +5505,11 @@ pub fn create_audio_description(
     notify_status(
         &mut callbacks,
         "complete",
-        "Audio-description MP3 export complete.",
+        if job.create_video_output {
+            "Audio-described video export complete."
+        } else {
+            "Audio-description MP3 export complete."
+        },
     );
     if checkpoint_path.exists() {
         crate::log_if_err!(
@@ -3801,7 +5518,7 @@ pub fn create_audio_description(
         );
     }
     Ok(AudioDescriptionOutcome {
-        output_path: job.output_path.clone(),
+        output_path: final_output_path,
         project_path,
         project_warning,
         character_catalog_path,
@@ -3824,6 +5541,7 @@ mod tests {
         audio_description_samples_have_signal, audio_description_tts_chunks,
         audio_description_tts_error_is_empty_output, build_audio_description_project,
         build_gemini_chunk_timeline, choose_slot, delete_audio_description_project_description,
+        gemini_media_invalid_argument, gemini_media_processing_failed,
         load_audio_description_character_catalog_context, load_audio_description_project,
         merge_catalog_characters, merge_catalog_description,
         normalize_audio_description_source_duration, normalize_catalog_characters,
@@ -3836,6 +5554,30 @@ mod tests {
     use std::path::{Path, PathBuf};
     use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn gemini_media_processing_failure_matches_terminal_failed_state_only() {
+        assert!(gemini_media_processing_failed(
+            "Video processing failed on Gemini's servers. Final state: FAILED"
+        ));
+        assert!(gemini_media_processing_failed(
+            "HTTP 502 Sonarpad AI request failed: file_verification_failed"
+        ));
+        assert!(!gemini_media_processing_failed(
+            "HTTP 401 Sonarpad AI authentication failed: invalid_session"
+        ));
+        assert!(!gemini_media_processing_failed("network timeout"));
+    }
+
+    #[test]
+    fn gemini_invalid_argument_matcher_stays_separate_from_processing_failure() {
+        assert!(gemini_media_invalid_argument(
+            "HTTP 400 INVALID_ARGUMENT: Request contains an invalid argument"
+        ));
+        assert!(!gemini_media_invalid_argument(
+            "Video processing failed on Gemini's servers. Final state: FAILED"
+        ));
+    }
 
     #[test]
     fn audio_description_source_duration_normalizes_large_matroska_clock_offset() {
@@ -3981,6 +5723,7 @@ mod tests {
             recognize_screen_text: false,
             character_catalog: None,
             save_project: false,
+            create_video_output: false,
             tts_engine: TtsEngine::Edge,
             tts_voice: "it-IT-ElsaNeural".to_string(),
             tts_rate: 0,
@@ -4030,6 +5773,7 @@ mod tests {
             recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
+            create_video_output: false,
             tts_engine: TtsEngine::Edge,
             tts_voice: "it-IT-ElsaNeural".to_string(),
             tts_rate: 0,
@@ -4224,6 +5968,7 @@ mod tests {
             recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
+            create_video_output: false,
             tts_engine: TtsEngine::Edge,
             tts_voice: "it-IT-ElsaNeural".to_string(),
             tts_rate: 0,
@@ -4293,6 +6038,7 @@ mod tests {
             recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
+            create_video_output: false,
             tts_engine: TtsEngine::Edge,
             tts_voice: "voice".to_string(),
             tts_rate: 0,
@@ -4569,6 +6315,7 @@ mod tests {
             recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
+            create_video_output: false,
             tts_engine: TtsEngine::Edge,
             tts_voice: "it-IT-ElsaNeural".to_string(),
             tts_rate: 0,
@@ -4648,6 +6395,7 @@ mod tests {
             recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
+            create_video_output: false,
             tts_engine: TtsEngine::Edge,
             tts_voice: "it-IT-ElsaNeural".to_string(),
             tts_rate: 0,
@@ -4694,6 +6442,7 @@ mod tests {
             recognize_screen_text: false,
             character_catalog: None,
             save_project: true,
+            create_video_output: false,
             tts_engine: TtsEngine::Edge,
             tts_voice: "it-IT-ElsaNeural".to_string(),
             tts_rate: 0,

@@ -31,6 +31,21 @@ class GeminiRetryTests(unittest.TestCase):
             all(call.args == (5,) for call in sleep_mock.call_args_list)
         )
 
+    def test_sonarpad_file_verification_failure_is_bounded_to_three_attempts(self):
+        error = RuntimeError(
+            "HTTP 502 Sonarpad AI request failed: file_verification_failed"
+        )
+        error.status_code = 502
+        operation = mock.Mock(side_effect=error)
+
+        with mock.patch.object(gemini_helpers.time, "sleep") as sleep_mock:
+            with self.assertRaises(RuntimeError) as raised:
+                gemini_helpers.run_with_retry(operation, operation_label="upload status check")
+
+        self.assertIs(raised.exception, error)
+        self.assertEqual(operation.call_count, 3)
+        self.assertEqual(sleep_mock.call_count, 2)
+
     def test_non_transient_failure_still_stops_immediately(self):
         operation = mock.Mock(side_effect=ValueError("invalid request"))
 

@@ -106,7 +106,10 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertIn("state.project.output_mp3_path", preview)
         self.assertIn("description.output_start_sec", preview)
         self.assertIn(".output_end_sec", preview)
-        self.assertIn("if draft != description.text || description.rendered_text != description.text", preview)
+        self.assertIn(
+            "ifdescription.extended_pause||draft!=description.text||description.rendered_text!=description.text{",
+            "".join(preview.split()),
+        )
         self.assertIn("start_draft_preview(hwnd, state, index, draft)", preview)
         self.assertIn("synthesize_audio_description_project_preview", PROJECT)
         self.assertIn("WM_PROJECT_DRAFT_PREVIEW_DONE", PROJECT)
@@ -154,12 +157,17 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
             AUDIO.index("pub fn save_audio_description_project")
         ]
         self.assertIn("description.rendered_text.is_empty()", loader)
-        apply_fn = AUDIO[
-            AUDIO.index("pub fn apply_audio_description_project_batch_edits"):
-            AUDIO.index("pub fn delete_audio_description_project_description")
+        prepare = AUDIO[
+            AUDIO.index("fn prepare_audio_description_project_batch_edits("):
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits(")
         ]
-        self.assertIn("description.text = text.clone()", apply_fn)
-        self.assertNotIn("description.rendered_text =", apply_fn)
+        apply_fn = AUDIO[
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits("):
+            AUDIO.index("pub fn apply_reanalyzed_audio_description_project_segment_and_reexport(")
+        ]
+        self.assertIn("description.text = text.clone()", prepare)
+        self.assertNotIn("description.rendered_text =", prepare + apply_fn)
+        self.assertIn("prepare_audio_description_project_batch_edits(", apply_fn)
         builder = AUDIO[
             AUDIO.index("fn build_audio_description_project"):
             AUDIO.index("pub fn load_audio_description_project")
@@ -178,15 +186,25 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertIn("save_audio_description_project(project_path, &updated)?", delete)
 
     def test_apply_synthesizes_checks_duration_then_saves_batch_once(self):
-        apply_fn = AUDIO[
-            AUDIO.index("pub fn apply_audio_description_project_batch_edits"):
-            AUDIO.index("pub fn delete_audio_description_project_description")
+        prepare = AUDIO[
+            AUDIO.index("fn prepare_audio_description_project_batch_edits("):
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits(")
         ]
-        synthesis = apply_fn.index("synthesize_description(")
-        duration_check = apply_fn.index("validate_audio_description_project_edit_duration(")
-        save = apply_fn.index("save_audio_description_project(project_path, &updated)")
+        apply_fn = AUDIO[
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits("):
+            AUDIO.index("pub fn apply_reanalyzed_audio_description_project_segment_and_reexport(")
+        ]
+        synthesis = prepare.index("synthesize_description(")
+        duration_check = prepare.index("validate_audio_description_project_edit_duration(")
         self.assertLess(synthesis, duration_check)
-        self.assertLess(duration_check, save)
+        self.assertLess(duration_check, prepare.index("validation_result?;"))
+        self.assertLess(prepare.index("validation_result?;"), prepare.index("description.text = text.clone()"))
+        self.assertNotIn("save_audio_description_project(", prepare)
+        self.assertLess(
+            apply_fn.index("prepare_audio_description_project_batch_edits("),
+            apply_fn.index("save_audio_description_project(project_path, &outcome.project)"),
+        )
+        self.assertIn("None,\n    )?;", apply_fn)
         self.assertIn("AudioDescriptionProjectEditError::TooLong", AUDIO)
         self.assertIn("start_apply(hwnd, state)", PROJECT)
         self.assertIn("WM_PROJECT_APPLY_DONE", PROJECT)
@@ -310,14 +328,21 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertIn("capture_current_draft(state)", apply)
         self.assertIn("state.drafts.get(&description.id)", apply)
         self.assertIn("apply_audio_description_project_batch_edits", apply)
-        batch = AUDIO[
-            AUDIO.index("pub fn apply_audio_description_project_batch_edits"):
-            AUDIO.index("pub fn change_audio_description_project_voice")
+        prepare = AUDIO[
+            AUDIO.index("fn prepare_audio_description_project_batch_edits("):
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits(")
         ]
-        self.assertIn("for (index, text) in &normalized_edits", batch)
-        self.assertIn("validate_audio_description_project_edit_duration(", batch)
-        self.assertEqual(batch.count("save_audio_description_project(project_path, &updated)"), 1)
-        self.assertIn("applied_count: normalized_edits.len()", batch)
+        batch = AUDIO[
+            AUDIO.index("pub fn apply_audio_description_project_batch_edits("):
+            AUDIO.index("pub fn apply_reanalyzed_audio_description_project_segment_and_reexport(")
+        ]
+        self.assertIn("normalized_edits.iter().enumerate()", prepare)
+        self.assertIn("for (index, text) in &normalized_edits", prepare)
+        self.assertIn("validate_audio_description_project_edit_duration(", prepare)
+        self.assertNotIn("save_audio_description_project(", prepare)
+        self.assertEqual(batch.count("save_audio_description_project("), 1)
+        self.assertIn("save_audio_description_project(project_path, &outcome.project)", batch)
+        self.assertIn("applied_count: normalized_edits.len()", prepare)
 
     def test_batch_apply_focuses_invalid_description_and_keeps_other_drafts(self):
         done = PROJECT[
@@ -451,7 +476,7 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertIn('show_audio_description_error_and_focus', prepare)
         self.assertNotIn('prompt_user(', prepare)
 
-    def test_project_voice_change_reuses_real_scheduler_and_rebuilds_mp3_atomically(self):
+    def test_project_voice_change_reuses_real_scheduler_and_rebuilds_output_atomically(self):
         self.assertIn('change_audio_description_project_voice', PROJECT)
         self.assertIn('WM_PROJECT_VOICE_DONE', PROJECT)
         self.assertIn('restore_project_voice_selection', PROJECT)
@@ -462,12 +487,13 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         ]
         synth = validation.index('synthesize_description_tasks_parallel(')
         schedule = validation.index('schedule_synthesized_descriptions(')
-        export = validation.index('export_audio_description_mp3(')
+        export = validation.index('export_audio_description_output(')
         project_save = validation.index('save_audio_description_project(&temporary_project, &updated)')
         commit = validation.index('commit_audio_description_pair(')
         self.assertLess(synth, schedule)
         self.assertLess(schedule, export)
         self.assertLess(export, project_save)
+        self.assertIn('project.output_is_video,', validation[export:project_save])
         self.assertLess(project_save, commit)
         self.assertIn('if let Some(first) = dropped.first()', validation)
         self.assertIn('AudioDescriptionProjectVoiceError::DoesNotFit', validation)
@@ -487,7 +513,7 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         ]
         self.assertEqual(validation.count('synthesize_description_tasks_parallel('), 1)
         schedule = validation.index('schedule_synthesized_descriptions(')
-        export = validation.index('export_audio_description_mp3(')
+        export = validation.index('export_audio_description_output(')
         between = validation[schedule:export]
         self.assertNotIn('synthesize_description_tasks_parallel(', between)
         self.assertIn('samples: description.samples.clone()', between)

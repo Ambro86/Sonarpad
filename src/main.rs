@@ -14042,6 +14042,13 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                         }
                         LRESULT(0)
                     }
+                    IDM_EDIT_JOIN_WRAPPED_LINES => {
+                        log_debug("Menu: Join wrapped lines");
+                        if editor_manager::join_wrapped_lines_active_edit(hwnd) {
+                            confirm_menu_action(hwnd, "edit.join_wrapped_lines");
+                        }
+                        LRESULT(0)
+                    }
                     IDM_EDIT_CLEAN_EOL_HYPHENS => {
                         log_debug("Menu: Clean EOL hyphens");
                         if editor_manager::clean_end_of_line_hyphens_active_edit(hwnd) {
@@ -21384,6 +21391,11 @@ fn create_accelerators() -> HACCEL {
                 fVirt: virt_shift,
                 key: 'J' as u16,
                 cmd: IDM_EDIT_JOIN_LINES as u16,
+            },
+            ACCEL {
+                fVirt: virt_alt_shift,
+                key: 'J' as u16,
+                cmd: IDM_EDIT_JOIN_WRAPPED_LINES as u16,
             },
             ACCEL {
                 fVirt: virt_alt,

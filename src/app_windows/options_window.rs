@@ -673,6 +673,10 @@ fn find_fixed_shortcut_conflict_label(
             labels.edit_join_lines,
         ),
         (
+            ShortcutBinding::new(false, true, true, 'J' as u16),
+            labels.edit_join_wrapped_lines,
+        ),
+        (
             ShortcutBinding::new(true, true, true, 'Y' as u16),
             labels.edit_text_stats,
         ),

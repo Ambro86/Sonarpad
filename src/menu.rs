@@ -63,6 +63,7 @@ pub const IDM_EDIT_OUTDENT: usize = 2029;
 pub const IDM_EDIT_FIND_PREVIOUS: usize = 2030;
 pub const IDM_EDIT_INSERT_ELLIPSIS: usize = 2031;
 pub const IDM_EDIT_SUMMARIZE_TEXT: usize = 2032;
+pub const IDM_EDIT_JOIN_WRAPPED_LINES: usize = 2033;
 pub const IDM_SPELLCHECK_SUGGESTION_BASE: usize = 12000;
 pub const IDM_SPELLCHECK_SUGGESTION_MAX: usize = 10;
 pub const IDM_SPELLCHECK_ADD_TO_DICTIONARY: usize = 12100;
@@ -295,6 +296,7 @@ pub struct MenuLabels {
     pub edit_outdent: String,
     pub edit_text_stats: String,
     pub edit_join_lines: String,
+    pub edit_join_wrapped_lines: String,
     pub edit_clean_eol_hyphens: String,
     pub edit_remove_duplicate_lines: String,
     pub edit_remove_duplicate_consecutive_lines: String,
@@ -457,6 +459,7 @@ pub fn menu_labels(language: Language) -> MenuLabels {
         edit_outdent: i18n::tr(language, "edit.outdent"),
         edit_text_stats: i18n::tr(language, "edit.text_stats"),
         edit_join_lines: i18n::tr(language, "edit.join_lines"),
+        edit_join_wrapped_lines: i18n::tr(language, "edit.join_wrapped_lines"),
         edit_clean_eol_hyphens: i18n::tr(language, "edit.clean_eol_hyphens"),
         edit_remove_duplicate_lines: i18n::tr(language, "edit.remove_duplicate_lines"),
         edit_remove_duplicate_consecutive_lines: i18n::tr(
@@ -1139,6 +1142,10 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             label_with_shortcut(&labels.edit_quote_lines, shortcuts.quote_lines);
         labels.edit_unquote_lines =
             label_with_shortcut(&labels.edit_unquote_lines, shortcuts.unquote_lines);
+        labels.edit_join_wrapped_lines = label_with_shortcut(
+            &labels.edit_join_wrapped_lines,
+            ShortcutBinding::new(false, true, true, 'J' as u16),
+        );
 
         append_menu_string(file_menu, MF_STRING, IDM_FILE_NEW, &labels.file_new);
         append_menu_string(file_menu, MF_STRING, IDM_FILE_OPEN, &labels.file_open);
@@ -1246,6 +1253,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             MF_STRING,
             IDM_EDIT_JOIN_LINES,
             &labels.edit_join_lines,
+        );
+        append_menu_string(
+            text_menu,
+            MF_STRING,
+            IDM_EDIT_JOIN_WRAPPED_LINES,
+            &labels.edit_join_wrapped_lines,
         );
         append_menu_string(
             text_menu,
@@ -2147,6 +2160,7 @@ mod tests {
             edit_normalize_whitespace,
             edit_hard_line_break,
             edit_join_lines,
+            edit_join_wrapped_lines,
             edit_clean_eol_hyphens,
             edit_order_items,
             edit_keep_unique_items,

@@ -1,5 +1,29 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.7 – 2026-09-11
+
+Mô tả âm thanh bằng AI
+1. Đã thêm tùy chọn tạo mô tả âm thanh trong tệp video gốc. Khi bật, Sonarpad giờ ưu tiên MP4: luồng video gốc được sao chép mà không mã hóa lại và bản âm thanh mô tả đã trộn được chèn vào. Nếu FFmpeg báo lỗi tương thích vùng chứa hoặc ghi gói khi tạo MP4, Sonarpad tự động thử lại cùng lần xuất dưới dạng MKV, vẫn không mã hóa lại video. Người dùng cũng có thể chọn MKV trực tiếp. Các khoảng dừng mở rộng bị bỏ qua trong chế độ này để giữ âm thanh và video đồng bộ.
+
+2. Cải thiện việc phân tích lại phân đoạn trong các dự án mô tả âm thanh đã lưu. Cửa sổ giờ sử dụng quyền truy cập AI đã được cấu hình trong cửa sổ chính Tạo mô tả âm thanh, vì vậy không còn lặp lại khóa API, số dư Sonarpad AI và lựa chọn mô hình. Một phân đoạn được phân tích lại giờ giữ toàn bộ nhóm mô tả của dự án thuộc cùng đoạn phân tích thay vì chỉ mô tả đầu tiên hoặc gần nhất; tất cả mô tả trong nhóm đều được đánh dấu là đã phân tích lại và “Áp dụng phân đoạn và xuất lại MP3” áp dụng toàn bộ nhóm trong một lần. Bản xem trước của các khoảng dừng mở rộng giờ được tổng hợp trực tiếp thay vì tìm vị trí trong MP3 đã xuất, tránh trường hợp xem trước bắt đầu bằng âm thanh phim hoặc cắt mất phần mô tả.
+
+3. Đã cải thiện cơ chế dự phòng thận trọng cho media Gemini mà không thay đổi quy trình đang hoạt động. HTTP 400 `INVALID_ARGUMENT` vẫn kích hoạt các đoạn MKV nhỏ hơn (khoảng 15 MB), sau đó là các đoạn MP4 tương thích. Nếu Gemini chấp nhận đoạn đã tải lên nhưng quá trình xử lý kết thúc ở trạng thái `FAILED`, Sonarpad tải lại chính đoạn đó một lần rồi mới chuyển sang MP4; các lần thử lại do Code 13 của máy chủ được giới hạn ở ba trước khi dùng cùng cơ chế dự phòng, tránh chờ vô hạn. Lỗi mạng, hạn mức, xác thực hoặc tổng hợp không kích hoạt đường này.
+
+4. Đã sửa việc lưu thông tin truy cập AI khi chuyển chế độ. Khóa API Gemini cá nhân và mã truy cập Sonarpad AI giờ được lưu độc lập: chuyển giữa Khóa API cá nhân và Sonarpad AI không còn xóa thông tin của chế độ không hoạt động. Khóa Gemini cũng được lưu khi trường nhập mất tiêu điểm.
+
+5. Đã thêm nút Hủy thực sự cho “Phân tích lại phân đoạn” và “Áp dụng phân đoạn và xuất lại MP3”. Thanh tiến trình vẫn hoạt động, còn Hủy giờ sẽ dừng việc chuẩn bị phân đoạn bằng FFmpeg, tiến trình AI, kiểm tra TTS và lần xuất cuối ngay khi giai đoạn hiện tại có thể dừng an toàn. Việc áp dụng một phân đoạn đã phân tích lại giờ mang tính giao dịch: dự án và tệp phương tiện hiện có chỉ được thay thế sau khi xuất lại thành công; nếu hủy, các tệp trước đó vẫn giữ nguyên và đề xuất phân tích lại vẫn còn để thử lại.
+
+6. Đã sửa việc phân tích lại phân đoạn cho các mô tả nằm ngoài chunk Gemini đầu tiên. Chunk riêng lẻ giờ được gửi tới worker hiện có với dòng thời gian cục bộ bắt đầu từ 0, sau đó được ánh xạ trở lại vị trí tuyệt đối trong dự án, tránh lỗi `Invalid prepared chunk timeline at chunk 1` mà không thay đổi quy trình mô tả âm thanh thông thường.
+
+7. Việc phân tích lại đoạn trong dự án đã lưu được làm lại để dùng cùng các kiểm tra an toàn như khi tạo mô tả âm thanh đầy đủ. Đoạn được chọn giờ trải qua cùng bước trích xuất âm thanh mono 16 kHz và phân tích lời thoại/khoảng lặng bằng Pyannote, cùng quy tắc thời gian và cơ chế dự phòng Gemini, cùng tổng hợp TTS thực tế bằng giọng của dự án và cùng bộ lập lịch cuối để đặt an toàn và dùng khoảng dừng kéo dài. Khi áp dụng đoạn, Sonarpad giữ các mốc thời gian tuyệt đối mới đã được kiểm tra và cập nhật vùng bảo vệ Pyannote của đoạn đó; giải pháp xem trước đặc biệt trước đây cho văn bản phân tích lại quá dài đã bị loại bỏ.
+
+8. Đã sửa việc thay thế cấu trúc của đoạn sau khi phân tích lại đầy đủ. Sonarpad không còn yêu cầu đoạn vừa được kiểm tra phải có đúng cùng số mô tả như dự án đã lưu: các mô tả cũ trong chunk được thay bằng toàn bộ kết quả an toàn của quy trình đầy đủ, vì vậy một đoạn có 10 mô tả có thể đúng đắn trở thành 9 (hoặc 11). Trình chỉnh sửa dự án hiển thị ngay số lượng và thời gian mới để nghe thử, còn dự án và tệp phương tiện đã lưu không thay đổi cho đến khi áp dụng đoạn và xuất lại MP3 hoàn tất thành công.
+
+9. Đã làm lại việc phân tích lại đoạn để coi phần vật lý được chọn như một bộ phim nhỏ độc lập thực sự. Sonarpad giờ chuyển trực tiếp bộ phim nhỏ này vào chính xác cùng hàm `create_audio_description` được dùng khi tạo đầy đủ bình thường, nhờ đó video và đường âm thanh dùng chung một dòng thời gian cục bộ và các kiểm tra Pyannote, Gemini, TTS thực, bộ lập lịch và an toàn thông thường chạy mà không có một triển khai phân tích lại riêng. Chỉ sau khi quy trình bình thường hoàn tất, các thời gian cục bộ mới được cộng độ lệch để trở về vị trí ban đầu trong phim.
+
+Chỉnh sửa văn bản
+1. Đã cải tiến “Nối các dòng bị ngắt” trong Chỉnh sửa > Văn bản. Khi không có vùng chọn, lệnh xử lý toàn bộ tài liệu; khi có vùng chọn, lệnh chỉ xử lý các dòng đã chọn. Giờ đây lệnh dựng lại các đoạn văn hoàn chỉnh bằng cách nối các dòng liên tiếp ngay cả khi một câu đã kết thúc bằng dấu câu; dòng trống vẫn là ranh giới đoạn và danh sách đánh số hoặc dấu đầu dòng được giữ nguyên.
+
 Phiên bản 0.9.6 – 2026-09-09
 
 1. Đã sửa lỗi treo ở một số giọng SAPI4 khi bật tính năng di chuyển con trỏ theo lời đọc. Cầu nối giờ chờ tổng hợp giọng nói hoàn tất thực sự và vẫn giữ tính năng theo dõi con trỏ.
@@ -791,3 +815,6 @@ Cải tiến
 
 ## 0.1.0 - 2025-12-25
 - Phiên bản phát hành đầu tiên: Cấu trúc dự án và tệp README.
+
+10. Fixed segment reanalysis timing when mapping an independently analyzed mini-film back to the original movie. Sonarpad now applies the same small chunk-duration reconciliation used by the normal full analysis to descriptions, visual-evidence timestamps, and protected dialogue intervals, preventing progressive sub-second drift near the end of a chunk from moving narration onto speech.
+

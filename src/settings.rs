@@ -883,6 +883,8 @@ pub struct AppSettings {
     #[serde(default)]
     pub audio_description_save_project: bool,
     #[serde(default)]
+    pub audio_description_create_video: bool,
+    #[serde(default)]
     pub audio_description_delete_video_after: bool,
     #[serde(default)]
     pub audio_description_after_tv_recording: bool,
@@ -1377,6 +1379,7 @@ impl Default for AppSettings {
             audio_description_keep_character_catalog: false,
             audio_description_character_catalog: String::new(),
             audio_description_save_project: false,
+            audio_description_create_video: false,
             audio_description_delete_video_after: false,
             audio_description_after_tv_recording: false,
             youtube_include_timestamps: true,
@@ -3850,6 +3853,7 @@ mod audio_description_save_folder_tests {
         assert!(!settings.audio_description_keep_character_catalog);
         assert!(settings.audio_description_character_catalog.is_empty());
         assert!(!settings.audio_description_save_project);
+        assert!(!settings.audio_description_create_video);
         assert!(!settings.audio_description_delete_video_after);
         assert!(!settings.audio_description_after_tv_recording);
     }

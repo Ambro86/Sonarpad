@@ -1,5 +1,29 @@
 # Dnevnik izmena
 
+Verzija 0.9.7 – 2026-09-11
+
+AI audio opis
+1. Додата је опциона могућност креирања аудио-дескрипције у оригиналној видео датотеци. Када је укључена, Sonarpad сада прво бира MP4: оригинални видео ток се копира без поновног кодирања и додаје се мешана трака аудио-дескрипције. Ако FFmpeg при креирању MP4 пријави некомпатибилност контејнера или уписа пакета, Sonarpad аутоматски понови исти извоз као MKV, и даље без поновног кодирања видеа. MKV се може изабрати и ручно. Продужене паузе се у овом режиму игноришу да би звук и видео остали синхронизовани.
+
+2. Poboljšana je ponovna analiza segmenata u sačuvanim projektima audio-deskripcije. Prozor sada koristi AI pristup koji je već podešen u glavnom prozoru za kreiranje audio-deskripcije, pa se više ne dupliraju API ključ, Sonarpad AI kredit i izbor modela. Ponovo analizirani segment sada zadržava celu grupu opisa projekta koji pripadaju istom segmentu analize, umesto samo prvog ili najbližeg opisa; svi opisi u grupi dobijaju oznaku da su ponovo analizirani, a „Primeni segment i ponovo izvezi MP3“ primenjuje celu grupu odjednom. Pregledi produženih pauza sada se sintetišu direktno umesto traženja pozicije u izvezenom MP3 fajlu, čime se izbegava da pregled počne zvukom filma ili da odseče opis.
+
+3. Poboljšan je konzervativni rezervni postupak za Gemini medije bez menjanja postojećeg toka koji već radi. HTTP 400 `INVALID_ARGUMENT` i dalje aktivira manje MKV segmente (oko 15 MB), a zatim kompatibilne MP4 segmente. Ako Gemini prihvati poslati segment, ali se obrada završi stanjem `FAILED`, Sonarpad ponovo šalje potpuno isti segment jednom i tek zatim prelazi na MP4; pokušaji za serverski Code 13 ograničeni su na tri pre istog fallbacka, čime se izbegava beskonačno čekanje. Mrežne, kvota, autentifikacione ili greške sinteze ne aktiviraju ovaj put.
+
+4. Исправљено је чување AI приступних података при промени режима приступа. Лични Gemini API кључ и Sonarpad AI приступни код сада се чувају независно: прелазак између личног API кључа и Sonarpad AI више не брише неактивни приступни податак. Gemini кључ се такође чува када његово поље изгуби фокус.
+
+5. Додато је право дугме Откажи за „Поново анализирај сегмент“ и „Примени сегмент и поново извези MP3“. Трака напретка остаје активна, а Откажи сада прекида FFmpeg припрему сегмента, AI worker, TTS проверу и завршни извоз чим текућа фаза може безбедно да се заустави. Примена поново анализираног сегмента сада је трансакциона: постојећи пројекат и излазни медиј замењују се тек после успешног поновног извоза; ако се операција откаже, претходне датотеке остају неизмењене, а предлог поновне анализе остаје доступан за нови покушај.
+
+6. Ispravljena je ponovna analiza segmenata za opise izvan prvog Gemini segmenta. Izdvojeni segment se sada šalje postojećem worker-u sa lokalnom vremenskom linijom koja počinje od 0, a zatim se vraća na apsolutnu poziciju u projektu, čime se izbegava `Invalid prepared chunk timeline at chunk 1` bez promene normalnog toka audio-deskripcije.
+
+7. Ponovna analiza segmenata u sačuvanim projektima sada koristi iste bezbednosne provere kao potpuno pravljenje audio-deskripcije. Izabrani segment prolazi kroz isto izdvajanje mono zvuka od 16 kHz i Pyannote analizu dijaloga/tišine, ista vremenska pravila i Gemini rezervne putanje, istu stvarnu TTS sintezu glasom projekta i isti završni raspoređivač za bezbedno postavljanje i produžene pauze. Pri primeni segmenta Sonarpad zadržava nova proverena apsolutna vremena i osvežava Pyannote zaštitu za taj segment; prethodno posebno zaobilaženje pregleda za predugačak ponovo analiziran tekst je uklonjeno.
+
+8. Ispravljena je strukturna zamena segmenta posle potpune ponovne analize. Sonarpad više ne zahteva da novo provereni segment ima potpuno isti broj opisa kao sačuvani projekat: stari opisi tog segmenta zamenjuju se kompletnim bezbednim rezultatom pune obrade, pa segment sa 10 opisa može ispravno postati 9 (ili 11). Uređivač odmah prikazuje novi broj i nova vremena za pregled, dok sačuvani projekat i medijska datoteka ostaju nepromenjeni sve dok primena segmenta i ponovni izvoz MP3 ne budu uspešno završeni.
+
+9. Ponovna analiza segmenta je prerađena tako da se izabrani fizički isečak tretira kao pravi samostalni mini-film. Sonarpad sada taj mini-film prosleđuje direktno potpuno istoj funkciji `create_audio_description` koja se koristi pri normalnom kompletnom kreiranju, pa video i audio zapis dele istu lokalnu vremensku osu, a uobičajene Pyannote, Gemini, stvarni TTS, raspoređivanje i bezbednosne provere rade bez posebne implementacije ponovne analize. Tek po završetku normalne obrade dobijena lokalna vremena se pomeraju nazad na originalnu poziciju u filmu.
+
+Uređivanje teksta
+1. Poboljšana je opcija „Spoji prelomljene redove“ u Uredi > Tekst. Bez izbora obrađuje ceo dokument, a sa izborom samo označene redove. Sada rekonstruiše cele pasuse spajanjem uzastopnih redova čak i kada se rečenica završava interpunkcijom; prazni redovi ostaju razdvajači pasusa, a numerisane i označene liste se čuvaju.
+
 Verzija 0.9.6 – 2026-09-09
 
 1. Ispravljeno je blokiranje nekih SAPI4 glasova kada je praćenje kursora uključeno. Bridge sada čeka stvarni završetak sinteze, dok praćenje kursora ostaje aktivno.
@@ -804,3 +828,6 @@ Poboljšanja
 
 ## 0.1.0 - 2025-12-25
 - Prvo izdanje: struktura projekta i README.
+
+10. Fixed segment reanalysis timing when mapping an independently analyzed mini-film back to the original movie. Sonarpad now applies the same small chunk-duration reconciliation used by the normal full analysis to descriptions, visual-evidence timestamps, and protected dialogue intervals, preventing progressive sub-second drift near the end of a chunk from moving narration onto speech.
+

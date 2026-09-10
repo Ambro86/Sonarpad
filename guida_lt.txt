@@ -140,6 +140,10 @@ Sonarpad kataloge saugo informaciją apie veikėjus, kad pagerintų atpažinimo 
 
 Dar kartą paspaudę Tab rasite Taip pat išsaugoti projektą būsimiems pakeitimams. Įjunkite šią parinktį, jei žinote, kad vėliau norėsite peržiūrėti garsinį vaizdavimą, pataisyti aprašus ar pakeisti balsą.
 
+Žymimasis langelis Sukurti garsinį vaizdavimą originaliame vaizdo faile leidžia iš karto gauti vaizdo failą su jau įterptu garsiniu vaizdavimu, o ne tik MP3 failą. Kai ši parinktis įjungta, Sonarpad išsaugo originalų vaizdo įrašą ir prideda sugeneruotus aprašus prie jo garso takelio, be reikalo neperkoduodamas vaizdo. Numatytasis formatas yra MP4, tačiau įrašymo lange taip pat galima pasirinkti MKV. Originalus vaizdo failas niekada neperrašomas.
+
+Kai tiesiogiai kuriate vaizdo įrašą su garsiniu vaizdavimu, išplėstos pauzės nenaudojamos, nes jos pakeistų filmo trukmę ir sinchronizaciją. Todėl Sonarpad įterpia aprašus tik į originaliame garso takelyje esančias laisvas vietas.
+
 Parinktis Perkelti vaizdo failą į Šiukšlinę po garsinio vaizdavimo skirta tada, kai po garsiniu vaizdavimu papildyto MP3 sukūrimo nenorite išsaugoti pradinio vaizdo įrašo. Pagal numatytuosius nustatymus ji išjungta ir pasiekiama, kai neįjungtas projekto išsaugojimas, nes redaguojamam projektui vis dar reikia pradinio vaizdo failo.
 
 Toliau rasite Gemini API raktą. Čia įveskite savo API raktą. Raktą galima sukurti nemokamai. Naudodami Tab pereisite prie mygtuko Gauti API raktą, kuris naršyklėje atidaro Google puslapį, kuriame prisijungę prie paskyros galite susikurti raktą. Paprastai tai trunka labai trumpai.
@@ -149,6 +153,12 @@ Po API rakto rasite Gemini modelį ir mygtuką Atnaujinti modelių sąrašą. Da
 Dar kartą paspaudę Tab rasite Kalbos sintezės modulį ir Balsą, kuriuos galite keisti pagal savo pageidavimus.
 
 Toliau rasite Keisti garsinio vaizdavimo projektą. Ši funkcija leidžia iš naujo atidaryti ir redaguoti anksčiau išsaugotą projektą. Svarbu: projektui redaguoti pradinis vaizdo failas turi būti vis dar prieinamas.
+
+Lange Keisti garsinio vaizdavimo projektą taip pat yra Iš naujo analizuoti segmentą. Ši funkcija naudinga, kai vienas ar keli tam tikros filmo dalies aprašai jūsų netenkina ir norite paprašyti Gemini dar kartą išanalizuoti tą sritį, nekuriant viso garsinio vaizdavimo iš naujo.
+
+Pasirinkite aprašą, priklausantį sričiai, kurią norite peržiūrėti, ir aktyvinkite Iš naujo analizuoti segmentą. Sonarpad dar kartą analizuoja vaizdo segmentą, kuriame yra tas aprašas, ir pasiūlo naujus tekstus, išlaikydamas projekte jau išsaugotus laikus ir laisvas vietas. Baigus pakartotinę analizę, naujos segmento balso peržiūros jau būna paruoštos: galite judėti tarp aprašų ir paspausti tarpo klavišą, kad iš karto jų klausytumėte kartu su originaliu garsu.
+
+Paveikti aprašai pažymimi kaip segmentas iš naujo išanalizuotas. Pakartotinė analizė lieka tik pasiūlymu, kol nepasirenkate Pritaikyti segmentą ir iš naujo eksportuoti MP3. Tik tada Sonarpad pritaiko naujus aprašus projektui ir iš naujo sukuria failą su garsiniu vaizdavimu. Jei segmento nepritaikote, išsaugotas projektas lieka nepakeistas.
 
 Po to rasite Tęsti nutrauktą garsinį vaizdavimą. Sonarpad sukurtas taip, kad neprarastų jau atlikto darbo: jei kūrimo metu nutrūksta ryšys, Gemini susiduria su problema arba procesas nutraukiamas, Sonarpad periodiškai išsaugo pažangos taškus. Naudodami šią funkciją galite tęsti pradėtą darbą nepradėdami iš naujo.
 

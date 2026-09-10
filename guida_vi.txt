@@ -156,6 +156,10 @@ Sonarpad lưu thông tin về nhân vật trong danh mục để cải thiện t
 
 Nhấn Tab lần nữa để đến Cũng lưu dự án để chỉnh sửa sau này. Hãy bật tùy chọn này nếu bạn biết rằng sau đó mình sẽ muốn xem lại phần thuyết minh, sửa mô tả hoặc thay đổi giọng.
 
+Hộp kiểm Tạo mô tả âm thanh trong tệp video gốc cho phép bạn nhận trực tiếp một tệp video đã có phần mô tả âm thanh, thay vì chỉ có tệp MP3. Khi tùy chọn này được bật, Sonarpad giữ nguyên video gốc và thêm các mô tả đã tạo vào rãnh âm thanh mà không mã hóa lại video một cách không cần thiết. Định dạng mặc định là MP4, nhưng trong cửa sổ lưu bạn cũng có thể chọn MKV. Tệp video gốc không bao giờ bị ghi đè.
+
+Khi tạo trực tiếp video có mô tả âm thanh, các khoảng dừng mở rộng không được sử dụng vì chúng sẽ làm thay đổi thời lượng và sự đồng bộ của phim. Vì vậy Sonarpad chỉ chèn các mô tả vào những khoảng trống có sẵn trong rãnh âm thanh gốc.
+
 Hộp kiểm Chuyển tệp video vào Thùng rác sau khi tạo mô tả âm thanh dùng khi bạn không muốn giữ video gốc sau khi MP3 có thuyết minh đã được tạo. Tùy chọn này mặc định bị tắt và chỉ khả dụng khi không bật lưu dự án, vì một dự án có thể chỉnh sửa vẫn cần video gốc.
 
 Tiếp theo bạn sẽ thấy Khóa API Gemini. Nhập khóa API của bạn tại đây. Khóa có thể được tạo miễn phí. Dùng Tab để đến nút Lấy khóa API; nút này mở trang Google trong trình duyệt, nơi bạn có thể tạo khóa sau khi đăng nhập bằng tài khoản của mình. Thông thường quy trình này rất nhanh.
@@ -165,6 +169,12 @@ Sau khóa API bạn sẽ thấy Mô hình Gemini và nút Làm mới danh sách 
 Nhấn Tab lần nữa để đến Công cụ tổng hợp giọng nói và Giọng, có thể thay đổi theo sở thích của bạn.
 
 Ở phần sau bạn sẽ thấy Sửa dự án thuyết minh hình ảnh. Chức năng này cho phép mở lại và chỉnh sửa một dự án đã lưu trước đó. Lưu ý: để chỉnh sửa dự án, tệp video gốc vẫn phải còn khả dụng.
+
+Trong cửa sổ Sửa dự án thuyết minh hình ảnh cũng có Phân tích lại đoạn. Chức năng này hữu ích khi một hoặc nhiều mô tả trong một phần của phim chưa làm bạn hài lòng và bạn muốn yêu cầu Gemini phân tích lại khu vực đó mà không phải tạo lại toàn bộ phần mô tả âm thanh.
+
+Chọn một mô tả thuộc khu vực bạn muốn xem lại rồi kích hoạt Phân tích lại đoạn. Sonarpad phân tích lại đoạn video chứa mô tả đó và đề xuất văn bản mới trong khi vẫn giữ nguyên thời gian và các khoảng trống đã lưu trong dự án. Khi việc phân tích lại hoàn tất, các bản xem trước giọng nói mới của đoạn đã được chuẩn bị sẵn: bạn có thể di chuyển giữa các mô tả và nhấn Phím cách để nghe ngay cùng với âm thanh gốc.
+
+Các mô tả liên quan được đánh dấu là đoạn đã được phân tích lại. Kết quả phân tích lại chỉ là đề xuất cho đến khi bạn chọn Áp dụng đoạn và xuất lại MP3. Chỉ lúc đó Sonarpad mới áp dụng các mô tả mới vào dự án và tạo lại tệp có mô tả âm thanh. Nếu bạn không áp dụng đoạn, dự án đã lưu vẫn không thay đổi.
 
 Tiếp theo là Tiếp tục mô tả âm thanh bị gián đoạn. Sonarpad được thiết kế để không làm mất công việc đã hoàn thành: nếu kết nối bị gián đoạn trong khi tạo, Gemini gặp sự cố hoặc tiến trình bị dừng, Sonarpad định kỳ lưu các điểm tiến độ. Với chức năng này bạn có thể tiếp tục công việc đang làm mà không phải bắt đầu lại từ đầu.
 

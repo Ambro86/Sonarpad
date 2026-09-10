@@ -84,6 +84,7 @@ const ID_SONARPAD_SHOW_CODE: usize = 9680;
 const ID_SONARPAD_BALANCE: usize = 9681;
 const ID_VOICE_SETTINGS: usize = 9682;
 const ID_RECOGNIZE_SCREEN_TEXT: usize = 9683;
+const ID_CREATE_VIDEO: usize = 9684;
 const EM_SETPASSWORDCHAR: u32 = 0x00CC;
 const SONARPAD_AI_SERVICE_URL: &str = "https://sonarpad.com/sonarpad-ai";
 
@@ -121,6 +122,7 @@ struct Labels {
     character_catalog_new_name_label: String,
     character_catalog_name_error: String,
     save_project: String,
+    create_video: String,
     delete_video_after: String,
     modify_project: String,
     ai_access: String,
@@ -189,6 +191,7 @@ struct WindowState {
     character_catalog_name_edit: HWND,
     character_catalogs: Vec<AudioDescriptionCharacterCatalogSummary>,
     save_project_checkbox: HWND,
+    create_video_checkbox: HWND,
     delete_video_after_checkbox: HWND,
     ai_personal_radio: HWND,
     ai_sonarpad_radio: HWND,
@@ -547,6 +550,7 @@ fn labels(language: Language) -> Labels {
             "audio_description.character_catalog.name_error",
         ),
         save_project: i18n::tr(language, "audio_description.save_project"),
+        create_video: i18n::tr(language, "audio_description.create_video"),
         delete_video_after: i18n::tr(language, "audio_description.delete_video_after"),
         modify_project: i18n::tr(language, "audio_description.modify_project"),
         ai_access: i18n::tr(language, "audio_description.ai_access"),
@@ -972,12 +976,13 @@ fn configured_output_folder(parent: HWND) -> PathBuf {
     folder
 }
 
-fn default_output(parent: HWND, input: &Path) -> PathBuf {
+fn default_output(parent: HWND, input: &Path, create_video: bool) -> PathBuf {
     let stem = input
         .file_stem()
         .and_then(|value| value.to_str())
         .unwrap_or("audio");
-    configured_output_folder(parent).join(format!("{stem}_audiodescritto.mp3"))
+    let extension = if create_video { "mp4" } else { "mp3" };
+    configured_output_folder(parent).join(format!("{stem}_audiodescritto.{extension}"))
 }
 
 fn open_input_dialog(parent: HWND, language: Language, labels: &Labels) -> Option<PathBuf> {
@@ -1009,12 +1014,27 @@ fn open_output_dialog(
     language: Language,
     labels: &Labels,
     initial: &Path,
+    create_video: bool,
 ) -> Option<PathBuf> {
     unsafe {
         let all_files = i18n::tr(language, "dialog.all_files");
-        let filter = to_wide(&format!("MP3 (*.mp3)\0*.mp3\0{} (*.*)\0*.*\0\0", all_files));
+        let (filter_text, default_ext) = if create_video {
+            (
+                format!(
+                    "MP4 video (*.mp4)\0*.mp4\0Matroska video (*.mkv)\0*.mkv\0{} (*.*)\0*.*\0\0",
+                    all_files
+                ),
+                "mp4",
+            )
+        } else {
+            (
+                format!("MP3 (*.mp3)\0*.mp3\0{} (*.*)\0*.*\0\0", all_files),
+                "mp3",
+            )
+        };
+        let filter = to_wide(&filter_text);
         let title = to_wide(&labels.save_title);
-        let extension = to_wide("mp3");
+        let extension = to_wide(default_ext);
         let mut buffer = [0_u16; 2048];
         let initial_wide = to_wide(&initial.to_string_lossy());
         let copy_len = initial_wide.len().min(buffer.len() - 1);
@@ -1036,7 +1056,7 @@ fn open_output_dialog(
         let len = buffer.iter().position(|value| *value == 0)?;
         let mut path = PathBuf::from(String::from_utf16_lossy(&buffer[..len]));
         if path.extension().is_none() {
-            path.set_extension("mp3");
+            path.set_extension(default_ext);
         }
         Some(path)
     }
@@ -1428,8 +1448,13 @@ fn persist_audio_description_preferences(state: &WindowState) {
         recognize_characters && checkbox_checked(state.keep_character_catalog_checkbox);
     let character_catalog = selected_character_catalog_name(state);
     let save_project = checkbox_checked(state.save_project_checkbox);
+    let create_video = checkbox_checked(state.create_video_checkbox);
     let delete_video_after = checkbox_checked(state.delete_video_after_checkbox);
     let use_sonarpad_ai = using_sonarpad_ai(state);
+    // Keep the credentials for both AI access modes independently persisted.
+    // Switching modes must never erase the inactive credential.
+    let gemini_api_key = get_text(state.gemini_api_key_edit).trim().to_string();
+    let gemini_model = get_text(state.gemini_model_combo).trim().to_string();
     let sonarpad_ai_access_code = get_text(state.sonarpad_code_edit).trim().to_string();
     if with_state(state.parent, |app| {
         app.settings.audio_description_language = Some(description_language);
@@ -1450,8 +1475,13 @@ fn persist_audio_description_preferences(state: &WindowState) {
         app.settings.audio_description_keep_character_catalog = keep_character_catalog;
         app.settings.audio_description_character_catalog = character_catalog;
         app.settings.audio_description_save_project = save_project;
+        app.settings.audio_description_create_video = create_video;
         app.settings.audio_description_delete_video_after = delete_video_after;
         app.settings.audio_description_use_sonarpad_ai = use_sonarpad_ai;
+        app.settings.gemini_api_key = gemini_api_key;
+        if !gemini_model.is_empty() {
+            app.settings.audio_description_gemini_model = gemini_model;
+        }
         app.settings.sonarpad_ai_access_code = sonarpad_ai_access_code;
         save_settings(app.settings.clone());
     })
@@ -1468,6 +1498,28 @@ fn update_delete_video_visibility(state: &WindowState) {
             state.delete_video_after_checkbox,
             if save_project { SW_HIDE } else { SW_SHOW },
         );
+    }
+}
+
+fn update_video_output_mode(state: &WindowState) {
+    let create_video = checkbox_checked(state.create_video_checkbox);
+    unsafe {
+        // Extended pauses change the audio timeline. Keep the user's preference intact,
+        // but disable the control and ignore it while fast video output is selected.
+        EnableWindow(state.extended_checkbox, !create_video && !state.running);
+    }
+    let output_text = get_text(state.output);
+    if !output_text.trim().is_empty() {
+        let mut output = PathBuf::from(output_text.trim());
+        let extension = output
+            .extension()
+            .and_then(|value| value.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if extension.is_empty() || extension == "mp3" || extension == "mkv" || extension == "mp4" {
+            output.set_extension(if create_video { "mp4" } else { "mp3" });
+            set_path(state.output, &output);
+        }
     }
 }
 
@@ -1849,6 +1901,7 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
             } else {
                 update_character_catalog_visibility(state);
                 update_delete_video_visibility(state);
+                update_video_output_mode(state);
                 update_ai_access_visibility(state);
                 SetFocus(state.start_button);
             }
@@ -2067,11 +2120,24 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
             show_audio_description_error_and_focus(hwnd, state, &labels.error_input, state.input);
             return;
         }
+        let create_video_output = checkbox_checked(state.create_video_checkbox);
         let mut output = PathBuf::from(get_text(state.output).trim());
         if output.as_os_str().is_empty() {
-            output = default_output(state.parent, &input);
-            set_path(state.output, &output);
+            output = default_output(state.parent, &input, create_video_output);
         }
+        if create_video_output {
+            let extension = output
+                .extension()
+                .and_then(|value| value.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            if extension != "mp4" && extension != "mkv" {
+                output.set_extension("mp4");
+            }
+        } else {
+            output.set_extension("mp3");
+        }
+        set_path(state.output, &output);
         if output.as_os_str().is_empty() {
             show_audio_description_error_and_focus(hwnd, state, &labels.error_output, state.output);
             return;
@@ -2139,7 +2205,7 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
         }
 
         let description_language = language_from_combo(state.language_combo);
-        let extended = checkbox_checked(state.extended_checkbox);
+        let extended = checkbox_checked(state.extended_checkbox) && !create_video_output;
         let recognize_characters = checkbox_checked(state.recognize_characters_checkbox);
         let character_catalog = match prepare_character_catalog(hwnd, state, &labels) {
             Ok(CharacterCatalogPreparation::Disabled) => None,
@@ -2169,6 +2235,7 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
             recognize_screen_text: checkbox_checked(state.recognize_screen_text_checkbox),
             character_catalog,
             save_project,
+            create_video_output,
             tts_engine: engine_from_combo(state.engine_combo),
             tts_voice: voice,
             tts_rate: state.tts_rate,
@@ -2325,6 +2392,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     selected_character_catalog,
                     audio_description_save_folder,
                     save_project,
+                    create_video,
                     delete_video_after,
                 ) = with_state(parent, |state| {
                     (
@@ -2356,6 +2424,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         state.settings.audio_description_character_catalog.clone(),
                         state.settings.audio_description_save_folder.clone(),
                         state.settings.audio_description_save_project,
+                        state.settings.audio_description_create_video,
                         state.settings.audio_description_delete_video_after,
                     )
                 })
@@ -2378,6 +2447,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     false,
                     String::new(),
                     default_audio_description_save_folder(),
+                    false,
                     false,
                     false,
                 ));
@@ -2686,7 +2756,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     16,
                     332,
-                    650,
+                    324,
                     24,
                     hwnd,
                     HMENU(ID_SAVE_PROJECT as isize),
@@ -2703,6 +2773,34 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     }),
                     LPARAM(0),
                 );
+
+                let create_video_checkbox = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.create_video).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
+                    350,
+                    332,
+                    316,
+                    24,
+                    hwnd,
+                    HMENU(ID_CREATE_VIDEO as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                SendMessageW(
+                    create_video_checkbox,
+                    BM_SETCHECK,
+                    WPARAM(if create_video {
+                        BST_CHECKED.0 as usize
+                    } else {
+                        0
+                    }),
+                    LPARAM(0),
+                );
+                if create_video {
+                    EnableWindow(extended_checkbox, false);
+                }
 
                 let recognize_screen_text_checkbox = CreateWindowExW(
                     Default::default(),
@@ -3173,6 +3271,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     character_catalog_name_label,
                     character_catalog_name_edit,
                     save_project_checkbox,
+                    create_video_checkbox,
                     delete_video_after_checkbox,
                     gemini_api_key_edit,
                     gemini_show_api_key_checkbox,
@@ -3212,6 +3311,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     character_catalog_name_edit,
                     character_catalogs,
                     save_project_checkbox,
+                    create_video_checkbox,
                     delete_video_after_checkbox,
                     ai_personal_radio,
                     ai_sonarpad_radio,
@@ -3263,6 +3363,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         character_catalog_name_label,
                         character_catalog_name_edit,
                         save_project_checkbox,
+                        create_video_checkbox,
                         delete_video_after_checkbox,
                         ai_access_label,
                         ai_personal_radio,
@@ -3339,7 +3440,14 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     ID_INPUT_BROWSE if !state.running => {
                         if let Some(path) = open_input_dialog(hwnd, state.language, &labels) {
                             set_path(state.input, &path);
-                            set_path(state.output, &default_output(state.parent, &path));
+                            set_path(
+                                state.output,
+                                &default_output(
+                                    state.parent,
+                                    &path,
+                                    checkbox_checked(state.create_video_checkbox),
+                                ),
+                            );
                             ensure_new_character_catalog_name(state);
                             SetForegroundWindow(hwnd);
                         }
@@ -3348,16 +3456,28 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         let initial_text = get_text(state.output);
                         let initial = if initial_text.trim().is_empty() {
                             let input = PathBuf::from(get_text(state.input));
-                            default_output(state.parent, &input)
+                            default_output(
+                                state.parent,
+                                &input,
+                                checkbox_checked(state.create_video_checkbox),
+                            )
                         } else {
                             PathBuf::from(initial_text)
                         };
-                        if let Some(path) =
-                            open_output_dialog(hwnd, state.language, &labels, &initial)
-                        {
+                        if let Some(path) = open_output_dialog(
+                            hwnd,
+                            state.language,
+                            &labels,
+                            &initial,
+                            checkbox_checked(state.create_video_checkbox),
+                        ) {
                             set_path(state.output, &path);
                             SetForegroundWindow(hwnd);
                         }
+                    }
+                    ID_CREATE_VIDEO if !state.running => {
+                        update_video_output_mode(state);
+                        persist_audio_description_preferences(state);
                     }
                     ID_AI_PERSONAL | ID_AI_SONARPAD if !state.running => {
                         let use_service = id == ID_AI_SONARPAD;
@@ -3381,6 +3501,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     }
                     ID_SONARPAD_SHOW_CODE if !state.running => {
                         update_sonarpad_code_visibility(state);
+                    }
+                    ID_GEMINI_API_KEY if notification == EN_KILLFOCUS && !state.running => {
+                        persist_audio_description_preferences(state);
                     }
                     ID_SONARPAD_CODE if notification == EN_KILLFOCUS && !state.running => {
                         persist_audio_description_preferences(state);
@@ -3947,6 +4070,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     set_controls_enabled(state, true);
                     update_character_catalog_visibility(state);
                     update_delete_video_visibility(state);
+                    update_video_output_mode(state);
                     SetFocus(state.input);
                     crate::log_debug(
                         "Audio description: reset creation window for a fresh empty job",
@@ -4026,7 +4150,18 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         }),
                         LPARAM(0),
                     );
+                    SendMessageW(
+                        state.create_video_checkbox,
+                        BM_SETCHECK,
+                        WPARAM(if resume.create_video_output {
+                            BST_CHECKED.0 as usize
+                        } else {
+                            0
+                        }),
+                        LPARAM(0),
+                    );
                     update_delete_video_visibility(state);
+                    update_video_output_mode(state);
                     SendMessageW(
                         state.engine_combo,
                         CB_SETCURSEL,
@@ -4080,7 +4215,11 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     set_path((*pointer).input, &input_path);
                     set_path(
                         state.output,
-                        &default_output((*pointer).parent, &input_path),
+                        &default_output(
+                            (*pointer).parent,
+                            &input_path,
+                            checkbox_checked((*pointer).create_video_checkbox),
+                        ),
                     );
                     ensure_new_character_catalog_name(state);
                     SetFocus(state.input);

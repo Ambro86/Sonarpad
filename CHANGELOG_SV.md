@@ -1,5 +1,31 @@
 # Ändringslogg
 
+Version 0.9.7 – 2026-09-11
+
+AI-syntolkning
+1. Lade till ett valfritt alternativ för att skapa ljudbeskrivningen i den ursprungliga videofilen. När det är aktiverat föredrar Sonarpad nu MP4: den ursprungliga videoströmmen kopieras utan omkodning och det mixade ljudbeskrivningsspåret läggs till. Om FFmpeg rapporterar ett kompatibilitetsfel för behållaren eller paketskrivningen när MP4 skapas, försöker Sonarpad automatiskt samma export som MKV, fortfarande utan att koda om videon. MKV kan också väljas uttryckligen. Förlängda pauser ignoreras i detta läge för att hålla ljud och video synkroniserade.
+
+2. Förbättrad omanalys av segment i sparade syntolkningsprojekt. Fönstret använder nu AI-åtkomsten som redan är konfigurerad i huvudfönstret Skapa syntolkning, så API-nyckel, Sonarpad AI-saldo och modellval dupliceras inte längre. Ett omanalyserat segment behåller nu hela gruppen av projektbeskrivningar som hör till samma analysdel i stället för bara den första eller närmaste beskrivningen; alla beskrivningar i gruppen markeras som omanalyserade och ”Tillämpa segment och exportera MP3 igen” tillämpar hela gruppen på en gång. Förhandslyssning av utökade pauser syntetiseras nu direkt i stället för att söka i den exporterade MP3-filen, vilket förhindrar att förhandslyssningen börjar med filmljud eller klipper beskrivningen.
+
+3. Den försiktiga reservvägen för Gemini-media har förbättrats utan att ändra det befintliga fungerande flödet. HTTP 400 `INVALID_ARGUMENT` fortsätter att använda mindre MKV-segment (cirka 15 MB) och därefter kompatibla MP4-segment. Om Gemini accepterar ett uppladdat segment men bearbetningen slutar i `FAILED`, laddar Sonarpad upp exakt samma segment en gång till och går först därefter över till MP4; serverns Code 13-försök begränsas till tre innan samma reservväg används, så att väntan inte kan bli oändlig. Nätverks-, kvot-, autentiserings- och syntesfel aktiverar inte denna väg.
+
+4. Åtgärdade lagringen av AI-uppgifter när åtkomstläge byts. Den personliga Gemini-API-nyckeln och Sonarpad AI-åtkomstkoden sparas nu oberoende av varandra: byte mellan personlig API-nyckel och Sonarpad AI raderar inte längre den inaktiva uppgiften. Gemini-nyckeln sparas också när fältet tappar fokus.
+
+5. En riktig Avbryt-knapp har lagts till för ”Analysera segment igen” och ”Tillämpa segment och exportera MP3 igen”. Förloppsindikatorn förblir aktiv och Avbryt stoppar nu FFmpeg-förberedelsen av segmentet, AI-processen, TTS-kontrollen och den slutliga exporten så snart det aktuella steget kan stoppas säkert. Tillämpning av ett omanalyserat segment är nu transaktionell: det befintliga projektet och mediefilen ersätts först efter en lyckad ny export; vid avbrott lämnas de tidigare filerna oförändrade och förslaget från omanalyseringen finns kvar för ett nytt försök.
+
+6. Segmentomanalysen har korrigerats för beskrivningar utanför den första Gemini-chunken. Den isolerade chunken skickas nu till den befintliga workern med en lokal tidslinje som börjar på 0 och mappas sedan tillbaka till sin absoluta position i projektet, vilket undviker `Invalid prepared chunk timeline at chunk 1` utan att ändra den normala ljudbeskrivningskedjan.
+
+7. Segmentanalysen i sparade projekt har gjorts om så att den använder samma säkerhetskontroller som en fullständig skapning av syntolkning. Det valda segmentet går nu igenom samma mono 16 kHz-ljudextraktion och Pyannote-analys av dialog/tystnad, samma tidsregler och Gemini-reservvägar, samma verkliga TTS-syntes med projektets röst och samma slutliga schemaläggare för säker placering och förlängda pauser. När segmentet tillämpas behåller Sonarpad de nya verifierade absoluta tiderna och uppdaterar Pyannote-skyddet för segmentet; den tidigare särskilda förhandsvisningslösningen för för lång omanalys-text har tagits bort.
+
+8. Den strukturella ersättningen av ett segment efter fullständig omanalys har rättats. Sonarpad kräver inte längre att det nykontrollerade segmentet innehåller exakt samma antal beskrivningar som det sparade projektet: de gamla beskrivningarna i chunket ersätts av hela det säkra resultatet från den fullständiga pipelinen, så ett segment med 10 beskrivningar kan korrekt bli 9 (eller 11). Projektredigeraren visar omedelbart det nya antalet och de nya tiderna för förhandslyssning, medan det sparade projektet och mediefilen lämnas orörda tills segmentet har tillämpats och MP3-exporten slutförts.
+
+9. Segmentomstartanalysen har byggts om så att det valda fysiska avsnittet behandlas som en riktig fristående minifilm. Sonarpad skickar nu minifilmen direkt till exakt samma `create_audio_description`-funktion som används vid normal fullständig skapande, så video och ljudspår delar samma lokala tidslinje och de vanliga kontrollerna för Pyannote, Gemini, verklig TTS, schemaläggning och säkerhet körs utan en separat omanalysimplementation. Först när den normala pipelinen är klar flyttas de lokala tiderna tillbaka till den ursprungliga positionen i filmen.
+
+Textredigering
+1. ”Slå ihop brutna rader” under Redigera > Text har förbättrats. Utan markering bearbetas hela dokumentet, med markering endast de markerade raderna. Funktionen bygger nu upp hela stycken genom att slå ihop efterföljande rader även när en mening redan slutar med skiljetecken; tomma rader fortsätter att skilja stycken åt och numrerade listor samt punktlistor bevaras.
+
+10. Fixed segment reanalysis timing when mapping an independently analyzed mini-film back to the original movie. Sonarpad now applies the same small chunk-duration reconciliation used by the normal full analysis to descriptions, visual-evidence timestamps, and protected dialogue intervals, preventing progressive sub-second drift near the end of a chunk from moving narration onto speech.
+
 Version 0.9.6 – 2026-09-09
 
 1. Åtgärdat låsningar med vissa SAPI4-röster när markörföljning är aktiverad. Bryggan väntar nu tills syntesen verkligen är klar, med markörföljningen fortsatt aktiv.

@@ -1,5 +1,31 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.7 – 2026-09-11
+
+DI garsinis vaizdavimas
+1. Pridėta pasirenkama galimybė kurti garsinį aprašą originaliame vaizdo faile. Įjungus šią parinktį, Sonarpad dabar pirmiausia renkasi MP4: originalus vaizdo srautas nukopijuojamas be perkodavimo ir įdedamas sumaišytas garsinio aprašo takelis. Jei kuriant MP4 FFmpeg praneša apie konteinerio ar paketų rašymo nesuderinamumą, Sonarpad automatiškai pakartoja tą patį eksportą į MKV, taip pat neperkoduodamas vaizdo. MKV galima pasirinkti ir tiesiogiai. Šiuo režimu išplėstos pauzės ignoruojamos, kad garsas ir vaizdas liktų sinchronizuoti.
+
+2. Patobulinta išsaugotų garsinio vaizdavimo projektų segmentų pakartotinė analizė. Langas dabar naudoja AI prieigą, jau nustatytą pagrindiniame lange „Kurti garsinį vaizdavimą“, todėl nebedubliuojami API raktas, Sonarpad AI kreditas ir modelio pasirinkimas. Pakartotinai analizuotas segmentas dabar išlaiko visą tam analizės fragmentui priklausančių projekto aprašymų grupę, o ne tik pirmą ar artimiausią aprašymą; visi grupės aprašymai pažymimi kaip pakartotinai analizuoti, o „Taikyti segmentą ir iš naujo eksportuoti MP3“ pritaiko visą grupę vienu veiksmu. Išplėstų pauzių peržiūros dabar sintetinamos tiesiogiai, o ne ieškoma vietos eksportuotame MP3, todėl peržiūra neprasideda filmo garsu ir nenukerpa aprašymo.
+
+3. Patobulintas atsargus Gemini medijos atsarginis kelias nekeičiant jau veikiančio pagrindinio proceso. HTTP 400 `INVALID_ARGUMENT` ir toliau įjungia mažesnius MKV fragmentus (apie 15 MB), o po jų – suderinamus MP4 fragmentus. Jei Gemini priima įkeltą fragmentą, bet jo apdorojimas baigiasi būsena `FAILED`, Sonarpad vieną kartą iš naujo įkelia tą patį fragmentą ir tik tada pereina prie MP4; serverio Code 13 bandymai ribojami iki trijų, kad neliktų begalinio laukimo. Tinklo, kvotos, autentifikavimo ar sintezės klaidos šio kelio neįjungia.
+
+4. Ištaisytas AI prisijungimo duomenų išsaugojimas perjungiant prieigos režimą. Asmeninis Gemini API raktas ir Sonarpad AI prieigos kodas dabar išsaugomi nepriklausomai: perjungiant tarp asmeninio API rakto ir Sonarpad AI neaktyvūs prisijungimo duomenys nebėra ištrinami. Gemini raktas taip pat išsaugomas laukui praradus fokusą.
+
+5. Komandoms „Iš naujo analizuoti segmentą“ ir „Taikyti segmentą ir iš naujo eksportuoti MP3“ pridėtas tikras mygtukas Atšaukti. Eigos juosta lieka aktyvi, o Atšaukti dabar sustabdo FFmpeg segmento paruošimą, DI darbinį procesą, TTS tikrinimą ir galutinį eksportą, kai tik dabartinį etapą galima saugiai nutraukti. Pakartotinai išanalizuoto segmento taikymas dabar yra transakcinis: esamas projektas ir išvesties medija pakeičiami tik sėkmingai baigus pakartotinį eksportą; atšaukus ankstesni failai lieka nepakeisti, o pakartotinės analizės pasiūlymas išlieka prieinamas kitam bandymui.
+
+6. Ištaisyta segmentų pakartotinė analizė aprašams, esantiems už pirmojo Gemini fragmento ribų. Atskiras fragmentas dabar siunčiamas esamam worker su vietine nuo 0 prasidedančia laiko juosta, o tada susiejamas atgal su absoliučia projekto pozicija, todėl išvengiama `Invalid prepared chunk timeline at chunk 1` nekeičiant įprastos garsinio vaizdavimo grandinės.
+
+7. Išsaugotų projektų segmentų pakartotinė analizė pertvarkyta taip, kad naudotų tuos pačius saugos patikrinimus kaip ir visas garsinio aprašo kūrimas. Pasirinktam segmentui dabar taikomas tas pats mono 16 kHz garso išgavimas ir Pyannote dialogo / tylos analizė, tos pačios Gemini laiko taisyklės ir atsarginiai keliai, ta pati tikroji TTS sintezė projekto balsu ir tas pats galutinis saugaus išdėstymo bei išplėstų pauzių planuoklis. Pritaikant segmentą išsaugomi nauji patikrinti absoliutūs laikai ir atnaujinama to segmento Pyannote apsauga; ankstesnis specialus per ilgo teksto peržiūros apėjimas pašalintas.
+
+8. Ištaisytas struktūrinis segmento pakeitimas po pilnos pakartotinės analizės. Sonarpad nebereikalauja, kad naujai patikrintame segmente būtų lygiai tiek pat aprašymų kaip išsaugotame projekte: senojo chunk aprašymai pakeičiami visu saugiu pilnos grandinės rezultatu, todėl 10 aprašymų segmentas gali teisingai tapti 9 (arba 11). Projekto redaktorius iškart rodo naują skaičių ir laikus peržiūrai, o išsaugotas projektas ir medija nekeičiami, kol sėkmingai neužbaigiamas segmento pritaikymas ir MP3 eksportas.
+
+9. Segmento pakartotinė analizė pertvarkyta taip, kad pasirinktas fizinis fragmentas būtų laikomas tikru savarankišku mini filmu. Dabar Sonarpad šį mini filmą tiesiogiai perduoda tai pačiai `create_audio_description` funkcijai, kuri naudojama įprastai pilnai kūrybai, todėl vaizdas ir garso takelis turi tą pačią vietinę laiko juostą, o įprasti Pyannote, Gemini, tikro TTS, planavimo ir saugos patikrinimai vykdomi be atskiro pakartotinės analizės įgyvendinimo. Tik baigus įprastą procesą gauti vietiniai laikai perkeliami atgal į pradinę filmo vietą.
+
+Teksto redagavimas
+1. Patobulinta funkcija „Sujungti perkeltas eilutes“ meniu Redaguoti > Tekstas. Be pažymėjimo apdorojamas visas dokumentas, o pažymėjus – tik pasirinktos eilutės. Dabar ji atkuria ištisas pastraipas sujungdama gretimas eilutes net tada, kai sakinys baigiasi skyrybos ženklu; tuščios eilutės lieka pastraipų skirtukais, o numeruoti ir ženkleliais pažymėti sąrašai išsaugomi.
+
+10. Fixed segment reanalysis timing when mapping an independently analyzed mini-film back to the original movie. Sonarpad now applies the same small chunk-duration reconciliation used by the normal full analysis to descriptions, visual-evidence timestamps, and protected dialogue intervals, preventing progressive sub-second drift near the end of a chunk from moving narration onto speech.
+
 Versija 0.9.6 – 2026-09-09
 
 1. Ištaisytas kai kurių SAPI4 balsų strigimas įjungus žymeklio sekimą. Jungiamasis procesas dabar laukia tikrosios sintezės pabaigos, o žymeklio sekimas lieka įjungtas.

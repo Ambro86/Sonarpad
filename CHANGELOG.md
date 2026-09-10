@@ -1,5 +1,31 @@
 # Changelog
 
+Version 0.9.7 – 2026-09-11
+
+AI Audio Description
+1. Added the optional “Create audio description on the original video file” setting. When enabled, Sonarpad now prefers MP4: it copies the original video stream without re-encoding and inserts the mixed audio-description track. If FFmpeg reports a container/packet compatibility failure while creating the MP4, Sonarpad automatically retries the same export as MKV, still without re-encoding the video. Users can also explicitly choose MKV. Extended pauses are ignored in this mode to keep audio and video synchronized.
+
+2. Improved segment reanalysis in saved audio-description projects. The reanalysis window now uses the AI access already configured in the main Create audio description window, so API key, Sonarpad AI credit and model controls are no longer duplicated. A reanalyzed segment now keeps the full group of project descriptions that belong to that analysis chunk instead of only the first/nearest description; every description in the group is marked as reanalyzed and “Apply segment and re-export MP3” applies the whole group at once. Extended-pause previews are synthesized directly instead of seeking inside the exported MP3, avoiding previews that start on film audio or cut the description.
+
+3. Added conservative Gemini media recovery without changing the existing successful pipeline. HTTP 400 `INVALID_ARGUMENT` still triggers smaller MKV chunks (about 15 MB) and then MP4 compatibility chunks. In addition, if Gemini accepts an uploaded chunk but its processing ends in `FAILED`, Sonarpad retries that exact upload once and only then falls back to MP4; server Code 13 retries are capped at three before the same fallback, preventing endless waits. Network, quota, authentication and synthesis errors do not activate this path.
+
+4. Fixed AI credential persistence when switching access modes. The personal Gemini API key and the Sonarpad AI access code are now stored independently: switching from Personal API key to Sonarpad AI, or back, no longer clears the inactive credential. The Gemini key is also saved when its field loses focus.
+
+5. Added a real Cancel action for “Reanalyze segment” and “Apply segment and re-export MP3”. The progress bar remains active, while Cancel now interrupts FFmpeg segment preparation, the AI worker, TTS validation and the final export as soon as the current stage can stop safely. Applying a reanalyzed segment is now transactional: the existing project and output media are replaced only after a successful re-export; if the operation is cancelled, the previous files remain unchanged and the reanalyzed proposal stays available for another attempt.
+
+6. Fixed segment reanalysis for descriptions outside the first Gemini chunk. Isolated chunks are now sent to the existing worker on a local 0-based timeline and mapped back to their absolute project position, preventing `Invalid prepared chunk timeline at chunk 1` without changing the normal audio-description pipeline.
+
+7. Reworked saved-project segment reanalysis to use the same safety pipeline as full audio-description creation. The selected chunk now gets the same mono 16 kHz audio extraction and Pyannote dialogue/silence analysis, the same Gemini timing rules and media fallbacks, the same real TTS synthesis with the project voice, and the same final scheduler for safe placement and extended pauses. The reanalysis keeps the newly verified absolute timings and refreshed Pyannote protection for that chunk when it is applied; the previous preview-only workaround for overlong reanalyzed text has been removed.
+
+8. Fixed structural segment replacement after full reanalysis. Sonarpad no longer requires the newly verified segment to contain exactly the same number of descriptions as the saved project: the old descriptions in that chunk are replaced by the complete safe result of the full pipeline, so a 10-description segment may correctly become 9 (or 11). The project editor immediately shows the new count and timings for preview, while the saved project and media remain unchanged until “Apply segment and re-export MP3” completes successfully.
+
+9. Reworked segment reanalysis so the selected physical chunk is treated as a real, self-contained mini-film. Sonarpad now passes that mini-film directly to the exact same `create_audio_description` function used by normal full creation, so video and soundtrack share the same local timeline and the ordinary Pyannote, Gemini, real-TTS, scheduling and safety pipeline runs without a separate reanalysis implementation. Only after that normal pipeline finishes are the resulting local times shifted back to the original movie position.
+
+Text editing
+1. Improved “Join wrapped lines” in Edit > Text. With no selection it processes the whole document; with a selection it processes only the selected lines. It now reconstructs complete paragraphs by joining consecutive lines even when a sentence already ends with punctuation, using blank lines as paragraph separators while preserving numbered and bulleted lists.
+
+10. Fixed segment reanalysis timing when mapping an independently analyzed mini-film back to the original movie. Sonarpad now applies the same small chunk-duration reconciliation used by the normal full analysis to descriptions, visual-evidence timestamps, and protected dialogue intervals, preventing progressive sub-second drift near the end of a chunk from moving narration onto speech.
+
 Version 0.9.6 – 2026-09-09
 
 1. Fixed freezes with some SAPI4 voices when cursor tracking was enabled. The bridge now waits for actual synthesis completion while keeping cursor tracking active.

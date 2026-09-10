@@ -1,5 +1,31 @@
 # Changelog
 
+Versão 0.9.7 – 2026-09-11
+
+Audiodescrição com IA
+1. Adicionada a opção opcional para criar a audiodescrição no arquivo de vídeo original. Quando ativada, o Sonarpad agora prefere MP4: copia o fluxo de vídeo original sem recodificação e adiciona a faixa de audiodescrição mixada. Se o FFmpeg indicar incompatibilidade do contêiner ou da gravação de pacotes ao criar o MP4, o Sonarpad tenta automaticamente a mesma exportação em MKV, também sem recodificar o vídeo. Também é possível escolher MKV explicitamente. Nesse modo, as pausas estendidas são ignoradas para manter áudio e vídeo sincronizados.
+
+2. Melhorada a reanálise de segmentos nos projetos de audiodescrição salvos. A janela agora usa o acesso à IA já configurado na janela principal Criar audiodescrição, sem duplicar chave de API, crédito do Sonarpad AI e seleção de modelo. Um segmento reanalisado agora mantém todo o grupo de descrições do projeto pertencentes ao mesmo trecho de análise, em vez de apenas a primeira ou a mais próxima; todas as descrições do grupo são marcadas como reanalisadas e “Aplicar segmento e reexportar MP3” aplica o grupo inteiro de uma só vez. As prévias das pausas estendidas agora são sintetizadas diretamente em vez de buscar a posição no MP3 exportado, evitando prévias que comecem com o áudio do filme ou cortem a descrição.
+
+3. O fallback conservador de mídia do Gemini foi aprimorado sem alterar o fluxo que já funciona. O HTTP 400 `INVALID_ARGUMENT` continua acionando trechos MKV menores (cerca de 15 MB) e depois trechos MP4 compatíveis. Além disso, se o Gemini aceitar um trecho enviado, mas o processamento terminar em `FAILED`, o Sonarpad envia exatamente o mesmo trecho novamente uma vez e só então passa para o MP4; as tentativas do Code 13 do servidor ficam limitadas a três antes do mesmo fallback, evitando esperas infinitas. Erros de rede, cota, autenticação ou síntese não acionam esse caminho.
+
+4. Corrigida a persistência das credenciais de IA ao mudar o modo de acesso. A chave de API pessoal do Gemini e o código de acesso do Sonarpad AI agora são salvos de forma independente: alternar entre Chave de API pessoal e Sonarpad AI não apaga mais a credencial inativa. A chave Gemini também é salva quando o campo perde o foco.
+
+5. Foi adicionado um verdadeiro botão Cancelar a “Reanalisar segmento” e “Aplicar segmento e reexportar MP3”. A barra de progresso continua ativa e Cancelar agora interrompe a preparação do segmento pelo FFmpeg, o worker de IA, a validação TTS e a exportação final assim que a etapa atual puder parar com segurança. A aplicação de um segmento reanalisado agora é transacional: o projeto e o arquivo de mídia existentes só são substituídos após uma reexportação bem-sucedida; se a operação for cancelada, os arquivos anteriores permanecem inalterados e a proposta reanalisada continua disponível para uma nova tentativa.
+
+6. Corrigida a reanálise de segmentos para descrições fora do primeiro chunk do Gemini. O segmento isolado agora é enviado ao worker existente com uma linha do tempo local iniciada em 0 e depois remapeado para a posição absoluta no projeto, evitando `Invalid prepared chunk timeline at chunk 1` sem alterar o fluxo normal de audiodescrição.
+
+7. A reanálise de segmentos em projetos salvos foi refeita para usar os mesmos controles de segurança da criação completa de audiodescrição. O trecho selecionado passa agora pela mesma extração de áudio mono a 16 kHz e análise de diálogos/silêncios com Pyannote, pelas mesmas regras temporais e fallbacks do Gemini, pela mesma síntese TTS real com a voz do projeto e pelo mesmo agendador final para posicionamento seguro e pausas estendidas. Ao aplicar o segmento, o Sonarpad mantém os novos tempos absolutos já verificados e atualiza a proteção Pyannote desse trecho; foi removida a solução especial anterior da prévia para textos reanalisados longos demais.
+
+8. Corrigida a substituição estrutural do segmento após a reanálise completa. O Sonarpad não exige mais que o segmento recém-verificado tenha exatamente o mesmo número de descrições do projeto salvo: as descrições antigas daquele chunk são substituídas pelo resultado seguro completo da pipeline, portanto um segmento com 10 descrições pode corretamente passar a 9 (ou 11). O editor mostra imediatamente a nova quantidade e os novos tempos para prévia, enquanto o projeto e o arquivo de mídia salvos permanecem inalterados até “Aplicar segmento e reexportar MP3” terminar com sucesso.
+
+9. A reanálise de segmentos foi reformulada para tratar o trecho físico selecionado como um verdadeiro minifilme independente. O Sonarpad passa agora esse minifilme diretamente para exatamente a mesma função `create_audio_description` usada na criação completa normal, para que vídeo e faixa de áudio compartilhem a mesma linha do tempo local e os controles normais de Pyannote, Gemini, TTS real, agendamento e segurança sejam executados sem uma implementação separada de reanálise. Somente depois que esse fluxo normal termina os tempos locais resultantes são deslocados de volta para a posição original no filme.
+
+Edição de texto
+1. Melhorado “Unir linhas quebradas” em Editar > Texto. Sem seleção, processa o documento inteiro; com uma seleção, atua apenas nas linhas selecionadas. Agora reconstrói parágrafos completos unindo linhas consecutivas mesmo quando uma frase termina com pontuação; linhas em branco continuam separando parágrafos e listas numeradas ou com marcadores são preservadas.
+
+10. Corrigida a sincronização temporal da reanálise ao mapear o mini-filme analisado de volta para o filme original. O Sonarpad agora aplica a mesma pequena reconciliação da duração dos segmentos usada na análise completa às descrições, aos tempos de Visual Evidence e aos intervalos de diálogo protegidos, evitando desvios progressivos de frações de segundo sobre a fala.
+
 Versão 0.9.6 – 2026-09-09
 
 1. Corrigidos os travamentos de algumas vozes SAPI4 com o acompanhamento do cursor ativado. O bridge agora aguarda a conclusão real da síntese, mantendo o acompanhamento ativo.

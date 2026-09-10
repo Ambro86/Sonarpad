@@ -140,6 +140,10 @@ Sonarpad stores character information in the catalog to improve recognition cont
 
 Press Tab again to find Also save the project for future editing. Enable it when you know that you will later want to review the audio description, correct descriptions, or change the voice.
 
+The Create audio description on the original video file check box lets you obtain a video file with the audio description already inserted, instead of only an MP3 file. When this option is enabled, Sonarpad keeps the original video and adds the generated descriptions to its audio track without unnecessarily re-encoding the video. The default format is MP4, but you can also choose MKV in the save window. The original video file is never overwritten.
+
+When you create the audio-described video directly, extended pauses are not used because they would change the duration and synchronization of the film. Sonarpad therefore inserts descriptions only into the spaces available in the original audio track.
+
 The Move the video file to the Recycle Bin after the audio description check box is useful if you do not want to keep the original video after the audio-described MP3 has been created. It is disabled by default and is available when project saving is not enabled, because an editable project still needs the original video.
 
 Next you will find Gemini API key. Enter your API key here. The key can be created for free. With Tab you reach the Get API key button, which opens the Google page in your browser where, after signing in with your account, you can create the key. The procedure is normally very quick.
@@ -149,6 +153,12 @@ After the API key you will find Gemini model and the Refresh model list button. 
 Press Tab again to find Speech synthesis engine and Voice, which you can change according to your preferences.
 
 Further on you will find Modify audio-description project. This feature lets you reopen and edit a project that you previously saved. Important: to modify the project, the original video file must still be available.
+
+The Modify audio-description project window also includes Reanalyze segment. This feature is useful when one or more descriptions in part of a film do not satisfy you and you want Gemini to analyze that area again without recreating the entire audio description.
+
+Select a description that belongs to the area you want to review and activate Reanalyze segment. Sonarpad analyzes the video segment containing that description again and proposes new text while keeping the timings and available spaces already saved in the project. When reanalysis finishes, the new voice previews for the segment are already prepared: move among the descriptions and press Space to hear them immediately together with the original audio.
+
+The affected descriptions are marked as segment reanalyzed. The reanalysis remains a proposal until you choose Apply segment and re-export MP3. Only then does Sonarpad apply the new descriptions to the project and recreate the audio-described file. If you do not apply the segment, the saved project remains unchanged.
 
 Next you will find Continue interrupted audio description. Sonarpad is designed not to lose work that has already been completed: if the connection drops during creation, Gemini has a problem, or the process is interrupted, Sonarpad periodically saves progress checkpoints. With this feature you can resume an unfinished job without starting again from the beginning.
 

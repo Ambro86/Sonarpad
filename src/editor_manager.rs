@@ -2590,6 +2590,85 @@ pub fn join_lines_active_edit(hwnd: HWND) -> bool {
     }
 }
 
+pub fn join_wrapped_lines_active_edit(hwnd: HWND) -> bool {
+    unsafe {
+        let Some(hwnd_edit) = crate::get_active_edit(hwnd) else {
+            return false;
+        };
+        let text = get_edit_text(hwnd_edit);
+        if text.is_empty() {
+            return false;
+        }
+
+        let line_ending = if text.contains("\r\n") { "\r\n" } else { "\n" };
+        let mut selection = CHARRANGE { cpMin: 0, cpMax: 0 };
+        SendMessageW(
+            hwnd_edit,
+            EM_EXGETSEL,
+            WPARAM(0),
+            LPARAM(&mut selection as *mut _ as isize),
+        );
+        let had_selection = selection.cpMin != selection.cpMax;
+        let original_caret = selection.cpMin;
+
+        // With a selection, operate on the complete selected lines. Without a
+        // selection, process the whole document: this command is intended for
+        // imported/OCR/transcribed text where hard line wraps affect many lines.
+        let (replace_start, replace_end, affected, has_trailing_newline) = if had_selection {
+            let Some((start, end, selected, trailing)) =
+                selected_line_block_from_selection(hwnd_edit, &text, selection)
+            else {
+                return false;
+            };
+            (start, end, selected, trailing)
+        } else {
+            let text_len = SendMessageW(hwnd_edit, WM_GETTEXTLENGTH, WPARAM(0), LPARAM(0)).0 as i32;
+            (
+                0,
+                text_len,
+                text.clone(),
+                text.ends_with('\n') || text.ends_with('\r'),
+            )
+        };
+
+        let joined = join_wrapped_lines_block(&affected, line_ending, has_trailing_newline);
+        if joined == affected {
+            return false;
+        }
+
+        let mut replace_range = CHARRANGE {
+            cpMin: replace_start,
+            cpMax: replace_end,
+        };
+        begin_single_undo_action(hwnd_edit);
+        SendMessageW(
+            hwnd_edit,
+            EM_EXSETSEL,
+            WPARAM(0),
+            LPARAM(&mut replace_range as *mut _ as isize),
+        );
+        let replace_wide = to_wide(&joined);
+        SendMessageW(
+            hwnd_edit,
+            EM_REPLACESEL,
+            WPARAM(1),
+            LPARAM(replace_wide.as_ptr() as isize),
+        );
+        end_single_undo_action(hwnd_edit);
+        restore_caret_after_line_op_if_no_selection(
+            hwnd_edit,
+            had_selection,
+            original_caret,
+            replace_start,
+            &affected,
+            &joined,
+        );
+        mark_dirty_from_edit(hwnd, hwnd_edit);
+        SetFocus(hwnd_edit);
+        true
+    }
+}
+
 pub fn clean_end_of_line_hyphens_active_edit(hwnd: HWND) -> bool {
     unsafe {
         let Some(hwnd_edit) = crate::get_active_edit(hwnd) else {
@@ -2900,6 +2979,91 @@ fn split_lines_any_newline(content: &str) -> Vec<String> {
         .split('\n')
         .map(ToString::to_string)
         .collect()
+}
+
+fn line_looks_like_list_item(line: &str) -> bool {
+    let s = line.trim_start();
+    if s.is_empty() {
+        return false;
+    }
+    if s.starts_with("- ") || s.starts_with("* ") || s.starts_with("• ") {
+        return true;
+    }
+
+    let mut chars = s.chars().peekable();
+    let mut saw_digit = false;
+    while chars.peek().is_some_and(|c| c.is_ascii_digit()) {
+        saw_digit = true;
+        chars.next();
+    }
+    if saw_digit && matches!(chars.next(), Some('.') | Some(')')) {
+        return chars.next().is_some_and(|c| c.is_whitespace());
+    }
+    false
+}
+
+fn append_wrapped_line(target: &mut String, next: &str) {
+    let next = next.trim_start();
+    if next.is_empty() {
+        return;
+    }
+
+    while target.chars().last().is_some_and(|c| c.is_whitespace()) {
+        target.pop();
+    }
+
+    let previous = target.chars().last();
+    let first = next.chars().next();
+    let no_space_after_previous =
+        previous.is_some_and(|c| matches!(c, '-' | '‐' | '‑' | '/' | '\'' | '’' | '(' | '[' | '{'));
+    let no_space_before_next = first
+        .is_some_and(|c| matches!(c, ',' | '.' | ';' | ':' | '!' | '?' | '…' | ')' | ']' | '}'));
+
+    if !target.is_empty() && !no_space_after_previous && !no_space_before_next {
+        target.push(' ');
+    }
+    target.push_str(next);
+}
+
+fn join_wrapped_lines_block(text: &str, line_ending: &str, has_trailing_newline: bool) -> String {
+    let (content, trailing_newline) = split_trailing_newline(text, has_trailing_newline);
+    let lines = split_lines_any_newline(content);
+    let mut out_lines: Vec<String> = Vec::with_capacity(lines.len());
+    let mut current: Option<String> = None;
+
+    let flush_current = |out_lines: &mut Vec<String>, current: &mut Option<String>| {
+        if let Some(line) = current.take() {
+            out_lines.push(line);
+        }
+    };
+
+    for line in lines {
+        if line.trim().is_empty() {
+            flush_current(&mut out_lines, &mut current);
+            out_lines.push(line);
+            continue;
+        }
+
+        if line_looks_like_list_item(&line) {
+            flush_current(&mut out_lines, &mut current);
+            current = Some(line);
+            continue;
+        }
+
+        if let Some(existing) = current.as_mut() {
+            append_wrapped_line(existing, &line);
+        } else {
+            current = Some(line);
+        }
+    }
+
+    flush_current(&mut out_lines, &mut current);
+
+    let mut out = out_lines.join(line_ending);
+    if trailing_newline {
+        out.push_str(line_ending);
+    }
+    out
 }
 
 fn clean_end_of_line_hyphens_block(
@@ -5421,6 +5585,42 @@ mod tests {
             FileFormat::Text(TextEncoding::Utf8),
             false
         ));
+    }
+
+    #[test]
+    fn join_wrapped_lines_reconstructs_paragraphs_across_sentence_boundaries() {
+        let input = "Prima parte della frase,\nche continua qui.\nNuova frase.\nAltra riga senza punto\nche continua.";
+        let expected = "Prima parte della frase, che continua qui. Nuova frase. Altra riga senza punto che continua.";
+        assert_eq!(join_wrapped_lines_block(input, "\n", false), expected);
+    }
+
+    #[test]
+    fn join_wrapped_lines_preserves_paragraphs_and_lists() {
+        let input = "Frase spezzata\nin due righe.\n\n1. Primo elemento\n2. Secondo elemento\n\nTesto finale.";
+        let expected = "Frase spezzata in due righe.\n\n1. Primo elemento\n2. Secondo elemento\n\nTesto finale.";
+        assert_eq!(join_wrapped_lines_block(input, "\n", false), expected);
+    }
+
+    #[test]
+    fn join_wrapped_lines_handles_hyphen_apostrophe_and_windows_eol() {
+        let input = "cognitivo-\ncomportamentale e l'\nelaborazione.\r\nFrase nuova.";
+        let expected = "cognitivo-comportamentale e l'elaborazione.\r\nFrase nuova.";
+        assert_eq!(join_wrapped_lines_block(input, "\r\n", false), expected);
+    }
+
+    #[test]
+    fn join_wrapped_lines_keeps_list_items_separate_and_joins_their_continuations() {
+        let input = "1. Primo elemento\nche continua su una seconda riga.\n2. Secondo elemento\ncon altra continuazione.";
+        let expected = "1. Primo elemento che continua su una seconda riga.\n2. Secondo elemento con altra continuazione.";
+        assert_eq!(join_wrapped_lines_block(input, "\n", false), expected);
+    }
+
+    #[test]
+    fn join_wrapped_lines_keeps_trailing_newline() {
+        assert_eq!(
+            join_wrapped_lines_block("riga spezzata\nqui\n", "\n", true),
+            "riga spezzata qui\n"
+        );
     }
 
     #[test]

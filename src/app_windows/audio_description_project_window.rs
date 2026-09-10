@@ -3,33 +3,34 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
+use std::time::Duration;
 
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM};
-use windows::Win32::Graphics::Gdi::{COLOR_WINDOW, HBRUSH, HFONT};
+use windows::Win32::Graphics::Gdi::{COLOR_WINDOW, HBRUSH, HFONT, InvalidateRect};
 use windows::Win32::UI::Controls::Dialogs::{
     GetOpenFileNameW, GetSaveFileNameW, OFN_EXPLORER, OFN_FILEMUSTEXIST, OFN_HIDEREADONLY,
     OFN_OVERWRITEPROMPT, OFN_PATHMUSTEXIST, OPENFILENAMEW,
 };
 use windows::Win32::UI::Controls::{
-    PBM_SETPOS, PBM_SETRANGE32, PROGRESS_CLASSW, WC_BUTTON, WC_COMBOBOXW, WC_EDIT, WC_LISTBOXW,
-    WC_STATIC,
+    BST_CHECKED, PBM_SETPOS, PBM_SETRANGE32, PROGRESS_CLASSW, WC_BUTTON, WC_COMBOBOXW, WC_EDIT,
+    WC_LISTBOXW, WC_STATIC,
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     EnableWindow, SetFocus, VK_ESCAPE, VK_RETURN, VK_SHIFT, VK_SPACE, VK_TAB,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, BS_DEFPUSHBUTTON, CB_ADDSTRING, CB_GETCURSEL, CB_RESETCONTENT, CB_SETCURSEL,
-    CBN_SELCHANGE, CBS_DROPDOWNLIST, CREATESTRUCTW, CreatePopupMenu, CreateWindowExW,
-    DefWindowProcW, DestroyMenu, DestroyWindow, EN_CHANGE, ES_AUTOHSCROLL, ES_AUTOVSCROLL,
-    ES_MULTILINE, ES_WANTRETURN, GetCursorPos, GetWindowLongPtrW, HMENU, IDC_ARROW, IDYES,
-    IsWindowVisible, LB_ADDSTRING, LB_GETCURSEL, LB_RESETCONTENT, LB_SETCURSEL, LBN_SELCHANGE,
-    LBS_HASSTRINGS, LBS_NOINTEGRALHEIGHT, LBS_NOTIFY, LoadCursorW, MB_ICONERROR,
-    MB_ICONINFORMATION, MB_ICONQUESTION, MB_OK, MB_YESNO, MF_STRING, MessageBoxW, PostMessageW,
-    SendMessageW, SetForegroundWindow, SetWindowLongPtrW, TPM_NONOTIFY, TPM_RETURNCMD,
-    TrackPopupMenu, WINDOW_STYLE, WM_APP, WM_CLOSE, WM_COMMAND, WM_CONTEXTMENU, WM_CREATE,
-    WM_DESTROY, WM_KEYDOWN, WM_NCDESTROY, WM_SETFOCUS, WM_SETFONT, WNDCLASSW, WS_CAPTION, WS_CHILD,
-    WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_SYSMENU, WS_TABSTOP, WS_VISIBLE,
-    WS_VSCROLL,
+    AppendMenuW, BM_GETCHECK, BS_AUTOCHECKBOX, BS_DEFPUSHBUTTON, CB_ADDSTRING, CB_GETCURSEL,
+    CB_RESETCONTENT, CB_SETCURSEL, CBN_SELCHANGE, CBS_DROPDOWNLIST, CREATESTRUCTW, CreatePopupMenu,
+    CreateWindowExW, DefWindowProcW, DestroyMenu, DestroyWindow, EN_CHANGE, EN_KILLFOCUS,
+    ES_AUTOHSCROLL, ES_AUTOVSCROLL, ES_MULTILINE, ES_READONLY, ES_WANTRETURN, GetCursorPos,
+    GetWindowLongPtrW, HMENU, IDC_ARROW, IDYES, IsWindowVisible, LB_ADDSTRING, LB_GETCURSEL,
+    LB_RESETCONTENT, LB_SETCURSEL, LBN_SELCHANGE, LBS_HASSTRINGS, LBS_NOINTEGRALHEIGHT, LBS_NOTIFY,
+    LoadCursorW, MB_ICONERROR, MB_ICONINFORMATION, MB_ICONQUESTION, MB_OK, MB_YESNO, MF_STRING,
+    MessageBoxW, PostMessageW, SendMessageW, SetForegroundWindow, SetWindowLongPtrW, TPM_NONOTIFY,
+    TPM_RETURNCMD, TrackPopupMenu, WINDOW_STYLE, WM_APP, WM_CLOSE, WM_COMMAND, WM_CONTEXTMENU,
+    WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_NCDESTROY, WM_SETFOCUS, WM_SETFONT, WNDCLASSW,
+    WS_CAPTION, WS_CHILD, WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_SYSMENU,
+    WS_TABSTOP, WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::{PCWSTR, PWSTR};
 
@@ -38,18 +39,28 @@ use crate::audio_description::{
     AudioDescriptionCallbacks, AudioDescriptionOutcome, AudioDescriptionProject,
     AudioDescriptionProjectBatchEditError, AudioDescriptionProjectDescription,
     AudioDescriptionProjectEditError, AudioDescriptionProjectEditOutcome,
-    AudioDescriptionProjectPreviewAudio, AudioDescriptionProjectVoiceError,
-    AudioDescriptionProjectVoiceSettings, apply_audio_description_project_batch_edits,
+    AudioDescriptionProjectPreviewAudio, AudioDescriptionProjectSegmentReanalysis,
+    AudioDescriptionProjectVoiceError, AudioDescriptionProjectVoiceSettings,
+    apply_audio_description_project_batch_edits,
+    apply_reanalyzed_audio_description_project_segment_and_reexport,
     change_audio_description_project_voice, delete_audio_description_project_description,
-    load_audio_description_project, reexport_audio_description_project,
-    synthesize_audio_description_project_preview,
+    load_audio_description_project, reanalyze_audio_description_project_segment,
+    reexport_audio_description_project, synthesize_audio_description_project_preview,
 };
 use crate::bass_output::BassOutput;
 use crate::i18n;
-use crate::settings::{Language, TtsEngine, VoiceInfo, default_audio_description_save_folder};
+use crate::settings::{
+    DEFAULT_AUDIO_DESCRIPTION_GEMINI_MODEL, Language, TtsEngine, VoiceInfo,
+    default_audio_description_save_folder,
+};
+use crate::tools::audio_description_bridge::{
+    AudioDescriptionOverloadDecision, AudioDescriptionQuotaDecision,
+};
 use crate::{show_error, with_state};
 
 const CLASS_NAME: &str = "SonarpadAudioDescriptionProject";
+const SONARPAD_AI_SERVICE_URL: &str = "https://sonarpad.com/sonarpad-ai";
+const EM_SETPASSWORDCHAR: u32 = 0x00CC;
 const ID_LIST: usize = 9671;
 const ID_EDIT: usize = 9672;
 const ID_APPLY: usize = 9673;
@@ -68,6 +79,13 @@ const ID_SEARCH_BUTTON: usize = 9685;
 const ID_RATE: usize = 9686;
 const ID_VOLUME: usize = 9687;
 const ID_TEST_VOICE: usize = 9688;
+const ID_REANALYZE_AI_MODE: usize = 9689;
+const ID_REANALYZE_CREDENTIAL: usize = 9690;
+const ID_REANALYZE_SHOW_CREDENTIAL: usize = 9691;
+const ID_REANALYZE_MODEL: usize = 9692;
+const ID_REANALYZE: usize = 9693;
+const ID_APPLY_REANALYZED: usize = 9694;
+const ID_REANALYZE_BALANCE: usize = 9695;
 
 const WM_PROJECT_PROGRESS: u32 = WM_APP + 192;
 const WM_PROJECT_STATUS: u32 = WM_APP + 193;
@@ -77,6 +95,9 @@ const WM_PROJECT_PLAY_SELECTED: u32 = WM_APP + 196;
 const WM_PROJECT_DRAFT_PREVIEW_DONE: u32 = WM_APP + 197;
 const WM_PROJECT_VOICES_LOADED: u32 = WM_APP + 198;
 const WM_PROJECT_VOICE_DONE: u32 = WM_APP + 199;
+const WM_PROJECT_REANALYZE_DONE: u32 = WM_APP + 200;
+const WM_PROJECT_REANALYZE_BALANCE: u32 = WM_APP + 201;
+const WM_PROJECT_APPLY_REANALYZED_DONE: u32 = WM_APP + 202;
 
 struct DraftPreviewPayload {
     generation: u64,
@@ -93,6 +114,15 @@ struct VoiceLoadPayload {
 struct VoiceChangePayload {
     requested_voice: String,
     result: Result<AudioDescriptionProject, AudioDescriptionProjectVoiceError>,
+}
+
+struct SegmentReanalysisPayload {
+    result: Result<AudioDescriptionProjectSegmentReanalysis, String>,
+}
+
+struct ReanalysisBalancePayload {
+    access_code: String,
+    result: Result<f64, String>,
 }
 
 struct Labels {
@@ -143,6 +173,20 @@ struct Labels {
     edit_saved_multiple: String,
     apply_before_export: String,
     unsaved_close: String,
+    reanalyze_ai_access: String,
+    reanalyze_personal: String,
+    reanalyze_sonarpad: String,
+    reanalyze_api_key: String,
+    reanalyze_sonarpad_code: String,
+    reanalyze_show_key: String,
+    reanalyze_balance: String,
+    reanalyze_balance_unavailable: String,
+    reanalyze_model: String,
+    reanalyze_button: String,
+    apply_reanalyzed: String,
+    reanalyzed_marker: String,
+    reanalyzing: String,
+    reanalyzed_ready: String,
 }
 
 struct WindowState {
@@ -164,6 +208,21 @@ struct WindowState {
     progress: HWND,
     status: HWND,
     apply_button: HWND,
+    reanalyze_ai_mode_combo: HWND,
+    reanalyze_credential_label: HWND,
+    reanalyze_credential_edit: HWND,
+    reanalyze_show_credential_checkbox: HWND,
+    reanalyze_balance_edit: HWND,
+    reanalyze_model_combo: HWND,
+    reanalyze_button: HWND,
+    apply_reanalyzed_button: HWND,
+    reanalyze_personal_api_key: String,
+    reanalyze_sonarpad_code: String,
+    reanalyze_mode_sonarpad: bool,
+    reanalyzed_drafts: HashMap<usize, String>,
+    reanalyzed_groups: HashMap<usize, Vec<usize>>,
+    reanalyzed_preview_audio: HashMap<usize, AudioDescriptionProjectPreviewAudio>,
+    reanalysis_base_project: Option<AudioDescriptionProject>,
     search_edit: HWND,
     search_button: HWND,
     display_order: Vec<usize>,
@@ -251,6 +310,29 @@ fn labels(language: Language) -> Labels {
         edit_saved_multiple: i18n::tr(language, "audio_description.project.edit_saved_multiple"),
         apply_before_export: i18n::tr(language, "audio_description.project.apply_before_export"),
         unsaved_close: i18n::tr(language, "audio_description.project.unsaved_close"),
+        reanalyze_ai_access: i18n::tr(language, "audio_description.project.reanalyze_ai_access"),
+        reanalyze_personal: i18n::tr(language, "audio_description.project.reanalyze_personal"),
+        reanalyze_sonarpad: i18n::tr(language, "audio_description.project.reanalyze_sonarpad"),
+        reanalyze_api_key: i18n::tr(language, "audio_description.project.reanalyze_api_key"),
+        reanalyze_sonarpad_code: i18n::tr(
+            language,
+            "audio_description.project.reanalyze_sonarpad_code",
+        ),
+        reanalyze_show_key: i18n::tr(language, "audio_description.project.reanalyze_show_key"),
+        reanalyze_balance: i18n::tr(language, "audio_description.project.reanalyze_balance"),
+        reanalyze_balance_unavailable: i18n::tr(
+            language,
+            "audio_description.project.reanalyze_balance_unavailable",
+        ),
+        reanalyze_model: i18n::tr(language, "audio_description.project.reanalyze_model"),
+        reanalyze_button: i18n::tr(language, "audio_description.project.reanalyze_button"),
+        apply_reanalyzed: i18n::tr(language, "audio_description.project.apply_reanalyzed"),
+        reanalyzed_marker: i18n::tr(language, "audio_description.project.reanalyzed_marker"),
+        reanalyzing: i18n::tr(language, "audio_description.project.status.reanalyzing"),
+        reanalyzed_ready: i18n::tr(
+            language,
+            "audio_description.project.status.reanalyzed_ready",
+        ),
     }
 }
 
@@ -642,6 +724,170 @@ fn set_text(hwnd: HWND, text: &str) {
     );
 }
 
+fn checkbox_checked(control: HWND) -> bool {
+    unsafe { SendMessageW(control, BM_GETCHECK, WPARAM(0), LPARAM(0)).0 == BST_CHECKED.0 as isize }
+}
+
+fn using_reanalysis_sonarpad_ai(state: &WindowState) -> bool {
+    unsafe {
+        SendMessageW(
+            state.reanalyze_ai_mode_combo,
+            CB_GETCURSEL,
+            WPARAM(0),
+            LPARAM(0),
+        )
+        .0 == 1
+    }
+}
+
+fn update_reanalysis_credential_visibility(state: &WindowState) {
+    let show = checkbox_checked(state.reanalyze_show_credential_checkbox);
+    unsafe {
+        SendMessageW(
+            state.reanalyze_credential_edit,
+            EM_SETPASSWORDCHAR,
+            WPARAM(if show { 0 } else { '*' as usize }),
+            LPARAM(0),
+        );
+        if !InvalidateRect(state.reanalyze_credential_edit, None, true).as_bool() {
+            crate::log_debug("Audio description project: failed to redraw AI credential field");
+        }
+    }
+}
+
+fn format_reanalysis_balance(language: Language, balance: f64) -> String {
+    let value = format!("{balance:.2}");
+    let localized = match language {
+        Language::English => value,
+        _ => value.replace('.', ","),
+    };
+    format!("{localized} €")
+}
+
+fn capture_reanalysis_credential(state: &mut WindowState) {
+    let value = get_text(state.reanalyze_credential_edit).trim().to_string();
+    if state.reanalyze_mode_sonarpad {
+        state.reanalyze_sonarpad_code = value;
+    } else {
+        state.reanalyze_personal_api_key = value;
+    }
+}
+
+fn refresh_reanalysis_balance(hwnd: HWND, state: &WindowState) {
+    if state.running || !using_reanalysis_sonarpad_ai(state) {
+        set_text(
+            state.reanalyze_balance_edit,
+            &labels(state.language).reanalyze_balance_unavailable,
+        );
+        return;
+    }
+    let access_code = get_text(state.reanalyze_credential_edit).trim().to_string();
+    if !access_code.starts_with("sp_") {
+        set_text(
+            state.reanalyze_balance_edit,
+            &labels(state.language).reanalyze_balance_unavailable,
+        );
+        return;
+    }
+    let device_id = with_state(state.parent, |app| {
+        app.settings.sonarpad_ai_device_id.clone()
+    })
+    .unwrap_or_default();
+    if device_id.trim().is_empty() {
+        set_text(
+            state.reanalyze_balance_edit,
+            &labels(state.language).reanalyze_balance_unavailable,
+        );
+        return;
+    }
+    set_text(state.reanalyze_balance_edit, "…");
+    thread::spawn(move || {
+        let result = (|| -> Result<f64, String> {
+            let client = reqwest::blocking::Client::builder()
+                .timeout(Duration::from_secs(30))
+                .build()
+                .map_err(|error| error.to_string())?;
+            let activate = client
+                .post(format!("{SONARPAD_AI_SERVICE_URL}/v1/activate"))
+                .json(&serde_json::json!({
+                    "code": access_code.clone(),
+                    "device_id": device_id,
+                    "device_name": "Sonarpad Windows",
+                }))
+                .send()
+                .map_err(|error| error.to_string())?;
+            if !activate.status().is_success() {
+                return Err(format!("HTTP {}", activate.status().as_u16()));
+            }
+            let activate_json: serde_json::Value =
+                activate.json().map_err(|error| error.to_string())?;
+            let session_token = activate_json
+                .get("session_token")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .trim()
+                .to_string();
+            if !session_token.starts_with("sst_") {
+                return Err("invalid session response".to_string());
+            }
+            let account = client
+                .get(format!("{SONARPAD_AI_SERVICE_URL}/v1/account"))
+                .bearer_auth(session_token)
+                .send()
+                .map_err(|error| error.to_string())?;
+            if !account.status().is_success() {
+                return Err(format!("HTTP {}", account.status().as_u16()));
+            }
+            let account_json: serde_json::Value =
+                account.json().map_err(|error| error.to_string())?;
+            account_json
+                .get("balance_eur")
+                .and_then(serde_json::Value::as_f64)
+                .ok_or_else(|| "missing balance".to_string())
+        })();
+        post_boxed_message(
+            hwnd,
+            WM_PROJECT_REANALYZE_BALANCE,
+            WPARAM(0),
+            Box::new(ReanalysisBalancePayload {
+                access_code,
+                result,
+            }),
+        );
+    });
+}
+
+fn update_reanalysis_ai_mode(hwnd: HWND, state: &mut WindowState) {
+    capture_reanalysis_credential(state);
+    let service = using_reanalysis_sonarpad_ai(state);
+    state.reanalyze_mode_sonarpad = service;
+    let language_labels = labels(state.language);
+    if service {
+        set_text(
+            state.reanalyze_credential_label,
+            &language_labels.reanalyze_sonarpad_code,
+        );
+        set_text(
+            state.reanalyze_credential_edit,
+            &state.reanalyze_sonarpad_code,
+        );
+    } else {
+        set_text(
+            state.reanalyze_credential_label,
+            &language_labels.reanalyze_api_key,
+        );
+        set_text(
+            state.reanalyze_credential_edit,
+            &state.reanalyze_personal_api_key,
+        );
+    }
+    unsafe {
+        EnableWindow(state.reanalyze_model_combo, !service && !state.running);
+    }
+    update_reanalysis_credential_visibility(state);
+    refresh_reanalysis_balance(hwnd, state);
+}
+
 fn format_time(seconds: f64) -> String {
     let total_ms = (seconds.max(0.0) * 1000.0).round() as u64;
     let hours = total_ms / 3_600_000;
@@ -656,6 +902,7 @@ fn row_text(
     index: usize,
     labels: &Labels,
     text_override: Option<&str>,
+    reanalyzed: bool,
 ) -> String {
     let description = &project.descriptions[index];
     let kind = if description.extended_pause {
@@ -664,12 +911,18 @@ fn row_text(
         &labels.normal
     };
     let text = text_override.unwrap_or(&description.text);
+    let marker = if reanalyzed {
+        format!(" - {}", labels.reanalyzed_marker)
+    } else {
+        String::new()
+    };
     format!(
-        "{}. {} - {} - {} - {}",
+        "{}. {} - {} - {}{} - {}",
         index + 1,
         format_time(description.output_start_sec),
         format_time(description.output_end_sec),
         kind,
+        marker,
         text.replace(['\r', '\n'], " ")
     )
 }
@@ -703,10 +956,21 @@ fn capture_current_draft(state: &mut WindowState) {
     let description_id = description.id;
     let original = description.text.trim();
     let current = get_text(state.edit).trim().to_string();
-    if current == original {
+    if current == original && !state.reanalyzed_drafts.contains_key(&description_id) {
         state.drafts.remove(&description_id);
     } else {
         state.drafts.insert(description_id, current);
+    }
+}
+
+fn update_apply_reanalyzed_button(state: &WindowState) {
+    let enabled = !state.running
+        && state
+            .selected_index
+            .and_then(|index| project_description_id(state, index))
+            .is_some_and(|id| state.reanalyzed_drafts.contains_key(&id));
+    unsafe {
+        EnableWindow(state.apply_reanalyzed_button, enabled);
     }
 }
 
@@ -731,6 +995,7 @@ fn select_project_description(state: &mut WindowState, project_index: usize) {
             &labels(state.language),
         ),
     );
+    update_apply_reanalyzed_button(state);
 }
 
 fn details_text(
@@ -792,11 +1057,14 @@ fn refill_list(state: &mut WindowState, select_project_index: usize) {
             let override_text = project_description_id(state, *project_index)
                 .and_then(|id| state.drafts.get(&id))
                 .map(String::as_str);
+            let reanalyzed = project_description_id(state, *project_index)
+                .is_some_and(|id| state.reanalyzed_drafts.contains_key(&id));
             let row = to_wide(&row_text(
                 &state.project,
                 *project_index,
                 &labels,
                 override_text,
+                reanalyzed,
             ));
             SendMessageW(
                 state.list,
@@ -825,6 +1093,7 @@ fn refill_list(state: &mut WindowState, select_project_index: usize) {
             set_text(state.details, "");
         }
     }
+    update_apply_reanalyzed_button(state);
 }
 
 fn apply_description_search(state: &mut WindowState) {
@@ -860,7 +1129,7 @@ fn selected_edit_text(state: &WindowState) -> Result<(usize, String), String> {
 }
 
 fn has_unapplied_edit(state: &WindowState) -> bool {
-    if !state.drafts.is_empty() {
+    if state.reanalysis_base_project.is_some() || !state.drafts.is_empty() {
         return true;
     }
     let Some(index) = state.selected_index else {
@@ -997,7 +1266,7 @@ fn play_modified_preview(
             0.0,
             duck_gain,
             true,
-            None,
+            state.project.audio_stream_index,
         ) {
             Ok(source) => {
                 crate::log_debug(&format!(
@@ -1065,7 +1334,32 @@ fn play_selected_description(hwnd: HWND, state: &mut WindowState) {
         show_project_error(hwnd, state.language, &labels(state.language).no_selection);
         return;
     };
-    if draft != description.text || description.rendered_text != description.text {
+    let reanalyzed = state.reanalyzed_drafts.contains_key(&description.id);
+    if reanalyzed && draft == description.text {
+        if let Some(preview_audio) = state.reanalyzed_preview_audio.get(&description.id).cloned() {
+            stop_preview(state);
+            crate::log_debug(&format!(
+                "Audio description project: playing cached reanalysis preview id={}; no TTS requested by Space",
+                description.id
+            ));
+            play_modified_preview(hwnd, state, description, preview_audio);
+            return;
+        }
+        crate::log_debug(&format!(
+            "Audio description project: missing cached reanalysis preview id={}; refusing on-demand TTS for unchanged proposal",
+            description.id
+        ));
+        preview_error(
+            hwnd,
+            state,
+            "the reanalysis preview cache is unavailable; run segment reanalysis again",
+        );
+        return;
+    }
+    if description.extended_pause
+        || draft != description.text
+        || description.rendered_text != description.text
+    {
         start_draft_preview(hwnd, state, index, draft);
     } else {
         play_exported_description(hwnd, state, &description);
@@ -1073,6 +1367,14 @@ fn play_selected_description(hwnd: HWND, state: &mut WindowState) {
 }
 
 fn delete_selected_description(hwnd: HWND, state: &mut WindowState) {
+    if state.reanalysis_base_project.is_some() {
+        show_project_error(
+            hwnd,
+            state.language,
+            &labels(state.language).apply_before_export,
+        );
+        return;
+    }
     capture_current_draft(state);
     let Some(index) = state.selected_index else {
         show_error(
@@ -1182,7 +1484,11 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
         for control in [
             state.list,
             state.edit,
-            state.apply_button,
+            state.reanalyze_ai_mode_combo,
+            state.reanalyze_credential_edit,
+            state.reanalyze_show_credential_checkbox,
+            state.reanalyze_button,
+            state.apply_reanalyzed_button,
             state.search_edit,
             state.search_button,
             state.engine_combo,
@@ -1196,6 +1502,19 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
         ] {
             EnableWindow(control, enabled);
         }
+        EnableWindow(
+            state.reanalyze_model_combo,
+            enabled && !using_reanalysis_sonarpad_ai(state),
+        );
+        EnableWindow(
+            state.apply_button,
+            enabled && state.reanalysis_base_project.is_none(),
+        );
+        let has_reanalysis = state
+            .selected_index
+            .and_then(|index| project_description_id(state, index))
+            .is_some_and(|id| state.reanalyzed_drafts.contains_key(&id));
+        EnableWindow(state.apply_reanalyzed_button, enabled && has_reanalysis);
         let voices_available = !state.voices.is_empty();
         EnableWindow(state.voice_combo, enabled && voices_available);
         EnableWindow(state.test_voice_button, enabled && voices_available);
@@ -1321,7 +1640,324 @@ unsafe extern "system" fn window_proc(
     }
 }
 
+fn start_segment_reanalysis(hwnd: HWND, state: &mut WindowState) {
+    let Some(mut index) = state.selected_index else {
+        show_project_error(hwnd, state.language, &labels(state.language).no_selection);
+        return;
+    };
+    capture_current_draft(state);
+
+    // Only one structural segment proposal is kept at a time. Re-running the
+    // same proposed segment discards the in-memory proposal and starts again
+    // from the last project saved on disk. A different segment must first be
+    // applied or the window reopened, so unrelated pending work is never mixed.
+    if state.reanalysis_base_project.is_some() {
+        let selected_id = project_description_id(state, index);
+        let existing_group = selected_id
+            .and_then(|id| state.reanalyzed_groups.get(&id).cloned())
+            .unwrap_or_default();
+        if existing_group.is_empty()
+            || state
+                .drafts
+                .keys()
+                .any(|draft_id| !existing_group.contains(draft_id))
+        {
+            show_project_error(
+                hwnd,
+                state.language,
+                &labels(state.language).apply_before_export,
+            );
+            return;
+        }
+
+        let target_sec = state
+            .project
+            .descriptions
+            .get(index)
+            .map(|description| {
+                if description.gemini_start_sec.is_finite() {
+                    description.gemini_start_sec.max(0.0)
+                } else {
+                    description.source_start_sec.max(0.0)
+                }
+            })
+            .unwrap_or(0.0);
+        if let Some(base_project) = state.reanalysis_base_project.take() {
+            state.project = base_project;
+        }
+        state.drafts.clear();
+        state.reanalyzed_drafts.clear();
+        state.reanalyzed_groups.clear();
+        state.reanalyzed_preview_audio.clear();
+        index = state
+            .project
+            .descriptions
+            .iter()
+            .enumerate()
+            .min_by(|(_, left), (_, right)| {
+                let left_time = if left.gemini_start_sec.is_finite() {
+                    left.gemini_start_sec.max(0.0)
+                } else {
+                    left.source_start_sec.max(0.0)
+                };
+                let right_time = if right.gemini_start_sec.is_finite() {
+                    right.gemini_start_sec.max(0.0)
+                } else {
+                    right.source_start_sec.max(0.0)
+                };
+                (left_time - target_sec)
+                    .abs()
+                    .total_cmp(&(right_time - target_sec).abs())
+            })
+            .map(|(candidate_index, _)| candidate_index)
+            .unwrap_or(0);
+        state.selected_index = Some(index);
+        refill_list(state, index);
+    } else if !state.drafts.is_empty() {
+        show_project_error(
+            hwnd,
+            state.language,
+            &labels(state.language).apply_before_export,
+        );
+        return;
+    }
+
+    let Some((use_sonarpad_ai, gemini_api_key, sonarpad_code, device_id, selected_model)) =
+        with_state(state.parent, |app| {
+            (
+                app.settings.audio_description_use_sonarpad_ai,
+                app.settings.gemini_api_key.clone(),
+                app.settings.sonarpad_ai_access_code.clone(),
+                app.settings.sonarpad_ai_device_id.clone(),
+                app.settings.audio_description_gemini_model.clone(),
+            )
+        })
+    else {
+        show_project_error(
+            hwnd,
+            state.language,
+            &i18n::tr(
+                state.language,
+                "audio_description.project.error_ai_settings_main",
+            ),
+        );
+        return;
+    };
+
+    let (gemini_api_key, service_url, service_code, device_id, model) = if use_sonarpad_ai {
+        if sonarpad_code.trim().is_empty() || device_id.trim().is_empty() {
+            show_project_error(
+                hwnd,
+                state.language,
+                &i18n::tr(
+                    state.language,
+                    "audio_description.project.error_ai_settings_main",
+                ),
+            );
+            return;
+        }
+        (
+            String::new(),
+            SONARPAD_AI_SERVICE_URL.to_string(),
+            sonarpad_code,
+            device_id,
+            "gemini-3.8-flash".to_string(),
+        )
+    } else {
+        let model = selected_model.trim().to_string();
+        if gemini_api_key.trim().is_empty() || model.is_empty() {
+            show_project_error(
+                hwnd,
+                state.language,
+                &i18n::tr(
+                    state.language,
+                    "audio_description.project.error_ai_settings_main",
+                ),
+            );
+            return;
+        }
+        (
+            gemini_api_key,
+            String::new(),
+            String::new(),
+            String::new(),
+            model,
+        )
+    };
+
+    stop_preview(state);
+    let project = state.project.clone();
+    let cancel = Arc::new(AtomicBool::new(false));
+    state.cancel = Some(cancel.clone());
+    state.running = true;
+    set_controls_enabled(state, false);
+    set_text(state.status, &labels(state.language).reanalyzing);
+    unsafe {
+        SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0));
+        SetFocus(state.cancel_button);
+    }
+
+    thread::spawn(move || {
+        let status_hwnd = hwnd;
+        let progress_hwnd = hwnd;
+        let result = reanalyze_audio_description_project_segment(
+            &project,
+            index,
+            gemini_api_key,
+            service_url,
+            service_code,
+            device_id,
+            model,
+            cancel,
+            AudioDescriptionCallbacks {
+                status: Some(Box::new(move |_stage, message| {
+                    post_boxed_message(
+                        status_hwnd,
+                        WM_PROJECT_STATUS,
+                        WPARAM(0),
+                        Box::new(("reanalyze_segment".to_string(), message.to_string())),
+                    );
+                })),
+                progress: Some(Box::new(move |pct| unsafe {
+                    crate::log_if_err!(
+                        PostMessageW(
+                            progress_hwnd,
+                            WM_PROJECT_PROGRESS,
+                            WPARAM(pct as usize),
+                            LPARAM(0),
+                        ),
+                        "Audio description project: PostMessageW failed"
+                    );
+                })),
+                quota: Some(Box::new(|_model, _error| {
+                    AudioDescriptionQuotaDecision::Stop
+                })),
+                overload: Some(Box::new(|_model, _error| {
+                    AudioDescriptionOverloadDecision::Stop
+                })),
+            },
+        );
+        post_boxed_message(
+            hwnd,
+            WM_PROJECT_REANALYZE_DONE,
+            WPARAM(0),
+            Box::new(SegmentReanalysisPayload { result }),
+        );
+    });
+}
+
+fn start_apply_reanalyzed(hwnd: HWND, state: &mut WindowState) {
+    let Some(index) = state.selected_index else {
+        show_project_error(hwnd, state.language, &labels(state.language).no_selection);
+        return;
+    };
+    let Some(description_id) = project_description_id(state, index) else {
+        return;
+    };
+    let Some(group_ids) = state.reanalyzed_groups.get(&description_id).cloned() else {
+        show_project_error(hwnd, state.language, &labels(state.language).no_selection);
+        return;
+    };
+    if group_ids.is_empty() || state.reanalysis_base_project.is_none() {
+        show_project_error(hwnd, state.language, &labels(state.language).no_selection);
+        return;
+    }
+
+    capture_current_draft(state);
+    if state
+        .drafts
+        .keys()
+        .any(|draft_id| !group_ids.contains(draft_id))
+    {
+        show_project_error(
+            hwnd,
+            state.language,
+            &labels(state.language).apply_before_export,
+        );
+        return;
+    }
+
+    let mut edits = Vec::new();
+    for group_id in &group_ids {
+        let Some(project_index) = state
+            .project
+            .descriptions
+            .iter()
+            .position(|description| description.id == *group_id)
+        else {
+            continue;
+        };
+        if let Some(text) = state.drafts.get(group_id) {
+            edits.push((project_index, text.clone()));
+        }
+    }
+
+    stop_preview(state);
+    let project_path = state.project_path.clone();
+    let project = state.project.clone();
+    let cancel = Arc::new(AtomicBool::new(false));
+    state.cancel = Some(cancel.clone());
+    state.running = true;
+    set_controls_enabled(state, false);
+    set_text(state.status, &labels(state.language).checking_duration);
+    unsafe {
+        SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0));
+        SetFocus(state.cancel_button);
+    }
+
+    thread::spawn(move || {
+        let status_hwnd = hwnd;
+        let progress_hwnd = hwnd;
+        let result = apply_reanalyzed_audio_description_project_segment_and_reexport(
+            &project_path,
+            &project,
+            &edits,
+            cancel,
+            AudioDescriptionCallbacks {
+                status: Some(Box::new(move |stage, message| {
+                    post_boxed_message(
+                        status_hwnd,
+                        WM_PROJECT_STATUS,
+                        WPARAM(0),
+                        Box::new((stage.to_string(), message.to_string())),
+                    );
+                })),
+                progress: Some(Box::new(move |pct| unsafe {
+                    crate::log_if_err!(
+                        PostMessageW(
+                            progress_hwnd,
+                            WM_PROJECT_PROGRESS,
+                            WPARAM(pct as usize),
+                            LPARAM(0),
+                        ),
+                        "Audio description project: PostMessageW failed"
+                    );
+                })),
+                quota: None,
+                overload: None,
+            },
+        );
+        post_boxed_message(
+            hwnd,
+            WM_PROJECT_APPLY_REANALYZED_DONE,
+            WPARAM(0),
+            Box::new(result),
+        );
+    });
+}
+
 fn start_apply(hwnd: HWND, state: &mut WindowState) {
+    if state.reanalysis_base_project.is_some() {
+        show_project_error(
+            hwnd,
+            state.language,
+            &labels(state.language).apply_before_export,
+        );
+        unsafe {
+            SetFocus(state.apply_reanalyzed_button);
+        }
+        return;
+    }
     capture_current_draft(state);
 
     let mut edits = Vec::new();
@@ -1723,9 +2359,238 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     16,
                     40,
                     760,
-                    245,
+                    170,
                     hwnd,
                     HMENU(ID_LIST as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                // Create this button immediately after the segment list so Windows tab order
+                // skips it while disabled, but reaches it directly after a reanalysis enables it.
+                let apply_reanalyzed_button = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.apply_reanalyzed).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                    246,
+                    216,
+                    310,
+                    28,
+                    hwnd,
+                    HMENU(ID_APPLY_REANALYZED as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                EnableWindow(apply_reanalyzed_button, false);
+                let (use_sonarpad_ai, personal_api_key, sonarpad_code, selected_ai_model) =
+                    with_state(parent, |app| {
+                        (
+                            app.settings.audio_description_use_sonarpad_ai,
+                            app.settings.gemini_api_key.clone(),
+                            app.settings.sonarpad_ai_access_code.clone(),
+                            app.settings.audio_description_gemini_model.clone(),
+                        )
+                    })
+                    .unwrap_or((
+                        false,
+                        String::new(),
+                        String::new(),
+                        project.gemini_model.clone(),
+                    ));
+                let ai_access_label = CreateWindowExW(
+                    Default::default(),
+                    WC_STATIC,
+                    PCWSTR(to_wide(&labels.reanalyze_ai_access).as_ptr()),
+                    WS_CHILD,
+                    16,
+                    220,
+                    100,
+                    20,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let reanalyze_ai_mode_combo = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_COMBOBOXW,
+                    PCWSTR::null(),
+                    WS_CHILD | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                    116,
+                    216,
+                    250,
+                    120,
+                    hwnd,
+                    HMENU(ID_REANALYZE_AI_MODE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                add_combo_item(reanalyze_ai_mode_combo, &labels.reanalyze_personal);
+                add_combo_item(reanalyze_ai_mode_combo, &labels.reanalyze_sonarpad);
+                SendMessageW(
+                    reanalyze_ai_mode_combo,
+                    CB_SETCURSEL,
+                    WPARAM(if use_sonarpad_ai { 1 } else { 0 }),
+                    LPARAM(0),
+                );
+                let reanalyze_credential_label = CreateWindowExW(
+                    Default::default(),
+                    WC_STATIC,
+                    PCWSTR(
+                        to_wide(if use_sonarpad_ai {
+                            &labels.reanalyze_sonarpad_code
+                        } else {
+                            &labels.reanalyze_api_key
+                        })
+                        .as_ptr(),
+                    ),
+                    WS_CHILD,
+                    380,
+                    220,
+                    132,
+                    20,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let initial_credential = if use_sonarpad_ai {
+                    sonarpad_code.clone()
+                } else {
+                    personal_api_key.clone()
+                };
+                let reanalyze_credential_edit = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_EDIT,
+                    PCWSTR(to_wide(&initial_credential).as_ptr()),
+                    WS_CHILD | WINDOW_STYLE(ES_AUTOHSCROLL as u32),
+                    512,
+                    216,
+                    150,
+                    26,
+                    hwnd,
+                    HMENU(ID_REANALYZE_CREDENTIAL as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                SendMessageW(
+                    reanalyze_credential_edit,
+                    EM_SETPASSWORDCHAR,
+                    WPARAM('*' as usize),
+                    LPARAM(0),
+                );
+                let reanalyze_show_credential_checkbox = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.reanalyze_show_key).as_ptr()),
+                    WS_CHILD | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
+                    670,
+                    216,
+                    106,
+                    26,
+                    hwnd,
+                    HMENU(ID_REANALYZE_SHOW_CREDENTIAL as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let balance_label = CreateWindowExW(
+                    Default::default(),
+                    WC_STATIC,
+                    PCWSTR(to_wide(&labels.reanalyze_balance).as_ptr()),
+                    WS_CHILD,
+                    16,
+                    252,
+                    150,
+                    20,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let reanalyze_balance_edit = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_EDIT,
+                    PCWSTR(to_wide(&labels.reanalyze_balance_unavailable).as_ptr()),
+                    WS_CHILD | WINDOW_STYLE(ES_READONLY as u32),
+                    166,
+                    248,
+                    190,
+                    26,
+                    hwnd,
+                    HMENU(ID_REANALYZE_BALANCE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let model_label = CreateWindowExW(
+                    Default::default(),
+                    WC_STATIC,
+                    PCWSTR(to_wide(&labels.reanalyze_model).as_ptr()),
+                    WS_CHILD,
+                    380,
+                    252,
+                    110,
+                    20,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let reanalyze_model_combo = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_COMBOBOXW,
+                    PCWSTR::null(),
+                    WS_CHILD | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                    490,
+                    248,
+                    286,
+                    130,
+                    hwnd,
+                    HMENU(ID_REANALYZE_MODEL as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let mut reanalysis_models = vec![
+                    DEFAULT_AUDIO_DESCRIPTION_GEMINI_MODEL.to_string(),
+                    project.gemini_model.clone(),
+                    selected_ai_model.clone(),
+                ];
+                reanalysis_models.retain(|model| !model.trim().is_empty());
+                reanalysis_models.sort();
+                reanalysis_models.dedup();
+                let preferred_model = if selected_ai_model.trim().is_empty() {
+                    if project.gemini_model.trim().is_empty() {
+                        DEFAULT_AUDIO_DESCRIPTION_GEMINI_MODEL.to_string()
+                    } else {
+                        project.gemini_model.clone()
+                    }
+                } else {
+                    selected_ai_model.clone()
+                };
+                let mut preferred_index = 0usize;
+                for (model_index, model) in reanalysis_models.iter().enumerate() {
+                    add_combo_item(reanalyze_model_combo, model);
+                    if model == &preferred_model {
+                        preferred_index = model_index;
+                    }
+                }
+                SendMessageW(
+                    reanalyze_model_combo,
+                    CB_SETCURSEL,
+                    WPARAM(preferred_index),
+                    LPARAM(0),
+                );
+                EnableWindow(reanalyze_model_combo, !use_sonarpad_ai);
+                let reanalyze_button = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.reanalyze_button).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                    16,
+                    216,
+                    220,
+                    28,
+                    hwnd,
+                    HMENU(ID_REANALYZE as isize),
                     HINSTANCE(0),
                     None,
                 );
@@ -1735,7 +2600,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.text).as_ptr()),
                     WS_CHILD | WS_VISIBLE,
                     16,
-                    296,
+                    252,
                     370,
                     20,
                     hwnd,
@@ -1753,9 +2618,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         | WS_VSCROLL
                         | WINDOW_STYLE((ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN) as u32),
                     16,
-                    320,
+                    276,
                     760,
-                    110,
+                    154,
                     hwnd,
                     HMENU(ID_EDIT as isize),
                     HINSTANCE(0),
@@ -2095,6 +2960,17 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 for control in [
                     descriptions_label,
                     list,
+                    ai_access_label,
+                    reanalyze_ai_mode_combo,
+                    reanalyze_credential_label,
+                    reanalyze_credential_edit,
+                    reanalyze_show_credential_checkbox,
+                    balance_label,
+                    reanalyze_balance_edit,
+                    model_label,
+                    reanalyze_model_combo,
+                    reanalyze_button,
+                    apply_reanalyzed_button,
                     text_label,
                     edit,
                     details,
@@ -2142,6 +3018,21 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     progress,
                     status,
                     apply_button,
+                    reanalyze_ai_mode_combo,
+                    reanalyze_credential_label,
+                    reanalyze_credential_edit,
+                    reanalyze_show_credential_checkbox,
+                    reanalyze_balance_edit,
+                    reanalyze_model_combo,
+                    reanalyze_button,
+                    apply_reanalyzed_button,
+                    reanalyze_personal_api_key: personal_api_key,
+                    reanalyze_sonarpad_code: sonarpad_code,
+                    reanalyze_mode_sonarpad: use_sonarpad_ai,
+                    reanalyzed_drafts: HashMap::new(),
+                    reanalyzed_groups: HashMap::new(),
+                    reanalyzed_preview_audio: HashMap::new(),
+                    reanalysis_base_project: None,
                     search_edit,
                     search_button,
                     display_order: Vec::new(),
@@ -2159,10 +3050,11 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 });
                 refill_list(&mut state, 0);
                 let project_engine = state.project.tts_engine;
+                let state_ptr = Box::into_raw(state);
                 SetWindowLongPtrW(
                     hwnd,
                     windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA,
-                    Box::into_raw(state) as isize,
+                    state_ptr as isize,
                 );
                 set_text(status, &labels.loading_voices);
                 load_project_voices(hwnd, project_engine);
@@ -2195,6 +3087,18 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                             select_project_description(state, index);
                         }
                     }
+                    ID_REANALYZE_AI_MODE if notification == CBN_SELCHANGE && !state.running => {
+                        update_reanalysis_ai_mode(hwnd, state);
+                    }
+                    ID_REANALYZE_SHOW_CREDENTIAL if !state.running => {
+                        update_reanalysis_credential_visibility(state);
+                    }
+                    ID_REANALYZE_CREDENTIAL if notification == EN_KILLFOCUS && !state.running => {
+                        capture_reanalysis_credential(state);
+                        refresh_reanalysis_balance(hwnd, state);
+                    }
+                    ID_REANALYZE if !state.running => start_segment_reanalysis(hwnd, state),
+                    ID_APPLY_REANALYZED if !state.running => start_apply_reanalyzed(hwnd, state),
                     ID_SEARCH if notification == EN_CHANGE && !state.running => {
                         if get_text(state.search_edit).trim().is_empty() {
                             capture_current_draft(state);
@@ -2220,8 +3124,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     ID_EXPORT_VTT if !state.running => export_project_subtitles(hwnd, state, "vtt"),
                     ID_CANCEL => {
                         if let Some(cancel) = state.cancel.as_ref() {
-                            cancel.store(true, Ordering::Relaxed);
-                            set_text(state.status, &labels(state.language).canceling);
+                            cancel.store(true, Ordering::SeqCst);
+                            let message = labels(state.language).canceling;
+                            set_text(state.status, &message);
+                            crate::accessibility::screen_reader_speak(&message);
                             EnableWindow(state.cancel_button, false);
                         }
                     }
@@ -2323,6 +3229,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         let applied_count = outcome.applied_count;
                         state.project = outcome.project;
                         state.drafts.clear();
+                        state.reanalyzed_drafts.clear();
+                        state.reanalyzed_groups.clear();
+                        state.reanalyzed_preview_audio.clear();
+                        state.reanalysis_base_project = None;
                         refill_list(state, state.selected_index.unwrap_or(0));
                         SendMessageW(state.progress, PBM_SETPOS, WPARAM(100), LPARAM(0));
                         let language_labels = labels(state.language);
@@ -2369,6 +3279,197 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                                     SetFocus(state.edit);
                                 }
                             }
+                        }
+                    }
+                }
+                LRESULT(0)
+            }
+            WM_PROJECT_APPLY_REANALYZED_DONE => {
+                let payload = lparam.0
+                    as *mut Result<AudioDescriptionOutcome, AudioDescriptionProjectBatchEditError>;
+                if payload.is_null() {
+                    return LRESULT(0);
+                }
+                let result = *Box::from_raw(payload);
+                let pointer =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut WindowState;
+                if pointer.is_null() {
+                    return LRESULT(0);
+                }
+                let state = &mut *pointer;
+                state.running = false;
+                state.cancel = None;
+                set_controls_enabled(state, true);
+                match result {
+                    Ok(_outcome) => match load_audio_description_project(&state.project_path) {
+                        Ok(project) => {
+                            state.project = project;
+                            state.drafts.clear();
+                            state.reanalyzed_drafts.clear();
+                            state.reanalyzed_groups.clear();
+                            state.reanalyzed_preview_audio.clear();
+                            state.reanalysis_base_project = None;
+                            refill_list(state, state.selected_index.unwrap_or(0));
+                            SendMessageW(state.progress, PBM_SETPOS, WPARAM(100), LPARAM(0));
+                            set_text(state.status, &labels(state.language).complete);
+                            show_project_info(
+                                hwnd,
+                                state.language,
+                                &labels(state.language).success,
+                            );
+                            SetFocus(state.list);
+                        }
+                        Err(error) => {
+                            set_text(state.status, &error);
+                            show_project_error(hwnd, state.language, &error);
+                        }
+                    },
+                    Err(batch_error) => {
+                        if let Some(index) = batch_error.index {
+                            refill_list(state, index);
+                        }
+                        match batch_error.error {
+                            AudioDescriptionProjectEditError::Cancelled => {
+                                SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0));
+                                set_text(state.status, &labels(state.language).ready);
+                                SetFocus(state.list);
+                            }
+                            AudioDescriptionProjectEditError::TooLong {
+                                available_sec,
+                                synthesized_sec,
+                            } => {
+                                let available = format!("{available_sec:.3}");
+                                let actual = format!("{synthesized_sec:.3}");
+                                let message = i18n::tr_f(
+                                    state.language,
+                                    "audio_description.project.error_too_long",
+                                    &[("available", &available), ("actual", &actual)],
+                                );
+                                set_text(state.status, &message);
+                                show_project_error(hwnd, state.language, &message);
+                                if batch_error.index.is_some() {
+                                    SetFocus(state.edit);
+                                }
+                            }
+                            AudioDescriptionProjectEditError::Other(error) => {
+                                set_text(state.status, &error);
+                                show_project_error(hwnd, state.language, &error);
+                                if batch_error.index.is_some() {
+                                    SetFocus(state.edit);
+                                }
+                            }
+                        }
+                    }
+                }
+                LRESULT(0)
+            }
+            WM_PROJECT_REANALYZE_DONE => {
+                let payload = lparam.0 as *mut SegmentReanalysisPayload;
+                if payload.is_null() {
+                    return LRESULT(0);
+                }
+                let payload = *Box::from_raw(payload);
+                let pointer =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut WindowState;
+                if pointer.is_null() {
+                    return LRESULT(0);
+                }
+                let state = &mut *pointer;
+                state.running = false;
+                state.cancel = None;
+                set_controls_enabled(state, true);
+                match payload.result {
+                    Ok(reanalysis) => {
+                        let AudioDescriptionProjectSegmentReanalysis {
+                            focus_index,
+                            project,
+                            segment_description_ids: member_ids,
+                            preview_audio,
+                        } = reanalysis;
+                        if member_ids.is_empty() {
+                            show_project_error(
+                                hwnd,
+                                state.language,
+                                &labels(state.language).no_selection,
+                            );
+                        } else {
+                            // Keep the last saved project only as an in-memory rollback.
+                            // The visible project becomes the fully checked structural
+                            // candidate, so the list/preview show the real new count and
+                            // placements before the user presses Apply segment.
+                            state.reanalysis_base_project = Some(state.project.clone());
+                            state.project = project;
+                            EnableWindow(state.apply_button, false);
+                            state.drafts.clear();
+                            state.reanalyzed_drafts.clear();
+                            state.reanalyzed_groups.clear();
+                            state.reanalyzed_preview_audio = preview_audio;
+                            for description_id in &member_ids {
+                                if let Some(description) = state
+                                    .project
+                                    .descriptions
+                                    .iter()
+                                    .find(|description| description.id == *description_id)
+                                {
+                                    state
+                                        .reanalyzed_drafts
+                                        .insert(*description_id, description.text.clone());
+                                }
+                                state
+                                    .reanalyzed_groups
+                                    .insert(*description_id, member_ids.clone());
+                            }
+                            refill_list(state, focus_index);
+                            SendMessageW(state.progress, PBM_SETPOS, WPARAM(100), LPARAM(0));
+                            let message = labels(state.language).reanalyzed_ready;
+                            set_text(state.status, &message);
+                            crate::accessibility::screen_reader_speak(&message);
+                            SetFocus(state.list);
+                        }
+                    }
+                    Err(error) if error == "cancelled" => {
+                        SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0));
+                        set_text(state.status, &labels(state.language).ready);
+                        SetFocus(state.list);
+                    }
+                    Err(error) => {
+                        set_text(state.status, &error);
+                        show_project_error(hwnd, state.language, &error);
+                    }
+                }
+                LRESULT(0)
+            }
+            WM_PROJECT_REANALYZE_BALANCE => {
+                let payload = lparam.0 as *mut ReanalysisBalancePayload;
+                if payload.is_null() {
+                    return LRESULT(0);
+                }
+                let payload = *Box::from_raw(payload);
+                let pointer =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut WindowState;
+                if pointer.is_null() {
+                    return LRESULT(0);
+                }
+                let state = &mut *pointer;
+                if using_reanalysis_sonarpad_ai(state)
+                    && get_text(state.reanalyze_credential_edit).trim() == payload.access_code
+                {
+                    match payload.result {
+                        Ok(balance) => set_text(
+                            state.reanalyze_balance_edit,
+                            &format_reanalysis_balance(state.language, balance),
+                        ),
+                        Err(error) => {
+                            crate::log_debug(&format!(
+                                "Audio description project: Sonarpad AI balance unavailable: {error}"
+                            ));
+                            set_text(
+                                state.reanalyze_balance_edit,
+                                &labels(state.language).reanalyze_balance_unavailable,
+                            );
                         }
                     }
                 }
@@ -2558,7 +3659,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         as *mut WindowState;
                 if !pointer.is_null() && (*pointer).running {
                     if let Some(cancel) = (*pointer).cancel.as_ref() {
-                        cancel.store(true, Ordering::Relaxed);
+                        cancel.store(true, Ordering::SeqCst);
                     }
                     set_text((*pointer).status, &labels((*pointer).language).canceling);
                     return LRESULT(0);

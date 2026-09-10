@@ -667,6 +667,7 @@ pub fn segment_media_file(
         segment_seconds,
         start_number,
         SegmentMediaOptions::default(),
+        None,
         progress,
     )
 }
@@ -677,6 +678,7 @@ pub(crate) fn segment_media_file_for_analysis(
     segment_seconds: u32,
     start_number: u32,
     preferred_audio_stream_index: Option<i32>,
+    cancel: &Arc<AtomicBool>,
     progress: Option<&mut dyn FnMut(u32)>,
 ) -> Result<(), String> {
     segment_media_file_inner(
@@ -689,6 +691,7 @@ pub(crate) fn segment_media_file_for_analysis(
             preferred_audio_stream_index,
             ..SegmentMediaOptions::default()
         },
+        Some(cancel),
         progress,
     )
 }
@@ -698,6 +701,7 @@ pub(crate) fn segment_media_file_for_analysis_video_only(
     output_pattern: &Path,
     segment_seconds: u32,
     start_number: u32,
+    cancel: &Arc<AtomicBool>,
     progress: Option<&mut dyn FnMut(u32)>,
 ) -> Result<(), String> {
     segment_media_file_inner(
@@ -710,6 +714,7 @@ pub(crate) fn segment_media_file_for_analysis_video_only(
             tolerate_invalid_analysis_packets: true,
             ..SegmentMediaOptions::default()
         },
+        Some(cancel),
         progress,
     )
 }
@@ -730,6 +735,7 @@ pub fn segment_audio_file(
             ..SegmentMediaOptions::default()
         },
         None,
+        None,
     )
 }
 
@@ -739,6 +745,7 @@ fn segment_media_file_inner(
     segment_seconds: u32,
     start_number: u32,
     options: SegmentMediaOptions,
+    cancel: Option<&Arc<AtomicBool>>,
     mut progress: Option<&mut dyn FnMut(u32)>,
 ) -> Result<(), String> {
     let SegmentMediaOptions {
@@ -747,6 +754,9 @@ fn segment_media_file_inner(
         tolerate_invalid_analysis_packets,
         preferred_audio_stream_index,
     } = options;
+    if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+        return Err("cancelled".to_string());
+    }
     let api = ffmpeg_api()?;
     let input_c = CString::new(input_path.to_string_lossy().as_bytes())
         .map_err(|_| "FFmpeg: invalid input path".to_string())?;
@@ -921,6 +931,10 @@ fn segment_media_file_inner(
     }
 
     loop {
+        if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+            segment_write_error = Some("cancelled".to_string());
+            break;
+        }
         let read_ret = crate::ffmpeg_source::av_read_frame_safe(api, in_ctx, pkt);
         if read_ret < 0 {
             break;

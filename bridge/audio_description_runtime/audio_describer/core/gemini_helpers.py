@@ -670,6 +670,23 @@ def _single_exception_is_permanent_invalid_argument(exc: BaseException) -> bool:
     )
 
 
+def is_sonarpad_file_verification_failed_error(exc: BaseException) -> bool:
+    """Return True only for Sonarpad AI's media verification failure.
+
+    This 502 is special: retrying the same verification forever has been seen to
+    leave the audio-description job stuck. It remains retryable briefly, then the
+    caller must be allowed to activate the media compatibility fallback.
+    """
+    seen = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if "file_verification_failed" in str(current).casefold():
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
 def is_retryable_transient_error(exc: BaseException) -> bool:
     """True if *exc* (or any cause/context in its chain) is a transient network/API error.
 
@@ -764,6 +781,13 @@ def run_with_retry(operation, *, status_callback=None, operation_label=None):
                 app_logger.error(
                     "Permanent Gemini billing error on %s attempt %d: %s",
                     label, attempt, e,
+                )
+                raise
+            if is_sonarpad_file_verification_failed_error(e) and attempt >= 3:
+                app_logger.warning(
+                    "Sonarpad AI file verification failed on %s attempt %d; "
+                    "stopping identical retries so the caller can activate the media fallback.",
+                    label, attempt,
                 )
                 raise
             if not is_retryable_transient_error(e):

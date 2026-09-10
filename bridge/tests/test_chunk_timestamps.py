@@ -420,6 +420,61 @@ class ChunkTimestampTests(unittest.TestCase):
         self.assertEqual(sleep.call_count, 2)
         self.assertIn("retry 2", statuses[-1].lower())
 
+    def test_generic_file_processing_failure_reuploads_same_chunk_once_then_returns_error(self):
+        client = object()
+        failures = [
+            _TransientGeminiFileProcessingError(
+                "Video processing failed on Gemini's servers. Final state: FAILED",
+                SimpleNamespace(name=f"files/failed-{index}"),
+            )
+            for index in range(2)
+        ]
+        statuses = []
+
+        with (
+            mock.patch(
+                "audio_describer.core.audio_describer._upload_and_wait_for_active_once",
+                side_effect=failures,
+            ) as upload_once,
+            mock.patch(
+                "audio_describer.core.audio_describer._cleanup_uploaded_file"
+            ) as cleanup,
+            mock.patch("audio_describer.core.audio_describer.time.sleep") as sleep,
+        ):
+            with self.assertRaises(gemini_helpers.GeminiAPIError):
+                _upload_and_wait_for_active(client, "chunk.mkv", statuses.append)
+
+        self.assertEqual(upload_once.call_count, 2)
+        self.assertEqual(cleanup.call_count, 2)
+        self.assertEqual(sleep.call_count, 1)
+        self.assertTrue(any("retrying the same upload once" in item.lower() for item in statuses))
+
+    def test_code_13_file_processing_is_bounded_after_three_reuploads(self):
+        client = object()
+        failures = [
+            _TransientGeminiFileProcessingError(
+                "Code 13", SimpleNamespace(name=f"files/failed-{index}")
+            )
+            for index in range(4)
+        ]
+
+        with (
+            mock.patch(
+                "audio_describer.core.audio_describer._upload_and_wait_for_active_once",
+                side_effect=failures,
+            ) as upload_once,
+            mock.patch(
+                "audio_describer.core.audio_describer._cleanup_uploaded_file"
+            ) as cleanup,
+            mock.patch("audio_describer.core.audio_describer.time.sleep") as sleep,
+        ):
+            with self.assertRaises(gemini_helpers.GeminiAPIError):
+                _upload_and_wait_for_active(client, "chunk.mkv")
+
+        self.assertEqual(upload_once.call_count, 4)
+        self.assertEqual(cleanup.call_count, 4)
+        self.assertEqual(sleep.call_count, 3)
+
     def test_character_continuity_keeps_only_named_characters(self):
         known = {}
         _update_character_continuity(known, [
