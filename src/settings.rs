@@ -1325,7 +1325,7 @@ impl Default for AppSettings {
             subtitle_mix_ducking: false,
             podcast_include_microphone: true,
             podcast_microphone_device_id: PODCAST_DEVICE_DEFAULT.to_string(),
-            podcast_microphone_gain: 1.5,
+            podcast_microphone_gain: 1.0,
             dictation_microphone_device_id: PODCAST_DEVICE_DEFAULT.to_string(),
             podcast_include_system_audio: true,
             podcast_split_sources: false,

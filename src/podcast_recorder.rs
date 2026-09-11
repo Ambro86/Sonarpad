@@ -41,12 +41,14 @@ use windows::Win32::System::Threading::{
 };
 use windows::Win32::System::Variant::VT_BLOB;
 use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
-use windows::core::{HRESULT, Interface, PCWSTR, PROPVARIANT, PWSTR, implement};
+use windows::core::{GUID, HRESULT, Interface, PCWSTR, PROPVARIANT, PWSTR, implement};
 
 const TARGET_SAMPLE_RATE: u32 = 44100;
 const TARGET_CHANNELS: u16 = 2;
 const TARGET_BITS: u16 = 16;
 const MIX_CHUNK_FRAMES: usize = 512;
+const WAVE_FORMAT_PCM_TAG: u32 = 0x0001;
+const KSDATAFORMAT_SUBTYPE_PCM: GUID = GUID::from_u128(0x00000001_0000_0010_8000_00AA00389B71);
 
 #[derive(Clone)]
 pub struct AudioDevice {
@@ -63,7 +65,20 @@ pub struct AudioApp {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SampleFormat {
     I16,
+    I24,
+    I32,
     F32,
+}
+
+impl SampleFormat {
+    fn name(self) -> &'static str {
+        match self {
+            Self::I16 => "i16",
+            Self::I24 => "i24",
+            Self::I32 => "i32",
+            Self::F32 => "f32",
+        }
+    }
 }
 
 struct DeviceEnumerator {
@@ -1360,7 +1375,7 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
     }
     let (input_rate, input_channels, input_format) = if options.target_process_id.is_some() {
         let wave_format = process_loopback_wave_format();
-        let parsed = parse_format(&wave_format);
+        let parsed = parse_format(&wave_format)?;
         unsafe {
             client
                 .Initialize(
@@ -1380,20 +1395,25 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
                 .GetMixFormat()
                 .map_err(|e| format!("GetMixFormat failed: {e}"))?
         };
-        let parsed = parse_mix_format_ptr(mix_format)?;
-        unsafe {
-            client
-                .Initialize(
-                    AUDCLNT_SHAREMODE_SHARED,
-                    stream_flags | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM,
-                    10_000_000,
-                    0,
-                    mix_format,
-                    None,
-                )
-                .map_err(|e| format!("AudioClient initialize failed: {e}"))?;
-            CoTaskMemFree(Some(mix_format as *const _));
-        }
+        let parsed = match parse_mix_format_ptr(mix_format) {
+            Ok(parsed) => parsed,
+            Err(err) => {
+                unsafe { CoTaskMemFree(Some(mix_format as *const _)) };
+                return Err(err);
+            }
+        };
+        let initialize_result = unsafe {
+            client.Initialize(
+                AUDCLNT_SHAREMODE_SHARED,
+                stream_flags | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM,
+                10_000_000,
+                0,
+                mix_format,
+                None,
+            )
+        };
+        unsafe { CoTaskMemFree(Some(mix_format as *const _)) };
+        initialize_result.map_err(|e| format!("AudioClient initialize failed: {e}"))?;
         parsed
     };
     if matches!(options.kind, SourceKind::Microphone) {
@@ -1417,10 +1437,7 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
 
     let mut resampler =
         LinearResampler::new(input_rate, TARGET_SAMPLE_RATE, input_channels as usize);
-    let input_format_name = match input_format {
-        SampleFormat::I16 => "i16",
-        SampleFormat::F32 => "f32",
-    };
+    let input_format_name = input_format.name();
     crate::log_debug(&format!(
         "capture_source format: kind={:?} pid={:?} stream_index={} input_rate={} input_channels={} input_format={} target_rate={} target_channels={}",
         match options.kind {
@@ -1590,8 +1607,14 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
     unsafe {
         crate::log_if_err!(client.Stop());
     }
+    let gain_processed_samples = total_output_frames.saturating_mul(u64::from(TARGET_CHANNELS));
+    let gain_clipped_percent = if gain_processed_samples == 0 {
+        0.0
+    } else {
+        gain_clipped_samples as f64 * 100.0 / gain_processed_samples as f64
+    };
     crate::log_debug(&format!(
-        "Podcast capture sync: source={} packets={} input_frames={} output_frames={} discontinuities={} timestamp_errors={} gain_clipped_samples={}",
+        "Podcast capture sync: source={} packets={} input_frames={} output_frames={} discontinuities={} timestamp_errors={} gain={} gain_clipped_samples={} gain_processed_samples={} gain_clipped_percent={:.4}%",
         if matches!(options.kind, SourceKind::Microphone) {
             "microphone"
         } else {
@@ -1602,7 +1625,10 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
         total_output_frames,
         discontinuities,
         timestamp_errors,
-        gain_clipped_samples
+        options.gain,
+        gain_clipped_samples,
+        gain_processed_samples,
+        gain_clipped_percent
     ));
     Ok(())
 }
@@ -1697,34 +1723,96 @@ fn resolve_device_with_name(
     }
 }
 
-fn parse_format(fmt: &WAVEFORMATEX) -> (u32, u16, SampleFormat) {
+fn pcm_sample_format(bits_per_sample: u16) -> Result<SampleFormat, String> {
+    match bits_per_sample {
+        16 => Ok(SampleFormat::I16),
+        24 => Ok(SampleFormat::I24),
+        32 => Ok(SampleFormat::I32),
+        other => Err(format!(
+            "Unsupported PCM capture format: {other} bits per sample"
+        )),
+    }
+}
+
+fn parse_format(fmt: &WAVEFORMATEX) -> Result<(u32, u16, SampleFormat), String> {
+    // WAVEFORMATEX is packed on Windows. Copy fields that are later passed to
+    // formatting machinery into aligned locals so Rust never creates an
+    // unaligned reference to a packed field.
     let channels = fmt.nChannels;
     let rate = fmt.nSamplesPerSec;
+    let block_align = fmt.nBlockAlign;
+    let avg_bytes_per_sec = fmt.nAvgBytesPerSec;
+    let cb_size = fmt.cbSize;
     if channels < 1 {
-        crate::log_debug(&format!(
-            "Recorder: invalid channel count {} in mix format",
+        return Err(format!(
+            "Invalid capture channel count {} in mix format",
             channels
         ));
     }
-    let mut format = match fmt.wFormatTag as u32 {
-        WAVE_FORMAT_IEEE_FLOAT => SampleFormat::F32,
-        _ => SampleFormat::I16,
-    };
-    if fmt.wFormatTag as u32 == WAVE_FORMAT_EXTENSIBLE {
+    if rate == 0 {
+        return Err("Invalid capture sample rate 0 in mix format".to_string());
+    }
+
+    let tag = fmt.wFormatTag as u32;
+    let bits = fmt.wBitsPerSample;
+    let (format, subtype_name) = if tag == WAVE_FORMAT_IEEE_FLOAT {
+        if bits != 32 {
+            return Err(format!(
+                "Unsupported IEEE float capture format: {bits} bits per sample"
+            ));
+        }
+        (SampleFormat::F32, "IEEE_FLOAT")
+    } else if tag == WAVE_FORMAT_PCM_TAG {
+        (pcm_sample_format(bits)?, "PCM")
+    } else if tag == WAVE_FORMAT_EXTENSIBLE {
+        if cb_size < 22 {
+            return Err(format!(
+                "Invalid WAVE_FORMAT_EXTENSIBLE capture format: cbSize={} (expected at least 22)",
+                cb_size
+            ));
+        }
         let ext = crate::wave_format_extensible_ref_safe(fmt);
         let subformat = crate::read_unaligned_safe(std::ptr::addr_of!(ext.SubFormat));
         if subformat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT {
-            format = SampleFormat::F32;
+            if bits != 32 {
+                return Err(format!(
+                    "Unsupported extensible IEEE float capture format: {bits} bits per sample"
+                ));
+            }
+            (SampleFormat::F32, "IEEE_FLOAT")
+        } else if subformat == KSDATAFORMAT_SUBTYPE_PCM {
+            (pcm_sample_format(bits)?, "PCM")
         } else {
-            format = SampleFormat::I16;
+            return Err(format!(
+                "Unsupported extensible capture subformat {:?} ({} bits per sample)",
+                subformat, bits
+            ));
         }
-    }
-    (rate, channels, format)
+    } else {
+        return Err(format!(
+            "Unsupported capture format tag 0x{tag:04X} ({} bits per sample)",
+            bits
+        ));
+    };
+
+    crate::log_debug(&format!(
+        "Podcast WASAPI format: tag=0x{tag:04X} subtype={} rate={} channels={} bits_per_sample={} block_align={} avg_bytes_per_sec={} cb_size={} decoded_as={}",
+        subtype_name,
+        rate,
+        channels,
+        bits,
+        block_align,
+        avg_bytes_per_sec,
+        cb_size,
+        format.name()
+    ));
+
+    Ok((rate, channels, format))
 }
 
 fn parse_mix_format_ptr(mix_format: *mut WAVEFORMATEX) -> Result<(u32, u16, SampleFormat), String> {
     crate::with_raw_mut_ptr_safe(mix_format, |fmt| parse_format(fmt))
-        .ok_or_else(|| "GetMixFormat returned null pointer".to_string())
+        .ok_or_else(|| "GetMixFormat returned null pointer".to_string())?
 }
 
 fn read_samples(ptr: *mut u8, frames: u32, channels: u16, format: SampleFormat) -> Vec<f32> {
@@ -1741,6 +1829,29 @@ fn read_samples(ptr: *mut u8, frames: u32, channels: u16, format: SampleFormat) 
             SampleFormat::I16 => {
                 let slice = std::slice::from_raw_parts(ptr as *const i16, sample_count);
                 slice.iter().map(|s| *s as f32 / i16::MAX as f32).collect()
+            }
+            SampleFormat::I24 => {
+                let bytes = std::slice::from_raw_parts(ptr as *const u8, sample_count * 3);
+                bytes
+                    .as_chunks::<3>()
+                    .0
+                    .iter()
+                    .map(|sample| {
+                        let raw = (sample[0] as i32)
+                            | ((sample[1] as i32) << 8)
+                            | ((sample[2] as i32) << 16);
+                        let signed = if raw & 0x0080_0000 != 0 {
+                            raw | !0x00FF_FFFF
+                        } else {
+                            raw
+                        };
+                        signed as f32 / 8_388_608.0
+                    })
+                    .collect()
+            }
+            SampleFormat::I32 => {
+                let slice = std::slice::from_raw_parts(ptr as *const i32, sample_count);
+                slice.iter().map(|s| *s as f32 / 2_147_483_648.0).collect()
             }
         }
     }
@@ -2036,6 +2147,35 @@ mod synchronization_tests {
             .timeline
             .end = Some(buffer.origin_qpc + frame_ticks(frames, TARGET_SAMPLE_RATE));
         Ok(buffer)
+    }
+
+    #[test]
+    fn pcm24_capture_samples_are_decoded_without_treating_them_as_i16() {
+        let bytes = [
+            0x00u8, 0x00, 0x00, // 0
+            0xFF, 0xFF, 0x7F, // almost +1
+            0x00, 0x00, 0x80, // -1
+        ];
+        let decoded = read_samples(bytes.as_ptr() as *mut u8, 3, 1, SampleFormat::I24);
+        assert_eq!(decoded.len(), 3);
+        assert_eq!(decoded[0], 0.0);
+        assert!((decoded[1] - 0.999_999_9).abs() < 0.000_001);
+        assert_eq!(decoded[2], -1.0);
+    }
+
+    #[test]
+    fn pcm32_capture_samples_are_decoded_without_treating_them_as_i16() {
+        let samples = [0i32, i32::MAX, i32::MIN];
+        let decoded = read_samples(
+            samples.as_ptr() as *mut u8,
+            samples.len() as u32,
+            1,
+            SampleFormat::I32,
+        );
+        assert_eq!(decoded.len(), 3);
+        assert_eq!(decoded[0], 0.0);
+        assert!(decoded[1] > 0.999_999);
+        assert_eq!(decoded[2], -1.0);
     }
 
     #[test]
