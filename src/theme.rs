@@ -260,7 +260,9 @@ fn attach_window(hwnd: isize) {
 }
 
 fn should_subclass_window(class_name: &str) -> bool {
-    class_name.starts_with("sonarpad")
+    class_name
+        .get(..8)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("sonarpad"))
 }
 
 /// Windows common dialogs and MessageBox windows use the system `#32770`
