@@ -1,5 +1,13 @@
 # Changelog
 
+Version 0.9.8 – 2026-09-12
+
+AI Audio Description
+1. Strengthened multichannel audio-description export conservatively without changing the pipeline for files that already work. Sonarpad always keeps the original channel layout on the normal path; only if the multichannel staging WAV fails because a frame/sample is not aligned to the channel count does Sonarpad retry that export alone through a stereo fallback. Mono, stereo and multichannel files that already export successfully continue through the normal path unchanged.
+
+Dark mode and accessibility
+1. Fixed dark mode interfering with native Windows dialogs and confirmation messages. Sonarpad no longer applies its custom dark-theme subclass to system `#32770` dialog trees, so Save/Open dialogs, diagnostic export and MessageBox confirmations remain managed by Windows and can correctly receive keyboard/NVDA focus. Also fixed an internal issue with the default ZIP extension used by the diagnostic Save dialog.
+
 Version 0.9.7 – 2026-09-11
 
 AI Audio Description

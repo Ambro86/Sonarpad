@@ -1,5 +1,13 @@
 # Dnevnik izmena
 
+Verzija 0.9.8 – 2026-09-12
+
+AI audio opis
+1. Dodat je konzervativni oporavak višekanalnog izvoza bez menjanja pipeline-a za datoteke koje već rade. Sonarpad i dalje prvo koristi originalni raspored kanala i samo po potrebi dopunjava nepotpun poslednji PCM okvir. Ako višekanalni privremeni WAV ipak ne može da se završi zato što broj uzoraka nije deljiv brojem kanala, Sonarpad automatski ponavlja samo taj izvoz u stereo formatu. Uspešni mono, stereo i višekanalni izvozi ostaju nepromenjeni.
+
+Tamna tema i pristupačnost
+1. Ispravljeno je da tamna tema ometa izvorne Windows dijaloge i poruke za potvrdu. Sonarpad više ne primenjuje svoj prilagođeni dark-theme subclass na sistemska `#32770` stabla dijaloga, pa dijalozi Otvori/Sačuvaj, izvoz dijagnostike i MessageBox ostaju pod upravljanjem Windows-a i pravilno dobijaju fokus tastature/NVDA. Ispravljen je i životni vek podrazumevane ZIP ekstenzije u dijalogu za čuvanje dijagnostike.
+
 Verzija 0.9.7 – 2026-09-11
 
 AI audio opis

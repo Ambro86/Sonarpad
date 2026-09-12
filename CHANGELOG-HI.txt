@@ -1,5 +1,13 @@
 # परिवर्तन सूची
 
+Version 0.9.8 – 2026-09-12
+
+AI ऑडियो विवरण
+1. पहले से काम करने वाली फ़ाइलों की pipeline बदले बिना multichannel export के लिए सुरक्षित recovery जोड़ी गई है। Sonarpad पहले मूल channel layout ही उपयोग करता है और केवल आवश्यकता होने पर अधूरा अंतिम PCM frame पूरा करता है। यदि multichannel staging WAV फिर भी इसलिए विफल हो कि samples की संख्या channels की संख्या का गुणज नहीं है, तो Sonarpad केवल उसी export को stereo में दोबारा प्रयास करता है। पहले से सफल mono, stereo और multichannel export अपरिवर्तित रहते हैं।
+
+डार्क थीम और accessibility
+1. वह समस्या ठीक की गई जिसमें dark theme Windows के native dialogs और confirmation messages में बाधा डालता था। Sonarpad अब system `#32770` dialog trees पर अपना custom dark-theme subclass लागू नहीं करता, इसलिए Open/Save dialogs, diagnostics export और MessageBox Windows द्वारा सामान्य रूप से संभाले जाते हैं और keyboard/NVDA focus सही मिलता है। Diagnostics Save dialog में default ZIP extension की memory lifetime भी ठीक की गई है।
+
 Version 0.9.7 – 2026-09-10
 
 AI ऑडियो विवरण

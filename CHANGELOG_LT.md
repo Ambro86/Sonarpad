@@ -1,5 +1,13 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.8 – 2026-09-12
+
+DI garso aprašymas
+1. Pridėtas konservatyvus daugiakanalio eksportavimo atkūrimas nekeičiant jau veikiančių failų apdorojimo. Sonarpad pirmiausia ir toliau naudoja pradinį kanalų išdėstymą ir tik prireikus užpildo nepilną paskutinį PCM kadrą. Jei daugiakanalis tarpinis WAV vis tiek nepavyksta, nes mėginių skaičius nėra kanalų skaičiaus kartotinis, Sonarpad automatiškai pakartoja tik tą eksportą stereofoniniu režimu. Jau sėkmingi mono, stereo ir daugiakanaliai eksportai nesikeičia.
+
+Tamsi tema ir prieinamumas
+1. Ištaisyta problema, kai tamsi tema trukdė vietiniams Windows dialogams ir patvirtinimo pranešimams. Sonarpad nebetaiko savo tamsios temos subclass sisteminių `#32770` dialogų medžiams, todėl Atidaryti/Išsaugoti langai, diagnostikos eksportas ir MessageBox lieka valdomi Windows ir tinkamai gauna klaviatūros/NVDA fokusą. Taip pat pataisytas diagnostikos išsaugojimo dialogo numatytojo ZIP plėtinio gyvavimo laikas.
+
 Versija 0.9.7 – 2026-09-11
 
 DI garsinis vaizdavimas

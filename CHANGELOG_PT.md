@@ -1,5 +1,13 @@
 # Changelog
 
+Versão 0.9.8 – 2026-09-12
+
+Audiodescrição com IA
+1. Foi adicionada uma recuperação conservadora para exportação multicanal sem alterar o pipeline dos ficheiros que já funcionam. O Sonarpad continua a usar primeiro a disposição de canais original e só completa um último quadro PCM incompleto quando necessário. Se o WAV intermédio multicanal ainda falhar porque o número de amostras não é múltiplo do número de canais, o Sonarpad repete automaticamente apenas essa exportação em estéreo. As exportações mono, estéreo e multicanal que já funcionam permanecem inalteradas.
+
+Tema escuro e acessibilidade
+1. Corrigido um problema em que o tema escuro interferia com diálogos nativos do Windows e mensagens de confirmação. O Sonarpad deixa de aplicar o seu subclass personalizado de tema escuro às árvores de diálogo do sistema `#32770`, mantendo Abrir/Guardar, a exportação de diagnósticos e MessageBox sob gestão do Windows e com foco correto do teclado/NVDA. Também foi corrigido o tempo de vida da extensão ZIP predefinida no diálogo Guardar dos diagnósticos.
+
 Versão 0.9.7 – 2026-09-11
 
 Audiodescrição com IA

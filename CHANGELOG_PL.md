@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+Wersja 0.9.8 – 2026-09-12
+
+Audiodeskrypcja AI
+1. Dodano ostrożny mechanizm odzyskiwania eksportu wielokanałowego bez zmiany pipeline dla plików, które już działają. Sonarpad nadal najpierw używa oryginalnego układu kanałów i tylko w razie potrzeby uzupełnia niepełną ostatnią ramkę PCM. Jeśli mimo to pośredni wielokanałowy WAV nie może zostać zakończony, ponieważ liczba próbek nie jest wielokrotnością liczby kanałów, Sonarpad automatycznie ponawia tylko ten eksport w stereo. Poprawnie działające eksporty mono, stereo i wielokanałowe pozostają bez zmian.
+
+Ciemny motyw i dostępność
+1. Naprawiono problem, przez który ciemny motyw zakłócał natywne okna dialogowe Windows i komunikaty potwierdzenia. Sonarpad nie stosuje już własnego subclassingu ciemnego motywu do systemowych drzew dialogów `#32770`, dzięki czemu okna Otwórz/Zapisz, eksport diagnostyki i MessageBox pozostają obsługiwane przez Windows i prawidłowo otrzymują fokus klawiatury/NVDA. Naprawiono również czas życia domyślnego rozszerzenia ZIP w oknie zapisu diagnostyki.
+
 Wersja 0.9.7 – 2026-09-11
 
 Audiodeskrypcja AI

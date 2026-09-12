@@ -1,5 +1,13 @@
 # Änderungsprotokoll
 
+Version 0.9.8 – 2026-09-12
+
+KI-Audiodeskription
+1. Eine konservative Wiederherstellung für den Mehrkanal-Export wurde hinzugefügt, ohne die Pipeline für bereits funktionierende Dateien zu ändern. Sonarpad verwendet weiterhin zuerst das ursprüngliche Kanallayout und ergänzt nur bei Bedarf einen unvollständigen letzten PCM-Frame. Falls ein Mehrkanal-Zwischen-WAV dennoch scheitert, weil die Anzahl der Samples kein Vielfaches der Kanalzahl ist, wird nur dieser Export automatisch in Stereo wiederholt. Erfolgreiche Mono-, Stereo- und Mehrkanal-Exporte bleiben unverändert.
+
+Dunkles Design und Barrierefreiheit
+1. Behoben, dass das dunkle Design native Windows-Dialoge und Bestätigungsmeldungen beeinträchtigte. Sonarpad wendet sein benutzerdefiniertes Dark-Theme-Subclassing nicht mehr auf Systemdialogbäume der Klasse `#32770` an. Öffnen-/Speichern-Dialoge, der Diagnoseexport und MessageBox-Bestätigungen bleiben damit unter Windows-Verwaltung und erhalten wieder korrekt Tastatur-/NVDA-Fokus. Außerdem wurde die Lebensdauer der Standard-ZIP-Erweiterung im Speichern-Dialog der Diagnose korrigiert.
+
 Version 0.9.7 – 2026-09-11
 
 KI-Audiodeskription

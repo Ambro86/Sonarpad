@@ -232,6 +232,9 @@ unsafe extern "system" fn apply_child_callback(hwnd: isize, _lparam: isize) -> i
 }
 
 fn attach_window_tree(hwnd: isize) {
+    if is_system_dialog_tree(hwnd) {
+        return;
+    }
     attach_window(hwnd);
     unsafe {
         enum_child_windows(hwnd, Some(apply_child_callback), 0);
@@ -240,7 +243,7 @@ fn attach_window_tree(hwnd: isize) {
 }
 
 fn attach_window(hwnd: isize) {
-    if hwnd == 0 {
+    if hwnd == 0 || is_system_dialog_tree(hwnd) {
         return;
     }
     let class_name = window_class_name(hwnd).to_ascii_lowercase();
@@ -257,7 +260,22 @@ fn attach_window(hwnd: isize) {
 }
 
 fn should_subclass_window(class_name: &str) -> bool {
-    class_name.starts_with("sonarpad") || class_name == "#32770"
+    class_name.starts_with("sonarpad")
+}
+
+/// Windows common dialogs and MessageBox windows use the system `#32770`
+/// dialog class. Keep their entire window tree native: forcing our custom
+/// subclass/theme while they are being created can leave the dialog alive but
+/// unusable/invisible to keyboard focus and assistive technology. Sonarpad's
+/// own top-level windows use dedicated `Sonarpad...` classes and continue to
+/// receive the dark theme normally.
+fn is_system_dialog_tree(hwnd: isize) -> bool {
+    if hwnd == 0 {
+        return false;
+    }
+    let root = unsafe { get_ancestor(hwnd, GA_ROOT) };
+    let root = if root == 0 { hwnd } else { root };
+    window_class_name(root).eq_ignore_ascii_case("#32770")
 }
 
 unsafe extern "system" fn theme_subclass_proc(
@@ -489,4 +507,16 @@ fn flush_menu_themes_function() -> Option<FlushMenuThemesFn> {
 
 fn wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_subclass_window;
+
+    #[test]
+    fn native_system_dialogs_are_not_subclassed_by_dark_theme() {
+        assert!(!should_subclass_window("#32770"));
+        assert!(should_subclass_window("SonarpadWin32"));
+        assert!(should_subclass_window("SonarpadCreateAudioDescription"));
+    }
 }

@@ -1,5 +1,13 @@
 # Ändringslogg
 
+Version 0.9.8 – 2026-09-12
+
+AI-ljudbeskrivning
+1. Ett konservativt återställningsläge för flerkanalsexport har lagts till utan att ändra pipeline för filer som redan fungerar. Sonarpad använder fortfarande den ursprungliga kanallayouten först och fyller bara ut en ofullständig sista PCM-ram vid behov. Om en flerkanalig mellan-WAV ändå misslyckas eftersom antalet sampel inte är en multipel av antalet kanaler, försöker Sonarpad automatiskt om endast den exporten i stereo. Fungerande mono-, stereo- och flerkanalsexporter är oförändrade.
+
+Mörkt tema och tillgänglighet
+1. Åtgärdat ett problem där mörkt tema störde inbyggda Windows-dialoger och bekräftelsemeddelanden. Sonarpad använder inte längre sin anpassade dark-theme-subclass på systemdialogträd av typen `#32770`, så Öppna/Spara, diagnostikexport och MessageBox hanteras av Windows och får korrekt tangentbords-/NVDA-fokus. Livslängden för standardändelsen ZIP i diagnostikens Spara-dialog har också korrigerats.
+
 Version 0.9.7 – 2026-09-11
 
 AI-syntolkning

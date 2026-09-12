@@ -24199,6 +24199,7 @@ fn export_diagnostics_dialog(hwnd: HWND) {
             zip_archive_label, all_files_label
         ));
         let title = to_wide(&i18n::tr(language, "dialog.export_diagnostics_title"));
+        let default_extension = to_wide("zip");
 
         let mut ofn = OPENFILENAMEW {
             lStructSize: std::mem::size_of::<OPENFILENAMEW>() as u32,
@@ -24207,7 +24208,7 @@ fn export_diagnostics_dialog(hwnd: HWND) {
             nMaxFile: default_wide.len() as u32,
             lpstrFilter: PCWSTR(filter.as_ptr()),
             lpstrTitle: PCWSTR(title.as_ptr()),
-            lpstrDefExt: PCWSTR(to_wide("zip").as_ptr()),
+            lpstrDefExt: PCWSTR(default_extension.as_ptr()),
             nFilterIndex: 1,
             Flags: OFN_EXPLORER | OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST,
             ..Default::default()

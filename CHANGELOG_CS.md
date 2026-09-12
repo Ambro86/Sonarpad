@@ -1,5 +1,13 @@
 # Přehled změn
 
+Verze 0.9.8 – 2026-09-12
+
+Zvukový popis s AI
+1. Přidána konzervativní obnova exportu vícekanálového zvuku bez změny pipeline u souborů, které již fungují. Sonarpad nejprve stále používá původní rozložení kanálů a pouze v případě potřeby doplní neúplný poslední PCM rámec. Pokud vícekanálový mezilehlý WAV přesto selže, protože počet vzorků není násobkem počtu kanálů, Sonarpad automaticky zopakuje pouze tento export ve stereu. Úspěšné mono, stereo a vícekanálové exporty zůstávají beze změny.
+
+Tmavý motiv a přístupnost
+1. Opraven problém, kdy tmavý motiv narušoval nativní dialogy Windows a potvrzovací zprávy. Sonarpad již nepoužívá vlastní subclass tmavého motivu na systémové dialogové stromy `#32770`, takže dialogy Otevřít/Uložit, export diagnostiky a MessageBox zůstávají spravovány Windows a správně získávají fokus klávesnice/NVDA. Opravena byla také životnost výchozí přípony ZIP v dialogu Uložit diagnostiku.
+
 Verze 0.9.7 – 2026-09-11
 
 AI audiopopis

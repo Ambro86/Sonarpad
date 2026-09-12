@@ -2098,6 +2098,14 @@ fn audio_description_temp_wav_path(output_path: &Path) -> PathBuf {
     ))
 }
 
+fn audio_description_needs_stereo_fallback(error: &str) -> bool {
+    let normalized = error.to_ascii_lowercase();
+    normalized.contains("[multichannel-staging channels=")
+        && (normalized.contains("number of samples written is not a multiple")
+            || normalized.contains("multiple of the number of channels")
+            || normalized.contains("incomplete final frame"))
+}
+
 /// Mix and export an audio-described MP3 without launching an external FFmpeg
 /// process. Source decoding and final libmp3lame encoding both use Sonarpad's
 /// dynamically loaded FFmpeg libraries. Pyannote is not involved here: its
@@ -2117,7 +2125,80 @@ pub fn export_audio_description_mp3(
         return Err("cancelled".to_string());
     }
 
-    let mut source = FfmpegSource::try_new(input_path, 0, None, preferred_audio_stream_index)?;
+    let mut forward_progress = |pct: u32| {
+        if let Some(callback) = progress.as_mut() {
+            callback(pct);
+        }
+    };
+
+    match export_audio_description_mp3_attempt(
+        input_path,
+        output_path,
+        preferred_audio_stream_index,
+        cues,
+        options,
+        false,
+        Some(&mut forward_progress),
+    ) {
+        Ok(()) => Ok(()),
+        Err(primary_error)
+            if !options.cancel.load(Ordering::Relaxed)
+                && audio_description_needs_stereo_fallback(&primary_error) =>
+        {
+            log_debug(&format!(
+                "Audio description export: multichannel staging frame alignment failed; retrying with conservative stereo fallback. primary_error={primary_error}"
+            ));
+            if let Err(error) = fs::remove_file(output_path)
+                && error.kind() != std::io::ErrorKind::NotFound
+            {
+                log_debug(&format!(
+                    "Audio description export: unable to remove partial output before stereo fallback: {error}"
+                ));
+            }
+            match export_audio_description_mp3_attempt(
+                input_path,
+                output_path,
+                preferred_audio_stream_index,
+                cues,
+                options,
+                true,
+                Some(&mut forward_progress),
+            ) {
+                Ok(()) => {
+                    log_debug(
+                        "Audio description export: conservative stereo fallback completed successfully",
+                    );
+                    Ok(())
+                }
+                Err(fallback_error) => Err(format!(
+                    "{primary_error}\nAudio description stereo fallback failed: {fallback_error}"
+                )),
+            }
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn export_audio_description_mp3_attempt(
+    input_path: &Path,
+    output_path: &Path,
+    preferred_audio_stream_index: Option<i32>,
+    cues: &[AudioDescriptionMixCue],
+    options: &AudioDescriptionExportOptions,
+    force_stereo: bool,
+    mut progress: Option<&mut dyn FnMut(u32)>,
+) -> Result<(), String> {
+    let mut source = if force_stereo {
+        FfmpegSource::try_new_with_forced_channels(
+            input_path,
+            0,
+            None,
+            preferred_audio_stream_index,
+            2,
+        )?
+    } else {
+        FfmpegSource::try_new(input_path, 0, None, preferred_audio_stream_index)?
+    };
     let sample_rate = source.sample_rate().max(1);
     let channels = source.channels().max(1);
     let channel_count = channels as usize;
@@ -2199,10 +2280,11 @@ pub fn export_audio_description_mp3(
         sample_format: hound::SampleFormat::Int,
     };
     log_debug(&format!(
-        "Audio description export: staging WAV sample_rate={} channels={} final_mp3_channels={}",
+        "Audio description export: staging WAV sample_rate={} channels={} final_mp3_channels={} stereo_fallback={}",
         sample_rate,
         channels,
-        channels.min(2)
+        channels.min(2),
+        force_stereo
     ));
     let mix_result = (|| -> Result<(), String> {
         let mut writer = hound::WavWriter::create(&temp_wav, wav_spec)
@@ -2329,9 +2411,15 @@ pub fn export_audio_description_mp3(
                 })?;
             }
         }
-        writer
-            .finalize()
-            .map_err(|error| format!("Audio description: finalize staging WAV failed: {error}"))?;
+        writer.finalize().map_err(|error| {
+            if channels > 2 {
+                format!(
+                    "Audio description: finalize staging WAV failed: {error} [multichannel-staging channels={channels}]"
+                )
+            } else {
+                format!("Audio description: finalize staging WAV failed: {error}")
+            }
+        })?;
         Ok(())
     })();
 
@@ -4726,6 +4814,19 @@ mod convert_tests {
     use std::path::PathBuf;
     use std::process::Command;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn test_audio_description_stereo_fallback_only_matches_multichannel_frame_alignment_errors() {
+        assert!(audio_description_needs_stereo_fallback(
+            "Audio description: finalize staging WAV failed: The number of samples written is not a multiple of the number of channels. [multichannel-staging channels=6]"
+        ));
+        assert!(!audio_description_needs_stereo_fallback(
+            "Audio description: finalize staging WAV failed: The number of samples written is not a multiple of the number of channels."
+        ));
+        assert!(!audio_description_needs_stereo_fallback(
+            "Audio description: finalize staging WAV failed: disk full [multichannel-staging channels=6]"
+        ));
+    }
 
     #[test]
     fn test_audio_description_wav_padding_is_noop_for_complete_frames() {

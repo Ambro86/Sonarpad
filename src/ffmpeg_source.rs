@@ -1004,11 +1004,31 @@ impl FfmpegSource {
         pts_clock: Option<Arc<AtomicI64>>,
         preferred_stream_index: Option<i32>,
     ) -> Result<Self, String> {
-        Self::try_new_at(
+        Self::try_new_at_with_forced_channels(
             path,
             start_seconds as f64,
             pts_clock,
             preferred_stream_index,
+            None,
+        )
+    }
+
+    /// Create a new FFmpeg audio source while forcing the decoded output to a
+    /// specific channel count. This is intentionally used only by conservative
+    /// recovery paths; ordinary playback and exports keep the source layout.
+    pub(crate) fn try_new_with_forced_channels(
+        path: &Path,
+        start_seconds: u64,
+        pts_clock: Option<Arc<AtomicI64>>,
+        preferred_stream_index: Option<i32>,
+        forced_channels: u16,
+    ) -> Result<Self, String> {
+        Self::try_new_at_with_forced_channels(
+            path,
+            start_seconds as f64,
+            pts_clock,
+            preferred_stream_index,
+            Some(forced_channels.max(1)),
         )
     }
 
@@ -1018,6 +1038,22 @@ impl FfmpegSource {
         start_seconds: f64,
         pts_clock: Option<Arc<AtomicI64>>,
         preferred_stream_index: Option<i32>,
+    ) -> Result<Self, String> {
+        Self::try_new_at_with_forced_channels(
+            path,
+            start_seconds,
+            pts_clock,
+            preferred_stream_index,
+            None,
+        )
+    }
+
+    fn try_new_at_with_forced_channels(
+        path: &Path,
+        start_seconds: f64,
+        pts_clock: Option<Arc<AtomicI64>>,
+        preferred_stream_index: Option<i32>,
+        forced_channels: Option<u16>,
     ) -> Result<Self, String> {
         let start_seconds = if start_seconds.is_finite() {
             start_seconds.max(0.0)
@@ -1179,7 +1215,8 @@ impl FfmpegSource {
             ));
         }
 
-        let (mut swr_ctx, channels, sample_rate) = Self::init_resampler(api, codec_ctx, codecpar)?;
+        let (mut swr_ctx, channels, sample_rate) =
+            Self::init_resampler(api, codec_ctx, codecpar, forced_channels)?;
 
         let mut packet = crate::ffmpeg_source::av_packet_alloc_safe(api);
         if packet.is_null() {
@@ -1288,6 +1325,7 @@ impl FfmpegSource {
         api: &FfmpegApi,
         codec_ctx: *mut AVCodecContext,
         codecpar: *const AVCodecParameters,
+        forced_channels: Option<u16>,
     ) -> Result<(*mut SwrContext, u16, u32), String> {
         let mut in_layout: AVChannelLayout = crate::zeroed_safe();
         let mut out_layout: AVChannelLayout = crate::zeroed_safe();
@@ -1316,7 +1354,14 @@ impl FfmpegSource {
             ));
         }
 
-        let out_copy = unsafe { (api.av_channel_layout_copy)(&mut out_layout, &in_layout) };
+        let out_copy = if let Some(forced_channels) = forced_channels {
+            unsafe {
+                (api.av_channel_layout_default)(&mut out_layout, forced_channels.max(1) as i32);
+            }
+            0
+        } else {
+            unsafe { (api.av_channel_layout_copy)(&mut out_layout, &in_layout) }
+        };
         if out_copy < 0 {
             unsafe {
                 (api.av_channel_layout_uninit)(&mut in_layout);

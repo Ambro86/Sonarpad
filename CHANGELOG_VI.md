@@ -1,5 +1,13 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.8 – 2026-09-12
+
+Mô tả âm thanh bằng AI
+1. Đã thêm cơ chế khôi phục thận trọng cho xuất âm thanh đa kênh mà không thay đổi pipeline của các tệp vốn đã hoạt động. Sonarpad vẫn dùng bố cục kênh gốc trước và chỉ bổ sung khung PCM cuối bị thiếu khi cần. Nếu WAV trung gian đa kênh vẫn thất bại vì số mẫu không phải bội số của số kênh, Sonarpad tự động thử lại riêng lần xuất đó ở stereo. Các lần xuất mono, stereo và đa kênh vốn thành công không thay đổi.
+
+Chế độ tối và khả năng truy cập
+1. Đã sửa lỗi chế độ tối can thiệp vào các hộp thoại Windows gốc và thông báo xác nhận. Sonarpad không còn áp dụng subclass giao diện tối tùy chỉnh cho cây hộp thoại hệ thống `#32770`, vì vậy hộp thoại Mở/Lưu, xuất chẩn đoán và MessageBox vẫn do Windows quản lý và nhận đúng focus bàn phím/NVDA. Đồng thời sửa thời gian sống của phần mở rộng ZIP mặc định trong hộp thoại Lưu chẩn đoán.
+
 Phiên bản 0.9.7 – 2026-09-11
 
 Mô tả âm thanh bằng AI
