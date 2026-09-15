@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "segment analyserat igen",
   "audio_description.project.status.reanalyzing": "Analyserar valt segment igen…",
   "audio_description.project.status.reanalyzed_ready": "Segmentet har analyserats igen. Tryck Mellanslag för förhandslyssning och använd sedan Tillämpa segment och exportera MP3 igen.",
-  "audio_description.project.error_ai_settings_main": "Konfigurera först AI-åtkomst i fönstret Skapa syntolkning (Gemini API-nyckel eller Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Konfigurera först AI-åtkomst i fönstret Skapa syntolkning (Gemini API-nyckel eller Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Ingen beskrivning kan infogas",
+  "audio_description.short_silence_retry_prompt": "Den normala analysen hittade ingen beskrivning som får plats i de tillgängliga pauserna utan att överlappa tal. Vill du upprepa analysen med mycket korta beskrivningar? Tystnadsbegränsningarna förblir aktiva.",
+  "audio_description.short_silence_retrying": "Upprepar analysen med mycket korta beskrivningar...",
+  "audio_description.no_silence_result": "Ingen beskrivning kunde infogas i de tillgängliga pauserna utan att överlappa tal.",
+  "audio_description.dialogue_overlap_retry_title": "Sista reservläge",
+  "audio_description.dialogue_overlap_retry_prompt": "Försöket med mycket korta beskrivningar kunde inte heller placera dem utan att överlappa tal. Vill du göra ett sista försök där korta överlappningar med dialog tillåts? Detta är ett isolerat reservläge och ändrar inte den normala syntolkningsanalysen.",
+  "audio_description.dialogue_overlap_retrying": "Skapar den sista reservlösningen med överlappning på dialog...",
+  "audio_description.dialogue_overlap_unavailable": "Det sista reservläget kan inte användas eftersom det inte finns några genererade beskrivningar att återanvända.",
+  "audio_description.dialogue_overlap_direct_prompt": "Analysen har redan körts med Korta beskrivningar, men ingen kunde placeras utan att överlappa tal. Vill du ändå skapa syntolkningen genom att tillåta korta överlappningar med dialog? Detta är en isolerad reservlösning och ändrar inte den normala syntolkningsprocessen."
 }

@@ -2195,5 +2195,14 @@
   "audio_description.project.reanalyzed_marker": "Segment neu analysiert",
   "audio_description.project.status.reanalyzing": "Ausgewähltes Segment wird neu analysiert…",
   "audio_description.project.status.reanalyzed_ready": "Segment neu analysiert. Drücke die Leertaste für die Vorschau und danach Segment anwenden und MP3 erneut exportieren.",
-  "audio_description.project.error_ai_settings_main": "Konfiguriere zuerst den KI-Zugriff im Fenster „Audiodeskription erstellen“ (Gemini-API-Schlüssel oder Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Konfiguriere zuerst den KI-Zugriff im Fenster „Audiodeskription erstellen“ (Gemini-API-Schlüssel oder Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Keine Beschreibung kann eingefügt werden",
+  "audio_description.short_silence_retry_prompt": "Die normale Analyse hat keine Beschreibung gefunden, die in die verfügbaren Pausen passt, ohne Sprache zu überlagern. Möchtest du die Analyse mit sehr kurzen Beschreibungen wiederholen? Die Pausenregeln bleiben aktiv.",
+  "audio_description.short_silence_retrying": "Analyse mit sehr kurzen Beschreibungen wird wiederholt...",
+  "audio_description.no_silence_result": "Es konnte keine Beschreibung in die verfügbaren Pausen eingefügt werden, ohne Sprache zu überlagern.",
+  "audio_description.dialogue_overlap_retry_title": "Letzter Fallback",
+  "audio_description.dialogue_overlap_retry_prompt": "Auch der Versuch mit sehr kurzen Beschreibungen konnte sie nicht ohne Überlappung mit Sprache einfügen. Möchtest du einen letzten Versuch zulassen, bei dem kurze Überlappungen mit Dialogen erlaubt sind? Dies ist ein isolierter Fallback und verändert die normale Audiodeskriptionsanalyse nicht.",
+  "audio_description.dialogue_overlap_retrying": "Letzten Fallback mit Dialogüberlappung erstellen...",
+  "audio_description.dialogue_overlap_unavailable": "Der letzte Fallback kann nicht verwendet werden, weil keine erzeugten Beschreibungen zur Wiederverwendung verfügbar sind.",
+  "audio_description.dialogue_overlap_direct_prompt": "Die Analyse wurde bereits mit kurzen Beschreibungen ausgeführt, aber keine davon konnte ohne Überlappung mit Sprache eingefügt werden. Soll die Audiodeskription trotzdem erstellt werden, indem kurze Überlappungen mit Dialog erlaubt werden? Dies ist ein isolierter Fallback und verändert die normale Audiodeskriptions-Pipeline nicht."
 }

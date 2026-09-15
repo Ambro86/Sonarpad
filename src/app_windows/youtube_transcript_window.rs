@@ -486,8 +486,8 @@ fn configure_ytdlp_standard_youtube_client(cmd: &mut Command, url: &str) {
 mod ytdlp_command_tests {
     use super::{
         StreamDialogResult, StreamOutputFormat, StreamQualitySelection,
-        configure_ytdlp_stream_download_command, is_youtube_stream_url, unique_stream_media_path,
-        ytdlp_command,
+        configure_ytdlp_stream_download_command, is_usable_youtube_navigation_entry,
+        is_youtube_stream_url, stream_entry_url, unique_stream_media_path, ytdlp_command,
     };
     use std::path::Path;
 
@@ -616,6 +616,38 @@ mod ytdlp_command_tests {
                 "YouTube transcript test cleanup folder failed: {error}"
             ));
         }
+    }
+
+    #[test]
+    fn youtube_navigation_filters_video_without_view_count() {
+        let entry = serde_json::json!({
+            "url": "abcdefghijk",
+            "title": "Members only",
+            "view_count": null
+        });
+        let url = stream_entry_url(&entry).expect("video URL");
+        assert!(!is_usable_youtube_navigation_entry(&entry, &url));
+    }
+
+    #[test]
+    fn youtube_navigation_keeps_video_with_zero_views() {
+        let entry = serde_json::json!({
+            "url": "abcdefghijk",
+            "title": "Public video",
+            "view_count": 0
+        });
+        let url = stream_entry_url(&entry).expect("video URL");
+        assert!(is_usable_youtube_navigation_entry(&entry, &url));
+    }
+
+    #[test]
+    fn youtube_navigation_keeps_collections_without_view_count() {
+        let entry = serde_json::json!({
+            "url": "https://www.youtube.com/playlist?list=PL123",
+            "title": "Playlist"
+        });
+        let url = stream_entry_url(&entry).expect("playlist URL");
+        assert!(is_usable_youtube_navigation_entry(&entry, &url));
     }
 }
 
@@ -2507,15 +2539,38 @@ fn stream_entry_title(entry: &serde_json::Value, language: Language) -> String {
         .unwrap_or_else(|| i18n::tr(language, "app.untitled_base"))
 }
 
+fn stream_entry_has_view_count(entry: &serde_json::Value) -> bool {
+    match entry.get("view_count") {
+        Some(serde_json::Value::Number(_)) => true,
+        Some(serde_json::Value::String(value)) => !value.trim().is_empty(),
+        _ => false,
+    }
+}
+
+fn is_usable_youtube_navigation_entry(entry: &serde_json::Value, url: &str) -> bool {
+    if is_youtube_collection_url(url) || extract_video_id(url).is_none() {
+        return true;
+    }
+    stream_entry_has_view_count(entry)
+}
+
 fn collect_stream_collection_entries(
     entries: &[serde_json::Value],
     language: Language,
+    filter_missing_video_views: bool,
 ) -> Vec<StreamCollectionEntry> {
     let mut out = Vec::new();
     for (index, entry) in entries.iter().enumerate() {
         let Some(video_url) = stream_entry_url(entry) else {
             continue;
         };
+        if filter_missing_video_views && !is_usable_youtube_navigation_entry(entry, &video_url) {
+            crate::log_debug(&format!(
+                "YouTube navigation: filtered video without view count: {}",
+                stream_entry_title(entry, language)
+            ));
+            continue;
+        }
         let position = entry
             .get("playlist_index")
             .and_then(|value| value.as_u64())
@@ -2578,11 +2633,9 @@ fn probe_youtube_collection_entries(
         return Ok((Vec::new(), false));
     };
 
-    let mut out = collect_stream_collection_entries(entries, language);
-    let has_more = out.len() > STREAM_SELECTION_PAGE_SIZE;
-    if has_more {
-        out.truncate(STREAM_SELECTION_PAGE_SIZE);
-    }
+    let has_more = entries.len() > STREAM_SELECTION_PAGE_SIZE;
+    let page_entries = &entries[..entries.len().min(STREAM_SELECTION_PAGE_SIZE)];
+    let out = collect_stream_collection_entries(page_entries, language, true);
     Ok((out, has_more))
 }
 
@@ -2631,7 +2684,7 @@ fn probe_youtube_playlist_all_entries(
     let entries = json
         .get("entries")
         .and_then(|value| value.as_array())
-        .map(|values| collect_stream_collection_entries(values, language))
+        .map(|values| collect_stream_collection_entries(values, language, false))
         .unwrap_or_default()
         .into_iter()
         .filter(|entry| {
@@ -2693,7 +2746,7 @@ fn probe_youtube_search_entries(
         .take(STREAM_SELECTION_PAGE_SIZE)
         .cloned()
         .collect();
-    let mut collected = collect_stream_collection_entries(&page_entries, language);
+    let mut collected = collect_stream_collection_entries(&page_entries, language, true);
     collected.sort_by_key(|entry| !is_youtube_collection_url(&entry.url));
     Ok((collected, has_more))
 }
@@ -6644,6 +6697,16 @@ fn members_only_stream_message(language: Language) -> String {
 
 fn drm_not_supported_stream_message(language: Language) -> String {
     i18n::tr(language, "stream_audio.drm_not_supported")
+}
+
+fn stream_download_error_message(language: Language, err: &str) -> String {
+    if is_members_only_stream_error(err) {
+        members_only_stream_message(language)
+    } else if is_drm_not_supported_stream_error(err) {
+        drm_not_supported_stream_message(language)
+    } else {
+        i18n::tr_f(language, "stream_audio.download_failed", &[("err", err)])
+    }
 }
 
 fn is_login_required_stream_error(err: &str) -> bool {
@@ -11585,11 +11648,8 @@ pub(crate) fn download_active_streaming_audio_media(
             downloaded_path = attempt.primary_path.take();
         } else {
             close_progress_dialog(progress);
-            show_error(
-                parent,
-                language,
-                &i18n::tr_f(language, "stream_audio.download_failed", &[("err", &err)]),
-            );
+            let message = stream_download_error_message(language, &err);
+            show_error(parent, language, &message);
             return true;
         }
     }

@@ -36,9 +36,10 @@ use crate::audio_description::{
     AudioDescriptionCallbacks, AudioDescriptionCharacterCatalogContext,
     AudioDescriptionCharacterCatalogSummary, AudioDescriptionJob, AudioDescriptionOutcome,
     AudioDescriptionResumeSettings, AudioDescriptionVerbosity,
-    audio_description_character_catalog_path, audio_description_job_from_checkpoint,
-    create_audio_description, language_code, list_audio_description_character_catalogs,
-    load_audio_description_character_catalog_context,
+    audio_description_character_catalog_path,
+    audio_description_checkpoint_has_generated_descriptions, audio_description_job_from_checkpoint,
+    create_audio_description, create_audio_description_dialogue_overlap_fallback, language_code,
+    list_audio_description_character_catalogs, load_audio_description_character_catalog_context,
 };
 use crate::i18n;
 use crate::settings::{
@@ -101,6 +102,16 @@ const WM_AD_RESET_NEW: u32 = WM_APP + 197;
 const WM_AD_OVERLOAD: u32 = WM_APP + 198;
 const WM_AD_RESTORE_RUNNING_FOCUS: u32 = WM_APP + 199;
 const WM_AD_SONARPAD_BALANCE: u32 = WM_APP + 200;
+const AUDIO_DESCRIPTION_NO_DESCRIPTIONS_ERROR: &str =
+    "Audio description: Gemini returned no descriptions";
+const AUDIO_DESCRIPTION_NO_SAFE_TTS_SLOT_ERROR: &str =
+    "Audio description: no synthesized description can be placed safely between dialogue";
+const AUDIO_DESCRIPTION_OVERLAP_NO_RAW_ERROR: &str =
+    "Audio description: final overlap fallback has no generated descriptions to reuse";
+fn is_audio_description_no_usable_descriptions_error(error: &str) -> bool {
+    error == AUDIO_DESCRIPTION_NO_DESCRIPTIONS_ERROR
+        || error == AUDIO_DESCRIPTION_NO_SAFE_TTS_SLOT_ERROR
+}
 
 struct Labels {
     title: String,
@@ -230,6 +241,9 @@ struct WindowState {
     source_player_path: Option<PathBuf>,
     resume_checkpoint_path: Option<PathBuf>,
     resume_mode: bool,
+    retry_job: Option<AudioDescriptionJob>,
+    retry_input_to_trash: Option<PathBuf>,
+    short_silence_retry_used: bool,
 }
 
 struct QuotaPromptRequest {
@@ -2257,6 +2271,73 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
         (job, input_to_trash)
     };
     let (job, input_to_trash) = job;
+    state.retry_job = Some(job.clone());
+    state.retry_input_to_trash = input_to_trash.clone();
+    state.short_silence_retry_used = false;
+    launch_audio_description_job(hwnd, state, job, input_to_trash);
+}
+
+fn launch_audio_description_dialogue_overlap_fallback(
+    hwnd: HWND,
+    state: &mut WindowState,
+    job: AudioDescriptionJob,
+    input_to_trash: Option<PathBuf>,
+) {
+    let cancel = Arc::new(AtomicBool::new(false));
+    state.cancel = Some(cancel.clone());
+    state.exhausted_gemini_models.clear();
+    state.running = true;
+    set_controls_enabled(state, false);
+    set_text(
+        state.status,
+        &i18n::tr(
+            state.language,
+            "audio_description.dialogue_overlap_retrying",
+        ),
+    );
+    unsafe { SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0)) };
+
+    thread::spawn(move || {
+        let status_hwnd = hwnd;
+        let progress_hwnd = hwnd;
+        let result = create_audio_description_dialogue_overlap_fallback(
+            &job,
+            cancel,
+            AudioDescriptionCallbacks {
+                status: Some(Box::new(move |stage, message| {
+                    let payload = Box::new((stage.to_string(), message.to_string()));
+                    post_boxed_message(status_hwnd, WM_AD_STATUS, WPARAM(0), payload);
+                })),
+                progress: Some(Box::new(move |pct| unsafe {
+                    crate::log_if_err!(
+                        PostMessageW(
+                            progress_hwnd,
+                            WM_AD_PROGRESS,
+                            WPARAM(pct as usize),
+                            LPARAM(0),
+                        ),
+                        "Audio description overlap fallback: PostMessageW failed"
+                    );
+                })),
+                quota: None,
+                overload: None,
+            },
+        );
+        let payload = Box::new(AudioDescriptionDonePayload {
+            result,
+            input_to_trash,
+        });
+        post_boxed_message(hwnd, WM_AD_DONE, WPARAM(0), payload);
+    });
+}
+
+fn launch_audio_description_job(
+    hwnd: HWND,
+    state: &mut WindowState,
+    job: AudioDescriptionJob,
+    input_to_trash: Option<PathBuf>,
+) {
+    let labels = labels(state.language);
     let cancel = Arc::new(AtomicBool::new(false));
     state.cancel = Some(cancel.clone());
     state.exhausted_gemini_models.clear();
@@ -3397,6 +3478,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     source_player_path: crate::current_playback_media_path(parent),
                     resume_checkpoint_path: None,
                     resume_mode: false,
+                    retry_job: None,
+                    retry_input_to_trash: None,
+                    short_silence_retry_used: false,
                 });
                 let state_pointer = Box::into_raw(state);
                 SetWindowLongPtrW(
@@ -4010,6 +4094,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         );
                         state.resume_checkpoint_path = None;
                         state.resume_mode = false;
+                        state.retry_job = None;
+                        state.retry_input_to_trash = None;
+                        state.short_silence_retry_used = false;
                         set_text(state.gemini_model_label, &labels.gemini_model);
                         set_text(state.start_button, &labels.start);
                         set_text(hwnd, &labels.title);
@@ -4021,6 +4108,183 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                             "Audio description: cancellation completed; worker stopped",
                         );
                         set_text(state.status, &labels.ready);
+                    }
+                    Err(error) if is_audio_description_no_usable_descriptions_error(&error) => {
+                        let no_result =
+                            i18n::tr(state.language, "audio_description.no_silence_result");
+                        if state.short_silence_retry_used {
+                            let prompt = i18n::tr(
+                                state.language,
+                                "audio_description.dialogue_overlap_retry_prompt",
+                            );
+                            let prompt_title = i18n::tr(
+                                state.language,
+                                "audio_description.dialogue_overlap_retry_title",
+                            );
+                            crate::watchdog::enter_modal_dialog();
+                            let choice = MessageBoxW(
+                                hwnd,
+                                PCWSTR(to_wide(&prompt).as_ptr()),
+                                PCWSTR(to_wide(&prompt_title).as_ptr()),
+                                MB_YESNO | MB_ICONQUESTION,
+                            );
+                            crate::watchdog::exit_modal_dialog();
+                            if choice == IDYES {
+                                if let Some(mut retry_job) = state.retry_job.clone() {
+                                    retry_job.verbosity = AudioDescriptionVerbosity::Brief;
+                                    retry_job.resume_checkpoint_path = None;
+                                    crate::log_debug(
+                                        "Audio description: brief-description retry also produced no safely placeable descriptions; user accepted isolated final dialogue-overlap fallback",
+                                    );
+                                    let retry_input_to_trash = state.retry_input_to_trash.clone();
+                                    launch_audio_description_dialogue_overlap_fallback(
+                                        hwnd,
+                                        state,
+                                        retry_job,
+                                        retry_input_to_trash,
+                                    );
+                                } else {
+                                    set_text(state.status, &no_result);
+                                    show_audio_description_error_and_focus(
+                                        hwnd,
+                                        state,
+                                        &no_result,
+                                        state.start_button,
+                                    );
+                                }
+                            } else {
+                                crate::log_debug(
+                                    "Audio description: isolated final dialogue-overlap fallback declined by user",
+                                );
+                                set_text(state.status, &labels.ready);
+                                SetFocus(state.start_button);
+                            }
+                        } else if let Some(retry_job) = state
+                            .retry_job
+                            .clone()
+                            .filter(|job| job.verbosity == AudioDescriptionVerbosity::Brief)
+                        {
+                            if audio_description_checkpoint_has_generated_descriptions(
+                                &retry_job.output_path,
+                            ) {
+                                crate::log_debug(
+                                    "Audio description: initial analysis already used Brief verbosity; skipping redundant Brief retry and offering isolated dialogue-overlap fallback",
+                                );
+                                let prompt = i18n::tr(
+                                    state.language,
+                                    "audio_description.dialogue_overlap_direct_prompt",
+                                );
+                                let prompt_title = i18n::tr(
+                                    state.language,
+                                    "audio_description.dialogue_overlap_retry_title",
+                                );
+                                crate::watchdog::enter_modal_dialog();
+                                let choice = MessageBoxW(
+                                    hwnd,
+                                    PCWSTR(to_wide(&prompt).as_ptr()),
+                                    PCWSTR(to_wide(&prompt_title).as_ptr()),
+                                    MB_YESNO | MB_ICONQUESTION,
+                                );
+                                crate::watchdog::exit_modal_dialog();
+                                if choice == IDYES {
+                                    crate::log_debug(
+                                        "Audio description: user accepted direct isolated dialogue-overlap fallback after an initial Brief analysis",
+                                    );
+                                    let retry_input_to_trash = state.retry_input_to_trash.clone();
+                                    launch_audio_description_dialogue_overlap_fallback(
+                                        hwnd,
+                                        state,
+                                        retry_job,
+                                        retry_input_to_trash,
+                                    );
+                                } else {
+                                    crate::log_debug(
+                                        "Audio description: direct isolated dialogue-overlap fallback declined after an initial Brief analysis",
+                                    );
+                                    set_text(state.status, &labels.ready);
+                                    SetFocus(state.start_button);
+                                }
+                            } else {
+                                crate::log_debug(
+                                    "Audio description: initial Brief analysis produced no reusable generated descriptions; skipping redundant retry and final overlap prompt",
+                                );
+                                set_text(state.status, &no_result);
+                                show_audio_description_error_and_focus(
+                                    hwnd,
+                                    state,
+                                    &no_result,
+                                    state.start_button,
+                                );
+                            }
+                        } else {
+                            let prompt = i18n::tr(
+                                state.language,
+                                "audio_description.short_silence_retry_prompt",
+                            );
+                            let prompt_title = i18n::tr(
+                                state.language,
+                                "audio_description.short_silence_retry_title",
+                            );
+                            crate::watchdog::enter_modal_dialog();
+                            let choice = MessageBoxW(
+                                hwnd,
+                                PCWSTR(to_wide(&prompt).as_ptr()),
+                                PCWSTR(to_wide(&prompt_title).as_ptr()),
+                                MB_YESNO | MB_ICONQUESTION,
+                            );
+                            crate::watchdog::exit_modal_dialog();
+                            if choice == IDYES {
+                                if let Some(mut retry_job) = state.retry_job.clone() {
+                                    retry_job.verbosity = AudioDescriptionVerbosity::Brief;
+                                    retry_job.resume_checkpoint_path = None;
+                                    state.short_silence_retry_used = true;
+                                    crate::log_debug(
+                                        "Audio description: no usable descriptions remained after the normal analysis; user accepted isolated brief-description retry",
+                                    );
+                                    set_text(
+                                        state.status,
+                                        &i18n::tr(
+                                            state.language,
+                                            "audio_description.short_silence_retrying",
+                                        ),
+                                    );
+                                    let retry_input_to_trash = state.retry_input_to_trash.clone();
+                                    launch_audio_description_job(
+                                        hwnd,
+                                        state,
+                                        retry_job,
+                                        retry_input_to_trash,
+                                    );
+                                } else {
+                                    set_text(state.status, &no_result);
+                                    show_audio_description_error_and_focus(
+                                        hwnd,
+                                        state,
+                                        &no_result,
+                                        state.start_button,
+                                    );
+                                }
+                            } else {
+                                crate::log_debug(
+                                    "Audio description: isolated brief-description retry declined by user",
+                                );
+                                set_text(state.status, &labels.ready);
+                                SetFocus(state.start_button);
+                            }
+                        }
+                    }
+                    Err(error) if error == AUDIO_DESCRIPTION_OVERLAP_NO_RAW_ERROR => {
+                        let no_result = i18n::tr(
+                            state.language,
+                            "audio_description.dialogue_overlap_unavailable",
+                        );
+                        set_text(state.status, &no_result);
+                        show_audio_description_error_and_focus(
+                            hwnd,
+                            state,
+                            &no_result,
+                            state.start_button,
+                        );
                     }
                     Err(error) => {
                         set_text(state.status, &error);
@@ -4056,6 +4320,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     state.resume_checkpoint_path = None;
                     state.resume_mode = false;
                     state.cancel = None;
+                    state.retry_job = None;
+                    state.retry_input_to_trash = None;
+                    state.short_silence_retry_used = false;
                     state.exhausted_gemini_models.clear();
 
                     let current_labels = labels(state.language);

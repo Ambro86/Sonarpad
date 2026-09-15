@@ -1,5 +1,15 @@
 # परिवर्तन सूची
 
+Version 0.9.9 – 2026-09-15
+
+AI Audio Description
+1. स्रोत वीडियो में ऑडियो ट्रैक न होने पर एक अलग fallback जोड़ा गया है, बिना पहले से सही काम कर रही pipeline को बदले। Sonarpad हमेशा पहले सामान्य export चलाता है; केवल तभी, जब FFmpeg audio stream न मिलने की सूचना देता है और Sonarpad पुष्टि करता है कि स्रोत में वास्तव में कोई audio track नहीं है, समान अवधि का silent source बनाकर synthesized descriptions को उसमें mix किया जाता है। Original video पर export करते समय मौजूदा video+audio mux path ही दोबारा उपयोग होता है। जिन वीडियो में पहले से audio है, वे बिल्कुल सामान्य path पर चलते रहते हैं।
+
+2. उस दुर्लभ स्थिति के लिए पूरी तरह अलग fallback जोड़ा गया है जिसमें सामान्य audio-description analysis के अंत में कोई उपयोगी description नहीं बचता। सामान्य pipeline में कोई बदलाव नहीं किया गया है और वह हमेशा पहले चलती है। केवल मौजूदा “Gemini returned no descriptions” error आने पर Sonarpad पूछता है कि क्या बहुत छोटे descriptions के साथ analysis दोबारा चलाया जाए। उपयोगकर्ता के स्वीकार करने पर वही pipeline Brief verbosity के साथ फिर चलती है, जबकि silence constraints और dialogue पर overlap न करने का नियम सक्रिय रहते हैं। यदि दूसरी कोशिश में भी कोई उपयोगी description न मिले, Sonarpad स्पष्ट localized संदेश दिखाता है और फिर से retry नहीं करता।
+
+Podcast recording
+1. कुछ problematic WASAPI microphone drivers के गलत device-position values के लिए conservative fallback जोड़ा गया है, बिना उन systems की recording बदले जहाँ वह पहले से सही काम करती है। यह केवल persistent mismatch पर सक्रिय होता है: लगातार 24 mismatch, या 64 clean packets में कम से कम 80% mismatch। असली WASAPI `DATA_DISCONTINUITY` flags और timestamp errors हमेशा authoritative रहते हैं, और system-audio capture में कोई बदलाव नहीं किया गया है।
+
 Version 0.9.8 – 2026-09-12
 
 AI ऑडियो विवरण

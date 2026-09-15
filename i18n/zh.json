@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "片段已重新分析",
   "audio_description.project.status.reanalyzing": "正在重新分析所选片段…",
   "audio_description.project.status.reanalyzed_ready": "片段已重新分析。按空格键试听预览，然后使用“应用片段并重新导出 MP3”。",
-  "audio_description.project.error_ai_settings_main": "请先在“创建音频描述”窗口中配置 AI 访问方式（Gemini API 密钥或 Sonarpad AI）。"
+  "audio_description.project.error_ai_settings_main": "请先在“创建音频描述”窗口中配置 AI 访问方式（Gemini API 密钥或 Sonarpad AI）。",
+  "audio_description.short_silence_retry_title": "无法插入描述",
+  "audio_description.short_silence_retry_prompt": "常规分析没有找到能够放入现有空隙且不覆盖对白的描述。是否要使用非常简短的描述重新分析？静音约束仍将保持启用。",
+  "audio_description.short_silence_retrying": "正在使用非常简短的描述重新分析...",
+  "audio_description.no_silence_result": "无法在不覆盖对白的情况下将描述插入现有空隙。",
+  "audio_description.dialogue_overlap_retry_title": "最终备用方案",
+  "audio_description.dialogue_overlap_retry_prompt": "使用极短描述的重试仍无法在不覆盖对白的情况下插入描述。是否进行最后一次尝试，允许描述与对白短暂重叠？这是独立的备用方案，不会修改正常的音频描述分析流程。",
+  "audio_description.dialogue_overlap_retrying": "正在创建允许与对白重叠的最终回退版本...",
+  "audio_description.dialogue_overlap_unavailable": "无法使用最终备用方案，因为没有可重复使用的已生成描述。",
+  "audio_description.dialogue_overlap_direct_prompt": "分析已经使用“简短”描述运行过，但没有任何描述能够在不与讲话重叠的情况下插入。是否仍要创建音频描述，并允许描述与对白短暂重叠？这是一个独立的回退方式，不会修改正常的音频描述流程。"
 }

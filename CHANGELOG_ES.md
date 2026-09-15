@@ -1,5 +1,22 @@
 # Changelog
 
+Versión 0.9.9 – 2026-09-15
+
+Audiodescripción con IA
+1. Añadido un fallback aislado para vídeos de origen sin pista de audio, sin modificar la canalización que ya funciona. Sonarpad intenta siempre primero la exportación normal; solo si FFmpeg indica que falta el flujo de audio y Sonarpad confirma que el archivo no contiene ninguna pista de audio, crea una fuente silenciosa con la misma duración y mezcla sobre ella las descripciones sintetizadas. Al exportar sobre el vídeo original, se reutiliza después la ruta de mux de vídeo+audio ya existente. Los vídeos que ya contienen audio siguen exactamente la ruta normal.
+
+2. Ampliado el fallback estrictamente aislado para la ausencia de descripciones sin modificar la canalización normal de audiodescripción. Sonarpad sigue ejecutando primero el análisis existente; solo cuando termina sin descripciones utilizables ofrece el segundo intento en modo Breve, usando la misma canalización y manteniendo activas todas las restricciones de silencio y de no superposición con los diálogos. Si ese segundo intento tampoco puede insertar una descripción, Sonarpad solicita ahora permiso explícito para un último fallback. Solo tras elegir Sí reutiliza las descripciones breves ya generadas por Gemini y guardadas en el checkpoint del segundo intento, y las mezcla en sus tiempos visuales con ducking, permitiendo breves superposiciones con los diálogos. Pyannote, el bridge de Gemini, las reglas normales de alineación, la planificación TTS y los dos primeros recorridos de análisis no se modifican. Si el usuario rechaza el intento, o no hay descripciones generadas para reutilizar, Sonarpad termina correctamente con un mensaje localizado.
+
+3. Perfeccionado el fallback aislado cuando no quedan descripciones utilizables, sin modificar la canalización normal de audiodescripción. Si la verbosidad elegida inicialmente ya es Breve y el análisis termina sin descripciones utilizables, Sonarpad omite ahora el segundo análisis redundante de Gemini y, cuando hay descripciones generadas reutilizables, pregunta directamente si se desea usar el fallback final con superposición de diálogo. Si la verbosidad inicial es Estándar o Detallada, se mantiene el intento Breve incluso cuando las pausas disponibles son muy cortas: en ese caso también sirve para generar una descripción más corta para el posible fallback final, reduciendo el tiempo durante el cual la narración cubre el diálogo. Pyannote, el bridge de Gemini y las reglas normales de silencios y alineación permanecen sin cambios.
+
+Grabación de pódcast
+1. Añadido un fallback conservador para la posición del dispositivo del micrófono con algunos controladores WASAPI problemáticos, sin cambiar la grabación en los sistemas que ya funcionan. Solo se activa tras desajustes persistentes de posición: 24 consecutivos o al menos un 80 % en 64 paquetes limpios. Los `DATA_DISCONTINUITY` reales de WASAPI y los errores de marca de tiempo siguen siendo autoritativos, y la captura del audio del sistema no cambia.
+
+YouTube y streaming
+1. Se corrigieron las descargas de YouTube fallidas iniciadas desde el menú contextual de los resultados. Los errores conocidos de yt-dlp para vídeos exclusivos de miembros del canal se transforman ahora en el mensaje localizado de Sonarpad, en lugar de mostrar el texto inglés sin procesar. Después de cerrar el error, Sonarpad restaura el foco cuando ha terminado realmente el menú contextual/bucle modal nativo, volviendo de forma fiable a la lista de resultados con el teclado activo. La pipeline normal de descargas correctas no cambia.
+
+2. Se ha alineado el filtro preventivo con SonarTube móvil: en los resultados de búsqueda y al explorar canales/listas de reproducción se ocultan los vídeos para los que YouTube/yt-dlp no devuelve ningún dato de visualizaciones. Los canales y las listas siguen visibles y los vídeos reales con 0 visualizaciones se conservan. La gestión localizada del error de contenido exclusivo para miembros permanece como segundo respaldo. La descarga múltiple de listas no cambia.
+
 Versión 0.9.8 – 2026-09-12
 
 Audiodescripción con IA

@@ -2316,6 +2316,12 @@ pub fn audio_description_partial_checkpoint_path(output_path: &Path) -> PathBuf 
     path
 }
 
+pub fn audio_description_checkpoint_has_generated_descriptions(output_path: &Path) -> bool {
+    let checkpoint_path = audio_description_partial_checkpoint_path(output_path);
+    load_audio_description_partial_checkpoint(&checkpoint_path)
+        .is_ok_and(|checkpoint| !checkpoint.descriptions.is_empty())
+}
+
 fn load_audio_description_partial_checkpoint(
     path: &Path,
 ) -> Result<AudioDescriptionPartialCheckpoint, String> {
@@ -5530,6 +5536,321 @@ pub fn create_audio_description(
     })
 }
 
+fn schedule_synthesized_descriptions_allow_dialogue_overlap(
+    descriptions: &[SynthesizedDescription],
+    duration_sec: f64,
+) -> (Vec<ScheduledDescription>, Vec<DroppedDescription>) {
+    let mut ordered = descriptions.to_vec();
+    ordered.sort_by(|left, right| left.visual_start_sec.total_cmp(&right.visual_start_sec));
+    let mut scheduled = Vec::new();
+    let mut dropped = Vec::new();
+    let mut cursor = 0.0_f64;
+
+    for description in ordered {
+        let frames = description.samples.len() / description.channels.max(1) as usize;
+        let required = frames as f64 / description.sample_rate.max(1) as f64;
+        let visual_start = description.visual_start_sec.max(0.0).min(duration_sec);
+        if required <= 0.0 || required > duration_sec.max(0.001) {
+            dropped.push(DroppedDescription {
+                original_index: description.original_index,
+                text: description.text,
+                desired_start_sec: visual_start,
+                tts_duration_sec: required,
+            });
+            continue;
+        }
+
+        let latest_start = (duration_sec - required).max(0.0);
+        let start = visual_start.min(latest_start).max(cursor);
+        if start > latest_start + f64::EPSILON
+            || (start - visual_start).abs() > MAX_SHIFT_SEC + f64::EPSILON
+        {
+            dropped.push(DroppedDescription {
+                original_index: description.original_index,
+                text: description.text,
+                desired_start_sec: visual_start,
+                tts_duration_sec: required,
+            });
+            continue;
+        }
+
+        cursor = start + required.max(0.001);
+        scheduled.push(ScheduledDescription {
+            original_index: description.original_index,
+            text: description.text,
+            desired_start_sec: visual_start,
+            visual_evidence_time_sec: description.visual_evidence_time_sec,
+            start_sec: start,
+            samples: description.samples,
+            sample_rate: description.sample_rate,
+            channels: description.channels,
+            extended_pause: false,
+        });
+    }
+
+    (scheduled, dropped)
+}
+
+/// Final, explicit fallback used only after the normal analysis and the isolated
+/// brief-description retry have both produced no safely placeable descriptions.
+/// It deliberately does not alter `create_audio_description`: it reuses the raw
+/// Gemini descriptions already saved in the last partial checkpoint, synthesizes
+/// them, and mixes them at their visual timestamps while allowing dialogue overlap.
+pub fn create_audio_description_dialogue_overlap_fallback(
+    job: &AudioDescriptionJob,
+    cancel: Arc<AtomicBool>,
+    mut callbacks: AudioDescriptionCallbacks,
+) -> Result<AudioDescriptionOutcome, String> {
+    validate_job(job)?;
+    if cancel.load(Ordering::Relaxed) {
+        return Err("cancelled".to_string());
+    }
+
+    let checkpoint_path = audio_description_partial_checkpoint_path(&job.output_path);
+    let checkpoint =
+        load_audio_description_partial_checkpoint(&checkpoint_path).map_err(|error| {
+            crate::log_debug(&format!(
+                "Audio description: final dialogue-overlap fallback checkpoint unavailable: {error}"
+            ));
+            "Audio description: final overlap fallback has no generated descriptions to reuse"
+                .to_string()
+        })?;
+    if checkpoint.descriptions.is_empty() {
+        return Err(
+            "Audio description: final overlap fallback has no generated descriptions to reuse"
+                .to_string(),
+        );
+    }
+
+    crate::log_debug(&format!(
+        "Audio description: isolated final dialogue-overlap fallback starting from checkpoint={} raw_descriptions={}",
+        checkpoint_path.display(),
+        checkpoint.descriptions.len()
+    ));
+    notify_status(
+        &mut callbacks,
+        "tts",
+        "Synthesizing the brief descriptions for the final dialogue-overlap fallback...",
+    );
+    notify_progress(&mut callbacks, 55);
+
+    let tasks = checkpoint
+        .descriptions
+        .iter()
+        .enumerate()
+        .map(|(index, description)| AudioDescriptionSynthesisTask {
+            synthesis_index: index,
+            original_index: index,
+            text: description.text.clone(),
+            desired_start_sec: description.start_sec,
+            visual_start_sec: description
+                .visual_start_sec
+                .unwrap_or(description.start_sec),
+            visual_evidence_time_sec: description.visual_evidence_time_sec,
+            mandatory: false,
+            slot_start_sec: None,
+            slot_end_sec: None,
+        })
+        .collect::<Vec<_>>();
+
+    let cache_dir = temporary_job_dir()?;
+    let synthesis_result = synthesize_description_tasks_parallel(
+        &tasks,
+        job,
+        &cache_dir,
+        cancel.clone(),
+        |completed, total| {
+            let pct = 55 + (completed as u32).saturating_mul(25) / total.max(1) as u32;
+            notify_progress(&mut callbacks, pct);
+        },
+    );
+    crate::log_if_err!(
+        fs::remove_dir_all(&cache_dir),
+        "Audio description cleanup operation failed"
+    );
+    let synthesized = synthesis_result?;
+
+    let (scheduled, dropped_descriptions) =
+        schedule_synthesized_descriptions_allow_dialogue_overlap(
+            &synthesized,
+            checkpoint.source_duration_sec,
+        );
+    if scheduled.is_empty() {
+        return Err(
+            "Audio description: final overlap fallback has no generated descriptions to reuse"
+                .to_string(),
+        );
+    }
+
+    crate::log_debug(&format!(
+        "Audio description: isolated final dialogue-overlap fallback scheduled={} dropped={} (silence constraints intentionally bypassed after explicit user consent)",
+        scheduled.len(),
+        dropped_descriptions.len()
+    ));
+
+    let mix_cues = scheduled
+        .iter()
+        .map(|description| AudioDescriptionMixCue {
+            start_sec: description.start_sec,
+            samples: description.samples.clone(),
+            sample_rate: description.sample_rate,
+            channels: description.channels,
+            extended_pause: false,
+        })
+        .collect::<Vec<_>>();
+
+    notify_status(
+        &mut callbacks,
+        "export",
+        if job.create_video_output {
+            "Applying ducking and creating the final audio-described video fallback..."
+        } else {
+            "Applying ducking and exporting the final audio-description fallback..."
+        },
+    );
+    let export_options = AudioDescriptionExportOptions {
+        ducking_db: AUDIO_DESCRIPTION_DUCKING_DB,
+        fade_ms: AUDIO_DESCRIPTION_FADE_MS,
+        bitrate_kbps: AUDIO_DESCRIPTION_BITRATE_KBPS,
+        cancel: cancel.clone(),
+    };
+    let export_target = if job.save_project {
+        temporary_sibling_path(&job.output_path, "new")
+    } else {
+        job.output_path.clone()
+    };
+    let mut export_progress = |pct: u32| {
+        notify_progress(&mut callbacks, 80 + pct.saturating_mul(20) / 100);
+    };
+    let export_result = match export_audio_description_output_with_video_fallback(
+        &job.input_path,
+        &export_target,
+        job.audio_stream_index,
+        &mix_cues,
+        &export_options,
+        job.create_video_output,
+        Some(&mut export_progress),
+    ) {
+        Ok(result) => result,
+        Err(error) => {
+            if export_target.exists() {
+                crate::log_if_err!(
+                    fs::remove_file(&export_target),
+                    "Audio description cleanup operation failed"
+                );
+            }
+            return Err(error);
+        }
+    };
+    let exported_target = export_result.output_path;
+    let final_output_path = if job.save_project {
+        if export_result.used_mkv_fallback {
+            audio_description_mkv_fallback_path(&job.output_path)
+        } else {
+            job.output_path.clone()
+        }
+    } else {
+        exported_target.clone()
+    };
+    let output_metadata = fs::metadata(&exported_target).map_err(|error| {
+        format!("Audio description: exported overlap fallback validation failed: {error}")
+    })?;
+    if output_metadata.len() == 0 {
+        crate::log_if_err!(
+            fs::remove_file(&exported_target),
+            "Audio description cleanup operation failed"
+        );
+        return Err("Audio description: exported overlap fallback is empty".to_string());
+    }
+
+    let mut project_path = None;
+    if job.save_project {
+        notify_status(
+            &mut callbacks,
+            "project",
+            "Saving the descriptions inserted by the final dialogue-overlap fallback...",
+        );
+        let path = audio_description_project_path(&final_output_path);
+        let temporary_project = temporary_sibling_path(&path, "new");
+        let output_duration_sec = crate::ffmpeg_export::media_duration_seconds(&exported_target)
+            .unwrap_or(checkpoint.source_duration_sec);
+        let mut project_job = job.clone();
+        project_job.output_path = final_output_path.clone();
+        let project = build_audio_description_project(
+            &project_job,
+            checkpoint.source_duration_sec,
+            output_duration_sec,
+            &[],
+            &scheduled,
+            &dropped_descriptions,
+        );
+        if let Err(error) = save_audio_description_project(&temporary_project, &project) {
+            crate::log_if_err!(
+                fs::remove_file(&exported_target),
+                "Audio description cleanup operation failed"
+            );
+            return Err(error);
+        }
+        if let Err(error) = commit_audio_description_pair(
+            &exported_target,
+            &final_output_path,
+            &temporary_project,
+            &path,
+        ) {
+            crate::log_if_err!(
+                fs::remove_file(&exported_target),
+                "Audio description cleanup operation failed"
+            );
+            crate::log_if_err!(
+                fs::remove_file(&temporary_project),
+                "Audio description cleanup operation failed"
+            );
+            return Err(error);
+        }
+        project_path = Some(path);
+    }
+
+    let (character_catalog_path, character_catalog_warning) = if let Some(catalog) =
+        job.character_catalog.as_ref()
+    {
+        match save_audio_description_character_catalog(catalog, &checkpoint.character_glossary) {
+            Ok(()) => (Some(catalog.path.clone()), None),
+            Err(error) => (None, Some(error)),
+        }
+    } else {
+        (None, None)
+    };
+
+    notify_progress(&mut callbacks, 100);
+    notify_status(
+        &mut callbacks,
+        "complete",
+        if job.create_video_output {
+            "Final dialogue-overlap audio-described video export complete."
+        } else {
+            "Final dialogue-overlap audio-description export complete."
+        },
+    );
+    if checkpoint_path.exists() {
+        crate::log_if_err!(
+            fs::remove_file(&checkpoint_path),
+            "Audio description: remove completed overlap-fallback checkpoint failed"
+        );
+    }
+
+    Ok(AudioDescriptionOutcome {
+        output_path: final_output_path,
+        project_path,
+        project_warning: None,
+        character_catalog_path,
+        character_catalog_warning,
+        generated_descriptions: checkpoint.descriptions.len(),
+        normal_descriptions: scheduled.len(),
+        extended_pauses: 0,
+        dropped_after_tts: dropped_descriptions.len(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -5546,7 +5867,8 @@ mod tests {
         merge_catalog_characters, merge_catalog_description,
         normalize_audio_description_source_duration, normalize_catalog_characters,
         normalize_prepared_gemini_chunk_duration, save_audio_description_character_catalog,
-        save_audio_description_project, schedule_synthesized_descriptions, scheduled_duration_sec,
+        save_audio_description_project, schedule_synthesized_descriptions,
+        schedule_synthesized_descriptions_allow_dialogue_overlap, scheduled_duration_sec,
         trim_edge_trailing_silence, validate_audio_description_project_edit_duration,
     };
     use crate::settings::{DictionaryEntry, Language, TtsEngine};
@@ -5827,6 +6149,29 @@ mod tests {
         let legacy_project: super::AudioDescriptionProject =
             serde_json::from_value(legacy_json).expect("deserialize legacy project");
         assert!(legacy_project.recognize_characters);
+    }
+
+    #[test]
+    fn dialogue_overlap_fallback_uses_visual_timing_without_silence_scheduler() {
+        let description = SynthesizedDescription {
+            original_index: 0,
+            text: "Short visual description".to_string(),
+            desired_start_sec: 2.0,
+            visual_start_sec: 2.0,
+            visual_evidence_time_sec: Some(2.0),
+            mandatory: false,
+            slot_start_sec: None,
+            slot_end_sec: None,
+            samples: Arc::from(vec![0.25_f32; 1_000]),
+            sample_rate: 1_000,
+            channels: 1,
+        };
+        let (scheduled, dropped) =
+            schedule_synthesized_descriptions_allow_dialogue_overlap(&[description], 10.0);
+        assert_eq!(scheduled.len(), 1);
+        assert!(dropped.is_empty());
+        assert!((scheduled[0].start_sec - 2.0).abs() < f64::EPSILON);
+        assert!(!scheduled[0].extended_pause);
     }
 
     #[test]

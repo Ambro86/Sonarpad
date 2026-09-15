@@ -1,5 +1,22 @@
 # Changelog
 
+Version 0.9.9 – 2026-09-15
+
+AI Audio Description
+1. Added an isolated fallback for source videos with no audio track, without changing the existing successful pipeline. Sonarpad still runs the normal export first; only if FFmpeg reports a missing audio stream and Sonarpad confirms that the source contains no audio streams does it create a silent source with the same duration and mix the synthesized descriptions onto it. When exporting on the original video, the existing video/audio mux path is then reused. Videos that already contain audio continue through the exact normal path.
+
+2. Extended the strictly isolated no-description fallback without changing the normal audio-description pipeline. Sonarpad still runs the existing analysis first; only when it ends with no usable descriptions does it offer the Brief retry, which uses the same pipeline and keeps all silence/no-dialogue-overlap constraints active. If that second attempt also cannot place a description, Sonarpad now asks for explicit permission for one final fallback. Only after Yes, it reuses the brief Gemini descriptions already saved by the second attempt and mixes them at their visual timestamps with ducking, allowing short overlaps with dialogue. Pyannote, the Gemini bridge, the normal alignment rules, TTS scheduling and the first two analysis paths are not altered. If the user declines, or no generated description is available to reuse, Sonarpad stops cleanly with a localized message.
+
+3. Refined the isolated no-description fallback without changing the normal audio-description pipeline. If the user’s original verbosity is already Brief and the analysis ends with no usable descriptions, Sonarpad now skips the redundant second Gemini analysis and, when reusable generated descriptions are available, asks directly whether to use the final dialogue-overlap fallback. If the original verbosity is Standard or Detailed, the Brief retry is still kept even when the available pauses are very short: in that case it also serves to generate a shorter description for the possible final overlap fallback, reducing how long narration covers dialogue. Pyannote, the Gemini bridge and the normal silence/alignment rules remain unchanged.
+
+Podcast recording
+1. Added a conservative microphone device-position fallback for problematic WASAPI capture drivers without changing recording on systems that already work. It activates only after persistent device-position mismatches (24 consecutive mismatches, or at least 80% mismatches across 64 clean packets). Real WASAPI `DATA_DISCONTINUITY` flags and timestamp errors remain authoritative, and system-audio capture is unchanged.
+
+YouTube and streaming
+1. Fixed failed YouTube downloads opened from the results context menu. Known members-only errors from yt-dlp are now converted into Sonarpad's localized message instead of exposing the raw English yt-dlp output. After dismissing the error, Sonarpad now performs a deferred focus restore after the native context-menu/modal loop unwinds, reliably returning keyboard focus to the existing results list while keeping the normal successful download pipeline unchanged.
+
+2. Matched SonarTube mobile's preventive filtering for YouTube navigation results: videos for which YouTube/yt-dlp does not provide any view-count metadata are now hidden from search results and channel/playlist browsing, while channels and playlists remain visible and genuine videos reporting 0 views are kept. The existing localized members-only download error remains as a second fallback. Bulk playlist download is unchanged.
+
 Version 0.9.8 – 2026-09-12
 
 AI Audio Description

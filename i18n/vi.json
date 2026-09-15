@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "đoạn đã được phân tích lại",
   "audio_description.project.status.reanalyzing": "Đang phân tích lại đoạn đã chọn…",
   "audio_description.project.status.reanalyzed_ready": "Đoạn đã được phân tích lại. Nhấn Phím cách để nghe bản xem trước, sau đó dùng Áp dụng đoạn và xuất lại MP3.",
-  "audio_description.project.error_ai_settings_main": "Trước tiên hãy cấu hình quyền truy cập AI trong cửa sổ Tạo mô tả âm thanh (khóa API Gemini hoặc Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Trước tiên hãy cấu hình quyền truy cập AI trong cửa sổ Tạo mô tả âm thanh (khóa API Gemini hoặc Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Không thể chèn mô tả",
+  "audio_description.short_silence_retry_prompt": "Phân tích thông thường không tìm thấy mô tả nào có thể vừa với các khoảng trống hiện có mà không chồng lên lời nói. Bạn có muốn phân tích lại bằng các mô tả rất ngắn không? Các ràng buộc về khoảng lặng vẫn được giữ nguyên.",
+  "audio_description.short_silence_retrying": "Đang phân tích lại với các mô tả rất ngắn...",
+  "audio_description.no_silence_result": "Không thể chèn mô tả vào các khoảng trống hiện có mà không chồng lên lời nói.",
+  "audio_description.dialogue_overlap_retry_title": "Phương án dự phòng cuối cùng",
+  "audio_description.dialogue_overlap_retry_prompt": "Lần thử với mô tả rất ngắn cũng không thể chèn chúng mà không chồng lên lời thoại. Bạn có muốn thử lần cuối, cho phép chồng lên lời thoại trong thời gian ngắn không? Đây là phương án dự phòng tách biệt và không thay đổi phân tích mô tả âm thanh thông thường.",
+  "audio_description.dialogue_overlap_retrying": "Đang tạo phương án dự phòng cuối cùng có chồng lên lời thoại...",
+  "audio_description.dialogue_overlap_unavailable": "Không thể dùng phương án dự phòng cuối cùng vì không có mô tả đã tạo để sử dụng lại.",
+  "audio_description.dialogue_overlap_direct_prompt": "Phân tích đã được chạy với mô tả Ngắn, nhưng không mô tả nào có thể được chèn mà không chồng lên lời nói. Bạn vẫn muốn tạo phần mô tả âm thanh bằng cách cho phép chồng ngắn lên lời thoại không? Đây là chế độ dự phòng tách biệt và không thay đổi quy trình mô tả âm thanh thông thường."
 }

@@ -1,5 +1,22 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.9 – 2026-09-15
+
+Mô tả âm thanh bằng AI
+1. Đã thêm cơ chế dự phòng tách biệt cho video nguồn không có track âm thanh mà không thay đổi pipeline đang hoạt động. Sonarpad vẫn luôn thử quy trình xuất bình thường trước; chỉ khi FFmpeg báo thiếu luồng âm thanh và Sonarpad xác nhận nguồn thực sự không có bất kỳ track âm thanh nào, chương trình mới tạo nguồn im lặng có cùng thời lượng rồi trộn các mô tả đã tổng hợp lên đó. Khi xuất trở lại video gốc, đường mux video+audio hiện có tiếp tục được tái sử dụng. Video vốn đã có âm thanh vẫn đi đúng quy trình bình thường như trước.
+
+2. Mở rộng phương án dự phòng được cô lập nghiêm ngặt cho trường hợp không còn mô tả có thể dùng mà không thay đổi quy trình mô tả âm thanh bình thường. Sonarpad vẫn luôn chạy phân tích hiện có trước; chỉ khi kết thúc mà không có mô tả dùng được mới đề nghị lần thử thứ hai ở chế độ Ngắn, dùng cùng quy trình và giữ nguyên mọi ràng buộc về khoảng lặng cũng như không chồng lên lời thoại. Nếu lần thử thứ hai cũng không thể đặt mô tả, Sonarpad giờ sẽ xin phép rõ ràng cho một phương án dự phòng cuối cùng. Chỉ sau khi chọn Có, các mô tả ngắn mà Gemini đã tạo và lưu trong checkpoint của lần thử thứ hai mới được sử dụng lại và trộn tại thời điểm hình ảnh tương ứng với ducking, cho phép chồng lên lời thoại trong thời gian ngắn. Pyannote, bridge Gemini, các quy tắc căn chỉnh bình thường, lịch TTS và hai đường phân tích đầu tiên không bị thay đổi. Nếu người dùng từ chối hoặc không có mô tả đã tạo để dùng lại, Sonarpad kết thúc gọn gàng với thông báo đã bản địa hóa.
+
+3. Tinh chỉnh chế độ dự phòng tách biệt khi không còn mô tả có thể sử dụng mà không thay đổi quy trình mô tả âm thanh thông thường. Nếu người dùng ngay từ đầu đã chọn mức Ngắn và quá trình phân tích kết thúc mà không có mô tả dùng được, Sonarpad giờ sẽ bỏ qua lần phân tích Gemini thứ hai dư thừa và, khi có mô tả đã tạo có thể tái sử dụng, sẽ hỏi trực tiếp có dùng chế độ dự phòng cuối cùng cho phép chồng lên lời thoại hay không. Nếu mức ban đầu là Tiêu chuẩn hoặc Chi tiết, lần thử Ngắn vẫn được giữ ngay cả khi các khoảng nghỉ rất ngắn: khi đó nó cũng giúp tạo mô tả ngắn hơn cho chế độ dự phòng cuối cùng nếu cần, giảm thời gian lời mô tả chồng lên hội thoại. Pyannote, bridge Gemini và các quy tắc bình thường về khoảng lặng và căn chỉnh thời gian vẫn không thay đổi.
+
+Ghi podcast
+1. Đã thêm fallback thận trọng cho lỗi vị trí thiết bị từ một số driver micro WASAPI có vấn đề, mà không thay đổi ghi âm trên các hệ thống đang hoạt động tốt. Fallback chỉ kích hoạt khi sai lệch vị trí kéo dài: 24 lần liên tiếp hoặc ít nhất 80% trong 64 gói sạch. Các cờ WASAPI `DATA_DISCONTINUITY` thật và lỗi timestamp vẫn được ưu tiên, còn thu âm hệ thống không thay đổi.
+
+YouTube và phát trực tuyến
+1. Đã sửa lỗi tải YouTube thất bại khi bắt đầu từ menu ngữ cảnh của kết quả. Các lỗi yt-dlp đã biết đối với video chỉ dành cho thành viên kênh giờ được chuyển thành thông báo Sonarpad đã bản địa hóa thay vì hiển thị nguyên văn tiếng Anh. Sau khi đóng lỗi, Sonarpad chỉ khôi phục tiêu điểm khi vòng lặp menu ngữ cảnh/modal gốc đã thực sự kết thúc, nhờ đó quay lại danh sách kết quả một cách ổn định với bàn phím hoạt động. Quy trình tải xuống thành công bình thường không thay đổi.
+
+2. Bộ lọc phòng ngừa đã được đồng bộ với SonarTube trên di động: trong kết quả tìm kiếm và khi duyệt kênh/danh sách phát, các video mà YouTube/yt-dlp không trả về dữ liệu lượt xem sẽ được ẩn. Kênh và danh sách phát vẫn hiển thị, còn video thực sự có 0 lượt xem vẫn được giữ lại. Xử lý lỗi đã bản địa hóa cho nội dung chỉ dành cho thành viên vẫn là phương án dự phòng thứ hai. Tải hàng loạt danh sách phát không thay đổi.
+
 Phiên bản 0.9.8 – 2026-09-12
 
 Mô tả âm thanh bằng AI

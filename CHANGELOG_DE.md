@@ -1,5 +1,22 @@
 # Änderungsprotokoll
 
+Version 0.9.9 – 2026-09-15
+
+KI-Audiodeskription
+1. Ein isolierter Fallback für Quellvideos ohne Audiospur wurde hinzugefügt, ohne die bereits funktionierende Pipeline zu verändern. Sonarpad versucht weiterhin zuerst den normalen Export. Nur wenn FFmpeg einen fehlenden Audiostream meldet und Sonarpad bestätigt, dass die Quelle tatsächlich keine Audiospur enthält, wird eine stille Quelle mit gleicher Dauer erzeugt und die synthetisierten Beschreibungen werden darauf gemischt. Beim Export auf das Originalvideo wird anschließend der bestehende Video+Audio-Mux-Pfad wiederverwendet. Videos mit vorhandener Audiospur nutzen unverändert den normalen Pfad.
+
+2. Den strikt isolierten Fallback für den Fall ohne nutzbare Beschreibungen erweitert, ohne die normale Audiodeskriptions-Pipeline zu verändern. Sonarpad führt weiterhin zuerst die bestehende Analyse aus; nur wenn danach keine nutzbare Beschreibung vorhanden ist, wird ein zweiter Versuch mit der Einstellung Kurz angeboten, der dieselbe Pipeline verwendet und alle Pausen- sowie Nicht-Überlappungsregeln beibehält. Kann auch dieser zweite Versuch keine Beschreibung platzieren, fragt Sonarpad jetzt ausdrücklich nach der Zustimmung zu einem letzten Fallback. Erst nach Ja werden die bereits von Gemini erzeugten kurzen Beschreibungen aus dem Checkpoint des zweiten Versuchs wiederverwendet und mit Ducking an ihren visuellen Zeitpunkten gemischt, wobei kurze Überlappungen mit Dialog erlaubt sind. Pyannote, Gemini-Bridge, normale Ausrichtungsregeln, TTS-Planung und die ersten beiden Analysepfade bleiben unverändert. Bei Ablehnung oder fehlenden wiederverwendbaren Beschreibungen beendet Sonarpad den Vorgang sauber mit einer lokalisierten Meldung.
+
+3. Der isolierte Fallback für fehlende nutzbare Beschreibungen wurde verfeinert, ohne die normale Audiodeskriptions-Pipeline zu verändern. Wenn die ursprünglich gewählte Ausführlichkeit bereits Kurz ist und die Analyse ohne nutzbare Beschreibung endet, überspringt Sonarpad jetzt die redundante zweite Gemini-Analyse und fragt bei vorhandenen wiederverwendbaren Beschreibungen direkt nach dem finalen Fallback mit Dialogüberlappung. War die ursprüngliche Ausführlichkeit Standard oder Detailliert, bleibt der Kurz-Versuch auch bei sehr kurzen Pausen erhalten: Er dient dann zusätzlich dazu, eine kürzere Beschreibung für den möglichen finalen Fallback zu erzeugen, damit die Erzählung den Dialog möglichst kurz überlagert. Pyannote, die Gemini-Bridge und die normalen Regeln für Pausen und Ausrichtung bleiben unverändert.
+
+Podcast-Aufnahme
+1. Ein konservativer Fallback für fehlerhafte Gerätepositionsmeldungen bestimmter WASAPI-Mikrofontreiber wurde hinzugefügt, ohne funktionierende Aufnahmen zu verändern. Er aktiviert sich nur bei dauerhaft falschen Positionswerten: 24 aufeinanderfolgenden Abweichungen oder mindestens 80 % Abweichungen in 64 sauberen Paketen. Echte WASAPI-`DATA_DISCONTINUITY`-Meldungen und Zeitstempelfehler bleiben maßgeblich; die Systemaudio-Aufnahme bleibt unverändert.
+
+YouTube und Streaming
+1. Fehlgeschlagene YouTube-Downloads aus dem Kontextmenü der Ergebnisse wurden korrigiert. Bekannte yt-dlp-Fehler für Inhalte nur für Kanalmitglieder werden nun in die lokalisierte Sonarpad-Meldung umgewandelt, statt den rohen englischen Text anzuzeigen. Nach dem Schließen der Meldung stellt Sonarpad den Fokus erst nach dem Ende der nativen Kontextmenü-/Modal-Schleife wieder her und kehrt zuverlässig mit aktiver Tastatur zur Ergebnisliste zurück. Die normale erfolgreiche Download-Pipeline bleibt unverändert.
+
+2. Der vorbeugende Filter wurde an SonarTube Mobile angeglichen: In Suchergebnissen sowie beim Durchsuchen von Kanälen und Playlists werden Videos ausgeblendet, für die YouTube/yt-dlp keine Aufrufzahl liefert. Kanäle und Playlists bleiben sichtbar, und echte Videos mit 0 Aufrufen werden nicht entfernt. Die lokalisierte Fehlerbehandlung für Inhalte nur für Mitglieder bleibt als zweiter Fallback aktiv. Der Mehrfachdownload von Playlists bleibt unverändert.
+
 Version 0.9.8 – 2026-09-12
 
 KI-Audiodeskription

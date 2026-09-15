@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "खंड का फिर से विश्लेषण किया गया",
   "audio_description.project.status.reanalyzing": "चुने गए खंड का फिर से विश्लेषण किया जा रहा है…",
   "audio_description.project.status.reanalyzed_ready": "खंड का फिर से विश्लेषण हो गया। पूर्वावलोकन सुनने के लिए स्पेस दबाएँ, फिर खंड लागू करें और MP3 फिर से निर्यात करें का उपयोग करें।",
-  "audio_description.project.error_ai_settings_main": "पहले ऑडियो विवरण बनाएँ विंडो में AI एक्सेस कॉन्फ़िगर करें (Gemini API कुंजी या Sonarpad AI)।"
+  "audio_description.project.error_ai_settings_main": "पहले ऑडियो विवरण बनाएँ विंडो में AI एक्सेस कॉन्फ़िगर करें (Gemini API कुंजी या Sonarpad AI)।",
+  "audio_description.short_silence_retry_title": "कोई वर्णन जोड़ा नहीं जा सकता",
+  "audio_description.short_silence_retry_prompt": "सामान्य विश्लेषण में ऐसा कोई वर्णन नहीं मिला जो उपलब्ध खाली जगह में बोले गए संवाद पर चढ़े बिना फिट हो सके। क्या आप बहुत छोटे वर्णनों के साथ विश्लेषण दोबारा करना चाहते हैं? मौन संबंधी सीमाएँ सक्रिय रहेंगी।",
+  "audio_description.short_silence_retrying": "बहुत छोटे वर्णनों के साथ विश्लेषण दोबारा किया जा रहा है...",
+  "audio_description.no_silence_result": "बोले गए संवाद पर चढ़े बिना उपलब्ध खाली जगह में कोई वर्णन नहीं जोड़ा जा सका।",
+  "audio_description.dialogue_overlap_retry_title": "अंतिम फ़ॉलबैक",
+  "audio_description.dialogue_overlap_retry_prompt": "बहुत छोटे वर्णनों वाला प्रयास भी उन्हें बोले गए संवाद पर चढ़े बिना नहीं जोड़ सका। क्या आप एक अंतिम प्रयास करना चाहते हैं जिसमें संवाद के साथ थोड़े समय का ओवरलैप स्वीकार किया जाए? यह अलग फ़ॉलबैक है और सामान्य ऑडियो-वर्णन विश्लेषण को नहीं बदलता।",
+  "audio_description.dialogue_overlap_retrying": "संवाद के ऊपर ओवरलैप वाले अंतिम फ़ॉलबैक को बनाया जा रहा है...",
+  "audio_description.dialogue_overlap_unavailable": "अंतिम फ़ॉलबैक का उपयोग नहीं किया जा सकता क्योंकि पुनः उपयोग के लिए कोई जनरेट किया गया वर्णन उपलब्ध नहीं है.",
+  "audio_description.dialogue_overlap_direct_prompt": "विश्लेषण पहले ही संक्षिप्त वर्णनों के साथ चलाया जा चुका है, लेकिन किसी भी वर्णन को बोलचाल के ऊपर आए बिना रखा नहीं जा सका। क्या आप फिर भी संवाद के साथ थोड़े समय के ओवरलैप की अनुमति देकर ऑडियो-वर्णन बनाना चाहते हैं? यह एक अलग फ़ॉलबैक है और सामान्य ऑडियो-वर्णन पाइपलाइन को नहीं बदलता।"
 }

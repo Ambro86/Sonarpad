@@ -1,5 +1,22 @@
 # Dziennik zmian
 
+Wersja 0.9.9 – 2026-09-15
+
+Audiodeskrypcja AI
+1. Dodano odizolowany mechanizm awaryjny dla filmów źródłowych bez ścieżki audio, bez zmiany już działającego potoku. Sonarpad nadal najpierw wykonuje zwykły eksport; tylko gdy FFmpeg zgłosi brak strumienia audio, a Sonarpad potwierdzi, że źródło rzeczywiście nie zawiera żadnej ścieżki audio, tworzona jest cicha ścieżka o tej samej długości i na nią miksowane są wygenerowane opisy. Przy eksporcie na oryginalny film ponownie używany jest istniejący mechanizm multipleksowania wideo+audio. Filmy zawierające audio nadal przechodzą dokładnie zwykłą ścieżką.
+
+2. Rozszerzono ściśle odizolowany tryb awaryjny dla przypadku braku użytecznych opisów, bez zmiany normalnego potoku audiodeskrypcji. Sonarpad nadal najpierw uruchamia istniejącą analizę; dopiero gdy kończy się ona bez użytecznych opisów, proponuje drugi przebieg w trybie Krótkim, korzystający z tego samego potoku i zachowujący wszystkie ograniczenia ciszy oraz zakaz nakładania na dialogi. Jeśli również ten drugi przebieg nie zdoła umieścić opisu, Sonarpad prosi teraz o wyraźną zgodę na ostatni tryb awaryjny. Dopiero po wybraniu Tak ponownie wykorzystuje krótkie opisy wygenerowane już przez Gemini i zapisane w punkcie kontrolnym drugiego przebiegu, miksując je w ich czasach wizualnych z duckingiem i zezwalając na krótkie nakładanie na dialogi. Pyannote, most Gemini, normalne reguły wyrównania, planowanie TTS i pierwsze dwa przebiegi analizy pozostają niezmienione. Po odmowie lub przy braku opisów do ponownego użycia Sonarpad kończy operację poprawnie z lokalizowanym komunikatem.
+
+3. Udoskonalono odizolowany tryb awaryjny na wypadek braku użytecznych opisów, bez zmiany normalnego procesu audiodeskrypcji. Jeśli użytkownik od początku wybrał tryb Krótki i analiza kończy się bez użytecznych opisów, Sonarpad pomija teraz zbędną drugą analizę Gemini i, gdy istnieją wygenerowane opisy możliwe do ponownego użycia, od razu proponuje końcowy fallback z nakładaniem na dialog. Jeśli początkowy poziom to Standardowy lub Szczegółowy, próba w trybie Krótkim pozostaje nawet przy bardzo krótkich pauzach: służy wtedy również do wygenerowania krótszego opisu dla ewentualnego końcowego fallbacku, ograniczając czas, przez jaki narracja nakłada się na dialog. Pyannote, most Gemini oraz normalne reguły ciszy i wyrównania pozostają bez zmian.
+
+Nagrywanie podcastów
+1. Dodano konserwatywny mechanizm awaryjny dla błędnych pozycji urządzenia zgłaszanych przez niektóre sterowniki mikrofonów WASAPI, bez zmiany nagrywania na systemach, na których już działa ono poprawnie. Mechanizm uruchamia się wyłącznie po trwałych rozbieżnościach: 24 kolejnych lub co najmniej 80% w 64 poprawnych pakietach. Prawdziwe flagi WASAPI `DATA_DISCONTINUITY` i błędy znaczników czasu nadal mają pierwszeństwo, a przechwytywanie dźwięku systemowego pozostaje bez zmian.
+
+YouTube i streaming
+1. Naprawiono nieudane pobieranie z YouTube uruchamiane z menu kontekstowego wyników. Znane błędy yt-dlp dotyczące filmów tylko dla członków kanału są teraz zamieniane na zlokalizowany komunikat Sonarpad zamiast wyświetlania surowego angielskiego tekstu. Po zamknięciu błędu Sonarpad przywraca fokus dopiero po rzeczywistym zakończeniu natywnej pętli menu kontekstowego/modalnego, niezawodnie wracając do listy wyników z aktywną klawiaturą. Normalna ścieżka udanych pobrań pozostaje bez zmian.
+
+2. Filtr zapobiegawczy został zrównany z SonarTube na urządzeniach mobilnych: w wynikach wyszukiwania oraz podczas przeglądania kanałów/list odtwarzania ukrywane są filmy, dla których YouTube/yt-dlp nie zwraca danych o liczbie wyświetleń. Kanały i playlisty pozostają widoczne, a prawdziwe filmy z 0 wyświetleń są zachowywane. Zlokalizowana obsługa błędu treści tylko dla członków pozostaje drugim zabezpieczeniem. Pobieranie wielu elementów playlisty pozostaje bez zmian.
+
 Wersja 0.9.8 – 2026-09-12
 
 Audiodeskrypcja AI

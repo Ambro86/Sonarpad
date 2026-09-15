@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "segment réanalysé",
   "audio_description.project.status.reanalyzing": "Réanalyse du segment sélectionné…",
   "audio_description.project.status.reanalyzed_ready": "Segment réanalysé. Appuyez sur Espace pour écouter l’aperçu, puis utilisez Appliquer le segment et réexporter le MP3.",
-  "audio_description.project.error_ai_settings_main": "Configurez d’abord l’accès à l’IA dans la fenêtre Créer une audiodescription (clé API Gemini ou Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Configurez d’abord l’accès à l’IA dans la fenêtre Créer une audiodescription (clé API Gemini ou Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Aucune description ne peut être insérée",
+  "audio_description.short_silence_retry_prompt": "L’analyse normale n’a trouvé aucune description pouvant tenir dans les espaces disponibles sans chevaucher la parole. Voulez-vous répéter l’analyse avec des descriptions très courtes ? Les contraintes de silence resteront actives.",
+  "audio_description.short_silence_retrying": "Nouvelle analyse avec des descriptions très courtes...",
+  "audio_description.no_silence_result": "Aucune description n’a pu être insérée dans les espaces disponibles sans chevaucher la parole.",
+  "audio_description.dialogue_overlap_retry_title": "Solution de secours finale",
+  "audio_description.dialogue_overlap_retry_prompt": "La tentative avec des descriptions très courtes n’a pas non plus permis de les insérer sans chevaucher la parole. Voulez-vous effectuer une dernière tentative en autorisant de brefs chevauchements avec les dialogues ? Il s’agit d’un fallback isolé qui ne modifie pas l’analyse normale de l’audiodescription.",
+  "audio_description.dialogue_overlap_retrying": "Création du fallback final avec chevauchement des dialogues...",
+  "audio_description.dialogue_overlap_unavailable": "Le fallback final ne peut pas être utilisé car aucune description générée n’est disponible pour être réutilisée.",
+  "audio_description.dialogue_overlap_direct_prompt": "L’analyse a déjà été effectuée avec des descriptions Brèves, mais aucune n’a pu être insérée sans chevaucher la parole. Voulez-vous tout de même créer l’audiodescription en autorisant de brefs chevauchements avec les dialogues ? Il s’agit d’un fallback isolé qui ne modifie pas le pipeline normal d’audiodescription."
 }

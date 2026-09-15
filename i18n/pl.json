@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "segment ponownie przeanalizowany",
   "audio_description.project.status.reanalyzing": "Ponowne analizowanie wybranego segmentu…",
   "audio_description.project.status.reanalyzed_ready": "Segment został ponownie przeanalizowany. Naciśnij Spację, aby odsłuchać podgląd, a następnie użyj Zastosuj segment i ponownie wyeksportuj MP3.",
-  "audio_description.project.error_ai_settings_main": "Najpierw skonfiguruj dostęp do AI w oknie Tworzenie audiodeskrypcji (klucz API Gemini lub Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Najpierw skonfiguruj dostęp do AI w oknie Tworzenie audiodeskrypcji (klucz API Gemini lub Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Nie można wstawić żadnego opisu",
+  "audio_description.short_silence_retry_prompt": "Zwykła analiza nie znalazła opisu, który zmieściłby się w dostępnych przerwach bez nakładania się na mowę. Czy chcesz powtórzyć analizę, używając bardzo krótkich opisów? Ograniczenia dotyczące ciszy pozostaną aktywne.",
+  "audio_description.short_silence_retrying": "Powtarzanie analizy z bardzo krótkimi opisami...",
+  "audio_description.no_silence_result": "Nie udało się wstawić żadnego opisu w dostępnych przerwach bez nakładania się na mowę.",
+  "audio_description.dialogue_overlap_retry_title": "Ostateczny tryb awaryjny",
+  "audio_description.dialogue_overlap_retry_prompt": "Próba z bardzo krótkimi opisami również nie pozwoliła wstawić ich bez nakładania na mowę. Czy chcesz wykonać ostatnią próbę, zezwalając na krótkie nakładanie się na dialogi? To odizolowany tryb awaryjny i nie zmienia normalnej analizy audiodeskrypcji.",
+  "audio_description.dialogue_overlap_retrying": "Tworzenie końcowego trybu awaryjnego z nakładaniem na dialog...",
+  "audio_description.dialogue_overlap_unavailable": "Nie można użyć ostatecznego trybu awaryjnego, ponieważ nie ma wygenerowanych opisów do ponownego użycia.",
+  "audio_description.dialogue_overlap_direct_prompt": "Analiza została już wykonana z krótkimi opisami, ale żadnego z nich nie udało się wstawić bez nakładania się na mowę. Czy mimo to utworzyć audiodeskrypcję, zezwalając na krótkie nakładanie się z dialogiem? Jest to odizolowany tryb awaryjny i nie zmienia normalnego procesu audiodeskrypcji."
 }

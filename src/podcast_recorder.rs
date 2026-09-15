@@ -50,6 +50,60 @@ const MIX_CHUNK_FRAMES: usize = 512;
 const WAVE_FORMAT_PCM_TAG: u32 = 0x0001;
 const KSDATAFORMAT_SUBTYPE_PCM: GUID = GUID::from_u128(0x00000001_0000_0010_8000_00AA00389B71);
 
+// Some capture drivers report a device position that is unusable even while their QPC
+// timestamps and native WASAPI discontinuity flags are healthy. Keep the legacy path
+// unless the mismatch pattern is unmistakably persistent; then ignore only the bad
+// position signal for that microphone capture session.
+const DEVICE_POSITION_FALLBACK_MIN_CLEAN_PACKETS: u64 = 64;
+const DEVICE_POSITION_FALLBACK_MISMATCH_PERCENT: u64 = 80;
+const DEVICE_POSITION_FALLBACK_STREAK: u64 = 24;
+
+#[derive(Default)]
+struct DevicePositionFallback {
+    clean_packets: u64,
+    position_mismatches: u64,
+    mismatch_streak: u64,
+    active: bool,
+}
+
+impl DevicePositionFallback {
+    fn observe(
+        &mut self,
+        kind: SourceKind,
+        position_mismatch: bool,
+        native_discontinuity: bool,
+        timestamp_unreliable: bool,
+    ) -> bool {
+        if !matches!(kind, SourceKind::Microphone) || native_discontinuity || timestamp_unreliable {
+            self.mismatch_streak = 0;
+            return false;
+        }
+
+        self.clean_packets += 1;
+        if position_mismatch {
+            self.position_mismatches += 1;
+            self.mismatch_streak += 1;
+        } else {
+            self.mismatch_streak = 0;
+        }
+
+        if !self.active {
+            let mismatch_ratio_high = self.clean_packets
+                >= DEVICE_POSITION_FALLBACK_MIN_CLEAN_PACKETS
+                && self.position_mismatches.saturating_mul(100)
+                    >= self
+                        .clean_packets
+                        .saturating_mul(DEVICE_POSITION_FALLBACK_MISMATCH_PERCENT);
+            let mismatch_streak_high = self.mismatch_streak >= DEVICE_POSITION_FALLBACK_STREAK;
+            if mismatch_ratio_high || mismatch_streak_high {
+                self.active = true;
+            }
+        }
+
+        self.active && position_mismatch
+    }
+}
+
 #[derive(Clone)]
 pub struct AudioDevice {
     pub id: String,
@@ -1456,6 +1510,10 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
     let mut next_packet_qpc: Option<u64> = None;
     let mut gain_clipped_samples = 0u64;
     let mut discontinuities = 0u64;
+    let mut native_discontinuities = 0u64;
+    let mut position_mismatches = 0u64;
+    let mut position_fallback = DevicePositionFallback::default();
+    let mut position_fallback_logged = false;
     let mut timestamp_errors = 0u64;
     let mut packet_counter: u64 = 0;
     let mut total_input_frames: u64 = 0;
@@ -1515,9 +1573,36 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
             if !options.paused.load(Ordering::SeqCst) {
                 update_peak(&options.shared, &options.kind, &samples);
             }
-            let discontinuity = expected_position
-                .is_some_and(|expected| expected != device_position)
-                || flags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY.0 as u32 != 0;
+            let position_mismatch =
+                expected_position.is_some_and(|expected| expected != device_position);
+            if position_mismatch {
+                position_mismatches += 1;
+            }
+            let native_discontinuity = flags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY.0 as u32 != 0;
+            if native_discontinuity {
+                native_discontinuities += 1;
+            }
+            let now = options.buffer.now();
+            let timestamp_unreliable = flags & AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR.0 as u32 != 0
+                || packet_qpc == 0
+                || packet_qpc > now + TICKS_PER_SECOND;
+            let ignore_position_mismatch = position_fallback.observe(
+                options.kind,
+                position_mismatch,
+                native_discontinuity,
+                timestamp_unreliable,
+            );
+            if position_fallback.active && !position_fallback_logged {
+                crate::log_debug(&format!(
+                    "Podcast microphone device-position fallback enabled: clean_packets={} position_mismatches={} mismatch_streak={}; WASAPI DATA_DISCONTINUITY and timestamp errors remain authoritative",
+                    position_fallback.clean_packets,
+                    position_fallback.position_mismatches,
+                    position_fallback.mismatch_streak
+                ));
+                position_fallback_logged = true;
+            }
+            let discontinuity =
+                native_discontinuity || (position_mismatch && !ignore_position_mismatch);
             if discontinuity {
                 discontinuities += 1;
                 // Do not interpolate across an interval of missing input audio.
@@ -1525,11 +1610,7 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
                     LinearResampler::new(input_rate, TARGET_SAMPLE_RATE, input_channels as usize);
             }
             expected_position = Some(device_position + u64::from(frames));
-            let now = options.buffer.now();
-            if flags & AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR.0 as u32 != 0
-                || packet_qpc == 0
-                || packet_qpc > now + TICKS_PER_SECOND
-            {
+            if timestamp_unreliable {
                 timestamp_errors += 1;
                 // A timestamp error also makes the device position untrustworthy.
                 // Preserve continuity unless there was a gap; then use arrival time.
@@ -1614,7 +1695,7 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
         gain_clipped_samples as f64 * 100.0 / gain_processed_samples as f64
     };
     crate::log_debug(&format!(
-        "Podcast capture sync: source={} packets={} input_frames={} output_frames={} discontinuities={} timestamp_errors={} gain={} gain_clipped_samples={} gain_processed_samples={} gain_clipped_percent={:.4}%",
+        "Podcast capture sync: source={} packets={} input_frames={} output_frames={} discontinuities={} native_discontinuities={} position_mismatches={} device_position_fallback={} timestamp_errors={} gain={} gain_clipped_samples={} gain_processed_samples={} gain_clipped_percent={:.4}%",
         if matches!(options.kind, SourceKind::Microphone) {
             "microphone"
         } else {
@@ -1624,6 +1705,9 @@ fn capture_source_once(options: CaptureOptions) -> Result<(), String> {
         total_input_frames,
         total_output_frames,
         discontinuities,
+        native_discontinuities,
+        position_mismatches,
+        position_fallback.active,
         timestamp_errors,
         options.gain,
         gain_clipped_samples,
@@ -2147,6 +2231,69 @@ mod synchronization_tests {
             .timeline
             .end = Some(buffer.origin_qpc + frame_ticks(frames, TARGET_SAMPLE_RATE));
         Ok(buffer)
+    }
+
+    #[test]
+    fn microphone_device_position_fallback_stays_off_for_occasional_mismatches() {
+        let mut fallback = DevicePositionFallback::default();
+        for packet in 0..200 {
+            let mismatch = packet % 10 == 0;
+            assert!(!fallback.observe(SourceKind::Microphone, mismatch, false, false));
+        }
+        assert!(!fallback.active);
+    }
+
+    #[test]
+    fn microphone_device_position_fallback_activates_only_after_persistent_bad_positions() {
+        let mut fallback = DevicePositionFallback::default();
+        for _ in 0..DEVICE_POSITION_FALLBACK_STREAK - 1 {
+            assert!(!fallback.observe(SourceKind::Microphone, true, false, false));
+        }
+        assert!(fallback.observe(SourceKind::Microphone, true, false, false));
+        assert!(fallback.active);
+    }
+
+    #[test]
+    fn microphone_device_position_fallback_also_detects_sustained_high_mismatch_ratio() {
+        let mut fallback = DevicePositionFallback::default();
+        for packet in 0..DEVICE_POSITION_FALLBACK_MIN_CLEAN_PACKETS {
+            // Four bad positions followed by one good position keeps the streak short
+            // while still making the position signal unusable overall.
+            let mismatch = packet % 5 != 4;
+            let ignored_position = fallback.observe(SourceKind::Microphone, mismatch, false, false);
+            assert_eq!(
+                ignored_position,
+                fallback.active && mismatch,
+                "observe result must match the active microphone fallback state"
+            );
+        }
+        assert!(fallback.mismatch_streak < DEVICE_POSITION_FALLBACK_STREAK);
+        assert!(fallback.active);
+    }
+
+    #[test]
+    fn microphone_device_position_fallback_never_hides_real_wasapi_or_timestamp_errors() {
+        let mut fallback = DevicePositionFallback::default();
+        for packet in 0..DEVICE_POSITION_FALLBACK_STREAK {
+            let ignored_position = fallback.observe(SourceKind::Microphone, true, false, false);
+            assert_eq!(
+                ignored_position,
+                packet + 1 >= DEVICE_POSITION_FALLBACK_STREAK,
+                "persistent mismatches must activate only at the configured streak"
+            );
+        }
+        assert!(fallback.active);
+        assert!(!fallback.observe(SourceKind::Microphone, true, true, false));
+        assert!(!fallback.observe(SourceKind::Microphone, true, false, true));
+    }
+
+    #[test]
+    fn device_position_fallback_does_not_change_system_capture_path() {
+        let mut fallback = DevicePositionFallback::default();
+        for _ in 0..200 {
+            assert!(!fallback.observe(SourceKind::System, true, false, false));
+        }
+        assert!(!fallback.active);
     }
 
     #[test]

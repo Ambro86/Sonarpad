@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "segment znovu analyzován",
   "audio_description.project.status.reanalyzing": "Probíhá nová analýza vybraného segmentu…",
   "audio_description.project.status.reanalyzed_ready": "Segment byl znovu analyzován. Stisknutím mezerníku si poslechněte náhled a potom použijte Použít segment a znovu exportovat MP3.",
-  "audio_description.project.error_ai_settings_main": "Nejprve nastavte přístup k AI v okně Vytvořit audiopopis (klíč Gemini API nebo Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Nejprve nastavte přístup k AI v okně Vytvořit audiopopis (klíč Gemini API nebo Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Nelze vložit žádný popis",
+  "audio_description.short_silence_retry_prompt": "Běžná analýza nenašla žádný popis, který by se vešel do dostupných mezer bez překrytí řeči. Chcete analýzu zopakovat s velmi krátkými popisy? Omezení ticha zůstanou aktivní.",
+  "audio_description.short_silence_retrying": "Opakování analýzy s velmi krátkými popisy...",
+  "audio_description.no_silence_result": "Do dostupných mezer se nepodařilo vložit žádný popis bez překrytí řeči.",
+  "audio_description.dialogue_overlap_retry_title": "Poslední záložní režim",
+  "audio_description.dialogue_overlap_retry_prompt": "Ani pokus s velmi krátkými popisy je nedokázal vložit bez překrytí řeči. Chcete provést poslední pokus a povolit krátké překrytí dialogu? Jde o izolovaný záložní režim a běžnou analýzu audiopopisu nemění.",
+  "audio_description.dialogue_overlap_retrying": "Vytváří se poslední záložní varianta s překrytím dialogu...",
+  "audio_description.dialogue_overlap_unavailable": "Poslední záložní režim nelze použít, protože nejsou k dispozici žádné vygenerované popisy k opětovnému použití.",
+  "audio_description.dialogue_overlap_direct_prompt": "Analýza již proběhla s krátkými popisy, ale žádný z nich nebylo možné vložit bez překrytí mluvené řeči. Chcete přesto vytvořit audiopopis a povolit krátká překrytí s dialogem? Jde o izolovaný záložní režim, který nemění běžnou pipeline audiopopisu."
 }

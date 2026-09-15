@@ -1,5 +1,22 @@
 # Changelog
 
+Versão 0.9.9 – 2026-09-15
+
+Audiodescrição com IA
+1. Adicionado um fallback isolado para vídeos de origem sem faixa de áudio, sem alterar a pipeline que já funciona. O Sonarpad continua a tentar primeiro a exportação normal; apenas se o FFmpeg indicar a ausência do fluxo de áudio e o Sonarpad confirmar que a origem não contém qualquer faixa de áudio é criada uma fonte silenciosa com a mesma duração, sobre a qual são misturadas as descrições sintetizadas. Ao exportar para o vídeo original, é depois reutilizado o caminho de mux vídeo+áudio já existente. Vídeos que já têm áudio continuam exatamente pelo caminho normal.
+
+2. Expandido o fallback estritamente isolado para a ausência de descrições sem alterar a pipeline normal de audiodescrição. O Sonarpad continua a executar primeiro a análise existente; apenas quando termina sem descrições utilizáveis oferece uma segunda tentativa em modo Breve, usando a mesma pipeline e mantendo todas as restrições de silêncio e de não sobreposição com diálogos. Se essa segunda tentativa também não conseguir inserir uma descrição, o Sonarpad pede agora autorização explícita para um último fallback. Só depois de escolher Sim reutiliza as descrições breves já geradas pelo Gemini e guardadas no checkpoint da segunda tentativa, misturando-as nos respetivos tempos visuais com ducking e permitindo breves sobreposições com os diálogos. Pyannote, a bridge Gemini, as regras normais de alinhamento, o agendamento TTS e os dois primeiros percursos de análise não são alterados. Se o utilizador recusar, ou não existirem descrições geradas para reutilizar, o Sonarpad termina corretamente com uma mensagem localizada.
+
+3. Aperfeiçoado o fallback isolado quando não restam descrições utilizáveis, sem alterar o fluxo normal de audiodescrição. Se a verbosidade escolhida inicialmente já for Breve e a análise terminar sem descrições utilizáveis, o Sonarpad passa a ignorar a segunda análise Gemini redundante e, quando existem descrições geradas reutilizáveis, pergunta diretamente se deve usar o fallback final com sobreposição de diálogo. Se a verbosidade inicial for Normal ou Detalhada, a tentativa Breve é mantida mesmo quando as pausas disponíveis são muito curtas: nesse caso também serve para gerar uma descrição mais curta para o eventual fallback final, reduzindo o tempo em que a narração se sobrepõe ao diálogo. Pyannote, o bridge Gemini e as regras normais de silêncio e alinhamento permanecem inalterados.
+
+Gravação de podcasts
+1. Adicionado um fallback conservador para a posição do dispositivo do microfone em alguns controladores WASAPI problemáticos, sem alterar a gravação nos sistemas que já funcionam. Só é ativado após incompatibilidades persistentes de posição: 24 consecutivas ou pelo menos 80% em 64 pacotes limpos. Os verdadeiros `DATA_DISCONTINUITY` do WASAPI e os erros de timestamp continuam a ter prioridade, e a captura do áudio do sistema permanece inalterada.
+
+YouTube e streaming
+1. Corrigidos os downloads do YouTube que falhavam quando iniciados pelo menu de contexto dos resultados. Os erros conhecidos do yt-dlp para vídeos exclusivos de membros do canal são agora convertidos na mensagem localizada do Sonarpad em vez de mostrar o texto bruto em inglês. Depois de fechar o erro, o Sonarpad restaura o foco apenas quando o ciclo nativo do menu de contexto/modal termina realmente, regressando de forma fiável à lista de resultados com o teclado ativo. A pipeline normal dos downloads bem-sucedidos não é alterada.
+
+2. O filtro preventivo foi alinhado com o SonarTube móvel: nos resultados de pesquisa e na navegação por canais/listas de reprodução, são agora ocultados os vídeos para os quais o YouTube/yt-dlp não devolve dados de visualizações. Canais e listas continuam visíveis e vídeos reais com 0 visualizações são mantidos. O tratamento localizado do erro de conteúdo exclusivo para membros permanece como segundo fallback. O download múltiplo de listas não é alterado.
+
 Versão 0.9.8 – 2026-09-12
 
 Audiodescrição com IA

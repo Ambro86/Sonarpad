@@ -1,5 +1,22 @@
 # Journal des modifications
 
+Version 0.9.9 – 2026-09-15
+
+Audiodescription par IA
+1. Ajout d’un fallback isolé pour les vidéos source sans piste audio, sans modifier le pipeline qui fonctionne déjà. Sonarpad tente toujours d’abord l’export normal ; uniquement si FFmpeg signale l’absence de flux audio et que Sonarpad confirme que le fichier ne contient aucune piste audio, une source silencieuse de même durée est créée puis les descriptions synthétisées y sont mixées. Lors d’un export sur la vidéo d’origine, le chemin de mux vidéo+audio existant est ensuite réutilisé. Les vidéos qui contiennent déjà de l’audio suivent exactement le chemin normal.
+
+2. Extension du fallback strictement isolé en cas d’absence de descriptions, sans modifier le pipeline normal d’audiodescription. Sonarpad exécute toujours d’abord l’analyse existante ; uniquement si elle se termine sans description utilisable, il propose une deuxième tentative en mode Bref, avec le même pipeline et toutes les contraintes de silence et d’absence de chevauchement avec les dialogues. Si cette deuxième tentative échoue également à placer une description, Sonarpad demande désormais une autorisation explicite pour un dernier fallback. Seulement après Oui, il réutilise les descriptions brèves déjà générées par Gemini et enregistrées dans le checkpoint de la deuxième tentative, puis les mixe à leurs temps visuels avec ducking en autorisant de brefs chevauchements avec les dialogues. Pyannote, le bridge Gemini, les règles normales d’alignement, la planification TTS et les deux premiers parcours d’analyse ne sont pas modifiés. En cas de refus, ou s’il n’existe aucune description générée à réutiliser, Sonarpad s’arrête proprement avec un message localisé.
+
+3. Affinement du fallback isolé lorsqu’aucune description utilisable ne reste, sans modifier le pipeline normal d’audiodescription. Si la verbosité choisie au départ est déjà Bref et que l’analyse se termine sans description utilisable, Sonarpad ignore désormais la seconde analyse Gemini redondante et, lorsque des descriptions générées réutilisables sont disponibles, propose directement le fallback final avec chevauchement des dialogues. Si la verbosité initiale est Standard ou Détaillé, la tentative Bref est conservée même lorsque les pauses disponibles sont très courtes : elle sert alors aussi à générer une description plus courte pour l’éventuel fallback final, afin de réduire la durée pendant laquelle la narration couvre le dialogue. Pyannote, le bridge Gemini et les règles normales de silence et d’alignement restent inchangés.
+
+Enregistrement de podcasts
+1. Ajout d’un fallback conservateur pour la position du périphérique micro avec certains pilotes WASAPI problématiques, sans modifier l’enregistrement sur les systèmes qui fonctionnent déjà. Il ne s’active qu’après des incohérences persistantes de position : 24 consécutives ou au moins 80 % sur 64 paquets valides. Les vrais indicateurs WASAPI `DATA_DISCONTINUITY` et les erreurs d’horodatage restent prioritaires, et la capture audio système est inchangée.
+
+YouTube et streaming
+1. Correction des téléchargements YouTube échoués lancés depuis le menu contextuel des résultats. Les erreurs yt-dlp connues pour les vidéos réservées aux membres de la chaîne sont désormais converties en message localisé de Sonarpad au lieu d’afficher le texte anglais brut. Après fermeture de l’erreur, Sonarpad restaure le focus une fois la boucle native du menu contextuel/modal réellement terminée, revenant de façon fiable à la liste des résultats avec le clavier actif. Le pipeline normal des téléchargements réussis reste inchangé.
+
+2. Alignement du filtre préventif sur SonarTube mobile : dans les résultats de recherche et la navigation des chaînes/listes de lecture, les vidéos pour lesquelles YouTube/yt-dlp ne fournit aucune donnée de vues sont désormais masquées. Les chaînes et listes restent visibles et les vraies vidéos à 0 vue sont conservées. La gestion localisée de l’erreur des contenus réservés aux membres reste active comme second recours. Le téléchargement multiple des listes n’est pas modifié.
+
 Version 0.9.8 – 2026-09-12
 
 Audiodescription par IA

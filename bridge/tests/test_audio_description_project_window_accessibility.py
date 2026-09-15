@@ -619,7 +619,7 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
 
     def test_completion_flow_after_ok_is_unchanged(self):
         start = WINDOW.index("crate::show_info_owned_by(", WINDOW.index("WM_AD_DONE =>"))
-        block = WINDOW[start:start + 900]
+        block = WINDOW[start:start + 1600]
         self.assertIn("recover_main_window_after_audio_description", block)
         self.assertIn(
             "open_result_in_player(hwnd, state.parent, outcome.output_path.clone());",

@@ -2195,5 +2195,14 @@
   "audio_description.project.reanalyzed_marker": "segmento reanalisado",
   "audio_description.project.status.reanalyzing": "Reanalisando o segmento selecionado…",
   "audio_description.project.status.reanalyzed_ready": "Segmento reanalisado. Pressione Espaço para ouvir a prévia e depois use Aplicar segmento e reexportar MP3.",
-  "audio_description.project.error_ai_settings_main": "Configure primeiro o acesso à IA na janela Criar audiodescrição (chave de API Gemini ou Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Configure primeiro o acesso à IA na janela Criar audiodescrição (chave de API Gemini ou Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Nenhuma descrição pode ser inserida",
+  "audio_description.short_silence_retry_prompt": "A análise normal não encontrou nenhuma descrição que caiba nos espaços disponíveis sem se sobrepor à fala. Deseja repetir a análise usando descrições muito curtas? As restrições de silêncio continuarão ativas.",
+  "audio_description.short_silence_retrying": "Repetindo a análise com descrições muito curtas...",
+  "audio_description.no_silence_result": "Não foi possível inserir nenhuma descrição nos espaços disponíveis sem se sobrepor à fala.",
+  "audio_description.dialogue_overlap_retry_title": "Fallback final",
+  "audio_description.dialogue_overlap_retry_prompt": "A tentativa com descrições muito curtas também não conseguiu inseri-las sem sobrepor a fala. Deseja fazer uma última tentativa permitindo breves sobreposições com os diálogos? Este é um fallback isolado e não altera a análise normal da audiodescrição.",
+  "audio_description.dialogue_overlap_retrying": "Criando o fallback final com sobreposição aos diálogos...",
+  "audio_description.dialogue_overlap_unavailable": "O fallback final não pode ser usado porque não há descrições geradas disponíveis para reutilizar.",
+  "audio_description.dialogue_overlap_direct_prompt": "A análise já foi executada com descrições Breves, mas nenhuma pôde ser inserida sem se sobrepor à fala. Deseja criar a audiodescrição mesmo assim, permitindo breves sobreposições com o diálogo? Este é um fallback isolado e não altera o fluxo normal de audiodescrição."
 }

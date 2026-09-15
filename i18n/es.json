@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "segmento vuelto a analizar",
   "audio_description.project.status.reanalyzing": "Volviendo a analizar el segmento seleccionado…",
   "audio_description.project.status.reanalyzed_ready": "Segmento vuelto a analizar. Pulsa Espacio para escuchar la vista previa y después usa Aplicar segmento y volver a exportar MP3.",
-  "audio_description.project.error_ai_settings_main": "Configura primero el acceso a la IA en la ventana Crear audiodescripción (clave API de Gemini o Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Configura primero el acceso a la IA en la ventana Crear audiodescripción (clave API de Gemini o Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "No se puede insertar ninguna descripción",
+  "audio_description.short_silence_retry_prompt": "El análisis normal no encontró ninguna descripción que pueda encajar en los espacios disponibles sin superponerse al habla. ¿Quieres repetir el análisis usando descripciones muy breves? Las restricciones de silencio seguirán activas.",
+  "audio_description.short_silence_retrying": "Repitiendo el análisis con descripciones muy breves...",
+  "audio_description.no_silence_result": "No se pudo insertar ninguna descripción en los espacios disponibles sin superponerse al habla.",
+  "audio_description.dialogue_overlap_retry_title": "Fallback final",
+  "audio_description.dialogue_overlap_retry_prompt": "El intento con descripciones muy breves tampoco pudo insertarlas sin superponerse al habla. ¿Quieres realizar un último intento permitiendo breves superposiciones con los diálogos? Es un fallback aislado y no modifica el análisis normal de audiodescripción.",
+  "audio_description.dialogue_overlap_retrying": "Creando el fallback final con superposición de diálogos...",
+  "audio_description.dialogue_overlap_unavailable": "El fallback final no se puede usar porque no hay descripciones generadas disponibles para reutilizar.",
+  "audio_description.dialogue_overlap_direct_prompt": "El análisis ya se ejecutó con descripciones Breves, pero ninguna pudo insertarse sin superponerse al habla. ¿Quieres crear igualmente la audiodescripción permitiendo breves superposiciones con los diálogos? Es un fallback aislado y no modifica la canalización normal de audiodescripción."
 }

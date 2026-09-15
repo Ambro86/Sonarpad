@@ -1,5 +1,22 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.9 – 2026-09-15
+
+DI garsinis vaizdavimas
+1. Pridėtas izoliuotas atsarginis kelias šaltinio vaizdo įrašams be garso takelio, nekeičiant jau veikiančios grandinės. Sonarpad visada pirmiausia bando įprastą eksportą; tik jei FFmpeg praneša, kad nėra garso srauto, o Sonarpad patvirtina, kad šaltinyje tikrai nėra nė vieno garso takelio, sukuriamas tokios pačios trukmės tylos šaltinis ir į jį sumaišomi sintezuoti aprašymai. Eksportuojant į originalų vaizdo įrašą vėliau vėl naudojamas esamas vaizdo+garso mux kelias. Vaizdo įrašai, kuriuose garsas jau yra, toliau naudoja tą patį įprastą kelią.
+
+2. Išplėstas griežtai izoliuotas atsarginis režimas atvejui, kai nelieka tinkamų aprašų, nekeičiant įprastos garsinio vaizdavimo analizės eigos. Sonarpad visada pirmiausia vykdo esamą analizę; tik jai pasibaigus be tinkamų aprašų pasiūlomas antras bandymas Trumpu režimu, naudojantis tą pačią eigą ir išlaikantis visus tylos bei nepersidengimo su dialogu apribojimus. Jei ir antras bandymas negali įterpti aprašo, Sonarpad dabar aiškiai paprašo leidimo paskutiniam atsarginiam režimui. Tik pasirinkus Taip pakartotinai panaudojami Gemini jau sugeneruoti trumpi aprašai, išsaugoti antro bandymo patikros taške, ir sumaišomi jų vaizdiniuose laikuose su ducking, leidžiant trumpą persidengimą su dialogu. Pyannote, Gemini bridge, įprastos lygiavimo taisyklės, TTS planavimas ir pirmieji du analizės keliai nekeičiami. Atsisakius arba nesant pakartotinai panaudojamų aprašų Sonarpad korektiškai baigia darbą su lokalizuotu pranešimu.
+
+3. Patobulintas izoliuotas atsarginis režimas, kai nelieka tinkamų aprašymų, nekeičiant įprastos garsinio vaizdavimo sekos. Jei vartotojas iš pradžių jau pasirinko trumpą aprašymų režimą ir analizė baigiasi be tinkamų aprašymų, Sonarpad dabar praleidžia nereikalingą antrą Gemini analizę ir, jei yra pakartotinai panaudojamų sugeneruotų aprašymų, iš karto pasiūlo galutinį režimą su dialogo persidengimu. Jei pradinis režimas buvo Standartinis arba Išsamus, trumpas pakartotinis bandymas paliekamas net ir esant labai trumpoms pauzėms: tada jis taip pat skirtas sukurti trumpesnį aprašymą galutiniam atsarginiam režimui, kad pasakojimas kuo trumpiau dengtų dialogą. Pyannote, Gemini tiltas ir įprastos tylos bei laiko derinimo taisyklės lieka nepakeistos.
+
+Tinklalaidžių įrašymas
+1. Pridėtas konservatyvus atsarginis mechanizmas kai kurių probleminių WASAPI mikrofono tvarkyklių neteisingai įrenginio pozicijai, nekeičiant įrašymo sistemose, kuriose jis jau veikia. Jis įsijungia tik esant nuolatiniams pozicijos neatitikimams: 24 iš eilės arba bent 80 % iš 64 švarių paketų. Tikri WASAPI `DATA_DISCONTINUITY` signalai ir laiko žymų klaidos išlieka svarbiausi, o sistemos garso fiksavimas nekeičiamas.
+
+YouTube ir srautinis perdavimas
+1. Ištaisyti nepavykę YouTube atsisiuntimai, paleisti iš rezultatų kontekstinio meniu. Žinomos yt-dlp klaidos dėl tik kanalo nariams skirtų vaizdo įrašų dabar pakeičiamos lokalizuotu Sonarpad pranešimu, o ne rodomu neapdorotu anglišku tekstu. Uždarius klaidą Sonarpad fokusą atkuria tik pasibaigus natyviam kontekstinio meniu / modaliniam ciklui, todėl patikimai grįžtama į rezultatų sąrašą su veikiančia klaviatūra. Įprastas sėkmingų atsisiuntimų kelias nekeičiamas.
+
+2. Prevencinis filtras suderintas su mobiliuoju SonarTube: paieškos rezultatuose ir naršant kanalus / grojaraščius dabar slepiami vaizdo įrašai, kuriems YouTube/yt-dlp nepateikia peržiūrų skaičiaus. Kanalai ir grojaraščiai lieka matomi, o tikri vaizdo įrašai su 0 peržiūrų paliekami. Lokalizuotas tik nariams skirto turinio klaidos apdorojimas lieka kaip antrasis atsarginis mechanizmas. Masinis grojaraščio atsisiuntimas nekeičiamas.
+
 Versija 0.9.8 – 2026-09-12
 
 DI garso aprašymas

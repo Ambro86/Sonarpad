@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "segment ponovo analiziran",
   "audio_description.project.status.reanalyzing": "Ponovna analiza izabranog segmenta…",
   "audio_description.project.status.reanalyzed_ready": "Segment je ponovo analiziran. Pritisnite razmak za pregled, zatim koristite Primeni segment i ponovo izvezi MP3.",
-  "audio_description.project.error_ai_settings_main": "Prvo podesite AI pristup u prozoru za kreiranje audio-deskripcije (Gemini API ključ ili Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Prvo podesite AI pristup u prozoru za kreiranje audio-deskripcije (Gemini API ključ ili Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Није могуће уметнути опис",
+  "audio_description.short_silence_retry_prompt": "Уобичајена анализа није пронашла опис који може да стане у доступне паузе без преклапања са говором. Желите ли да поновите анализу са веома кратким описима? Ограничења тишине остаће активна.",
+  "audio_description.short_silence_retrying": "Понављање анализе са веома кратким описима...",
+  "audio_description.no_silence_result": "Није било могуће уметнути опис у доступне паузе без преклапања са говором.",
+  "audio_description.dialogue_overlap_retry_title": "Последњи резервни режим",
+  "audio_description.dialogue_overlap_retry_prompt": "Покушај са веома кратким описима такође није успео да их уметне без преклапања са говором. Желите ли последњи покушај уз дозвољена кратка преклапања са дијалогом? Ово је изоловани резервни режим и не мења уобичајену анализу аудио-дескрипције.",
+  "audio_description.dialogue_overlap_retrying": "Kreiranje završnog rezervnog režima sa preklapanjem preko dijaloga...",
+  "audio_description.dialogue_overlap_unavailable": "Последњи резервни режим није доступан јер нема генерисаних описа за поновну употребу.",
+  "audio_description.dialogue_overlap_direct_prompt": "Analiza je već izvršena sa kratkim opisima, ali nijedan nije mogao da se ubaci bez preklapanja sa govorom. Da li ipak želite da napravite audio-deskripciju uz kratka preklapanja sa dijalogom? Ovo je izolovani rezervni režim i ne menja normalnu obradu audio-deskripcije."
 }

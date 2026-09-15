@@ -1,5 +1,22 @@
 # Ändringslogg
 
+Version 0.9.9 – 2026-09-15
+
+AI-ljudbeskrivning
+1. Lade till en isolerad reservväg för källvideor utan ljudspår, utan att ändra den pipeline som redan fungerar. Sonarpad försöker fortfarande alltid den normala exporten först; endast om FFmpeg rapporterar att ljudström saknas och Sonarpad bekräftar att källan verkligen saknar alla ljudspår skapas en tyst källa med samma längd och de syntetiserade beskrivningarna mixas ovanpå den. Vid export till originalvideon återanvänds därefter den befintliga mux-vägen för video+ljud. Videor som redan innehåller ljud fortsätter exakt via den normala vägen.
+
+2. Utökat det strikt isolerade reservläget för fall där inga användbara beskrivningar återstår, utan att ändra den normala syntolkningspipeline. Sonarpad kör fortfarande alltid den befintliga analysen först; endast om den slutar utan användbara beskrivningar erbjuds ett andra försök i Kort-läge, med samma pipeline och alla tystnads- och icke-överlappningsregler kvar. Om även det andra försöket inte kan placera någon beskrivning ber Sonarpad nu uttryckligen om tillstånd för ett sista reservläge. Först efter Ja återanvänds de korta beskrivningar som Gemini redan har skapat och sparat i det andra försökets checkpoint, och de mixas vid sina visuella tidpunkter med ducking samtidigt som korta överlappningar med dialog tillåts. Pyannote, Gemini-bridge, normala justeringsregler, TTS-schemaläggning och de två första analysvägarna ändras inte. Vid Nej, eller om inga genererade beskrivningar finns att återanvända, avslutas processen korrekt med ett lokaliserat meddelande.
+
+3. Den isolerade reservlösningen när inga användbara beskrivningar återstår har förfinats utan att den normala syntolkningsprocessen ändras. Om användaren redan från början har valt Kort och analysen slutar utan användbara beskrivningar hoppar Sonarpad nu över den överflödiga andra Gemini-analysen och frågar direkt om den slutliga reservlösningen med dialogöverlappning ska användas, när återanvändbara genererade beskrivningar finns. Om den ursprungliga nivån är Standard eller Detaljerad behålls Kort-försöket även när de tillgängliga pauserna är mycket korta: då används det också för att skapa en kortare beskrivning för den eventuella slutliga reservlösningen, så att berättarrösten täcker dialogen under kortare tid. Pyannote, Gemini-bryggan och de normala reglerna för tystnad och tidsjustering är oförändrade.
+
+Podcastinspelning
+1. Lade till en konservativ fallback för felaktiga enhetspositionsvärden från vissa problematiska WASAPI-mikrofondrivrutiner, utan att ändra inspelningen på system där den redan fungerar. Den aktiveras endast efter ihållande positionsfel: 24 i följd eller minst 80 % av 64 rena paket. Verkliga WASAPI-`DATA_DISCONTINUITY`-flaggor och tidsstämpelfel förblir styrande, och inspelning av systemljud är oförändrad.
+
+YouTube och strömning
+1. Misslyckade YouTube-nedladdningar som startas från resultatens snabbmeny har rättats. Kända yt-dlp-fel för videor som endast är tillgängliga för kanalmedlemmar omvandlas nu till Sonarpads lokaliserade meddelande i stället för att visa rå engelsk text. När felet stängs återställer Sonarpad fokus först efter att den inbyggda snabbmeny-/modalslingan faktiskt har avslutats och återgår pålitligt till resultatlistan med aktivt tangentbord. Den normala fungerande nedladdningsvägen är oförändrad.
+
+2. Det förebyggande filtret har anpassats till SonarTube Mobile: i sökresultat och vid bläddring i kanaler/spellistor döljs nu videor där YouTube/yt-dlp inte returnerar någon visningsdata. Kanaler och spellistor förblir synliga och riktiga videor med 0 visningar behålls. Den lokaliserade felhanteringen för innehåll endast för medlemmar finns kvar som en andra reservlösning. Massnedladdning av spellistor ändras inte.
+
 Version 0.9.8 – 2026-09-12
 
 AI-ljudbeskrivning

@@ -87,7 +87,23 @@ pub fn restore_active_interpreter_select_for_parent(parent: HWND) -> bool {
     ));
     crate::enable_window_safe(parent, false);
     crate::set_foreground_window_safe(dialog);
-    restore_interpreter_select_focus(dialog)
+    let restored = restore_interpreter_select_focus(dialog);
+    if restored {
+        // Context-menu media actions run inside a nested native menu/modal loop.
+        // The immediate SetFocus above can be overwritten while that loop unwinds,
+        // leaving the disabled main window in front after an error. Queue one more
+        // focus restore for the selector's normal message loop so the results list
+        // is reliably foreground and keyboard-active once the action has finished.
+        if let Err(err) =
+            crate::post_message_w_safe(dialog, WM_RESTORE_LIST_FOCUS, WPARAM(0), LPARAM(0))
+        {
+            crate::log_debug(&format!(
+                "Failed to queue deferred interpreter selector focus restore: {}",
+                err
+            ));
+        }
+    }
+    restored
 }
 
 pub fn request_close_active_interpreter_selects_for_parent(parent: HWND) -> bool {

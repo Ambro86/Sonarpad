@@ -1,5 +1,22 @@
 # Dnevnik izmena
 
+Verzija 0.9.9 – 2026-09-15
+
+AI audio opis
+1. Dodat je izolovani rezervni put za izvorne video datoteke bez audio zapisa, bez menjanja postojećeg funkcionalnog toka. Sonarpad i dalje prvo pokušava normalan izvoz; samo ako FFmpeg prijavi da audio tok nedostaje i Sonarpad potvrdi da izvor zaista nema nijedan audio zapis, kreira se tišina iste dužine i na nju se miksuju sintetizovani opisi. Pri izvozu na originalni video zatim se ponovo koristi postojeći mux put za video+audio. Video datoteke koje već imaju audio nastavljaju tačno normalnim putem.
+
+2. Проширен је строго изоловани резервни режим за случај када нема употребљивих описа, без измене нормалног тока аудио-дескрипције. Sonarpad и даље прво покреће постојећу анализу; само ако се она заврши без употребљивих описа нуди се други покушај у режиму Кратко, који користи исти ток и задржава сва ограничења тишине и забрану преклапања са дијалогом. Ако ни други покушај не може да уметне опис, Sonarpad сада тражи изричиту сагласност за последњи резервни режим. Тек након избора Да поново се користе кратки описи које је Gemini већ генерисао и који су сачувани у checkpoint-у другог покушаја, па се миксују у својим визуелним временима уз ducking и дозвољена кратка преклапања са дијалогом. Pyannote, Gemini bridge, нормална правила поравнања, TTS распоређивање и прва два пута анализе остају непромењени. Ако корисник одбије или нема описа за поновну употребу, Sonarpad се коректно зауставља уз локализовану поруку.
+
+3. Unapređen je izolovani rezervni režim kada nema upotrebljivih opisa, bez menjanja normalne obrade audio-deskripcije. Ako je korisnik već na početku izabrao Kratke opise i analiza završi bez upotrebljivog opisa, Sonarpad sada preskače suvišnu drugu Gemini analizu i, kada postoje generisani opisi koji mogu da se ponovo upotrebe, odmah nudi završni fallback sa preklapanjem dijaloga. Ako je početna opširnost Standardna ili Detaljna, Kratki pokušaj se zadržava čak i kada su dostupne pauze veoma kratke: tada služi i za generisanje kraćeg opisa za mogući završni fallback, kako bi naracija što kraće prekrivala dijalog. Pyannote, Gemini bridge i normalna pravila tišine i poravnanja ostaju nepromenjeni.
+
+Snimanje podkasta
+1. Dodat je konzervativni fallback za pogrešne pozicije uređaja koje prijavljuju pojedini problematični WASAPI drajveri mikrofona, bez menjanja snimanja na sistemima na kojima već radi. Aktivira se samo posle trajnih nepodudaranja pozicije: 24 uzastopna ili najmanje 80% u 64 ispravna paketa. Pravi WASAPI `DATA_DISCONTINUITY` signali i greške vremenskih oznaka i dalje imaju prednost, a snimanje sistemskog zvuka ostaje nepromenjeno.
+
+YouTube i striming
+1. Ispravljena su neuspešna YouTube preuzimanja pokrenuta iz kontekstnog menija rezultata. Poznate yt-dlp greške za video-snimke dostupne samo članovima kanala sada se pretvaraju u lokalizovanu Sonarpad poruku umesto prikazivanja sirovog engleskog teksta. Posle zatvaranja greške Sonarpad vraća fokus tek kada se nativni kontekstni meni/modalna petlja stvarno završi, pa se pouzdano vraća na listu rezultata sa aktivnom tastaturom. Uobičajeni tok uspešnog preuzimanja ostaje nepromenjen.
+
+2. Preventivni filter je usklađen sa mobilnim SonarTube-om: u rezultatima pretrage i pri pregledanju kanala/plejlista sada se skrivaju video-snimci za koje YouTube/yt-dlp ne vraća podatak o broju pregleda. Kanali i plejliste ostaju vidljivi, a stvarni video-snimci sa 0 pregleda se zadržavaju. Lokalizovana obrada greške za sadržaj samo za članove ostaje kao drugi rezervni mehanizam. Grupno preuzimanje plejlista nije promenjeno.
+
 Verzija 0.9.8 – 2026-09-12
 
 AI audio opis

@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "segmentas iš naujo išanalizuotas",
   "audio_description.project.status.reanalyzing": "Iš naujo analizuojamas pasirinktas segmentas…",
   "audio_description.project.status.reanalyzed_ready": "Segmentas iš naujo išanalizuotas. Paspauskite tarpo klavišą peržiūrai, tada pasirinkite Pritaikyti segmentą ir iš naujo eksportuoti MP3.",
-  "audio_description.project.error_ai_settings_main": "Pirmiausia lange „Kurti garsinį vaizdavimą“ sukonfigūruokite AI prieigą (Gemini API raktą arba Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Pirmiausia lange „Kurti garsinį vaizdavimą“ sukonfigūruokite AI prieigą (Gemini API raktą arba Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Negalima įterpti aprašo",
+  "audio_description.short_silence_retry_prompt": "Įprasta analizė nerado aprašo, kurį būtų galima sutalpinti į laisvus tarpus neuždengiant kalbos. Ar norite pakartoti analizę naudojant labai trumpus aprašus? Tylos apribojimai liks aktyvūs.",
+  "audio_description.short_silence_retrying": "Analizė kartojama su labai trumpais aprašais...",
+  "audio_description.no_silence_result": "Nepavyko įterpti aprašo į laisvus tarpus neuždengiant kalbos.",
+  "audio_description.dialogue_overlap_retry_title": "Galutinis atsarginis režimas",
+  "audio_description.dialogue_overlap_retry_prompt": "Bandymas su labai trumpais aprašais taip pat nesugebėjo jų įterpti neuždengiant kalbos. Ar norite atlikti paskutinį bandymą, leidžiant trumpą persidengimą su dialogu? Tai izoliuotas atsarginis režimas, nekeičiantis įprastos garsinio vaizdavimo analizės.",
+  "audio_description.dialogue_overlap_retrying": "Kuriamas galutinis atsarginis variantas su persidengimu su dialogu...",
+  "audio_description.dialogue_overlap_unavailable": "Galutinio atsarginio režimo naudoti negalima, nes nėra sugeneruotų aprašų, kuriuos būtų galima panaudoti pakartotinai.",
+  "audio_description.dialogue_overlap_direct_prompt": "Analizė jau buvo atlikta naudojant trumpus aprašymus, tačiau nė vieno jų nepavyko įterpti nepersidengiant su kalba. Ar vis tiek kurti garsinį vaizdavimą leidžiant trumpus persidengimus su dialogu? Tai izoliuotas atsarginis režimas, nekeičiantis įprastos garsinio vaizdavimo sekos."
 }

@@ -2195,5 +2195,14 @@
   "audio_description.project.reanalyzed_marker": "segmento rianalizzato",
   "audio_description.project.status.reanalyzing": "Rianalisi del segmento selezionato…",
   "audio_description.project.status.reanalyzed_ready": "Segmento rianalizzato. Premi Spazio per ascoltare l’anteprima, poi usa Applica segmento e riesporta MP3.",
-  "audio_description.project.error_ai_settings_main": "Configura prima l'accesso AI nella finestra Crea audiodescrizione (chiave API Gemini oppure Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Configura prima l'accesso AI nella finestra Crea audiodescrizione (chiave API Gemini oppure Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "Nessuna descrizione inseribile",
+  "audio_description.short_silence_retry_prompt": "L’analisi normale non ha trovato descrizioni che possano essere inserite negli spazi liberi senza sovrapporsi al parlato. Vuoi ripetere l’analisi usando descrizioni molto brevi? I vincoli sui silenzi resteranno attivi.",
+  "audio_description.short_silence_retrying": "Ripetizione dell’analisi con descrizioni molto brevi...",
+  "audio_description.no_silence_result": "Non è stato possibile inserire descrizioni negli spazi liberi senza sovrapporsi al parlato.",
+  "audio_description.dialogue_overlap_retry_title": "Fallback finale",
+  "audio_description.dialogue_overlap_retry_prompt": "Anche il tentativo con descrizioni molto brevi non è riuscito a inserirle senza sovrapporsi al parlato. Vuoi effettuare un ultimo tentativo consentendo brevi sovrapposizioni ai dialoghi? È un fallback isolato e non modifica la normale analisi dell’audiodescrizione.",
+  "audio_description.dialogue_overlap_retrying": "Creazione del fallback finale con sovrapposizioni ai dialoghi...",
+  "audio_description.dialogue_overlap_unavailable": "Il fallback finale non può essere usato perché non sono disponibili descrizioni generate da riutilizzare.",
+  "audio_description.dialogue_overlap_direct_prompt": "L’analisi è già stata eseguita con descrizioni Brevi, ma nessuna può essere inserita senza sovrapporsi al parlato. Vuoi creare comunque l’audiodescrizione consentendo brevi sovrapposizioni ai dialoghi? È un fallback isolato e non modifica la normale pipeline dell’audiodescrizione."
 }

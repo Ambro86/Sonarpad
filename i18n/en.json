@@ -2143,5 +2143,14 @@
   "audio_description.project.reanalyzed_marker": "segment reanalyzed",
   "audio_description.project.status.reanalyzing": "Reanalyzing selected segment…",
   "audio_description.project.status.reanalyzed_ready": "Segment reanalyzed. Press Space to preview it, then use Apply segment and re-export MP3.",
-  "audio_description.project.error_ai_settings_main": "Configure AI access first in the Create audio description window (Gemini API key or Sonarpad AI)."
+  "audio_description.project.error_ai_settings_main": "Configure AI access first in the Create audio description window (Gemini API key or Sonarpad AI).",
+  "audio_description.short_silence_retry_title": "No description can be inserted",
+  "audio_description.short_silence_retry_prompt": "The normal analysis did not find any description that can fit into the available gaps without overlapping speech. Do you want to repeat the analysis using very short descriptions? The silence constraints will remain active.",
+  "audio_description.short_silence_retrying": "Repeating the analysis with very short descriptions...",
+  "audio_description.no_silence_result": "No description could be inserted into the available gaps without overlapping speech.",
+  "audio_description.dialogue_overlap_retry_title": "Final fallback",
+  "audio_description.dialogue_overlap_retry_prompt": "The retry with very short descriptions also could not place them without overlapping speech. Do you want to make one final attempt allowing brief overlaps with dialogue? This is an isolated fallback and does not change the normal audio-description analysis.",
+  "audio_description.dialogue_overlap_retrying": "Creating the final fallback with dialogue overlap...",
+  "audio_description.dialogue_overlap_unavailable": "The final fallback cannot be used because there are no generated descriptions available to reuse.",
+  "audio_description.dialogue_overlap_direct_prompt": "The analysis was already run with Brief descriptions, but none could be inserted without overlapping speech. Do you want to create the audio description anyway by allowing brief overlaps with dialogue? This is an isolated fallback and does not change the normal audio-description pipeline."
 }

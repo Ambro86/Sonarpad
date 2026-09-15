@@ -1,5 +1,22 @@
 # Přehled změn
 
+Verze 0.9.9 – 2026-09-15
+
+AI audiopopis
+1. Přidán izolovaný záložní postup pro zdrojová videa bez zvukové stopy, aniž by se měnila již fungující pipeline. Sonarpad stále nejprve zkusí běžný export; pouze pokud FFmpeg nahlásí chybějící zvukový stream a Sonarpad potvrdí, že zdroj skutečně neobsahuje žádnou zvukovou stopu, vytvoří se tichý zdroj stejné délky a do něj se namixují syntetizované popisy. Při exportu do původního videa se následně znovu použije stávající muxovací cesta video+audio. Videa, která již audio obsahují, pokračují přesně běžnou cestou.
+
+2. Rozšířen přísně izolovaný záložní režim pro případ, kdy nezůstane žádný použitelný popis, bez změny běžného procesu audiopopisu. Sonarpad stále nejprve spustí stávající analýzu; pouze pokud skončí bez použitelných popisů, nabídne druhý pokus v režimu Krátký, který používá stejný proces a zachovává všechna omezení ticha i zákaz překrytí dialogu. Pokud ani druhý pokus nedokáže popis umístit, Sonarpad nyní výslovně požádá o souhlas s posledním záložním režimem. Teprve po volbě Ano znovu použije krátké popisy již vytvořené Gemini a uložené v checkpointu druhého pokusu a smíchá je v jejich vizuálních časech s duckingem, přičemž povolí krátké překrytí dialogu. Pyannote, bridge Gemini, běžná pravidla zarovnání, plánování TTS a první dva průchody analýzy zůstávají beze změny. Při odmítnutí nebo pokud nejsou k dispozici popisy k opětovnému použití Sonarpad skončí čistě s lokalizovanou zprávou.
+
+3. Upřesněn izolovaný záložní režim pro případ bez použitelných popisů, aniž by se měnila běžná pipeline audiopopisu. Pokud uživatel původně zvolil krátkou úroveň podrobnosti a analýza skončí bez použitelného popisu, Sonarpad nyní přeskočí nadbytečnou druhou analýzu Gemini a, pokud jsou k dispozici znovu použitelné vygenerované popisy, rovnou nabídne finální fallback s překrytím dialogu. Pokud byla původní úroveň Standardní nebo Podrobná, krátký opakovaný pokus zůstává zachován i při velmi krátkých pauzách: slouží také k vytvoření kratšího popisu pro případný finální fallback, aby vyprávění překrývalo dialog co nejkratší dobu. Pyannote, bridge Gemini ani běžná pravidla pro ticho a časové zarovnání se nemění.
+
+Nahrávání podcastů
+1. Přidán konzervativní fallback pro chybné hlášení pozice zařízení u některých problematických mikrofonních ovladačů WASAPI, bez změny záznamu na systémech, kde již funguje. Aktivuje se pouze při trvalých nesrovnalostech pozice: 24 po sobě jdoucích nebo alespoň 80 % z 64 čistých paketů. Skutečné příznaky WASAPI `DATA_DISCONTINUITY` a chyby časových značek zůstávají rozhodující a záznam systémového audia se nemění.
+
+YouTube a streamování
+1. Opraveny neúspěšné YouTube downloady spuštěné z kontextové nabídky výsledků. Známé chyby yt-dlp pro videa dostupná pouze členům kanálu se nyní převádějí na lokalizovanou zprávu Sonarpadu místo zobrazení surového anglického textu. Po zavření chyby Sonarpad navíc obnoví fokus až po ukončení nativní nabídky/modální smyčky, takže se spolehlivě vrátí do seznamu výsledků s aktivní klávesnicí. Běžná úspěšná download pipeline se nemění.
+
+2. Preventivní filtr byl sjednocen se SonarTube pro mobil: ve výsledcích vyhledávání a při procházení kanálů/playlistů se nyní skryjí videa, u kterých YouTube/yt-dlp neposkytne údaj o počtu zhlédnutí. Kanály a playlisty zůstávají viditelné a skutečná videa s 0 zhlédnutími se zachovají. Lokalizované zpracování chyby obsahu pouze pro členy zůstává jako druhá pojistka. Hromadné stahování playlistu se nemění.
+
 Verze 0.9.8 – 2026-09-12
 
 Zvukový popis s AI
