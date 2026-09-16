@@ -365,7 +365,7 @@ pub fn menu_labels(language: Language) -> MenuLabels {
             String::new()
         },
         menu_sonarpad_audiodescrizioni: if language == Language::Italian {
-            "Audiod&escrizioni Sonarpad...\tCtrl+Shift+Y".to_string()
+            "Audiodescrizioni Sonarpad (&H)...\tCtrl+Shift+Y".to_string()
         } else {
             String::new()
         },
