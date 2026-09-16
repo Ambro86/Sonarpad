@@ -1,5 +1,10 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.10 – 2026-09-16
+
+Mô tả âm thanh
+1. Cải thiện mô tả âm thanh bằng cách thay ký tự `_` (dấu gạch dưới) bằng dấu cách, để tổng hợp giọng nói không đọc ký tự này trong phần mô tả âm thanh.
+
 Phiên bản 0.9.9 – 2026-09-15
 
 Mô tả âm thanh bằng AI

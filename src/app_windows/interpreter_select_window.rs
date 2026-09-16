@@ -9,8 +9,8 @@ use windows::Win32::UI::Controls::{
     TVS_SHOWSELALWAYS, WC_BUTTON, WC_EDIT, WC_STATIC,
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    EnableWindow, SetFocus, VK_APPS, VK_CONTROL, VK_DOWN, VK_END, VK_ESCAPE, VK_F10, VK_HOME,
-    VK_LEFT, VK_NEXT, VK_PRIOR, VK_RETURN, VK_RIGHT, VK_SHIFT, VK_UP,
+    EnableWindow, SetFocus, VK_APPS, VK_BACK, VK_CONTROL, VK_DOWN, VK_END, VK_ESCAPE, VK_F10,
+    VK_HOME, VK_LEFT, VK_NEXT, VK_PRIOR, VK_RETURN, VK_RIGHT, VK_SHIFT, VK_UP,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, BS_DEFPUSHBUTTON, CREATESTRUCTW, CW_USEDEFAULT, CreatePopupMenu, CreateWindowExW,
@@ -176,6 +176,7 @@ pub(crate) struct GroupedSelectGroup {
 pub(crate) enum InterpreterSelectionResult {
     Item(String),
     SecondaryAction,
+    BackNavigation,
 }
 
 #[derive(Clone)]
@@ -202,6 +203,8 @@ struct InterpreterSelectOptions {
     suppress_parent_restore_on_secondary: bool,
     suppress_parent_restore_on_cancel: bool,
     pin_topmost: bool,
+    back_navigation_keys: bool,
+    right_accept_key: bool,
     secondary_action_label: Option<String>,
     initial_list_value: Option<String>,
     initial_tree_value: Option<String>,
@@ -351,6 +354,33 @@ pub fn select_interpreter_with_secondary_action_and_context_actions_and_initial_
     )
 }
 
+pub fn select_interpreter_with_secondary_action_and_context_actions_and_initial_without_parent_restore_and_right_navigation(
+    parent: HWND,
+    items: Vec<String>,
+    language: Language,
+    title: String,
+    secondary_action: InterpreterSecondaryActionOptions,
+    initial_value: Option<String>,
+    context_actions: Vec<InterpreterContextAction>,
+) -> Option<InterpreterSelectionResult> {
+    select_interpreter_internal(
+        parent,
+        InterpreterDialogInitMode::List(items),
+        language,
+        title,
+        InterpreterSelectOptions {
+            filter_label: secondary_action.filter_label,
+            secondary_action_label: Some(secondary_action.label),
+            initial_list_value: initial_value,
+            context_actions,
+            suppress_parent_restore_on_accept: true,
+            suppress_parent_restore_on_secondary: true,
+            right_accept_key: true,
+            ..Default::default()
+        },
+    )
+}
+
 pub fn select_interpreter_with_context_actions_without_parent_restore_on_accept(
     parent: HWND,
     items: Vec<String>,
@@ -375,6 +405,31 @@ pub fn select_interpreter_with_context_actions_without_parent_restore_on_accept(
         Some(InterpreterSelectionResult::Item(value)) => Some(value),
         _ => None,
     }
+}
+
+pub fn select_interpreter_with_context_actions_and_back_navigation_without_parent_restore_on_accept(
+    parent: HWND,
+    items: Vec<String>,
+    language: Language,
+    title: String,
+    initial_value: Option<String>,
+    context_actions: Vec<InterpreterContextAction>,
+) -> Option<InterpreterSelectionResult> {
+    select_interpreter_internal(
+        parent,
+        InterpreterDialogInitMode::List(items),
+        language,
+        title,
+        InterpreterSelectOptions {
+            initial_list_value: initial_value,
+            context_actions,
+            suppress_parent_restore_on_accept: true,
+            suppress_parent_restore_on_cancel: true,
+            back_navigation_keys: true,
+            right_accept_key: true,
+            ..Default::default()
+        },
+    )
 }
 
 pub fn select_grouped_interpreter_with_context_actions_without_parent_restore_on_accept(
@@ -530,6 +585,17 @@ fn select_interpreter_internal(
         }
         unsafe {
             let focused = crate::get_focus_safe();
+            if options.back_navigation_keys
+                && msg.message == WM_KEYDOWN
+                && (msg.wParam.0 as u32 == VK_LEFT.0 as u32
+                    || msg.wParam.0 as u32 == VK_BACK.0 as u32)
+            {
+                if let Ok(mut stored) = result.lock() {
+                    *stored = Some(InterpreterSelectionResult::BackNavigation);
+                }
+                crate::log_if_err!(PostMessageW(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0)));
+                continue;
+            }
             if msg.message == WM_KEYDOWN && msg.wParam.0 as u32 == VK_ESCAPE.0 as u32 {
                 crate::log_if_err!(PostMessageW(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0)));
                 continue;
@@ -554,20 +620,45 @@ fn select_interpreter_internal(
                 ));
                 continue;
             }
-            if msg.message == WM_KEYDOWN && msg.wParam.0 as u32 == VK_RIGHT.0 as u32 {
-                let is_flat_list_focused = with_interpreter_state(hwnd, |state| {
-                    if let ControlKind::Tree(_) = state.control {
-                        state
-                            .flat_list
-                            .map(|flat_list| focused == flat_list)
-                            .unwrap_or(false)
+            if options.right_accept_key
+                && msg.message == WM_KEYDOWN
+                && msg.wParam.0 as u32 == VK_RIGHT.0 as u32
+            {
+                // Sonarpad audiodescriptions uses Right Arrow as a synonym for
+                // Enter. Keep normal cursor movement inside the search edit.
+                // With screen readers Windows can report the dialog (or another
+                // accessibility proxy) as the focused HWND while the list still
+                // owns the selected item, so do not require focused == list.
+                let command_id = with_interpreter_state(hwnd, |state| {
+                    if state.filter_edit.is_some_and(|edit| focused == edit) {
+                        None
+                    } else if state
+                        .secondary_button
+                        .is_some_and(|button| focused == button)
+                    {
+                        Some(ID_SECONDARY)
                     } else {
-                        false
+                        match state.control {
+                            ControlKind::List(_) => Some(ID_OK),
+                            ControlKind::Tree(_) => state
+                                .flat_list
+                                .filter(|flat_list| focused == *flat_list)
+                                .map(|_| ID_OK),
+                        }
                     }
                 })
-                .unwrap_or(false);
-                if is_flat_list_focused {
-                    crate::log_if_err!(PostMessageW(hwnd, WM_COMMAND, WPARAM(ID_OK), LPARAM(0)));
+                .flatten();
+                if let Some(command_id) = command_id {
+                    crate::log_debug(&format!(
+                        "interpreter_select right_navigation: command={} hwnd={:?} focus={:?}",
+                        command_id, hwnd, focused
+                    ));
+                    crate::log_if_err!(PostMessageW(
+                        hwnd,
+                        WM_COMMAND,
+                        WPARAM(command_id),
+                        LPARAM(0)
+                    ));
                     continue;
                 }
             }
@@ -672,6 +763,9 @@ fn select_interpreter_internal(
         Some(InterpreterSelectionResult::Item(_)) => options.suppress_parent_restore_on_accept,
         Some(InterpreterSelectionResult::SecondaryAction) => {
             options.suppress_parent_restore_on_secondary
+        }
+        Some(InterpreterSelectionResult::BackNavigation) => {
+            options.suppress_parent_restore_on_cancel
         }
         None => options.suppress_parent_restore_on_cancel,
     };

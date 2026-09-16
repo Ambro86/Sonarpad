@@ -1,5 +1,10 @@
 # Dnevnik izmena
 
+Verzija 0.9.10 – 2026-09-16
+
+Audio-deskripcije
+1. Poboljšane su audio-deskripcije zamenom znaka `_` (donja crta) razmakom, kako sintetizator govora ne bi izgovarao taj znak u audio-deskripcijama.
+
 Verzija 0.9.9 – 2026-09-15
 
 AI audio opis

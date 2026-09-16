@@ -43,6 +43,7 @@ pub mod route_window;
 pub mod rss_window;
 pub mod scheduled_recording_window;
 pub mod site_credentials_window;
+pub mod sonarpad_audiodescrizioni_window;
 pub mod treccani_window;
 pub mod tv_guide_window;
 pub mod tv_window;

@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+Version 0.9.10 – 2026-09-16
+
+Audiodeskriptionen
+1. Audiodeskriptionen wurden verbessert, indem das Zeichen `_` (Unterstrich) durch ein Leerzeichen ersetzt wird, damit die Sprachsynthese dieses Zeichen in Audiodeskriptionen nicht ausspricht.
+
 Version 0.9.9 – 2026-09-15
 
 KI-Audiodeskription

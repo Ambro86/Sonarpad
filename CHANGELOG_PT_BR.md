@@ -1,5 +1,10 @@
 # Changelog
 
+Versão 0.9.10 – 2026-09-16
+
+Audiodescrições
+1. Melhoradas as audiodescrições substituindo o caractere `_` (sublinhado) por um espaço, para evitar que a síntese de voz pronuncie esse caractere nas audiodescrições.
+
 Versão 0.9.9 – 2026-09-15
 
 Audiodescrição com IA

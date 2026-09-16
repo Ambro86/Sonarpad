@@ -1,5 +1,10 @@
 # Ändringslogg
 
+Version 0.9.10 – 2026-09-16
+
+Syntolkning
+1. Förbättrade syntolkningar genom att ersätta tecknet `_` (understreck) med ett mellanslag, så att talsyntesen inte uttalar tecknet i syntolkningar.
+
 Version 0.9.9 – 2026-09-15
 
 AI-ljudbeskrivning

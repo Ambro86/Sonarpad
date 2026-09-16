@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+Wersja 0.9.10 – 2026-09-16
+
+Audiodeskrypcje
+1. Ulepszono audiodeskrypcje, zastępując znak `_` (podkreślenie) spacją, aby synteza mowy nie odczytywała tego znaku w audiodeskrypcjach.
+
 Wersja 0.9.9 – 2026-09-15
 
 Audiodeskrypcja AI

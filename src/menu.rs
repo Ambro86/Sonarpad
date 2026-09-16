@@ -171,6 +171,7 @@ pub const IDM_TOOLS_INTERNET_ARCHIVE: usize = 5024;
 pub const IDM_TOOLS_LIBRIVOX: usize = 5025;
 pub const IDM_TOOLS_LA7_PLAY: usize = 5026;
 pub const IDM_TOOLS_CREATE_AUDIO_DESCRIPTION: usize = 5027;
+pub const IDM_TOOLS_SONARPAD_AUDIODESCRIZIONI: usize = 5028;
 pub const IDM_HELP_GUIDE: usize = 7001;
 pub const IDM_HELP_ABOUT: usize = 7002;
 pub const IDM_HELP_CHECK_UPDATES: usize = 7003;
@@ -215,6 +216,7 @@ pub struct MenuLabels {
     pub menu_create_audio_description: String,
     pub menu_bdciechi: String,
     pub menu_rai_audiodescrizioni: String,
+    pub menu_sonarpad_audiodescrizioni: String,
     pub menu_raiplay: String,
     pub menu_raiplaysound: String,
     pub menu_tv: String,
@@ -359,6 +361,11 @@ pub fn menu_labels(language: Language) -> MenuLabels {
         },
         menu_rai_audiodescrizioni: if language == Language::Italian {
             "Rai a&udiodescrizioni...\tAlt+Shift+A".to_string()
+        } else {
+            String::new()
+        },
+        menu_sonarpad_audiodescrizioni: if language == Language::Italian {
+            "Audiod&escrizioni Sonarpad...\tCtrl+Shift+Y".to_string()
         } else {
             String::new()
         },
@@ -1743,6 +1750,14 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                     IDM_TOOLS_RAI_AUDIODESCRIZIONI,
                     &labels.menu_rai_audiodescrizioni,
                 );
+                if crate::settings::load_saved_rai_luce_code().is_some() {
+                    append_menu_string(
+                        multimedia_menu,
+                        MF_STRING,
+                        IDM_TOOLS_SONARPAD_AUDIODESCRIZIONI,
+                        &labels.menu_sonarpad_audiodescrizioni,
+                    );
+                }
                 append_menu_string(
                     multimedia_menu,
                     MF_STRING,
@@ -1901,6 +1916,14 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                     IDM_TOOLS_RAI_AUDIODESCRIZIONI,
                     &labels.menu_rai_audiodescrizioni,
                 );
+                if crate::settings::load_saved_rai_luce_code().is_some() {
+                    append_menu_string(
+                        tools_menu,
+                        MF_STRING,
+                        IDM_TOOLS_SONARPAD_AUDIODESCRIZIONI,
+                        &labels.menu_sonarpad_audiodescrizioni,
+                    );
+                }
                 append_menu_string(
                     tools_menu,
                     MF_STRING,
@@ -2276,6 +2299,7 @@ mod tests {
                 menu_stream_audio,
                 menu_create_audio_description,
                 menu_rai_audiodescrizioni,
+                menu_sonarpad_audiodescrizioni,
                 menu_raiplay,
                 menu_raiplaysound,
                 menu_tv,
@@ -2307,6 +2331,7 @@ mod tests {
                 menu_stream_audio,
                 menu_create_audio_description,
                 menu_rai_audiodescrizioni,
+                menu_sonarpad_audiodescrizioni,
                 menu_raiplay,
                 menu_raiplaysound,
                 menu_tv,

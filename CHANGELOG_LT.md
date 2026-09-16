@@ -1,5 +1,10 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.10 – 2026-09-16
+
+Garso aprašymai
+1. Patobulinti garso aprašymai pakeičiant simbolį `_` (apatinį brūkšnį) tarpu, kad kalbos sintezė šio simbolio garso aprašymuose neištartų.
+
 Versija 0.9.9 – 2026-09-15
 
 DI garsinis vaizdavimas

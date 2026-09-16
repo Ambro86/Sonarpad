@@ -1,5 +1,10 @@
 # Journal des modifications
 
+Version 0.9.10 – 2026-09-16
+
+Audiodescriptions
+1. Amélioration des audiodescriptions en remplaçant le caractère `_` (trait de soulignement) par un espace, afin d’éviter que la synthèse vocale prononce ce caractère dans les audiodescriptions.
+
 Version 0.9.9 – 2026-09-15
 
 Audiodescription par IA

@@ -2772,6 +2772,115 @@ pub(crate) fn save_rai_audio_description_context_media(
     });
 }
 
+pub(crate) fn save_remote_media_url_direct(
+    hwnd: HWND,
+    language: Language,
+    media_url: String,
+    suggested_filename: String,
+) {
+    let suggested_filename = suggested_filename.trim();
+    let suggested_filename = if suggested_filename.is_empty() {
+        "audiodescrizione_sonarpad.mp3"
+    } else {
+        suggested_filename
+    };
+    let Some(target) = save_podcast_episode_dialog(hwnd, language, suggested_filename) else {
+        return;
+    };
+
+    let cancel_flag = Arc::new(AtomicBool::new(false));
+    with_state(hwnd, |state| {
+        state.podcast_save_cancel_token = Some(cancel_flag.clone());
+    });
+    app_windows::rai_audiodescrizioni_window::mark_context_save_started(hwnd);
+    open_podcast_save_progress_window(hwnd, language);
+    update_podcast_save_progress_window(hwnd, 0);
+
+    let hwnd_value = hwnd.0;
+    std::thread::spawn(move || {
+        let hwnd = HWND(hwnd_value);
+        let mut target_created = false;
+        let result = (|| -> Result<(), String> {
+            let client = reqwest::blocking::Client::builder()
+                .connect_timeout(std::time::Duration::from_secs(30))
+                .build()
+                .map_err(|err| format!("Impossibile inizializzare il download: {err}"))?;
+            let mut response = client
+                .get(media_url.as_str())
+                .send()
+                .map_err(|err| format!("Impossibile scaricare il file: {err}"))?
+                .error_for_status()
+                .map_err(|err| format!("Download non riuscito: {err}"))?;
+            let total_bytes = response.content_length();
+            let mut file = std::fs::File::create(&target)
+                .map_err(|err| format!("Impossibile creare il file di destinazione: {err}"))?;
+            target_created = true;
+            let mut buffer = [0u8; 128 * 1024];
+            let mut downloaded = 0u64;
+
+            loop {
+                if cancel_flag.load(Ordering::Relaxed) {
+                    return Err("Saving canceled.".to_string());
+                }
+                let read = response
+                    .read(&mut buffer)
+                    .map_err(|err| format!("Errore durante il download: {err}"))?;
+                if read == 0 {
+                    break;
+                }
+                file.write_all(&buffer[..read])
+                    .map_err(|err| format!("Impossibile salvare il file: {err}"))?;
+                downloaded = downloaded.saturating_add(read as u64);
+                if let Some(total) = total_bytes.filter(|value| *value > 0) {
+                    let pct = ((downloaded.saturating_mul(100)) / total).min(100) as u32;
+                    update_podcast_save_progress_window(hwnd, pct);
+                }
+            }
+
+            if cancel_flag.load(Ordering::Relaxed) {
+                return Err("Saving canceled.".to_string());
+            }
+            file.flush()
+                .map_err(|err| format!("Impossibile finalizzare il file: {err}"))?;
+            update_podcast_save_progress_window(hwnd, 100);
+            Ok(())
+        })();
+
+        match result {
+            Ok(()) => post_podcast_episode_save_result(
+                hwnd,
+                PodcastEpisodeSaveResult {
+                    language,
+                    target_path: target,
+                    error: None,
+                    open_audio_description: false,
+                },
+            ),
+            Err(err) => {
+                if target_created
+                    && let Err(remove_err) = std::fs::remove_file(&target)
+                    && target.exists()
+                {
+                    log_debug(&format!(
+                        "Failed to remove partial direct media download {}: {}",
+                        target.display(),
+                        remove_err
+                    ));
+                }
+                post_podcast_episode_save_result(
+                    hwnd,
+                    PodcastEpisodeSaveResult {
+                        language,
+                        target_path: target,
+                        error: Some(err),
+                        open_audio_description: false,
+                    },
+                );
+            }
+        }
+    });
+}
+
 fn download_podcast_episode_with_progress(request: PodcastProgressDownloadRequest) {
     let PodcastProgressDownloadRequest {
         hwnd,
@@ -10755,6 +10864,13 @@ fn run_app(
                                     handled = true;
                                     return;
                                 }
+                                if app_windows::sonarpad_audiodescrizioni_window::restore_after_player_stop(
+                                    hwnd,
+                                    stopped_url.as_deref(),
+                                ) {
+                                    handled = true;
+                                    return;
+                                }
                                 if from_rai == RaiAudioOrigin::Recenti {
                                     app_windows::rai_audiodescrizioni_window::open(hwnd);
                                 } else if from_rai == RaiAudioOrigin::Tutte {
@@ -14553,6 +14669,11 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     IDM_TOOLS_RAI_AUDIODESCRIZIONI => {
                         log_debug("Menu: Rai audiodescrizioni");
                         app_windows::rai_audiodescrizioni_window::open(hwnd);
+                        LRESULT(0)
+                    }
+                    IDM_TOOLS_SONARPAD_AUDIODESCRIZIONI => {
+                        log_debug("Menu: Sonarpad audiodescrizioni");
+                        app_windows::sonarpad_audiodescrizioni_window::open(hwnd);
                         LRESULT(0)
                     }
                     IDM_TOOLS_RAIPLAYSOUND => {
@@ -21426,6 +21547,11 @@ fn create_accelerators() -> HACCEL {
                 fVirt: virt_alt_shift,
                 key: 'A' as u16,
                 cmd: IDM_TOOLS_RAI_AUDIODESCRIZIONI as u16,
+            },
+            ACCEL {
+                fVirt: virt_shift,
+                key: 'Y' as u16,
+                cmd: IDM_TOOLS_SONARPAD_AUDIODESCRIZIONI as u16,
             },
             ACCEL {
                 fVirt: virt,

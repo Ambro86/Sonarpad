@@ -1747,7 +1747,10 @@ fn trim_edge_trailing_silence(samples: &mut Vec<f32>, sample_rate: u32, channels
 }
 
 fn audio_description_tts_chunks(text: &str, job: &AudioDescriptionJob) -> Vec<TtsChunk> {
-    split_into_tts_chunks(text, false, &job.dictionary, job.tts_engine)
+    // Pronunciation-only normalization: keep the generated description and the
+    // scheduling pipeline untouched, but never send underscores to the TTS engine.
+    let pronunciation_text = text.replace('_', " ");
+    split_into_tts_chunks(&pronunciation_text, false, &job.dictionary, job.tts_engine)
 }
 
 fn audio_description_samples_have_signal(samples: &[f32]) -> bool {
@@ -6032,7 +6035,7 @@ mod tests {
     }
 
     #[test]
-    fn audio_description_tts_uses_voice_dictionary_replacements() {
+    fn audio_description_tts_uses_voice_dictionary_replacements_and_replaces_underscores() {
         let job = AudioDescriptionJob {
             input_path: PathBuf::from("movie.mkv"),
             output_path: PathBuf::from("movie.mp3"),
@@ -6067,7 +6070,7 @@ mod tests {
             audiobook_bitrate_kbps: 192,
             resume_checkpoint_path: None,
         };
-        let chunks = audio_description_tts_chunks("Sonarpad descrive la scena.", &job);
+        let chunks = audio_description_tts_chunks("Sonarpad_descrive_la_scena.", &job);
         assert!(!chunks.is_empty());
         assert!(
             chunks
@@ -6079,6 +6082,13 @@ mod tests {
                 .iter()
                 .all(|chunk| !chunk.text_to_read.contains("Sonarpad"))
         );
+        assert!(chunks.iter().all(|chunk| !chunk.text_to_read.contains('_')));
+        let spoken_text = chunks
+            .iter()
+            .map(|chunk| chunk.text_to_read.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        assert!(spoken_text.contains("descrive la scena"));
     }
 
     #[test]

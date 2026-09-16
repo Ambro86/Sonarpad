@@ -26,7 +26,7 @@ use crate::app_windows::interpreter_select_window::{
 };
 use crate::settings::Language;
 use crate::tools::rai_audiodescrizioni::{self, CatalogGroup, CatalogItem};
-use crate::{RaiAudioOrigin, show_error, with_state};
+use crate::{show_error, with_state};
 
 const AUTHOR_EMAIL: &str = "ambro86@gmail.com";
 const REQUEST_FORM_CLASS: &str = "SonarpadRaiCodeRequest";
@@ -314,14 +314,21 @@ fn open_recent_catalog(parent: HWND, language: Language, initial_item_id: Option
             with_state(parent, |state| {
                 state.last_rai_recent_item_id = Some(selected_item.item_id.clone());
             });
+            crate::enable_window_safe(parent, true);
             crate::set_foreground_window_safe(parent);
-            open_item(parent, language, &selected_item, RaiAudioOrigin::Recenti);
+            open_item(
+                parent,
+                language,
+                &selected_item,
+                crate::RaiAudioOrigin::Recenti,
+            );
         }
         Some(InterpreterSelectionResult::SecondaryAction) => {
+            crate::enable_window_safe(parent, true);
             crate::set_foreground_window_safe(parent);
             open_grouped(parent);
         }
-        None => {}
+        Some(InterpreterSelectionResult::BackNavigation) | None => {}
     }
 }
 
@@ -411,12 +418,14 @@ fn open_grouped_catalog(parent: HWND, language: Language, initial_item_id: Optio
     let Some(selected_value) = selection else {
         let recent_item_id =
             with_state(parent, |state| state.last_rai_recent_item_id.clone()).unwrap_or(None);
+        crate::enable_window_safe(parent, true);
         crate::set_foreground_window_safe(parent);
         open_recent_catalog(parent, language, recent_item_id);
         return;
     };
 
     if matches!(selected_value, InterpreterSelectionResult::SecondaryAction) {
+        crate::enable_window_safe(parent, true);
         crate::set_foreground_window_safe(parent);
         open_film_catalog(parent, language, &film_items);
         return;
@@ -432,8 +441,9 @@ fn open_grouped_catalog(parent: HWND, language: Language, initial_item_id: Optio
                 with_state(parent, |state| {
                     state.last_rai_grouped_item_id = Some(item.item_id.clone());
                 });
+                crate::enable_window_safe(parent, true);
                 crate::set_foreground_window_safe(parent);
-                open_item(parent, language, &item, RaiAudioOrigin::Tutte);
+                open_item(parent, language, &item, crate::RaiAudioOrigin::Tutte);
                 return;
             }
         }
@@ -527,7 +537,7 @@ fn open_item(
     parent: HWND,
     language: Language,
     selected_item: &CatalogItem,
-    rai_origin: RaiAudioOrigin,
+    origin: crate::RaiAudioOrigin,
 ) {
     let resolved_url = match rai_audiodescrizioni::resolve_audio_url(&selected_item.audio_url) {
         Ok(url) => url,
@@ -537,15 +547,18 @@ fn open_item(
         }
     };
 
-    let title = selected_item.title.trim().to_string();
-    let title = if title.is_empty() { None } else { Some(title) };
-    crate::play_named_remote_audio_from_url_with_rai_origin(
-        parent,
-        resolved_url,
-        title,
-        Some("audio/mpeg"),
-        rai_origin,
-    );
+    let title = selected_item.title.trim();
+    let title = (!title.is_empty()).then_some(title);
+    if let Err(err) =
+        crate::launch_stream_url_in_mpv(parent, &resolved_url, title, None, None, None)
+    {
+        show_error(parent, language, &err);
+        return;
+    }
+    with_state(parent, |state| {
+        state.active_podcast_episode_from_rai = origin;
+    });
+    crate::focus_editor(parent);
 }
 
 fn build_grouped_items(groups: &[CatalogGroup]) -> Vec<GroupedSelectGroup> {
@@ -591,6 +604,7 @@ fn open_film_catalog(parent: HWND, language: Language, items: &[CatalogItem]) {
     let Some(selected_label) = selection else {
         let initial_item_id =
             with_state(parent, |state| state.last_rai_grouped_item_id.clone()).unwrap_or(None);
+        crate::enable_window_safe(parent, true);
         crate::set_foreground_window_safe(parent);
         crate::set_focus_safe(parent);
         open_grouped_catalog(parent, language, initial_item_id);
@@ -610,8 +624,14 @@ fn open_film_catalog(parent: HWND, language: Language, items: &[CatalogItem]) {
     with_state(parent, |state| {
         state.last_rai_grouped_item_id = Some(selected_item.item_id.clone());
     });
+    crate::enable_window_safe(parent, true);
     crate::set_foreground_window_safe(parent);
-    open_item(parent, language, &selected_item, RaiAudioOrigin::Tutte);
+    open_item(
+        parent,
+        language,
+        &selected_item,
+        crate::RaiAudioOrigin::Tutte,
+    );
 }
 
 fn build_display_items(

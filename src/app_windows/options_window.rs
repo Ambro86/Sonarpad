@@ -752,6 +752,14 @@ fn find_fixed_shortcut_conflict_label(
             },
         ),
         (
+            ShortcutBinding::new(true, true, false, 'E' as u16),
+            if !labels.menu_sonarpad_audiodescrizioni.is_empty() {
+                labels.menu_sonarpad_audiodescrizioni
+            } else {
+                "Audiodescrizioni Sonarpad\tCtrl+Shift+E".to_string()
+            },
+        ),
+        (
             ShortcutBinding::new(false, true, true, 'B' as u16),
             if !labels.menu_bdciechi.is_empty() {
                 labels.menu_bdciechi

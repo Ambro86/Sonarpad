@@ -1,5 +1,10 @@
 # Changelog
 
+Version 0.9.10 – 2026-09-16
+
+Audio descriptions
+1. Improved audio descriptions by replacing the `_` (underscore) character with a space, preventing speech synthesis from pronouncing that character in audio descriptions.
+
 Version 0.9.9 – 2026-09-15
 
 AI Audio Description

@@ -1,5 +1,14 @@
 # Changelog
 
+Versione 0.9.10 – 2026-09-16
+
+Audiodescrizioni
+1. Aggiunta la nuova funzione Sonarpad Audiodescrizioni, per ascoltare i film audiodescritti con Sonarpad.
+
+2. Migliorata l’apertura delle audiodescrizioni Rai: non vengono più scaricate preventivamente, ma vengono aperte immediatamente. Se l’utente vorrà scaricarle potrà sempre farlo su sua richiesta.
+
+3. Migliorate le audiodescrizioni sostituendo il carattere `_` (trattino basso) con uno spazio, per evitare che nelle audiodescrizioni la sintesi vocale pronunci quel carattere.
+
 Versione 0.9.9 – 2026-09-15
 
 Audiodescrizione con IA

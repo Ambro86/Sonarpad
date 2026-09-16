@@ -1,5 +1,10 @@
 # Přehled změn
 
+Verze 0.9.10 – 2026-09-16
+
+Audiopopis
+1. Vylepšeny audiopopisy nahrazením znaku `_` (podtržítko) mezerou, aby syntéza řeči tento znak v audiopopisech nevyslovovala.
+
 Verze 0.9.9 – 2026-09-15
 
 AI audiopopis
