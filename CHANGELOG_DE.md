@@ -1,5 +1,15 @@
 # Änderungsprotokoll
 
+Version 0.9.11 – 2026-09-22
+
+Dateien speichern
+1. „Speichern unter“ wurde korrigiert: Wenn ein bereits von der Festplatte geöffnetes Dokument unter einem neuen Namen gespeichert wird, öffnet sich der Speicherdialog jetzt im selben Ordner wie die Originaldatei, statt im konfigurierten Standardordner oder in OneDrive zu starten. Neue Dokumente verwenden weiterhin den konfigurierten Speicherordner.
+
+Google-Stimmen
+1. Für den Start der Google-Stimmen wurde ein sicherer Fallback hinzugefügt: Wenn Chrome beendet wird, bevor die Google-TTS-Laufzeit bereit ist, versucht Sonarpad automatisch Microsoft Edge, sofern verfügbar. Auf Systemen, auf denen die Google-Stimmen bereits funktionieren, bleibt der bisherige Chrome-Ablauf unverändert.
+
+2. Die Diagnose seltener Startfehler des für Google-Stimmen verwendeten Browsers wurde verbessert: stdout und stderr von Chrome oder Edge werden nur dann in die Sonarpad-Diagnose geschrieben, wenn der Browser beendet wird, bevor die Google-TTS-Laufzeit bereit ist. Bei erfolgreichen Starts wird keine Browser-Ausgabe zur Diagnose hinzugefügt.
+
 Version 0.9.10 – 2026-09-16
 
 Audiodeskriptionen

@@ -1,5 +1,15 @@
 # Changelog
 
+Versão 0.9.11 – 2026-09-22
+
+Salvamento de arquivos
+1. Corrigido Salvar como: quando um documento já aberto do disco é salvo com um novo nome, a janela de salvamento agora abre na mesma pasta do arquivo original, em vez de iniciar na pasta padrão configurada ou no OneDrive. Novos documentos continuam usando a pasta de salvamento configurada.
+
+Vozes Google
+1. Foi adicionado um fallback seguro para a inicialização das vozes Google: se o Chrome fechar antes de o ambiente Google TTS estar pronto, o Sonarpad tenta automaticamente com o Microsoft Edge, quando disponível. Nos computadores em que as vozes Google já funcionam, o funcionamento atual com o Chrome permanece inalterado.
+
+2. Melhorado o diagnóstico das raras falhas ao iniciar o navegador usado pelas vozes Google: stdout e stderr do Chrome ou Edge são gravados no diagnóstico do Sonarpad somente quando o navegador fecha antes de o runtime Google TTS estar pronto. Inicializações bem-sucedidas não adicionam a saída do navegador ao diagnóstico.
+
 Versão 0.9.10 – 2026-09-16
 
 Audiodescrições

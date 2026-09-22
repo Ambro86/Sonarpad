@@ -1,5 +1,15 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.11 – 2026-09-22
+
+Lưu tệp
+1. Đã sửa Lưu thành: khi một tài liệu đã được mở từ ổ đĩa được lưu với tên mới, hộp thoại lưu giờ sẽ mở ngay trong cùng thư mục với tệp gốc thay vì bắt đầu ở thư mục mặc định đã cấu hình hoặc OneDrive. Tài liệu mới vẫn tiếp tục dùng thư mục lưu đã cấu hình.
+
+Giọng Google
+1. Đã thêm cơ chế dự phòng an toàn khi khởi động giọng Google: nếu Chrome đóng trước khi môi trường Google TTS sẵn sàng, Sonarpad sẽ tự động thử lại bằng Microsoft Edge khi có sẵn. Trên những máy mà giọng Google đã hoạt động bình thường, quy trình hiện tại với Chrome vẫn không thay đổi.
+
+2. Cải thiện chẩn đoán cho các lỗi hiếm khi khởi động trình duyệt dùng cho giọng Google: stdout và stderr của Chrome hoặc Edge chỉ được ghi vào chẩn đoán Sonarpad khi trình duyệt thoát trước khi runtime Google TTS sẵn sàng. Các lần khởi động thành công không thêm đầu ra của trình duyệt vào chẩn đoán.
+
 Phiên bản 0.9.10 – 2026-09-16
 
 Mô tả âm thanh

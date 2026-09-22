@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+Wersja 0.9.11 – 2026-09-22
+
+Zapisywanie plików
+1. Poprawiono Zapisz jako: gdy dokument otwarty wcześniej z dysku jest zapisywany pod nową nazwą, okno zapisu otwiera się teraz w tym samym folderze co plik oryginalny, zamiast w skonfigurowanym folderze domyślnym lub w OneDrive. Nowe dokumenty nadal korzystają ze skonfigurowanego folderu zapisu.
+
+Głosy Google
+1. Dodano bezpieczny mechanizm awaryjny przy uruchamianiu głosów Google: jeśli Chrome zamknie się, zanim środowisko Google TTS będzie gotowe, Sonarpad automatycznie ponowi próbę z użyciem Microsoft Edge, jeśli jest dostępny. Na komputerach, na których głosy Google już działają, dotychczasowa ścieżka z Chrome pozostaje bez zmian.
+
+2. Ulepszono diagnostykę rzadkich błędów uruchamiania przeglądarki używanej przez głosy Google: stdout i stderr Chrome lub Edge są zapisywane w diagnostyce Sonarpad tylko wtedy, gdy przeglądarka zamknie się przed gotowością środowiska Google TTS. Pomyślne uruchomienia nie dodają wyjścia przeglądarki do diagnostyki.
+
 Wersja 0.9.10 – 2026-09-16
 
 Audiodeskrypcje

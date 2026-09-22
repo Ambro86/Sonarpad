@@ -1,5 +1,15 @@
 # Přehled změn
 
+Verze 0.9.11 – 2026-09-22
+
+Ukládání souborů
+1. Opraveno Uložit jako: když je dokument již otevřený z disku uložen pod novým názvem, dialog pro uložení se nyní otevře ve stejné složce jako původní soubor místo výchozí nastavené složky nebo OneDrive. Nové dokumenty nadále používají nastavenou složku pro ukládání.
+
+Hlasy Google
+1. Přidán bezpečný záložní postup při spuštění hlasů Google: pokud se Chrome ukončí dříve, než je modul Google TTS připraven, Sonarpad automaticky zkusí Microsoft Edge, pokud je k dispozici. Na počítačích, kde hlasy Google již fungují, zůstává stávající použití Chromu beze změny.
+
+2. Vylepšena diagnostika vzácných chyb při spuštění prohlížeče používaného hlasy Google: stdout a stderr z Chrome nebo Edge se zapíší do diagnostiky Sonarpadu pouze tehdy, když se prohlížeč ukončí dříve, než je runtime Google TTS připraven. Při úspěšném spuštění se výstup prohlížeče do diagnostiky nepřidává.
+
 Verze 0.9.10 – 2026-09-16
 
 Audiopopis

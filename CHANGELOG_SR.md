@@ -1,5 +1,16 @@
 # Dnevnik izmena
 
+Verzija 0.9.11 – 2026-09-22
+
+Čuvanje datoteka
+1. Ispravljena je opcija Sačuvaj kao: kada se dokument koji je već otvoren sa diska čuva pod novim imenom, dijalog za čuvanje sada se otvara u istoj fascikli kao originalna datoteka, umesto u podešenoj podrazumevanoj fascikli ili na OneDrive-u. Novi dokumenti i dalje koriste podešenu fasciklu za čuvanje.
+
+
+Google glasovi
+1. Dodat je bezbedan rezervni način pokretanja Google glasova: ako se Chrome zatvori pre nego što Google TTS okruženje bude spremno, Sonarpad automatski pokušava ponovo koristeći Microsoft Edge, ako je dostupan. Na računarima na kojima Google glasovi već rade, postojeći način rada sa Chrome-om ostaje nepromenjen.
+
+2. Побољшана је дијагностика ретких грешака при покретању прегледача који користе Google гласови: stdout и stderr Chrome-а или Edge-а уписују се у Sonarpad дијагностику само ако се прегледач затвори пре него што Google TTS окружење буде спремно. Успешна покретања не додају излаз прегледача у дијагностику.
+
 Verzija 0.9.10 – 2026-09-16
 
 Audio-deskripcije

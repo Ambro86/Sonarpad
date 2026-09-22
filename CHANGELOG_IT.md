@@ -1,5 +1,24 @@
 # Changelog
 
+Versione 0.9.11 – 2026-09-22
+
+Salvataggio file
+1. Corretto Salva con nome: quando un documento già aperto viene salvato con un nuovo nome, la finestra di salvataggio si apre ora nella stessa cartella del file originale invece di partire dalla cartella predefinita configurata o da OneDrive. I documenti nuovi continuano a usare la cartella di salvataggio configurata.
+
+Voci Google
+1. Aggiunto un fallback sicuro all’avvio delle voci Google: se Chrome si chiude prima che il runtime Google TTS sia pronto, Sonarpad riprova automaticamente con Microsoft Edge quando disponibile. Nei computer in cui le voci Google funzionano già, il percorso esistente con Chrome resta invariato.
+
+2. Migliorata la diagnostica per i rari errori di avvio del browser usato dalle voci Google: stdout e stderr di Chrome o Edge vengono scritti nella diagnostica di Sonarpad solo quando il browser si chiude prima che il runtime Google TTS sia pronto. Gli avvii riusciti non aggiungono l’output del browser alla diagnostica.
+
+Sonarpad Audiodescrizioni
+1. Aggiornato l’elenco Recenti per usare lo stesso raggruppamento in cartelle lato server già usato su mobile. Quando più puntate appena aggiunte appartengono alla stessa cartella, nei Recenti ora compare una sola voce per la cartella invece di tutte le puntate; aprendola si visualizzano i contenuti e tornando indietro si ritorna ai Recenti. Il catalogo completo e la normale navigazione delle cartelle restano invariati.
+
+2. Aggiunta la lettura della trama nel catalogo Sonarpad Audiodescrizioni anche su Windows, come su mobile. Quando il server fornisce una trama, NVDA e gli altri screen reader la leggono subito dopo il titolo della voce; nei Recenti la data resta successiva alla trama.
+
+3. Migliorata la navigazione con Esc in Sonarpad Audiodescrizioni, in modo coerente con RaiPlay. Dentro una cartella Esc torna ora al livello precedente mantenendo il contesto; dalla radice del catalogo completo torna ai Recenti, mentre dalla schermata principale dei Recenti chiude la funzione e restituisce il focus all’editor.
+
+Per questa funzione, Sonarpad Audiodescrizioni, ringrazio in particolare Nicolò La Ferla che mi ha fornito lo spazio web per conservare i film e Chiara Schiroli che gestisce quotidianamente il gruppo dove vengono condivisi i film audiodescritti.
+
 Versione 0.9.10 – 2026-09-16
 
 Audiodescrizioni

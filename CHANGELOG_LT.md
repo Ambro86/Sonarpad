@@ -1,5 +1,15 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.11 – 2026-09-22
+
+Failų išsaugojimas
+1. Pataisyta „Išsaugoti kaip“: kai jau iš disko atidarytas dokumentas išsaugomas nauju vardu, išsaugojimo langas dabar atidaromas tame pačiame aplanke kaip pradinis failas, o ne numatytajame nustatytame aplanke ar „OneDrive“. Nauji dokumentai ir toliau naudoja nustatytą išsaugojimo aplanką.
+
+„Google“ balsai
+1. Pridėtas saugus „Google“ balsų paleidimo atsarginis būdas: jei „Chrome“ užsidaro dar nepasiruošus „Google TTS“ aplinkai, „Sonarpad“ automatiškai bando dar kartą su „Microsoft Edge“, jei ši naršyklė yra pasiekiama. Kompiuteriuose, kuriuose „Google“ balsai jau veikia, dabartinis „Chrome“ naudojimas nesikeičia.
+
+2. Patobulinta retų naršyklės, naudojamos „Google“ balsams, paleidimo klaidų diagnostika: „Chrome“ arba „Edge“ stdout ir stderr įrašomi į „Sonarpad“ diagnostiką tik tada, kai naršyklė užsidaro dar neparengus „Google TTS“ vykdymo aplinkos. Sėkmingo paleidimo metu naršyklės išvestis į diagnostiką nepridedama.
+
 Versija 0.9.10 – 2026-09-16
 
 Garso aprašymai

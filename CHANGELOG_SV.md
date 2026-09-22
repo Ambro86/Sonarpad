@@ -1,5 +1,15 @@
 # Ändringslogg
 
+Version 0.9.11 – 2026-09-22
+
+Spara filer
+1. Åtgärdade Spara som: när ett dokument som redan har öppnats från disken sparas med ett nytt namn öppnas dialogrutan nu i samma mapp som originalfilen, i stället för att starta i den konfigurerade standardmappen eller OneDrive. Nya dokument fortsätter att använda den konfigurerade sparmappen.
+
+Google-röster
+1. Lade till en säker reservlösning vid start av Google-röster: om Chrome avslutas innan Google TTS-miljön är klar försöker Sonarpad automatiskt igen med Microsoft Edge när det finns tillgängligt. På datorer där Google-röster redan fungerar är den befintliga Chrome-vägen oförändrad.
+
+2. Förbättrad diagnostik för sällsynta startfel i webbläsaren som används av Google-röster: stdout och stderr från Chrome eller Edge skrivs till Sonarpads diagnostik endast när webbläsaren avslutas innan Google TTS-miljön är klar. Lyckade starter lägger inte till webbläsarutdata i diagnostiken.
+
 Version 0.9.10 – 2026-09-16
 
 Syntolkning

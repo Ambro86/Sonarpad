@@ -1,5 +1,15 @@
 # Changelog
 
+Version 0.9.11 – 2026-09-22
+
+File saving
+1. Fixed Save As: when a document that was opened from disk is saved under a new name, the save dialog now opens in the same folder as the original file instead of starting from the configured default folder or OneDrive. New documents continue to use the configured save folder.
+
+Google voices
+1. Added a safe startup fallback for Google voices: if Chrome closes before the Google TTS runtime is ready, Sonarpad automatically retries with Microsoft Edge when available. On systems where Google voices already work, the existing Chrome path remains unchanged.
+
+2. Improved diagnostics for rare Google TTS browser startup failures: Chrome or Edge stdout and stderr are written to Sonarpad diagnostics only when the browser exits before the Google TTS runtime is ready. Successful startups do not add browser output to diagnostics.
+
 Version 0.9.10 – 2026-09-16
 
 Audio descriptions

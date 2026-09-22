@@ -4920,9 +4920,14 @@ pub fn save_document_at(hwnd: HWND, index: usize, force_dialog: bool) -> bool {
                         .current_save_text_encoding
                         .or(state.docs[index].opened_text_encoding)
                         .unwrap_or_default();
+                    let initial_directory = original_path
+                        .as_deref()
+                        .and_then(Path::parent)
+                        .filter(|directory| directory.is_dir());
                     match crate::save_file_dialog_with_encoding(
                         hwnd,
                         Some(&suggested_name),
+                        initial_directory,
                         initial_encoding,
                         allow_epub_save,
                         allow_epub_save.then_some("epub"),

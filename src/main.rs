@@ -24856,6 +24856,7 @@ fn apply_selected_save_filter_extension(path: &mut PathBuf, pattern: &str) {
 pub(crate) fn save_file_dialog_with_encoding(
     hwnd: HWND,
     suggested_name: Option<&str>,
+    initial_directory: Option<&Path>,
     initial_encoding: TextEncoding,
     allow_epub: bool,
     preferred_extension: Option<&str>,
@@ -24925,16 +24926,19 @@ pub(crate) fn save_file_dialog_with_encoding(
                 .is_some()
         })
         .unwrap_or(false);
-        let initial_dir = if route_document {
-            settings::default_documents_save_folder()
-        } else {
-            with_state(hwnd, |state| state.settings.documents_save_folder.clone())
-                .map(|path| path.trim().to_string())
-                .filter(|path| !path.is_empty())
-                .unwrap_or_else(settings::default_documents_save_folder)
-        };
+        let initial_dir = initial_directory.map(Path::to_path_buf).unwrap_or_else(|| {
+            if route_document {
+                PathBuf::from(settings::default_documents_save_folder())
+            } else {
+                with_state(hwnd, |state| state.settings.documents_save_folder.clone())
+                    .map(|path| path.trim().to_string())
+                    .filter(|path| !path.is_empty())
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| PathBuf::from(settings::default_documents_save_folder()))
+            }
+        });
         crate::log_if_err!(std::fs::create_dir_all(&initial_dir));
-        let initial_dir_wide = to_wide(&initial_dir);
+        let initial_dir_wide = to_wide(&initial_dir.to_string_lossy());
         if let Ok(shell_folder) =
             SHCreateItemFromParsingName::<_, _, IShellItem>(PCWSTR(initial_dir_wide.as_ptr()), None)
         {

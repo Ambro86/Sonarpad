@@ -21,6 +21,8 @@ pub(crate) struct CatalogItem {
     #[serde(default)]
     pub(crate) parent: String,
     #[serde(default)]
+    pub(crate) plot: String,
+    #[serde(default)]
     pub(crate) download_url: String,
     #[serde(default)]
     pub(crate) stream_url: Option<String>,
@@ -95,10 +97,10 @@ struct ApiResponse {
 }
 
 pub(crate) fn load_recent_catalog() -> Result<Vec<CatalogItem>, String> {
-    request_catalog("recent", None, None, Some("recent")).map(|items| {
+    request_catalog("recent", None, None, Some("recent"), true).map(|items| {
         items
             .into_iter()
-            .filter(CatalogItem::is_playable_file)
+            .filter(CatalogItem::is_catalog_entry)
             .collect()
     })
 }
@@ -115,6 +117,7 @@ pub(crate) fn load_folder_catalog(folder: &str) -> Result<Vec<CatalogItem>, Stri
         None,
         (!folder.is_empty()).then_some(folder),
         Some("alpha"),
+        false,
     )
     .map(|items| {
         items
@@ -129,6 +132,7 @@ fn request_catalog(
     query: Option<&str>,
     folder: Option<&str>,
     sort: Option<&str>,
+    group_recent_folders: bool,
 ) -> Result<Vec<CatalogItem>, String> {
     let code = crate::settings::load_saved_rai_luce_code()
         .map(|value| value.trim().to_string())
@@ -152,6 +156,9 @@ fn request_catalog(
     }
     if let Some(sort) = sort.map(str::trim).filter(|value| !value.is_empty()) {
         body["sort"] = serde_json::Value::String(sort.to_string());
+    }
+    if group_recent_folders {
+        body["group_recent_folders"] = serde_json::Value::Bool(true);
     }
 
     let authorization = format!("X-Sonarpad-Password: {code}");
@@ -195,6 +202,7 @@ mod tests {
             filename: "origine.mp4".to_string(),
             download_filename: "film.mp4".to_string(),
             parent: String::new(),
+            plot: String::new(),
             download_url: String::new(),
             stream_url: Some("https://example.invalid/stream".to_string()),
         };

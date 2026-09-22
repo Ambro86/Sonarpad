@@ -1,5 +1,15 @@
 # Journal des modifications
 
+Version 0.9.11 – 2026-09-22
+
+Enregistrement des fichiers
+1. Correction de Enregistrer sous : lorsqu’un document déjà ouvert depuis le disque est enregistré sous un nouveau nom, la boîte de dialogue s’ouvre désormais dans le même dossier que le fichier d’origine, au lieu de partir du dossier par défaut configuré ou de OneDrive. Les nouveaux documents continuent d’utiliser le dossier d’enregistrement configuré.
+
+Voix Google
+1. Ajout d’un mécanisme de secours sûr au démarrage des voix Google : si Chrome se ferme avant que le moteur Google TTS soit prêt, Sonarpad réessaie automatiquement avec Microsoft Edge lorsqu’il est disponible. Sur les ordinateurs où les voix Google fonctionnent déjà, le fonctionnement actuel avec Chrome reste inchangé.
+
+2. Amélioration du diagnostic des rares échecs de démarrage du navigateur utilisé par les voix Google : stdout et stderr de Chrome ou Edge sont ajoutés au diagnostic Sonarpad uniquement si le navigateur se ferme avant que le runtime Google TTS soit prêt. Les démarrages réussis n’ajoutent aucune sortie du navigateur au diagnostic.
+
 Version 0.9.10 – 2026-09-16
 
 Audiodescriptions

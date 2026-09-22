@@ -597,6 +597,11 @@ fn select_interpreter_internal(
                 continue;
             }
             if msg.message == WM_KEYDOWN && msg.wParam.0 as u32 == VK_ESCAPE.0 as u32 {
+                if options.back_navigation_keys
+                    && let Ok(mut stored) = result.lock()
+                {
+                    *stored = Some(InterpreterSelectionResult::BackNavigation);
+                }
                 crate::log_if_err!(PostMessageW(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0)));
                 continue;
             }

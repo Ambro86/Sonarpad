@@ -14,7 +14,12 @@ use crate::{show_error, with_state};
 #[derive(Clone)]
 enum SonarpadCatalogView {
     Recent,
-    Folder { path: String, title: String },
+    Folder {
+        path: String,
+        title: String,
+        recent_root_path: Option<String>,
+        recent_root_label: Option<String>,
+    },
 }
 
 #[derive(Clone)]
@@ -72,8 +77,21 @@ pub(crate) fn restore_after_player_stop(parent: HWND, stopped_url: Option<&str>)
         SonarpadCatalogView::Recent => {
             open_recent_catalog(parent, language, Some(context.selected_label));
         }
-        SonarpadCatalogView::Folder { path, title } => {
-            open_folder_catalog(parent, language, path, title, Some(context.selected_label));
+        SonarpadCatalogView::Folder {
+            path,
+            title,
+            recent_root_path,
+            recent_root_label,
+        } => {
+            open_folder_catalog_internal(
+                parent,
+                language,
+                path,
+                title,
+                Some(context.selected_label),
+                recent_root_path,
+                recent_root_label,
+            );
         }
     }
     true
@@ -236,13 +254,31 @@ fn open_recent_catalog(parent: HWND, language: Language, initial_label: Option<S
             };
             crate::enable_window_safe(parent, true);
             crate::set_foreground_window_safe(parent);
-            open_item(
-                parent,
-                language,
-                &selected_item,
-                SonarpadCatalogView::Recent,
-                selected_label,
-            );
+            if selected_item.is_folder() {
+                let folder_path = selected_item.path.trim_matches('/').to_string();
+                let folder_title = if selected_item.title.trim().is_empty() {
+                    folder_title_from_path(&folder_path)
+                } else {
+                    selected_item.title.trim().to_string()
+                };
+                open_folder_catalog_internal(
+                    parent,
+                    language,
+                    folder_path.clone(),
+                    folder_title,
+                    None,
+                    Some(folder_path),
+                    Some(selected_label),
+                );
+            } else {
+                open_item(
+                    parent,
+                    language,
+                    &selected_item,
+                    SonarpadCatalogView::Recent,
+                    selected_label,
+                );
+            }
         }
         Some(InterpreterSelectionResult::SecondaryAction) => {
             crate::enable_window_safe(parent, true);
@@ -274,6 +310,27 @@ fn open_folder_catalog(
     start_title: String,
     initial_label: Option<String>,
 ) {
+    open_folder_catalog_internal(
+        parent,
+        language,
+        start_path,
+        start_title,
+        initial_label,
+        None,
+        None,
+    );
+}
+
+fn open_folder_catalog_internal(
+    parent: HWND,
+    language: Language,
+    start_path: String,
+    start_title: String,
+    initial_label: Option<String>,
+    recent_root_path: Option<String>,
+    recent_root_label: Option<String>,
+) {
+    let recent_root_path = recent_root_path.map(|path| path.trim_matches('/').to_string());
     let mut current_path = start_path.trim_matches('/').to_string();
     let mut current_title = if start_title.trim().is_empty() {
         folder_title_from_path(&current_path)
@@ -332,6 +389,13 @@ fn open_folder_catalog(
             Some(InterpreterSelectionResult::BackNavigation) => {
                 crate::enable_window_safe(parent, true);
                 crate::set_foreground_window_safe(parent);
+                if recent_root_path
+                    .as_deref()
+                    .is_some_and(|root| current_path == root)
+                {
+                    open_recent_catalog(parent, language, recent_root_label.clone());
+                    return;
+                }
                 if current_path.is_empty() {
                     open_recent_catalog(parent, language, None);
                     return;
@@ -389,6 +453,8 @@ fn open_folder_catalog(
             SonarpadCatalogView::Folder {
                 path: current_path.clone(),
                 title: current_title.clone(),
+                recent_root_path: recent_root_path.clone(),
+                recent_root_label: recent_root_label.clone(),
             },
             selected_label,
         );
@@ -481,6 +547,10 @@ fn format_item_label(item: &CatalogItem, show_date: bool) -> String {
     } else {
         title.to_string()
     }];
+    let plot = item.plot.trim();
+    if !plot.is_empty() {
+        parts.push(format!("Trama: {plot}"));
+    }
     if show_date && let Some(date) = display_date(item) {
         parts.push(date);
     }

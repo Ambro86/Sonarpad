@@ -844,59 +844,138 @@ impl GoogleTtsRuntime {
             return Err("No Google TTS voice packages are installed.".to_string());
         }
         fs::create_dir_all(runtime_dir()).map_err(|err| err.to_string())?;
-        let browser = find_browser().ok_or_else(|| {
-            "Google Chrome and Microsoft Edge were not found. Install one of them, or set CHROME_PATH or EDGE_PATH."
-                .to_string()
-        })?;
-        let profiles_dir = browser_profiles_dir(browser.runtime);
-        fs::create_dir_all(&profiles_dir).map_err(|err| err.to_string())?;
-        cleanup_old_profiles(&profiles_dir, browser.runtime.display_name());
+        let browsers = find_browsers();
+        if browsers.is_empty() {
+            return Err(
+                "Google Chrome and Microsoft Edge were not found. Install one of them, or set CHROME_PATH or EDGE_PATH."
+                    .to_string(),
+            );
+        }
+        let browser_count = browsers.len();
         let server = EmbeddedHttpServer::start()?;
-        crate::log_debug(&format!(
-            "Google TTS browser runtime: {} ({})",
-            browser.runtime.display_name(),
-            browser.path.display()
-        ));
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|value| value.as_nanos())
-            .unwrap_or(0);
-        let profile_sequence = PROFILE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-        let profile_dir = profiles_dir.join(format!(
-            "session-{}-{timestamp}-{profile_sequence}",
-            std::process::id()
-        ));
-        fs::create_dir_all(&profile_dir).map_err(|err| err.to_string())?;
-        let devtools_file = profile_dir.join("DevToolsActivePort");
         let page_url = format!("http://127.0.0.1:{}/", server.port);
-        let browser_args = vec![
-            "--headless=new".to_string(),
-            "--remote-debugging-port=0".to_string(),
-            "--remote-allow-origins=*".to_string(),
-            format!("--user-data-dir={}", profile_dir.display()),
-            "--no-first-run".to_string(),
-            "--no-default-browser-check".to_string(),
-            "--disable-translate".to_string(),
-            "--disable-features=Translate,TranslateUI".to_string(),
-            "--disable-renderer-accessibility".to_string(),
-            "--disable-background-networking".to_string(),
-            "--disable-breakpad".to_string(),
-            "--disable-crash-reporter".to_string(),
-            "--noerrdialogs".to_string(),
-            "--autoplay-policy=no-user-gesture-required".to_string(),
-            page_url.clone(),
-        ];
-        let browser_name = browser.runtime.display_name();
-        let mut browser_process = Command::new(&browser.path)
-            .args(&browser_args)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .creation_flags(CREATE_NO_WINDOW)
-            .spawn()
-            .map_err(|err| format!("Failed to start {browser_name}: {err}"))?;
-        let debug_port =
-            wait_for_devtools_port(&mut browser_process, browser_name, &devtools_file, cancel)?;
+        let mut started_browser: Option<(Child, &'static str, PathBuf, u16)> = None;
+        let mut last_browser_start_error: Option<String> = None;
+
+        for (index, browser) in browsers.into_iter().enumerate() {
+            let profiles_dir = browser_profiles_dir(browser.runtime);
+            fs::create_dir_all(&profiles_dir).map_err(|err| err.to_string())?;
+            cleanup_old_profiles(&profiles_dir, browser.runtime.display_name());
+            crate::log_debug(&format!(
+                "Google TTS browser runtime: {} ({})",
+                browser.runtime.display_name(),
+                browser.path.display()
+            ));
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|value| value.as_nanos())
+                .unwrap_or(0);
+            let profile_sequence = PROFILE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+            let profile_dir = profiles_dir.join(format!(
+                "session-{}-{timestamp}-{profile_sequence}",
+                std::process::id()
+            ));
+            fs::create_dir_all(&profile_dir).map_err(|err| err.to_string())?;
+            let devtools_file = profile_dir.join("DevToolsActivePort");
+            let browser_args = vec![
+                "--headless=new".to_string(),
+                "--remote-debugging-port=0".to_string(),
+                "--remote-allow-origins=*".to_string(),
+                format!("--user-data-dir={}", profile_dir.display()),
+                "--no-first-run".to_string(),
+                "--no-default-browser-check".to_string(),
+                "--disable-translate".to_string(),
+                "--disable-features=Translate,TranslateUI".to_string(),
+                "--disable-renderer-accessibility".to_string(),
+                "--disable-background-networking".to_string(),
+                "--disable-breakpad".to_string(),
+                "--disable-crash-reporter".to_string(),
+                "--noerrdialogs".to_string(),
+                "--autoplay-policy=no-user-gesture-required".to_string(),
+                page_url.clone(),
+            ];
+            let browser_name = browser.runtime.display_name();
+            let mut browser_process = match Command::new(&browser.path)
+                .args(&browser_args)
+                .stdin(Stdio::null())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .creation_flags(CREATE_NO_WINDOW)
+                .spawn()
+            {
+                Ok(process) => process,
+                Err(err) => {
+                    let message = format!("Failed to start {browser_name}: {err}");
+                    if index + 1 < browser_count {
+                        crate::log_debug(&format!(
+                            "Google TTS {browser_name} could not be started; trying the alternate browser runtime: {message}"
+                        ));
+                        cleanup_failed_browser_profile(&profile_dir, browser_name);
+                        last_browser_start_error = Some(message);
+                        continue;
+                    }
+                    return Err(message);
+                }
+            };
+            let startup_stdout = browser_process
+                .stdout
+                .take()
+                .map(spawn_browser_output_reader);
+            let startup_stderr = browser_process
+                .stderr
+                .take()
+                .map(spawn_browser_output_reader);
+            match wait_for_devtools_port(&mut browser_process, browser_name, &devtools_file, cancel)
+            {
+                Ok(debug_port) => {
+                    started_browser =
+                        Some((browser_process, browser_name, profile_dir, debug_port));
+                    break;
+                }
+                Err(err)
+                    if is_browser_early_exit_error(&err)
+                        && index + 1 < browser_count
+                        && !cancel.load(Ordering::Relaxed) =>
+                {
+                    if let Err(wait_err) = browser_process.wait() {
+                        crate::log_debug(&format!(
+                            "Google TTS {browser_name} failed while waiting for the exited browser process: {wait_err}"
+                        ));
+                    }
+                    log_browser_startup_failure_output(
+                        browser_name,
+                        startup_stdout,
+                        startup_stderr,
+                    );
+                    crate::log_debug(&format!(
+                        "Google TTS {browser_name} exited before startup; trying the alternate browser runtime: {err}"
+                    ));
+                    cleanup_failed_browser_profile(&profile_dir, browser_name);
+                    last_browser_start_error = Some(err);
+                }
+                Err(err) if is_browser_early_exit_error(&err) => {
+                    if let Err(wait_err) = browser_process.wait() {
+                        crate::log_debug(&format!(
+                            "Google TTS {browser_name} failed while waiting for the exited browser process: {wait_err}"
+                        ));
+                    }
+                    log_browser_startup_failure_output(
+                        browser_name,
+                        startup_stdout,
+                        startup_stderr,
+                    );
+                    return Err(err);
+                }
+                Err(err) => return Err(err),
+            }
+        }
+
+        let (browser_process, browser_name, profile_dir, debug_port) =
+            started_browser.ok_or_else(|| {
+                last_browser_start_error.unwrap_or_else(|| {
+                    "Google TTS could not start an available browser runtime.".to_string()
+                })
+            })?;
         let websocket_url = wait_for_page_websocket(debug_port, &page_url, cancel)?;
         let (mut socket, _) = connect(websocket_url.as_str())
             .map_err(|err| format!("Google TTS DevTools connection failed: {err}"))?;
@@ -1523,17 +1602,88 @@ fn browser_candidates(runtime: BrowserRuntime) -> Vec<PathBuf> {
     candidates
 }
 
-fn find_browser() -> Option<BrowserExecutable> {
-    // Preserve Sonarpad's existing behavior: prefer Chrome, then fall back to Edge.
+fn find_browsers() -> Vec<BrowserExecutable> {
+    // Preserve Sonarpad's existing behavior: Chrome remains the first choice.
+    // Edge is kept as a dormant fallback and is only used if Chrome cannot
+    // start the isolated Google TTS runtime on this machine.
+    let mut browsers = Vec::new();
     for runtime in [BrowserRuntime::Chrome, BrowserRuntime::Edge] {
         if let Some(path) = browser_candidates(runtime)
             .into_iter()
             .find(|path| path.is_file())
         {
-            return Some(BrowserExecutable { runtime, path });
+            browsers.push(BrowserExecutable { runtime, path });
         }
     }
-    None
+    browsers
+}
+
+fn is_browser_early_exit_error(error: &str) -> bool {
+    error.contains("exited before Google TTS started:")
+}
+
+const BROWSER_STARTUP_OUTPUT_LIMIT: usize = 16 * 1024;
+
+fn spawn_browser_output_reader<R>(mut reader: R) -> thread::JoinHandle<String>
+where
+    R: Read + Send + 'static,
+{
+    thread::spawn(move || {
+        let mut captured = Vec::with_capacity(BROWSER_STARTUP_OUTPUT_LIMIT.min(4096));
+        let mut buffer = [0_u8; 4096];
+        loop {
+            match reader.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(read) => {
+                    if captured.len() < BROWSER_STARTUP_OUTPUT_LIMIT {
+                        let remaining = BROWSER_STARTUP_OUTPUT_LIMIT - captured.len();
+                        captured.extend_from_slice(&buffer[..read.min(remaining)]);
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+        String::from_utf8_lossy(&captured).trim().to_string()
+    })
+}
+
+fn log_browser_startup_failure_output(
+    browser_name: &str,
+    stdout: Option<thread::JoinHandle<String>>,
+    stderr: Option<thread::JoinHandle<String>>,
+) {
+    let stdout = stdout
+        .and_then(|handle| handle.join().ok())
+        .unwrap_or_default();
+    let stderr = stderr
+        .and_then(|handle| handle.join().ok())
+        .unwrap_or_default();
+
+    if !stdout.is_empty() {
+        crate::log_debug(&format!(
+            "Google TTS {browser_name} startup stdout (reported only after early exit): {stdout}"
+        ));
+    }
+    if !stderr.is_empty() {
+        crate::log_debug(&format!(
+            "Google TTS {browser_name} startup stderr (reported only after early exit): {stderr}"
+        ));
+    }
+    if stdout.is_empty() && stderr.is_empty() {
+        crate::log_debug(&format!(
+            "Google TTS {browser_name} early exit produced no stdout/stderr output."
+        ));
+    }
+}
+
+fn cleanup_failed_browser_profile(profile_dir: &Path, browser_name: &str) {
+    if let Err(err) = fs::remove_dir_all(profile_dir)
+        && err.kind() != std::io::ErrorKind::NotFound
+    {
+        crate::log_debug(&format!(
+            "Google TTS {browser_name} failed-start profile cleanup failed: {err}"
+        ));
+    }
 }
 
 fn wait_for_devtools_port(
@@ -1639,6 +1789,19 @@ mod tests {
         assert_eq!(google_synthesis_timeout(google_rate(0)).as_secs(), 35);
         assert_eq!(google_synthesis_timeout(google_rate(100)).as_secs(), 35);
         assert_eq!(google_synthesis_timeout(google_rate(-100)).as_secs(), 86);
+    }
+
+    #[test]
+    fn browser_exit_before_devtools_is_detected_for_safe_fallback() {
+        assert!(is_browser_early_exit_error(
+            "Google Chrome exited before Google TTS started: exit code: 0"
+        ));
+        assert!(is_browser_early_exit_error(
+            "Microsoft Edge exited before Google TTS started: exit code: 1"
+        ));
+        assert!(!is_browser_early_exit_error(
+            "Timed out waiting for Google Chrome DevTools."
+        ));
     }
 
     #[test]
