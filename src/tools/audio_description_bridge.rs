@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(debug_assertions)]
 const BRIDGE_DEBUG_FILE_NAME: &str = "audio_description_bridge.exe";
-const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v7.exe";
+const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v8.exe";
 const BRIDGE_MIN_VALID_SIZE_BYTES: u64 = 5_000_000;
 const BRIDGE_DOWNLOAD_URLS: [&str; 2] = [
     "https://github.com/Ambro86/Sonarpad-Tools/releases/download/0.7/audio_description_bridge.exe",
@@ -236,6 +236,7 @@ fn download_bridge(
     cancel: &Arc<AtomicBool>,
     progress: &mut Option<Box<dyn FnMut(i32) + Send>>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("download");
     let parent = target_path
         .parent()
         .ok_or_else(|| "invalid audio-description bridge path".to_string())?;
@@ -824,6 +825,7 @@ mod cache_cleanup_tests {
             "audio_description_bridge_v6.exe",
             "audio_description_bridge_v7.exe",
             "audio_description_bridge_v8.exe",
+            "audio_description_bridge_v9.exe",
             "audio_description_bridge.exe",
             "sapi4_bridge_32.exe",
             "audio_description_bridge_v3.exe.backup",
@@ -837,12 +839,13 @@ mod cache_cleanup_tests {
                 .share_mode(0)
                 .open(dir.join("audio_description_bridge_v6.exe"))
                 .expect("lock fixture");
-            remove_old_bridge_caches(&dir.join("audio_description_bridge_v7.exe"));
+            remove_old_bridge_caches(&dir.join("audio_description_bridge_v8.exe"));
             assert!(!dir.join("audio_description_bridge_v4.exe").exists());
+            assert!(!dir.join("audio_description_bridge_v7.exe").exists());
             for name in [
                 "audio_description_bridge_v6.exe",
-                "audio_description_bridge_v7.exe",
                 "audio_description_bridge_v8.exe",
+                "audio_description_bridge_v9.exe",
                 "audio_description_bridge.exe",
                 "sapi4_bridge_32.exe",
                 "audio_description_bridge_v3.exe.backup",
@@ -852,6 +855,6 @@ mod cache_cleanup_tests {
             }
         }
         fs::remove_dir_all(&dir).expect("remove isolated test directory");
-        remove_old_bridge_caches(&dir.join("audio_description_bridge_v7.exe"));
+        remove_old_bridge_caches(&dir.join("audio_description_bridge_v8.exe"));
     }
 }

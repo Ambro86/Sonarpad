@@ -1,5 +1,29 @@
 # Dnevnik izmena
 
+Verzija 0.9.12 – 2026-10-02
+
+Snimanje podkasta
+1. Dodat je konzervativni adaptivni mehanizam protiv jittera pri snimanju mikrofona. Na normalnim sistemima Sonarpad zadržava postojeću sinhronizaciju bez promena; samo kada sesija pokazuje uporan mikro-jitter WASAPI vremenskih oznaka manji od približno 1 ms, prestaje da rasteže ili sabija svaku malu promenu paketa i čuva pakete mikrofona neprekidno. Veća odstupanja, stvarni WASAPI prekidi i greške vremenskih oznaka i dalje koriste postojeću korekciju. Dijagnostika sada pokazuje da li se fallback aktivirao i koliko malih odstupanja je ignorisano.
+
+AI audio-deskripcija
+1. Dodat je konzervativni fallback za ispravne snimke kod kojih video tok počinje malim ponavljajućim vremenskim pomakom koji je mogao da izazove grešku „invalid Gemini chunk timeline“. Sonarpad i dalje prvo pokušava normalnu vremensku liniju i postojeći fallback za drift; samo ako oba ne uspeju i segmenti imaju mali, dosledan i ponovljen start-time, taj višak se normalizuje samo u pogođenim segmentima. Nedosledni ili veliki pomaci se i dalje odbijaju, pa video-zapisi koji već rade nastavljaju da koriste neizmenjenu normalnu pipeline. Dijagnostika sada prikazuje i trajanje i start-time segmenata kada vremenska linija ostane nevažeća.
+
+2. Ispravljen je još jedan slučaj `invalid Gemini chunk timeline` kod pojedinih TV/live snimaka. Kada FFmpeg napravi tačno očekivani broj segmenata za analizu, ali mali broj kontejnera prijavi nelogično trajanje, Sonarpad zadržava stvarno izmerena trajanja normalnih segmenata, menja samo očigledne anomalije u metapodacima poznatim rasporedom segmentacije i primenjuje najviše 6% završnog poravnanja. Ovaj fallback se koristi tek kada postojeći načini formiranja vremenske linije ne uspeju; normalni video-snimci ostaju nepromenjeni, a snimci sa raširenim ili nedoslednim vremenskim greškama i dalje se odbijaju.
+
+Plejer, YouTube i striming
+1. Ispravljena je izolacija fokusa tokom reprodukcije medija. Dok je aktivna kartica BASS ili upravljanog MPV plejera, Tab/Shift+Tab više ne mogu da pređu na skrivene kontrole editora ili panela glasova, a komande plejera kao što je Space ostaju dodeljene reprodukciji umesto da aktiviraju nepovezane onemogućene kontrole kao što je Streaming. Odloženi zahtevi za vraćanje fokusa u editor takođe se ignorišu dok je trenutna kartica plejer, bez promene normalnih kartica editora ili modalnih dijaloga.
+
+2. Ispravljen je povratak na YouTube/MPV posle pregleda AI audio-deskripcije. Kada se pregled zatvori, ako trenutna kartica i dalje predstavlja isti YouTube video, Sonarpad obavlja jednu odloženu proveru oporavka i ponovo pokreće MPV samo ako ni MPV ni BASS već nisu aktivni. Time se uklanja privremeno stanje „kartica plejera bez plejera“ bez duplih procesa ili petlji ponovnog pokretanja.
+
+3. Poboljšane su direktne YouTube veze nalepljene u „Reprodukuj medij iz striminga“. Ako naslov još nije poznat iz YouTube pretrage, Sonarpad sada preko yt-dlp preuzima pravi naslov videa i koristi ga za plejer i karticu, umesto da, kada je moguće, ostavi adresu `watch?v=...`.
+
+4. Ispravljena su imena fajlova pri preuzimanju iz direktne YouTube/striming reprodukcije. Pre „Sačuvaj kao“, Sonarpad ponovo pokušava da dobije nedostajući YouTube naslov i obično predlaže pravi naslov videa. Ako naslov i dalje nije dostupan, YouTube sada koristi `youtube_<video-id>` umesto generičkog `stream_media`; `stream_media` ostaje samo kao rezervna opcija za strimove koji nisu YouTube.
+
+5. Ispravljena je beskonačna petlja tastera Esc kod direktnih YouTube linkova sa Mix/playlist parametrima. Ako yt-dlp sa takvog URL-a pređe na jedan video bez otvaranja stvarnog nivoa kolekcije ili pretrage, zaustavljanje reprodukcije sada vraća fokus u editor umesto da ponovo otvori isti strim. Stvarni nivoi pretrage, plejlista i ugnježdenih kolekcija i dalje se vraćaju kao ranije.
+
+6. Ispravljene su direktne YouTube video veze koje sadrže i Mix/playlist parametre. Kada nalepljeni URL izričito sadrži `watch?v=<video-id>`, Sonarpad sada daje prednost tom ID-u videa u odnosu na prateće `list=` i `index=` parametre, pa početni video YouTube Mix-a više ne može da zameni traženi video. Pravi `/playlist?list=...` URL-ovi se i dalje otvaraju kao kolekcije.
+
+
 Verzija 0.9.11 – 2026-09-22
 
 Čuvanje datoteka

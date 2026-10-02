@@ -1,5 +1,29 @@
 # Dziennik zmian
 
+Wersja 0.9.12 – 2026-10-02
+
+Nagrywanie podcastów
+1. Dodano konserwatywny, adaptacyjny mechanizm przeciwko jitterowi podczas nagrywania mikrofonu. Na normalnych systemach Sonarpad pozostawia dotychczasową synchronizację bez zmian; tylko gdy sesja wykazuje trwały mikro-jitter znaczników czasu WASAPI mniejszy niż około 1 ms, program przestaje rozciągać lub ściskać każdą drobną różnicę pakietu i zachowuje ciągłość pakietów mikrofonu. Większe odchylenia, rzeczywiste przerwy WASAPI i błędy znaczników czasu nadal korzystają z istniejącej korekty. Diagnostyka pokazuje teraz, czy mechanizm został aktywowany i ile małych odchyleń zignorowano.
+
+Audiodeskrypcja z AI
+1. Dodano konserwatywny fallback dla poprawnych nagrań, w których strumień wideo zaczyna się od małego, powtarzającego się przesunięcia czasowego mogącego powodować błąd „invalid Gemini chunk timeline”. Sonarpad nadal najpierw próbuje normalnej osi czasu i istniejącego mechanizmu korekcji driftu; dopiero gdy oba zawiodą, a fragmenty mają mały, spójny i powtarzający się start-time, normalizuje ten narzut tylko w dotkniętych fragmentach. Niespójne lub duże przesunięcia są nadal odrzucane, więc filmy, które już działają, przechodzą przez niezmienioną normalną pipeline. Diagnostyka pokazuje teraz także czas trwania i start-time fragmentów, gdy oś czasu nadal jest nieprawidłowa.
+
+2. Naprawiono kolejny przypadek `invalid Gemini chunk timeline` występujący w niektórych nagraniach TV/transmisji na żywo. Gdy FFmpeg tworzy dokładnie oczekiwaną liczbę fragmentów analizy, ale niewielka część kontenerów zgłasza nieprawdopodobne czasy trwania, Sonarpad zachowuje rzeczywiste czasy normalnych fragmentów, zastępuje tylko wyraźne wartości odstające metadanych znanym harmonogramem segmentacji i stosuje najwyżej 6% końcowe wyrównanie. Ten fallback uruchamia się dopiero po niepowodzeniu istniejących ścieżek osi czasu; zwykłe filmy pozostają bez zmian, a nagrania z rozległymi lub niespójnymi błędami czasu nadal są odrzucane.
+
+Odtwarzacz, YouTube i streaming
+1. Naprawiono izolację fokusu podczas odtwarzania multimediów. Gdy aktywna jest karta odtwarzacza BASS lub zarządzanego MPV, Tab/Shift+Tab nie mogą już przechodzić do ukrytych kontrolek edytora lub panelu głosów, a skróty odtwarzacza, takie jak Spacja, pozostają przypisane do odtwarzania zamiast uruchamiać niezwiązane, wyłączone kontrolki, takie jak Streaming. Opóźnione żądania przywrócenia fokusu do edytora są również ignorowane, gdy bieżąca karta jest odtwarzaczem, bez zmiany normalnych kart edytora ani okien modalnych.
+
+2. Naprawiono powrót do YouTube/MPV po podglądzie audiodeskrypcji AI. Po zamknięciu podglądu, jeśli bieżąca karta nadal reprezentuje ten sam film YouTube, Sonarpad wykonuje jeden opóźniony test odzyskiwania i ponownie uruchamia MPV tylko wtedy, gdy ani MPV, ani BASS nie są już aktywne. Usuwa to tymczasowy stan „karta odtwarzacza bez odtwarzacza”, unikając zduplikowanych procesów i pętli restartu.
+
+3. Ulepszono bezpośrednie linki YouTube wklejane do „Odtwórz multimedia ze strumienia”. Jeśli tytuł nie jest już znany z wyszukiwania YouTube, Sonarpad pobiera teraz prawdziwy tytuł filmu za pomocą yt-dlp i używa go w odtwarzaczu oraz na karcie, zamiast pozostawiać adres `watch?v=...`, gdy tylko jest to możliwe.
+
+4. Naprawiono nazwy plików przy pobieraniu z bezpośredniego odtwarzania YouTube/streamingu. Przed Zapisz jako Sonarpad ponownie próbuje pobrać brakujący tytuł YouTube i zwykle proponuje prawdziwy tytuł filmu. Jeśli tytułu nadal nie można uzyskać, YouTube używa teraz `youtube_<video-id>` zamiast ogólnego `stream_media`; `stream_media` pozostaje tylko jako fallback dla strumieni innych niż YouTube.
+
+5. Naprawiono nieskończoną pętlę klawisza Esc dla bezpośrednich linków YouTube zawierających parametry Mix/listy odtwarzania. Jeśli yt-dlp przechodzi z takiego adresu URL do pojedynczego filmu bez otwierania rzeczywistego poziomu kolekcji lub wyszukiwania, zatrzymanie odtwarzania wraca teraz do edytora zamiast ponownie otwierać ten sam strumień. Rzeczywiste poziomy wyszukiwania, playlist i zagnieżdżonych kolekcji są nadal przywracane jak wcześniej.
+
+6. Naprawiono bezpośrednie linki do filmów YouTube zawierające również parametry Mix/listy odtwarzania. Gdy wklejony adres wyraźnie zawiera `watch?v=<video-id>`, Sonarpad nadaje teraz pierwszeństwo temu identyfikatorowi filmu przed dodatkowymi parametrami `list=` i `index=`, dzięki czemu identyfikator bazowy YouTube Mix nie może już zastąpić żądanego filmu. Prawdziwe adresy `/playlist?list=...` nadal otwierają się jako kolekcje.
+
+
 Wersja 0.9.11 – 2026-09-22
 
 Zapisywanie plików

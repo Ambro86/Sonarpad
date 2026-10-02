@@ -809,6 +809,8 @@ pub(crate) fn localized_status_text(
         "analysis_prepare" => Some("audio_description.progress.analysis_prepare"),
         "pyannote_prepare" => Some("audio_description.progress.pyannote_prepare"),
         "chunk_prepare" => Some("audio_description.progress.chunk_prepare"),
+        "timestamp_recode_start" => Some("audio_description.progress.timestamp_recode_start"),
+        "timestamp_recode_done" => Some("audio_description.progress.timestamp_recode_done"),
         "download" => Some("audio_description.progress.download"),
         "pyannote" | "pyannote_analyzing" => Some("audio_description.progress.pyannote_analyzing"),
         "pyannote_no_audio" => Some("audio_description.progress.pyannote_no_audio"),
@@ -4623,13 +4625,38 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
 #[cfg(test)]
 mod tests {
     use super::{localized_status_text, should_move_input_to_recycle_bin};
-    use crate::settings::Language;
+    use crate::{i18n, settings::Language};
 
     #[test]
     fn deleting_source_is_never_allowed_when_project_saving_is_enabled() {
         assert!(should_move_input_to_recycle_bin(true, false));
         assert!(!should_move_input_to_recycle_bin(true, true));
         assert!(!should_move_input_to_recycle_bin(false, false));
+    }
+
+    #[test]
+    fn status_localizes_timestamp_recode_messages() {
+        for (language, stage, key) in [
+            (
+                Language::Italian,
+                "timestamp_recode_start",
+                "audio_description.progress.timestamp_recode_start",
+            ),
+            (
+                Language::French,
+                "timestamp_recode_done",
+                "audio_description.progress.timestamp_recode_done",
+            ),
+            (
+                Language::Portuguese,
+                "timestamp_recode_start",
+                "audio_description.progress.timestamp_recode_start",
+            ),
+        ] {
+            let localized = localized_status_text(language, stage, "english fallback");
+            assert_eq!(localized, i18n::tr(language, key));
+            assert_ne!(localized, "english fallback");
+        }
     }
 
     #[test]

@@ -560,6 +560,7 @@ fn download_book(
     book: &GutenbergBook,
     mut context: GutenbergReturnContext,
 ) -> bool {
+    let _power_awake = crate::power_awake::acquire("download");
     crate::screen_reader_speak(&i18n::tr(language, "gutenberg.downloading"));
     let bytes = match client.download_epub(book.id) {
         Ok(bytes) => bytes,

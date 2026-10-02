@@ -3012,6 +3012,18 @@ def _parse_unified_response(json_string, status_update_callback):
 
     try:
         data = json.loads(processed_str)
+        if not isinstance(data, dict):
+            root_type = type(data).__name__
+            message = _(
+                "Warning: AI JSON root was %(type)s instead of an object; requesting JSON repair."
+            ) % {"type": root_type}
+            if status_update_callback:
+                status_update_callback(message)
+            app_logger.warning(
+                "Unified JSON root type was %s instead of dict; deferring to JSON repair.",
+                root_type,
+            )
+            return [], [], False
         descs, gloss = _extract_descriptions_and_glossary_from_dict(data, status_update_callback)
         return descs, gloss, True
 
@@ -3026,12 +3038,18 @@ def _parse_unified_response(json_string, status_update_callback):
             if 0 <= start_idx < end_idx:
                 corrected_json_string = processed_str[start_idx:end_idx]
                 data = json.loads(corrected_json_string)
-                if status_update_callback:
-                    status_update_callback(_("Successfully parsed a fallback JSON object."))
-                descs, gloss = _extract_descriptions_and_glossary_from_dict(
-                    data, status_update_callback
-                )
-                return descs, gloss, True
+                if not isinstance(data, dict):
+                    app_logger.warning(
+                        "Fallback unified JSON root type was %s instead of dict; continuing repair path.",
+                        type(data).__name__,
+                    )
+                else:
+                    if status_update_callback:
+                        status_update_callback(_("Successfully parsed a fallback JSON object."))
+                    descs, gloss = _extract_descriptions_and_glossary_from_dict(
+                        data, status_update_callback
+                    )
+                    return descs, gloss, True
         except json.JSONDecodeError:
             if status_update_callback:
                 status_update_callback(_("Fallback JSON parsing also failed."))

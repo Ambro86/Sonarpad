@@ -860,6 +860,36 @@ pub(crate) fn list_scheduled_recordings(
     result
 }
 
+pub(crate) fn cancel_scheduled_recording(id: &str) -> Result<(), String> {
+    let id = id.trim();
+    if id.is_empty() {
+        return Err("Identificatore della registrazione programmata non valido.".to_string());
+    }
+
+    // Remove the Windows scheduled task first so a future occurrence cannot start
+    // while the Sonarpad definition is being removed.
+    delete_task_checked(id)?;
+    let path = schedule_path(id);
+    match fs::remove_file(&path) {
+        Ok(()) => {
+            crate::log_debug(&format!(
+                "Scheduled recording cancelled id={id} definition={}",
+                path.display()
+            ));
+            Ok(())
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            crate::log_debug(&format!(
+                "Scheduled recording cancellation found no definition id={id}; task deletion was still requested"
+            ));
+            Ok(())
+        }
+        Err(error) => Err(format!(
+            "Impossibile rimuovere la registrazione programmata: {error}"
+        )),
+    }
+}
+
 fn next_occurrence(schedule: &ScheduledRecording, now: NaiveDateTime) -> Option<NaiveDateTime> {
     let date = NaiveDate::parse_from_str(&schedule.start_date, "%Y-%m-%d").ok()?;
     let mut start = date.and_hms_opt(schedule.hour, schedule.minute, 0)?;
@@ -981,17 +1011,49 @@ fn task_trigger_xml(recurrence: RecordingRecurrence, start_at: NaiveDateTime) ->
     }
 }
 
-fn delete_task(id: &str) {
-    let _status = Command::new("schtasks.exe")
+fn delete_task_checked(id: &str) -> Result<(), String> {
+    let output = Command::new("schtasks.exe")
         .arg("/Delete")
         .arg("/TN")
         .arg(task_name(id))
         .arg("/F")
         .creation_flags(CREATE_NO_WINDOW_FLAG)
         .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|error| error.to_string())?;
+    if output.status.success() {
+        return Ok(());
+    }
+
+    // If the task is already gone, cancellation is complete from Windows' point
+    // of view. Query it to distinguish that harmless case from a real delete
+    // failure (for example an access/Task Scheduler error).
+    let query = Command::new("schtasks.exe")
+        .arg("/Query")
+        .arg("/TN")
+        .arg(task_name(id))
+        .creation_flags(CREATE_NO_WINDOW_FLAG)
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();
+    if query.is_ok_and(|status| !status.success()) {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Err(if stderr.is_empty() { stdout } else { stderr })
+}
+
+fn delete_task(id: &str) {
+    if let Err(error) = delete_task_checked(id) {
+        crate::log_debug(&format!(
+            "Scheduled recording task deletion failed id={id} error={error}"
+        ));
+    }
 }
 
 fn task_name(id: &str) -> String {

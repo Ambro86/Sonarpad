@@ -34,7 +34,6 @@ use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::System::Diagnostics::Debug::{
     SEM_FAILCRITICALERRORS, SEM_NOGPFAULTERRORBOX, SetErrorMode,
 };
-use windows::Win32::System::Power::{ES_CONTINUOUS, ES_SYSTEM_REQUIRED, SetThreadExecutionState};
 use windows::Win32::System::Threading::{
     GetCurrentThread, SetThreadPriority, THREAD_PRIORITY_BELOW_NORMAL,
 };
@@ -486,13 +485,7 @@ fn cancelled_message(language: Language) -> String {
 }
 
 pub fn prevent_sleep(enable: bool) {
-    unsafe {
-        if enable {
-            SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
-        } else {
-            SetThreadExecutionState(ES_CONTINUOUS);
-        }
-    }
+    crate::power_awake::set_required("tts-reading", enable);
 }
 
 fn post_tts_chunk_offset(hwnd: HWND, session_id: u64, offset: usize) {
@@ -5945,6 +5938,7 @@ fn start_audiobook_with_text(
 
     let cancel_clone = cancel_token.clone();
     std::thread::spawn(move || {
+        let _power_awake = crate::power_awake::acquire("audiobook-creation");
         lower_current_audiobook_worker_priority("coordinator");
         let final_output = output.clone();
         let extension = final_output

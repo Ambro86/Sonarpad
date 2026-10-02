@@ -703,7 +703,7 @@ Function .onInit
     StrCpy $PassiveMode 1
 
 {{#if file_associations}}
-  StrCpy $AssociateFilesCheckboxState 1
+  StrCpy $AssociateFilesCheckboxState 0
   StrCpy $ContextMenuCheckboxState 1
 {{/if}}
 

@@ -3,6 +3,10 @@ use std::collections::VecDeque;
 
 pub(super) const TICKS_PER_SECOND: u64 = 10_000_000;
 
+const JITTER_DEAD_ZONE_MIN_BOUNDARIES: u64 = 64;
+const JITTER_DEAD_ZONE_SMALL_PERCENT: u64 = 80;
+const JITTER_DEAD_ZONE_STREAK: u64 = 24;
+
 pub(super) fn frame_ticks(frames: u64, rate: u32) -> u64 {
     ((u128::from(frames) * u128::from(TICKS_PER_SECOND) + u128::from(rate / 2)) / u128::from(rate))
         as u64
@@ -99,9 +103,60 @@ pub(super) struct TimedQueue {
     pub packet_overlap_frames: u64,
     pub max_packet_gap: u64,
     pub corrected_boundaries: u64,
+    jitter_dead_zone_frames: u64,
+    jitter_probe_boundaries: u64,
+    jitter_probe_small_boundaries: u64,
+    jitter_small_streak: u64,
+    pub jitter_dead_zone_active: bool,
+    pub ignored_jitter_boundaries: u64,
+    pub ignored_jitter_frames: u64,
 }
 
 impl TimedQueue {
+    pub fn with_adaptive_jitter_dead_zone(frames: u64) -> Self {
+        Self {
+            jitter_dead_zone_frames: frames,
+            ..Self::default()
+        }
+    }
+
+    fn observe_jitter_pattern(&mut self, boundary_error: u64, continuous: bool) {
+        if self.jitter_dead_zone_frames == 0 || self.jitter_dead_zone_active {
+            return;
+        }
+        if !continuous {
+            self.jitter_small_streak = 0;
+            return;
+        }
+
+        self.jitter_probe_boundaries += 1;
+        let small_jitter = boundary_error > 0 && boundary_error <= self.jitter_dead_zone_frames;
+        if small_jitter {
+            self.jitter_probe_small_boundaries += 1;
+            self.jitter_small_streak += 1;
+        } else {
+            self.jitter_small_streak = 0;
+        }
+
+        let ratio_high = self.jitter_probe_boundaries >= JITTER_DEAD_ZONE_MIN_BOUNDARIES
+            && self.jitter_probe_small_boundaries.saturating_mul(100)
+                >= self
+                    .jitter_probe_boundaries
+                    .saturating_mul(JITTER_DEAD_ZONE_SMALL_PERCENT);
+        let streak_high = self.jitter_small_streak >= JITTER_DEAD_ZONE_STREAK;
+        if ratio_high || streak_high {
+            self.jitter_dead_zone_active = true;
+        }
+    }
+
+    pub fn jitter_probe_stats(&self) -> (u64, u64, u64) {
+        (
+            self.jitter_probe_boundaries,
+            self.jitter_probe_small_boundaries,
+            self.jitter_small_streak,
+        )
+    }
+
     #[cfg(test)]
     pub fn push(&mut self, start: u64, samples: Vec<f32>) {
         self.push_clocked(start, samples, false);
@@ -110,40 +165,63 @@ impl TimedQueue {
     pub fn push_clocked(&mut self, mut start: u64, mut samples: Vec<f32>, continuous: bool) {
         if let Some(end) = self.previous_end {
             let gap = start.saturating_sub(end);
+            let overlap = end.saturating_sub(start);
+            let boundary_error = start.abs_diff(end);
             self.packet_gap_frames += gap;
-            self.packet_overlap_frames += end.saturating_sub(start);
+            self.packet_overlap_frames += overlap;
             self.max_packet_gap = self.max_packet_gap.max(gap);
-            // WASAPI device positions establish continuity; QPC jitter must not
-            // insert zero samples or discard the beginning of a continuous packet.
-            // Fit the complete packet to its measured end, keeping the shared clock
-            // (no cumulative shift). Genuine discontinuities bypass this correction.
             let frames = samples.len() / 2;
-            let target_end = start + frames as u64;
-            let target_frames = target_end.saturating_sub(end) as usize;
+            self.observe_jitter_pattern(boundary_error, continuous);
+
+            // Some microphone drivers expose harmless sub-millisecond QPC jitter at
+            // almost every WASAPI packet boundary. Time-stretching every one of those
+            // packets can modulate speech and sound like a tremolo even though no audio
+            // is actually missing. For queues with a small dead-zone, preserve the
+            // complete packet and join it continuously. Any real clock drift is still
+            // allowed to accumulate until it exceeds the dead-zone, at which point the
+            // existing shared-clock correction below takes over. Genuine discontinuities
+            // bypass both paths because `continuous` is false.
             if continuous
-                && start != end
-                // At 44.1 kHz, 110 frames are about 2.5 ms. Also cap the
-                // adjustment to a quarter packet to avoid stretching short tails.
-                && start.abs_diff(end) <= 110.min((frames / 4) as u64)
-                && frames > 1
-                && target_frames > 1
+                && self.jitter_dead_zone_active
+                && boundary_error > 0
+                && boundary_error <= self.jitter_dead_zone_frames
             {
-                let mut fitted = Vec::with_capacity(target_frames * 2);
-                for index in 0..target_frames {
-                    let position = index as f64 * (frames - 1) as f64 / (target_frames - 1) as f64;
-                    let left = position.floor() as usize;
-                    let right = (left + 1).min(frames - 1);
-                    let fraction = (position - left as f64) as f32;
-                    for channel in 0..2 {
-                        fitted.push(
-                            samples[left * 2 + channel] * (1.0 - fraction)
-                                + samples[right * 2 + channel] * fraction,
-                        );
-                    }
-                }
-                samples = fitted;
                 start = end;
-                self.corrected_boundaries += 1;
+                self.ignored_jitter_boundaries += 1;
+                self.ignored_jitter_frames += boundary_error;
+            } else {
+                // WASAPI device positions establish continuity; QPC jitter must not
+                // insert zero samples or discard the beginning of a continuous packet.
+                // Fit the complete packet to its measured end, keeping the shared clock
+                // (no cumulative shift). Genuine discontinuities bypass this correction.
+                let target_end = start + frames as u64;
+                let target_frames = target_end.saturating_sub(end) as usize;
+                if continuous
+                    && start != end
+                    // At 44.1 kHz, 110 frames are about 2.5 ms. Also cap the
+                    // adjustment to a quarter packet to avoid stretching short tails.
+                    && boundary_error <= 110.min((frames / 4) as u64)
+                    && frames > 1
+                    && target_frames > 1
+                {
+                    let mut fitted = Vec::with_capacity(target_frames * 2);
+                    for index in 0..target_frames {
+                        let position =
+                            index as f64 * (frames - 1) as f64 / (target_frames - 1) as f64;
+                        let left = position.floor() as usize;
+                        let right = (left + 1).min(frames - 1);
+                        let fraction = (position - left as f64) as f32;
+                        for channel in 0..2 {
+                            fitted.push(
+                                samples[left * 2 + channel] * (1.0 - fraction)
+                                    + samples[right * 2 + channel] * fraction,
+                            );
+                        }
+                    }
+                    samples = fitted;
+                    start = end;
+                    self.corrected_boundaries += 1;
+                }
             }
         }
         self.previous_end = Some(start + (samples.len() / 2) as u64);
@@ -226,6 +304,41 @@ mod tests {
             queue.push_clocked(start, vec![0.5; frames * 2], true);
             assert_eq!(queue.corrected_boundaries, 0);
         }
+    }
+
+    #[test]
+    fn adaptive_microphone_dead_zone_leaves_healthy_occasional_jitter_on_legacy_path() {
+        let mut queue = TimedQueue::with_adaptive_jitter_dead_zone(44);
+        queue.push_clocked(0, vec![0.5; 882], false);
+        queue.push_clocked(451, vec![0.5; 882], true);
+        queue.push_clocked(882, vec![0.5; 882], true);
+        assert!(!queue.jitter_dead_zone_active);
+        assert_eq!(queue.ignored_jitter_boundaries, 0);
+        assert_eq!(queue.corrected_boundaries, 2);
+    }
+
+    #[test]
+    fn adaptive_microphone_dead_zone_activates_for_persistent_small_jitter() {
+        let mut queue = TimedQueue::with_adaptive_jitter_dead_zone(44);
+        queue.push_clocked(0, vec![0.5; 882], false);
+        for _ in 0..JITTER_DEAD_ZONE_STREAK {
+            let start = queue.previous_end.expect("previous packet") + 10;
+            queue.push_clocked(start, vec![0.5; 882], true);
+        }
+        assert!(queue.jitter_dead_zone_active);
+        assert_eq!(queue.ignored_jitter_boundaries, 1);
+        assert_eq!(queue.ignored_jitter_frames, 10);
+        assert_eq!(queue.corrected_boundaries, JITTER_DEAD_ZONE_STREAK - 1);
+    }
+
+    #[test]
+    fn adaptive_microphone_dead_zone_still_corrects_larger_continuous_drift() {
+        let mut queue = TimedQueue::with_adaptive_jitter_dead_zone(44);
+        queue.jitter_dead_zone_active = true;
+        queue.push_clocked(0, vec![0.5; 882], false);
+        queue.push_clocked(491, vec![0.5; 882], true);
+        assert_eq!(queue.ignored_jitter_boundaries, 0);
+        assert_eq!(queue.corrected_boundaries, 1);
     }
 
     #[test]

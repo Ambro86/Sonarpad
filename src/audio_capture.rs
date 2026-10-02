@@ -190,6 +190,7 @@ fn get_audio_format() -> Result<(u32, u16), String> {
 }
 
 fn audio_capture_loop(audio_queue: Arc<AudioQueue>, stop: Arc<AtomicBool>) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("audio-recording");
     // Initialize COM for this thread - will be cleaned up when _com goes out of scope
     let _com = ComGuard::new_sta().map_err(|e| format!("CoInitializeEx failed: {:?}", e))?;
 

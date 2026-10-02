@@ -19,7 +19,8 @@ class WindowsYoutubeIsolatedOpeningTests(unittest.TestCase):
     def test_youtube_reuses_selected_list_title_without_extra_probe(self):
         block = self._playback_block()
         self.assertIn("let stream_title = if is_youtube", block)
-        self.assertIn("selected_title.clone().or_else(|| selected_label.clone())", block)
+        compact = "".join(block.split())
+        self.assertIn("selected_title.clone().or_else(||selected_label.clone())", compact)
         self.assertIn("selected_title: Some(selected_title)", YOUTUBE)
 
     def test_mpv_forces_builtin_ytdl_hook_only_inside_player_command(self):

@@ -61,6 +61,7 @@ mod dialogue_voice;
 mod i18n;
 mod podcast;
 mod podcast_recorder;
+mod power_awake;
 mod spellcheck;
 mod text_ops;
 mod tools;
@@ -295,6 +296,7 @@ const WM_START_CONTEXT_WHISPER_TRANSCRIPTION: u32 = WM_APP + 47;
 const WM_START_YOUTUBE_CONTEXT_AUDIO_DESCRIPTION: u32 = WM_APP + 48;
 const WM_START_RAIPLAY_CONTEXT_AUDIO_DESCRIPTION: u32 = WM_APP + 49;
 const WM_START_LA7_CONTEXT_AUDIO_DESCRIPTION: u32 = WM_APP + 50;
+const WM_RESTART_YOUTUBE_MPV_AFTER_PREVIEW: u32 = WM_APP + 51;
 const FOCUS_EDITOR_TIMER_ID: usize = 1;
 const FOCUS_EDITOR_TIMER_ID2: usize = 2;
 const FOCUS_EDITOR_TIMER_ID3: usize = 3;
@@ -3030,6 +3032,7 @@ fn download_podcast_episode_with_progress(request: PodcastProgressDownloadReques
     update_podcast_save_progress_window(hwnd, 0);
     let hwnd_copy = hwnd;
     std::thread::spawn(move || {
+        let _power_awake = crate::power_awake::acquire("download");
         let input_path = PathBuf::from(&stream_url);
         let mut progress_callback = |pct: u32| {
             update_podcast_save_progress_window(hwnd_copy, normalize_ffmpeg_progress_pct(pct));
@@ -3352,6 +3355,7 @@ fn download_and_extract_mpv_runtime(
     language: Language,
     target_dir: &Path,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("download");
     std::fs::create_dir_all(target_dir)
         .map_err(|err| format!("Impossibile creare la cartella di mpv: {err}"))?;
     let zip_path = settings::settings_dir().join("mpv.zip.download");
@@ -3965,7 +3969,7 @@ fn invalidate_managed_mpv_session(hwnd: HWND) {
     {
         log_debug("Failed to persist last stopped mpv url");
     }
-    prevent_sleep(false);
+    crate::power_awake::set_required("mpv-playback", false);
     if let Some(session) = session {
         taskkill_mpv_process(session.process_id, "after IPC failure");
     }
@@ -4206,6 +4210,27 @@ pub(crate) fn is_mpv_playback_active(hwnd: HWND) -> bool {
     with_state(hwnd, |state| state.active_mpv_session.is_some()).unwrap_or(false)
 }
 
+fn is_remote_mpv_player_document(doc: &editor_manager::Document) -> bool {
+    matches!(doc.format, FileFormat::Audiobook)
+        && doc.prefer_mpv_playback
+        && doc.path.as_deref().is_some_and(is_direct_stream_url_path)
+}
+
+fn is_current_player_focus_mode_active(hwnd: HWND) -> bool {
+    with_state(hwnd, |state| {
+        let current_doc = state.docs.get(state.current);
+        let current_is_player_document = current_doc
+            .map(|doc| matches!(doc.format, FileFormat::Audiobook))
+            .unwrap_or(false);
+        let current_is_remote_mpv_document = current_doc.is_some_and(is_remote_mpv_player_document);
+        current_is_player_document
+            && (state.active_audiobook.is_some()
+                || state.active_mpv_session.is_some()
+                || current_is_remote_mpv_document)
+    })
+    .unwrap_or(false)
+}
+
 pub(crate) fn is_local_mpv_video_mode_active(hwnd: HWND) -> bool {
     with_state(hwnd, |state| state.local_mpv_video_mode_active).unwrap_or(false)
 }
@@ -4436,7 +4461,7 @@ fn stop_obsolete_mpv_child(
             err
         ));
     }
-    prevent_sleep(false);
+    crate::power_awake::set_required("mpv-playback", false);
     true
 }
 
@@ -4445,7 +4470,7 @@ fn sync_mpv_sleep_prevention(hwnd: HWND) {
         .ok()
         .and_then(|value| value.as_bool());
     if let Some(paused) = paused {
-        prevent_sleep(!paused);
+        crate::power_awake::set_required("mpv-playback", !paused);
     }
 }
 
@@ -4486,7 +4511,7 @@ pub(crate) fn stop_managed_mpv_playback(hwnd: HWND) {
     {
         log_debug("Failed to persist last stopped mpv position");
     }
-    prevent_sleep(false);
+    crate::power_awake::set_required("mpv-playback", false);
     if stop_active_mpv_stream_recording(hwnd) {
         // Concediamo a libavformat il tempo di chiudere il contenitore prima
         // di terminare il processo mpv.
@@ -4729,7 +4754,7 @@ pub(crate) fn launch_raiplay_in_mpv_with_resume(
                     mpv_generation, err
                 ));
             }
-            prevent_sleep(true);
+            crate::power_awake::set_required("mpv-playback", true);
             menu::update_playback_menu(hwnd, true);
             return Ok(());
         }
@@ -5549,7 +5574,7 @@ fn launch_stream_url_in_mpv_with_options(
                     prefer_audio_description,
                 );
             }
-            prevent_sleep(true);
+            crate::power_awake::set_required("mpv-playback", true);
             menu::update_playback_menu(hwnd, true);
             focus_editor(hwnd);
             return Ok(());
@@ -5713,7 +5738,7 @@ pub(crate) fn launch_local_video_in_mpv(hwnd: HWND, path: &Path) -> Result<(), S
                     mpv_generation, err
                 ));
             }
-            prevent_sleep(true);
+            crate::power_awake::set_required("mpv-playback", true);
             menu::update_playback_menu(hwnd, true);
             if let Err(err) = apply_local_mpv_subtitle_offset(hwnd) {
                 log_debug(&format!("Local mpv subtitle offset failed: {}", err));
@@ -6173,6 +6198,7 @@ pub(crate) fn download_podcast_episode(
     let selected_audio_track = with_state(hwnd, |state| state.selected_audio_track).flatten();
     let hwnd_copy = hwnd;
     std::thread::spawn(move || {
+        let _power_awake = crate::power_awake::acquire("download");
         let stream_url = url
             .as_deref()
             .filter(|value| value.starts_with("http://") || value.starts_with("https://"));
@@ -7194,6 +7220,86 @@ pub(crate) fn current_local_playback_media_path(hwnd: HWND) -> Option<PathBuf> {
     Some(path)
 }
 
+fn schedule_youtube_mpv_restart_after_audio_description_preview(hwnd: HWND) {
+    let should_schedule = with_state(hwnd, |state| {
+        if state.active_mpv_session.is_some() || state.active_audiobook.is_some() {
+            return false;
+        }
+        state.docs.get(state.current).is_some_and(|doc| {
+            is_remote_mpv_player_document(doc)
+                && doc.path.as_deref().is_some_and(|path| {
+                    app_windows::youtube_transcript_window::is_youtube_stream_url(
+                        &path.to_string_lossy(),
+                    )
+                })
+        })
+    })
+    .unwrap_or(false);
+    if !should_schedule {
+        return;
+    }
+
+    log_debug("Audio description: scheduling controlled YouTube mpv restart after preview");
+    let hwnd_value = hwnd.0;
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        let hwnd = HWND(hwnd_value);
+        if let Err(err) = post_message_w_safe(
+            hwnd,
+            WM_RESTART_YOUTUBE_MPV_AFTER_PREVIEW,
+            WPARAM(0),
+            LPARAM(0),
+        ) {
+            log_debug(&format!(
+                "Audio description: failed to post YouTube mpv restart after preview: {err}"
+            ));
+        }
+    });
+}
+
+fn restart_youtube_mpv_after_audio_description_preview(hwnd: HWND) {
+    let restart = with_state(hwnd, |state| {
+        if state.active_mpv_session.is_some() || state.active_audiobook.is_some() {
+            return None;
+        }
+        let doc = state.docs.get(state.current)?;
+        if !is_remote_mpv_player_document(doc) {
+            return None;
+        }
+        let url = doc.path.as_ref()?.to_string_lossy().into_owned();
+        if !app_windows::youtube_transcript_window::is_youtube_stream_url(&url) {
+            return None;
+        }
+        let title = state
+            .active_podcast_episode_title
+            .clone()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| doc.title.clone());
+        Some((url, title))
+    })
+    .flatten();
+
+    let Some((url, title)) = restart else {
+        log_debug("Audio description: deferred YouTube mpv restart no longer needed");
+        return;
+    };
+
+    log_debug(&format!(
+        "Audio description: restarting YouTube mpv after preview url={} title={}",
+        url, title
+    ));
+    if let Err(err) =
+        app_windows::youtube_transcript_window::play_youtube_video_in_mpv(hwnd, &url, &title)
+    {
+        log_debug(&format!(
+            "Audio description: YouTube mpv restart after preview failed: {err}"
+        ));
+        if !err.trim().is_empty() {
+            accessibility::screen_reader_speak(&err);
+        }
+    }
+}
+
 pub(crate) fn finish_audio_description_after_output_preview(
     hwnd: HWND,
     source_player_path: Option<&Path>,
@@ -7247,6 +7353,7 @@ pub(crate) fn finish_audio_description_after_output_preview(
     unsafe {
         crate::log_if_err!(DrawMenuBar(hwnd));
     }
+    schedule_youtube_mpv_restart_after_audio_description_preview(hwnd);
     log_debug("Audio description: scheduling deferred editor focus after preview cleanup");
     crate::log_if_err!(post_message_w_safe(
         hwnd,
@@ -7711,27 +7818,13 @@ fn supports_direct_whisper_input(path: &Path, stream_index: Option<i32>) -> bool
 }
 
 fn is_direct_stream_playback_active(hwnd: HWND) -> bool {
-    {
-        with_state(hwnd, |state| {
-            if let Some(player) = state.active_audiobook.as_ref()
-                && is_direct_stream_url_path(&player.path)
-            {
-                return true;
-            }
-            state
-                .docs
-                .get(state.current)
-                .and_then(|doc| {
-                    if matches!(doc.format, FileFormat::Audiobook) {
-                        doc.path.as_ref()
-                    } else {
-                        None
-                    }
-                })
-                .is_some_and(|path| is_direct_stream_url_path(path))
-        })
-        .unwrap_or(false)
-    }
+    with_state(hwnd, |state| {
+        state
+            .active_audiobook
+            .as_ref()
+            .is_some_and(|player| is_direct_stream_url_path(&player.path))
+    })
+    .unwrap_or(false)
 }
 
 fn is_raiplay_stream_playback_active(hwnd: HWND) -> bool {
@@ -8194,7 +8287,7 @@ fn start_whisper_transcription_with_media(
     } else {
         crate::audio_player::pause_audiobook_if_playing(hwnd);
     }
-    prevent_sleep(true);
+    crate::power_awake::set_required("media-transcription", true);
 
     let cancel_flag = Arc::new(AtomicBool::new(false));
     with_state(hwnd, |state| {
@@ -8435,7 +8528,7 @@ fn start_whisper_folder_transcription(hwnd: HWND) {
     }
 
     crate::audio_player::pause_audiobook_if_playing(hwnd);
-    prevent_sleep(true);
+    crate::power_awake::set_required("media-transcription", true);
 
     let cancel_flag = Arc::new(AtomicBool::new(false));
     with_state(hwnd, |state| {
@@ -8620,7 +8713,7 @@ fn apply_whisper_transcription_result(hwnd: HWND, result: WhisperTranscriptionRe
             settings::default_documents_save_folder(),
         )
     });
-    prevent_sleep(false);
+    crate::power_awake::set_required("media-transcription", false);
     let transcription_succeeded = !result.cancelled && result.error_message.is_none();
     app_windows::raiplay_window::finish_context_transcription(hwnd, transcription_succeeded);
     app_windows::la7_play_window::finish_context_transcription(hwnd, transcription_succeeded);
@@ -10729,6 +10822,23 @@ fn run_app(
             if msg.message == WM_KEYDOWN
                 && msg.wParam.0 as u32 == VK_TAB.0 as u32
                 && (GetKeyState(VK_CONTROL.0 as i32) & (0x8000u16 as i16)) == 0
+                && is_current_player_focus_mode_active(hwnd)
+            {
+                let is_main_target = msg.hwnd == hwnd || IsChild(hwnd, msg.hwnd).as_bool();
+                if is_main_target {
+                    let tab_hwnd = with_state(hwnd, |state| state.hwnd_tab).unwrap_or(HWND(0));
+                    if tab_hwnd.0 != 0 && GetFocus() != tab_hwnd {
+                        set_focus_safe(tab_hwnd);
+                    }
+                    log_debug(
+                        "Player focus guard: blocked Tab navigation while playback is active",
+                    );
+                    continue;
+                }
+            }
+            if msg.message == WM_KEYDOWN
+                && msg.wParam.0 as u32 == VK_TAB.0 as u32
+                && (GetKeyState(VK_CONTROL.0 as i32) & (0x8000u16 as i16)) == 0
                 && handle_voice_panel_tab(hwnd)
             {
                 continue;
@@ -10794,11 +10904,23 @@ fn run_app(
                         || (state.audio_description_project_window.0 != 0
                             && IsWindowVisible(state.audio_description_project_window).as_bool());
 
-                    // Exclude voice panel controls from player keyboard handling
+                    // Normally voice-panel controls own their keyboard input. If playback is
+                    // active, or a remote MPV player tab is temporarily between sessions
+                    // (for example after an audio-description preview), stale focus must never
+                    // steal Space/arrows from the player.
                     let is_voice_panel_control = is_focus_in_voice_panel(hwnd);
+                    let player_session_active = state.active_audiobook.is_some()
+                        || state.active_mpv_session.is_some()
+                        || state
+                            .docs
+                            .get(state.current)
+                            .is_some_and(is_remote_mpv_player_document);
 
                     let is_main_target = msg.hwnd == hwnd || IsChild(hwnd, msg.hwnd).as_bool();
-                    if is_audiobook && !secondary_open && is_main_target && !is_voice_panel_control
+                    if is_audiobook
+                        && !secondary_open
+                        && is_main_target
+                        && (!is_voice_panel_control || player_session_active)
                     {
                         let command =
                             handle_player_keyboard(&msg, state.settings.audiobook_skip_seconds);
@@ -12011,6 +12133,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                         path.display()
                     ));
                 }
+                LRESULT(0)
+            }
+            WM_RESTART_YOUTUBE_MPV_AFTER_PREVIEW => {
+                restart_youtube_mpv_after_audio_description_preview(hwnd);
                 LRESULT(0)
             }
             WM_YOUTUBE_MPV_PLAYBACK_FAILED => {
@@ -13420,6 +13546,18 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 LRESULT(0)
             }
             WM_FOCUS_EDITOR => {
+                if is_current_player_focus_mode_active(hwnd) {
+                    if !has_secondary_window_open(hwnd) {
+                        let tab_hwnd = with_state(hwnd, |state| state.hwnd_tab).unwrap_or(HWND(0));
+                        if tab_hwnd.0 != 0 && GetFocus() != tab_hwnd {
+                            set_focus_safe(tab_hwnd);
+                        }
+                    }
+                    log_debug(
+                        "WM_FOCUS_EDITOR suppressed/redirected while player playback is active",
+                    );
+                    return LRESULT(0);
+                }
                 if !is_mpv_playback_active(hwnd)
                     && app_windows::youtube_transcript_window::has_active_player_return_list(hwnd)
                     && app_windows::youtube_transcript_window::restore_active_player_return_list(

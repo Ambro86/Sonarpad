@@ -78,6 +78,7 @@ fn verify_model_hash(path: &Path, expected: &str) -> Result<bool, String> {
 }
 
 fn download_to_part_file(url: &str, target: &Path, cancel: &Arc<AtomicBool>) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("download");
     let client = Client::builder()
         .connect_timeout(std::time::Duration::from_secs(30))
         .timeout(std::time::Duration::from_secs(60 * 30))
@@ -375,6 +376,7 @@ pub fn transcribe_wav(
     cancel: &Arc<AtomicBool>,
     progress_callback: Option<Box<dyn FnMut(i32)>>,
 ) -> Result<String, String> {
+    let _power_awake = crate::power_awake::acquire("media-transcription");
     if cancel.load(Ordering::Relaxed) {
         return Err("cancelled".to_string());
     }

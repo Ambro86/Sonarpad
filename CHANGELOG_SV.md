@@ -1,5 +1,29 @@
 # Ändringslogg
 
+Version 0.9.12 – 2026-10-02
+
+Podcastinspelning
+1. Lade till en konservativ adaptiv anti-jitter-reservlösning för mikrofoninspelning. På normala system behåller Sonarpad den befintliga synkroniseringen oförändrad; endast när en inspelningssession visar ihållande WASAPI-tidsstämpeljitter under cirka 1 ms slutar programmet att tidssträcka varje liten paketvariation och bevarar mikrofonpaketen kontinuerligt. Större avvikelser, verkliga WASAPI-avbrott och tidsstämpelfel använder fortfarande den befintliga korrigeringen. Diagnostiken visar nu om reservlösningen aktiverades och hur många små jittergränser som ignorerades.
+
+AI-ljudbeskrivning
+1. Lade till en konservativ reservlösning för giltiga inspelningar där videoströmmen börjar med en liten återkommande tidsförskjutning som annars kan orsaka felet ”invalid Gemini chunk timeline”. Sonarpad provar fortfarande först den normala tidslinjen och den befintliga drift-reservlösningen; endast om båda misslyckas och segmenten visar en liten, konsekvent och återkommande starttid normaliseras detta överhäng endast för de berörda segmenten. Inkonsistenta eller stora förskjutningar avvisas fortfarande, så videor som redan fungerar fortsätter genom den oförändrade normala pipeline. Diagnostiken visar nu även segmentens längd och starttid när tidslinjen fortfarande är ogiltig.
+
+2. Ytterligare ett fall av `invalid Gemini chunk timeline` för vissa TV-/liveinspelningar har rättats. När FFmpeg skapar exakt det förväntade antalet analyssegment men en liten minoritet av segmentbehållarna rapporterar orimliga längder behåller Sonarpad de faktiskt uppmätta längderna för normala segment, ersätter endast tydliga metadataavvikelser med det kända segmenteringsschemat och gör högst en slutlig justering på 6 %. Reservlösningen används först när de befintliga tidslinjevägarna har misslyckats; normala videor förblir oförändrade och inspelningar med omfattande eller inkonsekventa tidsfel avvisas fortfarande.
+
+Spelare, YouTube och strömning
+1. Fokusisoleringen under medieuppspelning har rättats. När en BASS- eller hanterad MPV-spelarflik är aktiv kan Tab/Skift+Tab inte längre gå in i dolda kontroller i redigeraren eller röstpanelen, och spelarkommandon som Mellanslag fortsätter att styra uppspelningen i stället för att aktivera orelaterade inaktiverade kontroller som Streaming. Fördröjda begäranden om att flytta fokus tillbaka till redigeraren ignoreras också medan den aktuella fliken är en spelare, utan att vanliga redigeringsflikar eller modala dialogrutor ändras.
+
+2. Återgången till YouTube/MPV efter förhandsvisning av en AI-ljudbeskrivning har rättats. När förhandsvisningen stängs och den aktuella fliken fortfarande representerar samma YouTube-video gör Sonarpad en enda fördröjd återställningskontroll och startar om MPV endast om varken MPV eller BASS redan är aktivt. Detta tar bort det tillfälliga läget ”spelarflik utan spelare” utan dubbla processer eller omstartsloopar.
+
+3. Direkta YouTube-länkar som klistras in i ”Spela media från strömning” har förbättrats. Om titeln inte redan är känd från YouTube-sökningen hämtar Sonarpad nu videons riktiga titel med yt-dlp och använder den för spelaren och fliken i stället för att, när det är möjligt, lämna en `watch?v=...`-adress.
+
+4. Filnamn vid hämtning från direkt YouTube-/strömuppspelning har rättats. Före Spara som frågar Sonarpad åter efter en saknad YouTube-titel och föreslår normalt videons riktiga titel. Om titeln fortfarande inte kan hämtas används nu `youtube_<video-id>` för YouTube i stället för generiska `stream_media`; `stream_media` finns kvar endast som reserv för strömmar som inte kommer från YouTube.
+
+5. Åtgärdade en oändlig Esc-loop för direkta YouTube-länkar med Mix-/spellisteparametrar. Om yt-dlp faller tillbaka från en sådan URL till en enda video utan att öppna en faktisk samlings- eller söknivå, återgår stoppad uppspelning nu till redigeraren i stället för att öppna samma ström igen. Riktiga sök-, spelliste- och nästlade samlingsnivåer återställs fortfarande som tidigare.
+
+6. Direkta YouTube-videolänkar som även innehåller Mix-/spellisteparametrar har korrigerats. När en inklistrad URL uttryckligen innehåller `watch?v=<video-id>` prioriterar Sonarpad nu detta video-ID framför tillhörande `list=`- och `index=`-parametrar, så att ett YouTube Mix-frö inte längre kan ersätta den begärda videon. Riktiga `/playlist?list=...`-URL:er öppnas fortfarande som samlingar.
+
+
 Version 0.9.11 – 2026-09-22
 
 Spara filer

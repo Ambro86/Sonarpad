@@ -557,6 +557,7 @@ fn download_and_update(
     asset_name: &str,
     release_tag: &str,
 ) -> Result<UpdateAction, String> {
+    let _power_awake = crate::power_awake::acquire("application-update");
     let current_exe = std::env::current_exe().map_err(|err| err.to_string())?;
     let temp_path = temp_update_path(&current_exe)?;
     let progress_guard = UpdateProgressGuard::open(hwnd, language);
@@ -850,6 +851,7 @@ fn download_file<F: FnMut(u32)>(
     target: &Path,
     mut progress_cb: F,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("application-update");
     let client = reqwest::blocking::Client::builder()
         .user_agent(USER_AGENT)
         .timeout(std::time::Duration::from_secs(300))
@@ -1222,6 +1224,7 @@ fn ensure_dir_writable_for_runner(path: &Path) -> bool {
 }
 
 pub(crate) fn run_self_update(args: &[String]) -> Result<i32, String> {
+    let _power_awake = crate::power_awake::acquire("application-update");
     let mut pid: Option<u32> = None;
     let mut current: Option<PathBuf> = None;
     let mut new: Option<PathBuf> = None;

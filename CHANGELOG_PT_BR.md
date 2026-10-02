@@ -1,5 +1,29 @@
 # Changelog
 
+Versão 0.9.12 – 2026-10-02
+
+Gravação de podcasts
+1. Foi adicionado um fallback adaptativo e conservador contra jitter na gravação do microfone. Em sistemas normais, o Sonarpad mantém inalterado o caminho de sincronização existente; somente quando uma sessão apresenta micro-jitter persistente nos timestamps WASAPI inferior a cerca de 1 ms deixa de esticar ou comprimir cada pequena variação de pacote e preserva esses pacotes do microfone continuamente. Desvios maiores, descontinuidades WASAPI reais e erros de timestamp continuam usando a correção existente. O diagnóstico agora informa se o fallback foi ativado e quantas pequenas variações foram ignoradas.
+
+Audiodescrição com IA
+1. Foi adicionado um fallback conservador para gravações válidas cujo fluxo de vídeo começa com um pequeno deslocamento temporal repetido que podia causar o erro “invalid Gemini chunk timeline”. O Sonarpad continua tentando primeiro a timeline normal e o fallback existente para drift; somente se ambos falharem e os segmentos apresentarem um start-time pequeno, coerente e repetido, esse deslocamento é normalizado apenas nos segmentos afetados. Deslocamentos incoerentes ou grandes continuam sendo rejeitados, portanto os vídeos que já funcionam seguem a pipeline normal sem alterações. O diagnóstico agora também informa a duração e o start-time dos segmentos quando a timeline permanece inválida.
+
+2. Corrigido outro caso de `invalid Gemini chunk timeline` observado em algumas gravações de TV/ao vivo. Quando o FFmpeg produz exatamente o número esperado de segmentos de análise, mas uma pequena minoria dos contêineres informa durações não plausíveis, o Sonarpad preserva as durações realmente medidas dos segmentos normais, substitui apenas valores claramente anômalos dos metadados pela duração prevista pela segmentação e aplica no máximo um realinhamento final de 6%. Esse fallback só entra depois que os caminhos de timeline existentes falham; vídeos normais permanecem inalterados e gravações com erros temporais generalizados ou incoerentes continuam sendo rejeitadas.
+
+Player, YouTube e streaming
+1. Corrigido o isolamento do foco durante a reprodução de mídia. Enquanto uma aba de player BASS ou MPV gerenciado estiver ativa, Tab/Shift+Tab não podem mais entrar nos controles ocultos do editor ou do painel de vozes, e comandos do player como Espaço continuam destinados à reprodução em vez de ativarem controles não relacionados e desabilitados, como Streaming. Solicitações adiadas para devolver o foco ao editor também são ignoradas enquanto a aba atual for um player, sem alterar as abas normais do editor nem as janelas modais.
+
+2. Corrigido o retorno ao YouTube/MPV após a prévia de uma audiodescrição por IA. Quando a prévia é fechada e a aba atual ainda representa o mesmo vídeo do YouTube, o Sonarpad faz uma única verificação adiada de recuperação e reinicia o MPV somente se nem MPV nem BASS já estiverem ativos. Isso elimina o estado temporário de “aba de player sem player” sem criar processos duplicados ou loops de reinicialização.
+
+3. Melhorados os links diretos do YouTube colados em “Reproduzir mídia por streaming”. Se o título ainda não for conhecido pela pesquisa do YouTube, o Sonarpad agora obtém o título real do vídeo com yt-dlp e o usa no player e na aba, evitando quando possível deixar um endereço `watch?v=...`.
+
+4. Corrigidos os nomes dos arquivos ao baixar a partir da reprodução direta do YouTube/streaming. Antes de Salvar como, o Sonarpad consulta novamente um título do YouTube que esteja ausente e normalmente sugere o título real do vídeo. Se ainda assim o título não puder ser obtido, o YouTube passa a usar `youtube_<video-id>` em vez do genérico `stream_media`; `stream_media` permanece apenas como fallback para streams que não sejam do YouTube.
+
+5. Corrigido um loop infinito ao pressionar Esc em links diretos do YouTube com parâmetros de Mix/playlist. Se o yt-dlp fizer fallback desse URL para um único vídeo sem abrir um nível real de coleção ou pesquisa, ao interromper a reprodução o Sonarpad agora volta ao editor em vez de reabrir o mesmo stream. Os níveis reais de pesquisa, playlists e coleções aninhadas continuam sendo restaurados como antes.
+
+6. Corrigidos os links diretos para vídeos do YouTube que também contêm parâmetros de Mix/playlist. Quando uma URL colada inclui explicitamente `watch?v=<video-id>`, o Sonarpad agora dá prioridade a esse ID de vídeo em vez dos parâmetros acessórios `list=` e `index=`, impedindo que a origem de um Mix do YouTube substitua o vídeo solicitado. URLs reais `/playlist?list=...` continuam sendo abertas como coleções.
+
+
 Versão 0.9.11 – 2026-09-22
 
 Salvamento de arquivos

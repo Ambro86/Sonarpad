@@ -1781,6 +1781,7 @@ pub fn download_url_to_file_with_progress<F: FnMut(u32)>(
     resume_from: u64,
     progress_cb: F,
 ) -> Result<u64, String> {
+    let _power_awake = crate::power_awake::acquire("download");
     let url_str = normalize_url(url);
     log_debug(&format!(
         "download_url_to_file_with_progress: calling impersonated for {} resume_from={} destination={}",

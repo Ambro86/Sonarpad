@@ -2168,7 +2168,44 @@ fn normalize_youtube_collection_url(input: &str) -> Option<String> {
     Some(url.to_string())
 }
 
+fn is_explicit_youtube_video_url(input: &str) -> bool {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    let candidate = if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+        trimmed.to_string()
+    } else {
+        format!("https://{trimmed}")
+    };
+    let Ok(url) = Url::parse(&candidate) else {
+        return false;
+    };
+    let Some(host) = url.host_str() else {
+        return false;
+    };
+    let host = host.to_ascii_lowercase();
+    if host == "youtu.be" || host.ends_with(".youtu.be") {
+        return extract_video_id(input).is_some();
+    }
+    if !(host == "youtube.com" || host.ends_with(".youtube.com")) {
+        return false;
+    }
+    let path = url.path().trim_end_matches('/');
+    (path == "/watch"
+        || path.starts_with("/shorts/")
+        || path.starts_with("/embed/")
+        || path.starts_with("/live/"))
+        && extract_video_id(input).is_some()
+}
+
 fn is_youtube_collection_url(input: &str) -> bool {
+    // A concrete video URL must win over any incidental list= / index= parameters
+    // (notably YouTube Mix URLs such as watch?v=VIDEO&list=RDSEED).
+    // Treating those as collections can replace VIDEO with the mix seed.
+    if is_explicit_youtube_video_url(input) {
+        return false;
+    }
     let Some(normalized) = normalize_youtube_collection_url(input) else {
         return false;
     };
@@ -6289,6 +6326,25 @@ fn choose_youtube_collection_entry(
             Ok(Err(err)) => {
                 close_progress_dialog(progress);
                 restore_stream_parent_after_selection_cancel(parent);
+                if is_explicit_youtube_video_url(url)
+                    && let Some(video_id) = extract_video_id(url)
+                {
+                    let direct_url = format!("https://www.youtube.com/watch?v={video_id}");
+                    crate::log_debug(&format!(
+                        "stream transition [collection_probe.explicit_video_fallback]: url={} direct_url={}",
+                        url, direct_url
+                    ));
+                    return Ok(Some(ResolvedStreamSelection {
+                        url: direct_url,
+                        collection_url: None,
+                        collection_page: None,
+                        selected_label: None,
+                        selected_title: None,
+                        previous_input: None,
+                        previous_collection_page: None,
+                        previous_selected_label: None,
+                    }));
+                }
                 if let Some(seed_url) = youtube_mix_seed_video_url(url) {
                     crate::log_debug(&format!(
                         "stream transition [collection_probe.mix_seed_fallback]: url={} seed_url={}",
@@ -9797,6 +9853,7 @@ fn spawn_ytdlp_output_reader<R: Read + Send + 'static>(
 fn run_ytdlp_stream_download_attempt(
     req: YtdlpDownloadRequest<'_>,
 ) -> Result<YtdlpDownloadAttempt, String> {
+    let _power_awake = crate::power_awake::acquire("download");
     let mut cmd = ytdlp_command(req.ytdlp_path);
     configure_ytdlp_stream_download_command(
         &mut cmd,
@@ -10808,12 +10865,26 @@ fn ensure_stream_save_extension(mut path: PathBuf, ext: &str) -> PathBuf {
 }
 
 fn suggested_stream_save_name(context: &StreamSaveContext) -> String {
-    context
+    if let Some(title) = context
         .title
         .as_deref()
         .map(crate::sanitize_filename)
         .filter(|title| !title.trim().is_empty())
-        .unwrap_or_else(|| "stream_media".to_string())
+    {
+        return title;
+    }
+
+    // YouTube should never surface the generic streaming fallback as the saved
+    // file name.  Normally the title is populated before this point; if title
+    // probing failed, keep a stable and recognizable fallback based on video ID.
+    if is_youtube_stream_url(&context.url) {
+        if let Some(video_id) = extract_video_id(&context.url) {
+            return format!("youtube_{video_id}");
+        }
+        return "youtube_video".to_string();
+    }
+
+    "stream_media".to_string()
 }
 
 pub(crate) fn unique_stream_media_path(folder: &Path, base_name: &str, extension: &str) -> PathBuf {
@@ -11509,6 +11580,26 @@ pub(crate) fn download_active_streaming_audio_media(
     context.dialog_data.format = selected_options.format;
     context.dialog_data.quality = selected_options.quality;
     persist_stream_save_format(parent, selected_options.format);
+
+    // A direct YouTube URL can reach Save media without a title in the cached
+    // stream context (for example after a playback/preview transition).  Do not
+    // expose the generic `stream_media` fallback to the user in that case: ask
+    // yt-dlp for the real video title again immediately before building the
+    // suggested file name.  This is intentionally limited to YouTube so generic
+    // streams keep their existing fast save path.
+    let missing_title = context
+        .title
+        .as_deref()
+        .map(str::trim)
+        .unwrap_or_default()
+        .is_empty();
+    if missing_title && is_youtube_stream_url(&context.url) {
+        crate::log_debug(
+            "YouTube save context has no title; probing title again before Save media",
+        );
+        context.title = probe_stream_media_title(&context.ytdlp_path, &context.url);
+    }
+
     set_active_stream_save_context(context.clone());
     let target_ext = stream_save_target_ext(context.dialog_data.format);
     let suggested_full = format!("{}.{}", suggested_stream_save_name(&context), target_ext);
@@ -12410,8 +12501,23 @@ pub fn play_streaming_audio_from_url(parent: HWND) {
             },
         );
     }
-    let should_reopen_selection =
-        needs_ytdlp_selection || collection_url.is_some() || collection_page.is_some();
+    // Reopen a previous YouTube/search level only when one really exists.
+    // A direct watch URL may contain a YouTube Mix `list=RD...` parameter and therefore
+    // initially require yt-dlp selection/probing. If that probe falls back to a single
+    // video without exposing a collection/search page, Esc must stop playback and return
+    // to the editor instead of reopening the same URL forever.
+    let should_reopen_selection = !looks_like_valid_stream_url(&input)
+        || collection_url.is_some()
+        || collection_page.is_some()
+        || previous_input.is_some();
+    crate::log_debug(&format!(
+        "stream transition [return_context_policy]: input_is_url={} collection_url={} collection_page={:?} previous_input={} reopen={}",
+        looks_like_valid_stream_url(&input),
+        collection_url.as_deref().unwrap_or(""),
+        collection_page,
+        previous_input.as_deref().unwrap_or(""),
+        should_reopen_selection
+    ));
 
     if dialog_data.direct_play && !should_play_streaming_audio_with_mpv() {
         let stream_path = PathBuf::from(&url);
@@ -12559,7 +12665,15 @@ pub fn play_streaming_audio_from_url(parent: HWND) {
         };
         reclaim_stream_modal_parent_foreground(parent, "play_streaming_audio.before_mpv_title");
         let stream_title = if is_youtube {
-            selected_title.clone().or_else(|| selected_label.clone())
+            selected_title
+                .clone()
+                .or_else(|| selected_label.clone())
+                .or_else(|| {
+                    crate::log_debug(
+                        "Direct YouTube stream has no selected title; probing title with yt-dlp",
+                    );
+                    probe_stream_media_title(&ytdlp_path, &url)
+                })
         } else {
             probe_stream_media_title(&ytdlp_path, &url)
         };
@@ -13546,6 +13660,7 @@ fn download_ytdlp_with_progress<F: FnMut(u32)>(
     target: &Path,
     mut progress_cb: F,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("download");
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent).map_err(|err| err.to_string())?;
     }

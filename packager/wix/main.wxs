@@ -190,11 +190,11 @@
             </Feature>
 
             {{#if file_associations}}
-            <Feature Id="FileAssociationsFeature" Title="!(loc.FileAssociationsFeatureTitle)" Description="!(loc.FileAssociationsFeatureDescription)" Level="1" Absent="allow" Display="expand">
+            <Feature Id="FileAssociationsFeature" Title="!(loc.FileAssociationsFeatureTitle)" Description="!(loc.FileAssociationsFeatureDescription)" Level="2" Absent="allow" Display="expand">
                 <ComponentRef Id="FileAssociationsMarker" />
                 {{#each file_associations as |association| ~}}
                 {{#each association.extensions as |ext| ~}}
-                <Feature Id="FileAssocExt_{{ext}}" Title=".{{ext}}" Description="{{association.description}}" Level="1" Absent="allow" Display="expand">
+                <Feature Id="FileAssocExt_{{ext}}" Title=".{{ext}}" Description="{{association.description}}" Level="2" Absent="allow" Display="expand">
                     <ComponentRef Id="CmpFileAssocExt_{{ext}}" />
                 </Feature>
                 {{/each~}}

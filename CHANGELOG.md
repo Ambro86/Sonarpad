@@ -1,5 +1,29 @@
 # Changelog
 
+Version 0.9.12 – 2026-10-02
+
+Podcast recording
+1. Added a conservative adaptive anti-jitter fallback for microphone recording. Sonarpad keeps the existing synchronization path on normal systems; only when a capture session shows persistent sub-millisecond WASAPI timestamp jitter does it stop time-stretching every tiny packet fluctuation and preserve those microphone packets continuously. Larger drift, real WASAPI discontinuities and timestamp errors still use the existing correction path. Diagnostics now report whether the fallback activated and how many small jitter boundaries were ignored.
+
+AI Audio Description
+1. Added a conservative fallback for valid recordings whose video stream starts with a small repeated timestamp offset that can otherwise cause “invalid Gemini chunk timeline”. Sonarpad still tries the normal timeline and the existing drift fallback first; only if both fail and the chunks show a small, consistent repeated start-time does it normalize that overhead for the affected chunks. Inconsistent or large offsets are still rejected, so videos that already work continue through the unchanged normal pipeline. Additional diagnostics now report chunk durations and start times when the timeline remains invalid.
+
+2. Fixed an additional `invalid Gemini chunk timeline` case seen with some TV/live-stream recordings. When FFmpeg produces the expected number of analysis chunks but a small minority of chunk containers report implausible durations, Sonarpad now preserves normal measured chunk lengths, replaces only clear duration-metadata outliers with the known segment schedule, and applies at most a 6% final reconciliation. This fallback runs only after the existing timeline paths fail; normal videos are unchanged, and recordings with widespread or inconsistent timing errors are still rejected.
+
+Player, YouTube and streaming
+1. Fixed focus isolation during media playback. While a BASS or managed MPV player tab is active, Tab/Shift+Tab can no longer move into hidden editor/voice controls, and player shortcuts such as Space remain assigned to playback instead of activating unrelated disabled controls such as Streaming. Deferred editor-focus requests are also ignored while the current tab is a player, without changing normal editor tabs or modal dialogs.
+
+2. Fixed the YouTube/MPV return path after an AI audio-description preview. When the preview closes and the current tab still represents the same YouTube video, Sonarpad performs one delayed recovery check and restarts MPV only if neither MPV nor BASS is already active. This removes the temporary “player tab without player” state while avoiding duplicate processes or restart loops.
+
+3. Improved direct YouTube links pasted into “Play media from streaming”. If no title is already known from YouTube search, Sonarpad now retrieves the real video title with yt-dlp and uses it for the player/tab instead of leaving a `watch?v=...` address whenever possible.
+
+4. Fixed filenames when downloading from direct YouTube/streaming playback. Before Save As, Sonarpad probes a missing YouTube title again and normally proposes the real video title. If the title still cannot be obtained, YouTube now falls back to `youtube_<video-id>` instead of the generic `stream_media`; `stream_media` remains only as a fallback for non-YouTube streams.
+
+5. Fixed an infinite Esc loop with direct YouTube links containing Mix/playlist parameters. If yt-dlp falls back from such a URL to a single video without opening a real collection or search level, stopping playback now returns to the editor instead of reopening the same stream. Real search, playlist and nested collection levels continue to be restored as before.
+
+6. Fixed direct YouTube video links that also contain Mix/playlist parameters. When a pasted URL explicitly includes `watch?v=<video-id>`, Sonarpad now gives that video ID priority over incidental `list=` and `index=` parameters, so a YouTube Mix seed can no longer replace the requested video. Real `/playlist?list=...` URLs continue to open as collections.
+
+
 Version 0.9.11 – 2026-09-22
 
 File saving

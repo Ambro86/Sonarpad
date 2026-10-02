@@ -66,7 +66,7 @@ impl AudiobookPlayer {
     fn play(&self) -> bool {
         let resumed = self.output.play();
         if resumed {
-            crate::tts_engine::prevent_sleep(true);
+            crate::power_awake::set_required("audio-playback", true);
         }
         resumed
     }
@@ -74,13 +74,13 @@ impl AudiobookPlayer {
     fn pause(&self) -> bool {
         let paused = self.output.pause();
         if paused {
-            crate::tts_engine::prevent_sleep(false);
+            crate::power_awake::set_required("audio-playback", false);
         }
         paused
     }
 
     fn stop(&self) {
-        crate::tts_engine::prevent_sleep(false);
+        crate::power_awake::set_required("audio-playback", false);
         self.output.stop();
     }
 
@@ -709,7 +709,7 @@ fn stop_obsolete_audiobook_output(
         path.display(),
         stage
     ));
-    crate::tts_engine::prevent_sleep(false);
+    crate::power_awake::set_required("audio-playback", false);
     output.stop();
     true
 }
@@ -1040,7 +1040,7 @@ fn start_audiobook_at_with_options_precise(
                     "Audio player: Playback started (generation {})",
                     playback_generation
                 ));
-                crate::tts_engine::prevent_sleep(true);
+                crate::power_awake::set_required("audio-playback", true);
             } else {
                 log_debug(&format!(
                     "Audio player: failed to start playback (generation {})",
@@ -1116,7 +1116,7 @@ fn start_audiobook_at_with_options_precise(
                 playback_generation
             ));
             if let Some(player) = pending_player {
-                crate::tts_engine::prevent_sleep(false);
+                crate::power_awake::set_required("audio-playback", false);
                 player.stop();
             }
             return;

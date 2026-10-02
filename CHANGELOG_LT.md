@@ -1,5 +1,29 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.12 – 2026-10-02
+
+Tinklalaidžių įrašymas
+1. Pridėtas konservatyvus adaptyvus mikrofono „jitter“ atsarginis režimas. Įprastose sistemose „Sonarpad“ nekeičia esamo sinchronizavimo; tik kai įrašymo sesijoje aptinkamas nuolatinis mažesnis nei maždaug 1 ms WASAPI laiko žymų mikro-jitter, programa nebetempia ir netrumpina kiekvieno mažo paketo svyravimo, o išsaugo mikrofono paketus vientisus. Didesni nuokrypiai, tikros WASAPI pertraukos ir laiko žymų klaidos toliau naudoja esamą korekciją. Diagnostika dabar parodo, ar atsarginis režimas buvo aktyvuotas ir kiek mažų svyravimų buvo ignoruota.
+
+DI garsinis aprašymas
+1. Pridėtas konservatyvus atsarginis režimas galiojantiems įrašams, kurių vaizdo srautas prasideda mažu pasikartojančiu laiko poslinkiu, galėjusiu sukelti klaidą „invalid Gemini chunk timeline“. „Sonarpad“ visada pirmiausia bando įprastą laiko juostą ir esamą „drift“ atsarginį režimą; tik jei abu nepavyksta ir segmentai turi mažą, nuoseklų bei pasikartojantį start-time, tas poslinkis normalizuojamas tik paveiktuose segmentuose. Nenuoseklūs arba dideli poslinkiai ir toliau atmetami, todėl jau veikiantys vaizdo įrašai naudoja nepakitusią įprastą pipeline. Diagnostikoje dabar taip pat pateikiama segmentų trukmė ir start-time, kai laiko juosta lieka netinkama.
+
+2. Ištaisytas dar vienas `invalid Gemini chunk timeline` atvejis, pasitaikantis su kai kuriais TV / tiesioginių transliacijų įrašais. Kai FFmpeg sukuria tiksliai numatytą analizės fragmentų skaičių, tačiau nedidelė dalis konteinerių pateikia neįtikimas trukmes, Sonarpad išsaugo įprastų fragmentų realiai išmatuotas trukmes, tik aiškius trukmės metaduomenų išsišokimus pakeičia žinomu segmentavimo grafiku ir taiko ne didesnį kaip 6 % galutinį suderinimą. Šis atsarginis režimas naudojamas tik tada, kai nepavyksta esami laiko juostos keliai; įprasti vaizdo įrašai nekeičiami, o įrašai su plačiai paplitusiomis ar nenuosekliomis laiko klaidomis ir toliau atmetami.
+
+Leistuvas, YouTube ir srautinis atkūrimas
+1. Ištaisyta fokusavimo izoliacija medijos atkūrimo metu. Kai aktyvus BASS arba valdomo MPV leistuvo skirtukas, Tab/Shift+Tab nebegali pereiti į paslėptus redaktoriaus ar balsų skydelio valdiklius, o leistuvo komandos, pvz., tarpo klavišas, lieka skirtos atkūrimui ir nebeaktyvina nesusijusių išjungtų valdiklių, pvz., Streaming. Atidėtos užklausos grąžinti fokusą į redaktorių taip pat ignoruojamos, kol dabartinis skirtukas yra leistuvas, nekeičiant įprastų redaktoriaus skirtukų ar modalinių langų veikimo.
+
+2. Ištaisytas grįžimas į YouTube/MPV po AI garsinio aprašymo peržiūros. Uždarius peržiūrą, jei dabartinis skirtukas vis dar rodo tą patį YouTube vaizdo įrašą, Sonarpad atlieka vieną atidėtą atkūrimo patikrą ir iš naujo paleidžia MPV tik tuo atveju, jei nei MPV, nei BASS jau nėra aktyvūs. Taip pašalinama laikina būsena „leistuvo skirtukas be leistuvo“, nesukuriant pasikartojančių procesų ar perkrovimo ciklų.
+
+3. Patobulinti tiesioginiai YouTube saitai, įklijuoti į „Leisti mediją iš srauto“. Jei pavadinimas dar nežinomas iš YouTube paieškos, Sonarpad dabar per yt-dlp gauna tikrą vaizdo įrašo pavadinimą ir naudoja jį leistuve bei skirtuke, kai įmanoma nepalikdamas `watch?v=...` adreso.
+
+4. Ištaisyti failų pavadinimai atsisiunčiant iš tiesioginio YouTube/srautinio atkūrimo. Prieš „Išsaugoti kaip“ Sonarpad dar kartą bando gauti trūkstamą YouTube pavadinimą ir paprastai pasiūlo tikrą vaizdo įrašo pavadinimą. Jei pavadinimo vis tiek nepavyksta gauti, YouTube dabar naudoja `youtube_<video-id>` vietoje bendro `stream_media`; `stream_media` lieka tik kaip atsarginis variantas ne YouTube srautams.
+
+5. Ištaisyta begalinė Esc kilpa naudojant tiesiogines YouTube nuorodas su Mix / grojaraščio parametrais. Jei yt-dlp iš tokio URL pereina prie vieno vaizdo įrašo neatidaręs tikro rinkinio ar paieškos lygio, sustabdžius atkūrimą dabar grįžtama į redaktorių, o ne iš naujo atidaromas tas pats srautas. Tikri paieškos, grojaraščio ir įdėtų rinkinių lygiai ir toliau atkuriami kaip anksčiau.
+
+6. Ištaisytos tiesioginės YouTube vaizdo įrašų nuorodos, kuriose kartu yra Mix / grojaraščio parametrai. Kai įklijuotame URL aiškiai yra `watch?v=<video-id>`, Sonarpad dabar teikia pirmenybę tam vaizdo įrašo ID, o ne papildomiems `list=` ir `index=` parametrams, todėl YouTube Mix pradinis ID nebegali pakeisti vartotojo pasirinkto vaizdo įrašo. Tikri `/playlist?list=...` URL ir toliau atidaromi kaip rinkiniai.
+
+
 Versija 0.9.11 – 2026-09-22
 
 Failų išsaugojimas

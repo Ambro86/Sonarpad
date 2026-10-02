@@ -19,10 +19,6 @@ use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Memory::{
     GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock,
 };
-use windows::Win32::System::Power::{
-    ES_CONTINUOUS, ES_SYSTEM_REQUIRED, EXECUTION_STATE, SetThreadExecutionState,
-};
-
 use windows::Win32::UI::Controls::{BST_CHECKED, WC_BUTTON, WC_COMBOBOXW, WC_EDIT, WC_STATIC};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     EnableWindow, GetFocus, GetKeyState, SetFocus, VK_CONTROL, VK_ESCAPE, VK_RETURN, VK_SHIFT,
@@ -3644,12 +3640,7 @@ fn trim_output_keep_last(state: &mut PromptState) {
 }
 
 fn apply_prevent_sleep(enabled: bool) -> bool {
-    let flags = if enabled {
-        ES_CONTINUOUS | ES_SYSTEM_REQUIRED
-    } else {
-        ES_CONTINUOUS
-    };
-    unsafe { SetThreadExecutionState(flags) != EXECUTION_STATE(0) }
+    crate::power_awake::set_required("prompt-window", enabled)
 }
 
 fn confirm_clear_output(hwnd: HWND, parent: HWND) -> bool {

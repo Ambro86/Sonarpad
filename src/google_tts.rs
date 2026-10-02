@@ -476,6 +476,7 @@ fn download_single_package(
     cancel: &Arc<AtomicBool>,
     mut progress: impl FnMut(i32),
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("download");
     if is_package_installed(package) {
         progress(100);
         return Ok(());
@@ -572,6 +573,7 @@ pub fn download_package(
     cancel: &Arc<AtomicBool>,
     mut progress: impl FnMut(i32),
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("download");
     let mut plan = Vec::new();
     collect_download_plan(package_id, &mut HashSet::new(), &mut plan)?;
     let client = Client::builder()

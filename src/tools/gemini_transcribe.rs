@@ -35,6 +35,7 @@ pub fn transcribe_wav(
     language: crate::settings::Language,
     cancel: &Arc<AtomicBool>,
 ) -> Result<String, String> {
+    let _power_awake = crate::power_awake::acquire("media-transcription");
     if cancel.load(Ordering::Relaxed) {
         return Err("cancelled".to_string());
     }

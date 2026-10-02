@@ -2118,6 +2118,7 @@ pub fn export_audio_description_mp3(
     options: &AudioDescriptionExportOptions,
     mut progress: Option<&mut dyn FnMut(u32)>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("audio-description-export");
     if cues.is_empty() {
         return Err("Audio description: no synthesized cues to export".to_string());
     }
@@ -4002,6 +4003,7 @@ pub fn export_mixed_media(
     settings: &AppSettings,
     options: &MixExportOptions,
 ) -> Result<PathBuf, String> {
+    let _power_awake = crate::power_awake::acquire("media-export");
     let subtitle_path = find_subtitle_for_media(media_path)
         .ok_or_else(|| "Subtitle: not found for media".to_string())?;
     let api = ffmpeg_api()?;
@@ -4205,6 +4207,7 @@ pub fn convert_audio_file(
     cancel: Option<Arc<AtomicBool>>,
     progress: Option<&mut dyn FnMut(u32)>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("media-conversion");
     convert_audio_file_with_stream_index(
         input_path,
         output_path,
@@ -4227,6 +4230,7 @@ pub fn convert_audio_file_with_preferred_stream(
     progress: Option<&mut dyn FnMut(u32)>,
     preferred_stream_index: Option<i32>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("media-conversion");
     convert_audio_file_with_stream_index(
         input_path,
         output_path,
@@ -4248,6 +4252,7 @@ pub fn remux_media_file_to_mp4_with_preferred_audio_stream(
     cancel: Option<Arc<AtomicBool>>,
     progress: Option<&mut dyn FnMut(u32)>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("media-remux");
     let api = ffmpeg_api()?;
     mux_video_with_audio(
         api,
@@ -4272,6 +4277,7 @@ pub fn remux_media_file_to_mp4_with_external_audio_stream(
     cancel: Option<Arc<AtomicBool>>,
     progress: Option<&mut dyn FnMut(u32)>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("media-remux");
     let api = ffmpeg_api()?;
     mux_video_with_audio(
         api,
@@ -4308,6 +4314,7 @@ pub fn record_live_media_stream_to_mp4(
     prefer_audio_description: bool,
     stop: Arc<AtomicBool>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("stream-recording");
     const HLS_FALLBACK_USER_AGENT: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
     let api = ffmpeg_api()?;
@@ -4394,6 +4401,7 @@ pub fn record_live_audio_stream_to_mp3(
     output_path: &Path,
     stop: Arc<AtomicBool>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("stream-recording");
     let settings = ConvertAudioSettings {
         format: ConvertAudioFormat::Mp3,
         quality: ConvertAudioQuality::BitrateKbps(192),
@@ -4420,6 +4428,7 @@ pub fn convert_audio_file_with_channels(
     progress: Option<&mut dyn FnMut(u32)>,
     forced_channels: Option<u16>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("media-conversion");
     convert_audio_file_with_stream_index(
         input_path,
         output_path,

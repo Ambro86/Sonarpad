@@ -349,6 +349,7 @@ pub(crate) fn record_stream_for_duration(
     ui_language: Option<Language>,
     options: ScheduledRecordingOptions<'_>,
 ) -> Result<PathBuf, String> {
+    let _power_awake = crate::power_awake::acquire("scheduled-stream-recording");
     let url = url.trim();
     if url.is_empty() {
         return Err(recording_text(
@@ -360,6 +361,11 @@ pub(crate) fn record_stream_for_duration(
     if options.duration_minutes == 0 {
         return Err("La durata della registrazione deve essere maggiore di zero.".to_string());
     }
+
+    // A cancellation marker belongs only to the currently running occurrence.
+    // Remove any stale marker before publishing the activity in the recordings list;
+    // after that point the UI can safely create a fresh marker to stop this run.
+    clear_scheduled_cancel_request(options.scheduled_id);
 
     let output_path = next_recording_path(kind, title, ui_language)?;
     let duration = Duration::from_secs(u64::from(options.duration_minutes) * 60);
@@ -376,9 +382,28 @@ pub(crate) fn record_stream_for_duration(
         StreamRecordingKind::Radio => {
             let stop = Arc::new(AtomicBool::new(false));
             let timer_stop = Arc::clone(&stop);
+            let scheduled_id = options.scheduled_id.to_string();
             thread::spawn(move || {
-                thread::sleep(duration);
-                timer_stop.store(true, Ordering::Release);
+                let started = Instant::now();
+                loop {
+                    if scheduled_cancel_requested(&scheduled_id) {
+                        crate::log_debug(&format!(
+                            "Scheduled radio recording observed graceful stop request id={scheduled_id}"
+                        ));
+                        timer_stop.store(true, Ordering::Release);
+                        break;
+                    }
+                    let elapsed = started.elapsed();
+                    if elapsed >= duration {
+                        timer_stop.store(true, Ordering::Release);
+                        break;
+                    }
+                    thread::sleep(
+                        duration
+                            .saturating_sub(elapsed)
+                            .min(Duration::from_millis(250)),
+                    );
+                }
             });
             run_internal_recording(
                 url,
@@ -395,10 +420,12 @@ pub(crate) fn record_stream_for_duration(
             user_agent,
             options.prefer_audio_description,
             duration,
+            options.scheduled_id,
         ),
     };
 
     remove_activity(&activity.id);
+    clear_scheduled_cancel_request(options.scheduled_id);
     if let Err(error) = result {
         remove_recording_file(&output_path, "scheduled recording failure");
         return Err(error);
@@ -441,6 +468,7 @@ fn run_internal_recording(
     prefer_audio_description: bool,
     stop: Arc<AtomicBool>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("stream-recording");
     match kind {
         StreamRecordingKind::Radio => {
             crate::ffmpeg_export::record_live_audio_stream_to_mp3(url, output_path, stop)
@@ -742,6 +770,7 @@ fn record_tv_for_duration_with_hidden_mpv(
     user_agent: Option<&str>,
     prefer_audio_description: bool,
     duration: Duration,
+    scheduled_id: &str,
 ) -> Result<(), String> {
     let mpv_exe = crate::installed_mpv_runtime_executable()?;
     let mpv_dir = mpv_exe
@@ -840,6 +869,7 @@ fn record_tv_for_duration_with_hidden_mpv(
     }
 
     let recording_started = Instant::now();
+    let mut cancelled_by_user = false;
     let status = loop {
         match child.try_wait() {
             Ok(Some(status)) => break status,
@@ -863,7 +893,14 @@ fn record_tv_for_duration_with_hidden_mpv(
         }
 
         let elapsed = recording_started.elapsed();
-        if elapsed >= duration {
+        if scheduled_cancel_requested(scheduled_id) {
+            cancelled_by_user = true;
+            crate::log_debug(&format!(
+                "Scheduled TV recording observed graceful stop request id={scheduled_id} elapsed_secs={:.3}",
+                elapsed.as_secs_f64()
+            ));
+        }
+        if cancelled_by_user || elapsed >= duration {
             let quit_result = crate::send_mpv_ipc_command(&ipc_path, r#"{"command":["quit"]}"#);
             if let Err(error) = quit_result {
                 crate::log_debug(&format!(
@@ -903,7 +940,7 @@ fn record_tv_for_duration_with_hidden_mpv(
             "mpv ha terminato la registrazione con stato {status}."
         ));
     }
-    if elapsed.saturating_add(Duration::from_secs(1)) < duration {
+    if !cancelled_by_user && elapsed.saturating_add(Duration::from_secs(1)) < duration {
         remove_recording_file(&temp_path, "hidden mpv early exit");
         return Err(format!(
             "mpv ha terminato la registrazione troppo presto: {:.1} secondi su {}.",
@@ -922,6 +959,7 @@ fn monitor_mpv_recording_until_player_closes(
     activity_id: String,
     open_audio_description_after: bool,
 ) {
+    let _power_awake = crate::power_awake::acquire("stream-recording");
     while is_process_alive(mpv_process_id) {
         thread::sleep(Duration::from_millis(500));
     }
@@ -1071,6 +1109,45 @@ fn activity_path(id: &str) -> PathBuf {
     activity_dir().join(format!("{id}.json"))
 }
 
+fn scheduled_cancel_dir() -> PathBuf {
+    crate::settings::settings_dir().join("ScheduledRecordingCancellations")
+}
+
+fn scheduled_cancel_path(id: &str) -> PathBuf {
+    let safe_id = id
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric() || *character == '-')
+        .collect::<String>();
+    scheduled_cancel_dir().join(format!("{safe_id}.cancel"))
+}
+
+fn clear_scheduled_cancel_request(id: &str) {
+    let path = scheduled_cancel_path(id);
+    if let Err(error) = fs::remove_file(&path)
+        && error.kind() != std::io::ErrorKind::NotFound
+    {
+        crate::log_debug(&format!(
+            "Scheduled recording cancellation marker removal failed id={id} path={} error={error}",
+            path.display()
+        ));
+    }
+}
+
+fn scheduled_cancel_requested(id: &str) -> bool {
+    scheduled_cancel_path(id).is_file()
+}
+
+fn request_scheduled_cancel(id: &str) -> Result<(), String> {
+    fs::create_dir_all(scheduled_cancel_dir()).map_err(|error| error.to_string())?;
+    let path = scheduled_cancel_path(id);
+    fs::write(&path, b"stop\n").map_err(|error| error.to_string())?;
+    crate::log_debug(&format!(
+        "Scheduled recording graceful stop requested id={id} marker={}",
+        path.display()
+    ));
+    Ok(())
+}
+
 fn create_activity(
     kind: StreamRecordingKind,
     title: &str,
@@ -1140,6 +1217,55 @@ fn list_active_recordings(kind: StreamRecordingKind) -> Vec<RecordingActivity> {
     }
     activities.sort_by_key(|activity| activity.started_unix);
     activities
+}
+
+fn active_recording_from_list_id(
+    kind: StreamRecordingKind,
+    list_id: &str,
+) -> Option<RecordingActivity> {
+    let activity_id = list_id.strip_prefix("active:")?;
+    let payload = fs::read(activity_path(activity_id)).ok()?;
+    let activity = serde_json::from_slice::<RecordingActivity>(&payload).ok()?;
+    if activity.kind != kind || !is_process_alive(activity.process_id) {
+        return None;
+    }
+    Some(activity)
+}
+
+fn stop_active_recording(
+    kind: StreamRecordingKind,
+    list_id: &str,
+    playback_parent: HWND,
+) -> Result<(), String> {
+    let activity = active_recording_from_list_id(kind, list_id)
+        .ok_or_else(|| "La registrazione non risulta più in corso.".to_string())?;
+
+    if let Some(scheduled_id) = activity.scheduled_id.as_deref() {
+        request_scheduled_cancel(scheduled_id)?;
+        crate::log_debug(&format!(
+            "Requested graceful stop for active scheduled recording activity_id={} scheduled_id={} title={}",
+            activity.id, scheduled_id, activity.title
+        ));
+        return Ok(());
+    }
+
+    // Immediate radio/TV recordings are tied to the managed mpv player in this
+    // Sonarpad process. Stopping the player already drives the existing graceful
+    // finalization path for the recording, so reuse it instead of adding a second
+    // stop mechanism.
+    if activity.process_id == std::process::id() {
+        crate::stop_managed_mpv_playback(playback_parent);
+        crate::log_debug(&format!(
+            "Requested stop for active immediate recording activity_id={} title={}",
+            activity.id, activity.title
+        ));
+        return Ok(());
+    }
+
+    Err(
+        "Non è stato possibile collegare la registrazione al processo che la sta eseguendo."
+            .to_string(),
+    )
 }
 
 fn unix_now() -> u64 {
@@ -1339,6 +1465,99 @@ pub(crate) fn open_recordings(
             }),
         };
 
+        let stop_label = translated(
+            language,
+            "recordings.stop_in_progress",
+            "Interrompi registrazione",
+        );
+        let stop_confirmation = translated(
+            language,
+            "recordings.stop_in_progress_confirm",
+            "Interrompere la registrazione in corso? Il contenuto registrato finora verrà conservato se il file è valido.",
+        );
+        let stop_confirmation_title = crate::settings::confirm_title(language);
+        let playback_parent_value = playback_parent.0;
+        let stop_action = InterpreterContextAction {
+            label: stop_label,
+            ctrl_c_shortcut: false,
+            delete_shortcut: false,
+            children: Vec::new(),
+            enabled: Arc::new(|id| id.starts_with("active:")),
+            handler: Arc::new(move |id| {
+                let dialog = crate::get_foreground_window_safe();
+                let confirmation_wide = to_wide(&stop_confirmation);
+                let title_wide = to_wide(&stop_confirmation_title);
+                let response = crate::message_box_modal(
+                    dialog,
+                    PCWSTR(confirmation_wide.as_ptr()),
+                    PCWSTR(title_wide.as_ptr()),
+                    MB_YESNO | MB_ICONQUESTION,
+                );
+                if response != IDYES {
+                    return;
+                }
+
+                if let Err(error) = stop_active_recording(kind, &id, HWND(playback_parent_value)) {
+                    crate::show_error(dialog, language, &error);
+                }
+            }),
+        };
+
+        let cancel_scheduled_label = translated(
+            language,
+            "recordings.cancel_scheduled",
+            "Annulla registrazione programmata",
+        );
+        let cancel_scheduled_confirmation = translated(
+            language,
+            "recordings.cancel_scheduled_confirm",
+            "Annullare la registrazione programmata selezionata?",
+        );
+        let cancel_scheduled_confirmation_title = crate::settings::confirm_title(language);
+        let scheduled_cancelled = Arc::new(AtomicBool::new(false));
+        let scheduled_cancelled_handler = Arc::clone(&scheduled_cancelled);
+        let cancel_scheduled_action = InterpreterContextAction {
+            label: cancel_scheduled_label,
+            ctrl_c_shortcut: false,
+            delete_shortcut: false,
+            children: Vec::new(),
+            enabled: Arc::new(|id| id.starts_with("scheduled:")),
+            handler: Arc::new(move |id| {
+                let dialog = crate::get_foreground_window_safe();
+                let confirmation_wide = to_wide(&cancel_scheduled_confirmation);
+                let title_wide = to_wide(&cancel_scheduled_confirmation_title);
+                let response = crate::message_box_modal(
+                    dialog,
+                    PCWSTR(confirmation_wide.as_ptr()),
+                    PCWSTR(title_wide.as_ptr()),
+                    MB_YESNO | MB_ICONQUESTION,
+                );
+                if response != IDYES {
+                    return;
+                }
+
+                let Some(scheduled_id) = id.strip_prefix("scheduled:") else {
+                    return;
+                };
+                match crate::app_windows::scheduled_recording_window::cancel_scheduled_recording(
+                    scheduled_id,
+                ) {
+                    Ok(()) => {
+                        scheduled_cancelled_handler.store(true, Ordering::SeqCst);
+                        if dialog.0 != 0 && crate::is_window_handle_valid(dialog) {
+                            crate::log_if_err!(crate::post_message_w_safe(
+                                dialog,
+                                windows::Win32::UI::WindowsAndMessaging::WM_CLOSE,
+                                windows::Win32::Foundation::WPARAM(0),
+                                windows::Win32::Foundation::LPARAM(0),
+                            ));
+                        }
+                    }
+                    Err(error) => crate::show_error(dialog, language, &error),
+                }
+            }),
+        };
+
         let title = match kind {
             StreamRecordingKind::Radio => {
                 translated(language, "radio.recordings", "Registrazioni radio")
@@ -1362,7 +1581,7 @@ pub(crate) fn open_recordings(
                 ),
                 show_search_edit: false,
                 secondary_action_label: None,
-                context_actions: vec![delete_action],
+                context_actions: vec![stop_action, cancel_scheduled_action, delete_action],
                 right_arrow_accepts_selection: true,
                 left_arrow_closes: true,
                 escape_stops_active_player: kind == StreamRecordingKind::Tv,
@@ -1379,6 +1598,11 @@ pub(crate) fn open_recordings(
         );
 
         if recording_deleted.swap(false, Ordering::SeqCst) {
+            selected_id = None;
+            close_silently_if_empty = true;
+            continue;
+        }
+        if scheduled_cancelled.swap(false, Ordering::SeqCst) {
             selected_id = None;
             close_silently_if_empty = true;
             continue;

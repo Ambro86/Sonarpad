@@ -221,6 +221,7 @@ pub fn download_work(
     index: &str,
     preview: bool,
 ) -> Result<WorkResponse, String> {
+    let _power_awake = crate::power_awake::acquire("download");
     let utc = Utc::now().format("%Y-%m-%d %H.%M.%S").to_string();
     let sample = if preview { "+" } else { "" };
     let query_plain = format!(

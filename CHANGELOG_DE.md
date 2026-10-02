@@ -1,5 +1,29 @@
 # Änderungsprotokoll
 
+Version 0.9.12 – 2026-10-02
+
+Podcast-Aufnahme
+1. Ein konservativer adaptiver Anti-Jitter-Fallback für Mikrofonaufnahmen wurde hinzugefügt. Auf normalen Systemen behält Sonarpad den bisherigen Synchronisationspfad unverändert bei; nur wenn eine Aufnahmesitzung dauerhaftes WASAPI-Zeitstempel-Jitter unter etwa 1 ms zeigt, werden die winzigen Paketabweichungen nicht mehr einzeln zeitlich gestreckt, sondern die Mikrofonpakete kontinuierlich erhalten. Größere Abweichungen, echte WASAPI-Unterbrechungen und Zeitstempelfehler verwenden weiterhin die bestehende Korrektur. Die Diagnose meldet nun, ob der Fallback aktiviert wurde und wie viele kleine Jitter-Grenzen ignoriert wurden.
+
+KI-Audiodeskription
+1. Ein konservativer Fallback für gültige Aufnahmen wurde hinzugefügt, deren Videostream mit einem kleinen wiederholten Zeitversatz beginnt, der sonst den Fehler „invalid Gemini chunk timeline“ auslösen kann. Sonarpad versucht weiterhin zuerst die normale Timeline und den vorhandenen Drift-Fallback; nur wenn beide fehlschlagen und die Chunks einen kleinen, konsistenten und wiederholten Startzeitversatz zeigen, wird dieser Overhead nur für die betroffenen Chunks normalisiert. Inkonsistente oder große Offsets werden weiterhin abgelehnt, sodass bereits funktionierende Videos unverändert durch die normale Pipeline laufen. Die Diagnose meldet jetzt zusätzlich Dauer und Startzeit der Chunks, wenn die Timeline weiterhin ungültig ist.
+
+2. Ein weiterer Fall von `invalid Gemini chunk timeline` bei einigen TV-/Livestream-Aufnahmen wurde behoben. Wenn FFmpeg genau die erwartete Anzahl von Analyse-Chunks erzeugt, aber eine kleine Minderheit der Chunk-Container unplausible Dauern meldet, behält Sonarpad die normal gemessenen Chunk-Dauern bei, ersetzt nur eindeutige Ausreißer in den Dauermetadaten durch den bekannten Segmentplan und führt höchstens einen abschließenden Abgleich von 6 % durch. Dieser Fallback wird erst nach dem Fehlschlagen der bestehenden Timeline-Pfade verwendet; normale Videos bleiben unverändert und Aufnahmen mit weit verbreiteten oder inkonsistenten Zeitfehlern werden weiterhin abgelehnt.
+
+Player, YouTube und Streaming
+1. Die Fokus-Isolierung während der Medienwiedergabe wurde korrigiert. Solange ein BASS- oder verwalteter MPV-Player-Tab aktiv ist, können Tab/Umschalt+Tab nicht mehr in ausgeblendete Editor- oder Sprachsteuerungen wechseln, und Player-Tasten wie die Leertaste bleiben der Wiedergabe zugeordnet, statt fremde deaktivierte Steuerelemente wie Streaming auszulösen. Verzögerte Anforderungen, den Fokus in den Editor zurückzusetzen, werden ebenfalls ignoriert, solange der aktuelle Tab ein Player ist; normale Editor-Tabs und modale Dialoge bleiben unverändert.
+
+2. Der Rückweg zu YouTube/MPV nach der Vorschau einer KI-Audiodeskription wurde korrigiert. Wenn die Vorschau geschlossen wird und der aktuelle Tab weiterhin dasselbe YouTube-Video darstellt, führt Sonarpad genau eine verzögerte Wiederherstellungsprüfung aus und startet MPV nur neu, wenn weder MPV noch BASS bereits aktiv sind. Dadurch wird der vorübergehende Zustand „Player-Tab ohne Player“ beseitigt, ohne doppelte Prozesse oder Neustartschleifen zu erzeugen.
+
+3. Direkt in „Medien aus Streaming wiedergeben“ eingefügte YouTube-Links wurden verbessert. Wenn aus der YouTube-Suche noch kein Titel bekannt ist, ermittelt Sonarpad jetzt mit yt-dlp den echten Videotitel und verwendet ihn für Player und Tab, statt nach Möglichkeit eine `watch?v=...`-Adresse stehen zu lassen.
+
+4. Dateinamen beim Herunterladen aus direkter YouTube-/Streaming-Wiedergabe wurden korrigiert. Vor „Speichern unter“ fragt Sonarpad einen fehlenden YouTube-Titel erneut ab und schlägt normalerweise den echten Videotitel vor. Falls der Titel weiterhin nicht ermittelt werden kann, verwendet YouTube nun `youtube_<video-id>` statt des generischen `stream_media`; `stream_media` bleibt nur als Fallback für Nicht-YouTube-Streams erhalten.
+
+5. Eine Endlosschleife bei Esc mit direkten YouTube-Links mit Mix-/Playlist-Parametern wurde behoben. Wenn yt-dlp bei einer solchen URL auf ein einzelnes Video zurückfällt, ohne eine echte Sammlungs- oder Suchebene zu öffnen, kehrt das Beenden der Wiedergabe nun zum Editor zurück, statt denselben Stream erneut zu öffnen. Echte Such-, Playlist- und verschachtelte Sammlungsebenen werden weiterhin wie bisher wiederhergestellt.
+
+6. Direkte YouTube-Videolinks mit zusätzlichen Mix-/Playlist-Parametern wurden korrigiert. Enthält eine eingefügte URL ausdrücklich `watch?v=<video-id>`, gibt Sonarpad dieser Video-ID jetzt Vorrang vor begleitenden `list=`- und `index=`-Parametern, sodass ein YouTube-Mix-Seed das angeforderte Video nicht mehr ersetzen kann. Echte `/playlist?list=...`-URLs werden weiterhin als Sammlungen geöffnet.
+
+
 Version 0.9.11 – 2026-09-22
 
 Dateien speichern

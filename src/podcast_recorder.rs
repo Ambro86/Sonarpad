@@ -35,7 +35,6 @@ use windows::Win32::Media::KernelStreaming::WAVE_FORMAT_EXTENSIBLE;
 use windows::Win32::Media::Multimedia::{KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, WAVE_FORMAT_IEEE_FLOAT};
 use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
-use windows::Win32::System::Power::{ES_CONTINUOUS, ES_SYSTEM_REQUIRED, SetThreadExecutionState};
 use windows::Win32::System::Threading::{
     OpenProcess, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
 };
@@ -46,6 +45,7 @@ use windows::core::{GUID, HRESULT, Interface, PCWSTR, PROPVARIANT, PWSTR, implem
 const TARGET_SAMPLE_RATE: u32 = 44100;
 const TARGET_CHANNELS: u16 = 2;
 const TARGET_BITS: u16 = 16;
+const MICROPHONE_JITTER_DEAD_ZONE_FRAMES: u64 = 44; // ~1 ms at 44.1 kHz
 const MIX_CHUNK_FRAMES: usize = 512;
 const WAVE_FORMAT_PCM_TAG: u32 = 0x0001;
 const KSDATAFORMAT_SUBTYPE_PCM: GUID = GUID::from_u128(0x00000001_0000_0010_8000_00AA00389B71);
@@ -910,24 +910,10 @@ fn rename_atomic(src: &Path, dest: &Path) -> Result<(), String> {
 }
 
 fn keep_awake_loop(stop: Arc<AtomicBool>) -> Result<(), String> {
-    const KEEP_AWAKE_REFRESH: Duration = Duration::from_secs(30);
     const KEEP_AWAKE_POLL: Duration = Duration::from_millis(200);
-
-    unsafe {
-        SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
-    }
-    let mut last_refresh = Instant::now();
+    let _power_awake = crate::power_awake::acquire("podcast-recording");
     while !stop.load(Ordering::SeqCst) {
-        if last_refresh.elapsed() >= KEEP_AWAKE_REFRESH {
-            unsafe {
-                SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
-            }
-            last_refresh = Instant::now();
-        }
         thread::sleep(KEEP_AWAKE_POLL);
-    }
-    unsafe {
-        SetThreadExecutionState(ES_CONTINUOUS);
     }
     Ok(())
 }
@@ -983,12 +969,13 @@ impl MixBuffer {
         let origin = Instant::now();
         let origin_qpc =
             ((counter as u128 * u128::from(TICKS_PER_SECOND)) / frequency as u128) as u64;
-        crate::log_debug(
-            "Podcast synchronization: shared QPC timeline; delayed packets buffered up to 1000 ms; capture queues drained on stop",
-        );
+        crate::log_debug(&format!(
+            "Podcast synchronization: shared QPC timeline; delayed packets buffered up to 1000 ms; capture queues drained on stop; microphone_jitter_dead_zone_frames={}",
+            MICROPHONE_JITTER_DEAD_ZONE_FRAMES
+        ));
         Ok(Self {
             inner: Mutex::new(MixQueues {
-                mic: TimedQueue::default(),
+                mic: TimedQueue::with_adaptive_jitter_dead_zone(MICROPHONE_JITTER_DEAD_ZONE_FRAMES),
                 system: (0..system_stream_count)
                     .map(|_| TimedQueue::default())
                     .collect(),
@@ -1084,11 +1071,19 @@ impl MixBuffer {
             let remaining = total.saturating_sub(inner.cursor);
             let drained = stopping && self.captures.load(Ordering::SeqCst) == 0;
             if drained && remaining == 0 {
+                let (mic_jitter_probe_boundaries, mic_jitter_probe_small, mic_jitter_streak) =
+                    inner.mic.jitter_probe_stats();
                 crate::log_debug(&format!(
-                    "Podcast packet continuity: mic_gap_frames={} mic_overlap_frames={} mic_max_gap={} mic_corrected={} system_gap_overlap_max_corrected={:?}",
+                    "Podcast packet continuity: mic_gap_frames={} mic_overlap_frames={} mic_max_gap={} mic_jitter_dead_zone_active={} mic_jitter_probe_boundaries={} mic_jitter_probe_small={} mic_jitter_streak={} mic_jitter_ignored_boundaries={} mic_jitter_ignored_frames={} mic_corrected={} system_gap_overlap_max_corrected={:?}",
                     inner.mic.packet_gap_frames,
                     inner.mic.packet_overlap_frames,
                     inner.mic.max_packet_gap,
+                    inner.mic.jitter_dead_zone_active,
+                    mic_jitter_probe_boundaries,
+                    mic_jitter_probe_small,
+                    mic_jitter_streak,
+                    inner.mic.ignored_jitter_boundaries,
+                    inner.mic.ignored_jitter_frames,
                     inner.mic.corrected_boundaries,
                     inner
                         .system

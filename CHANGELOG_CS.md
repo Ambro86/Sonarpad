@@ -1,5 +1,29 @@
 # Přehled změn
 
+Verze 0.9.12 – 2026-10-02
+
+Nahrávání podcastů
+1. Přidán konzervativní adaptivní mechanismus proti jitteru při nahrávání mikrofonu. Na běžných systémech Sonarpad zachovává stávající synchronizaci beze změny; pouze když relace vykazuje trvalý mikro-jitter časových značek WASAPI menší než přibližně 1 ms, přestane časově natahovat či zkracovat každou drobnou odchylku paketu a zachová mikrofonní pakety souvisle. Větší odchylky, skutečné diskontinuity WASAPI a chyby časových značek nadále používají stávající korekci. Diagnostika nyní uvádí, zda se fallback aktivoval a kolik malých odchylek bylo ignorováno.
+
+Zvukový popis s AI
+1. Přidán konzervativní fallback pro platné nahrávky, jejichž video stream začíná s malým opakovaným časovým posunem, který mohl způsobit chybu „invalid Gemini chunk timeline“. Sonarpad vždy nejprve použije běžnou časovou osu a existující fallback pro drift; teprve pokud oba selžou a chunky vykazují malý, konzistentní a opakovaný start-time, normalizuje tento přesah pouze u dotčených chunků. Nekonzistentní nebo velké posuny jsou nadále odmítnuty, takže videa, která již fungují, používají nezměněnou běžnou pipeline. Diagnostika nyní uvádí také délku a start-time chunků, pokud časová osa zůstane neplatná.
+
+2. Opraven další případ `invalid Gemini chunk timeline` u některých televizních/živých nahrávek. Když FFmpeg vytvoří přesně očekávaný počet analytických segmentů, ale malá část kontejnerů hlásí nevěrohodné délky, Sonarpad zachová skutečně naměřené délky běžných segmentů, nahradí pouze zjevné odlehlé hodnoty metadat známým plánem segmentace a provede nejvýše 6% závěrečné dorovnání. Tento záložní postup se použije až po selhání stávajících cest časové osy; běžná videa zůstávají beze změny a nahrávky s rozsáhlými nebo nekonzistentními časovými chybami jsou nadále odmítnuty.
+
+Přehrávač, YouTube a streamování
+1. Opravena izolace fokusu během přehrávání médií. Když je aktivní karta přehrávače BASS nebo spravovaného MPV, Tab/Shift+Tab už nemohou přejít do skrytých ovládacích prvků editoru nebo panelu hlasů a příkazy přehrávače, například Mezerník, zůstávají přiřazeny přehrávání místo aktivace nesouvisejících zakázaných prvků, například Streaming. Odložené požadavky na vrácení fokusu do editoru jsou také ignorovány, dokud je aktuální karta přehrávačem, aniž by se měnilo chování běžných karet editoru nebo modálních dialogů.
+
+2. Opraven návrat k YouTube/MPV po náhledu AI audiopopisu. Po zavření náhledu, pokud aktuální karta stále představuje stejné video YouTube, Sonarpad provede jednu odloženou kontrolu obnovení a znovu spustí MPV pouze tehdy, pokud již není aktivní ani MPV, ani BASS. Tím se odstraní dočasný stav „karta přehrávače bez přehrávače“, aniž by vznikaly duplicitní procesy nebo smyčky restartu.
+
+3. Vylepšeny přímé odkazy YouTube vložené do „Přehrát média ze streamu“. Pokud název ještě není znám z vyhledávání YouTube, Sonarpad nyní získá skutečný název videa pomocí yt-dlp a použije jej pro přehrávač a kartu, místo aby pokud možno ponechal adresu `watch?v=...`.
+
+4. Opraveny názvy souborů při stahování z přímého přehrávání YouTube/streamingu. Před Uložit jako Sonarpad znovu zkusí získat chybějící název YouTube a běžně navrhne skutečný název videa. Pokud se název stále nepodaří získat, YouTube nyní použije `youtube_<video-id>` místo obecného `stream_media`; `stream_media` zůstává pouze jako fallback pro streamy mimo YouTube.
+
+5. Opravena nekonečná smyčka klávesy Esc u přímých odkazů YouTube obsahujících parametry Mix/playlistu. Pokud yt-dlp z takové adresy přejde na jediné video bez otevření skutečné úrovně kolekce nebo vyhledávání, zastavení přehrávání se nyní vrátí do editoru místo opětovného otevření stejného streamu. Skutečné úrovně vyhledávání, playlistů a vnořených kolekcí se nadále obnovují jako dříve.
+
+6. Opraveny přímé odkazy na videa YouTube, které současně obsahují parametry Mix/playlistu. Pokud vložená adresa výslovně obsahuje `watch?v=<video-id>`, Sonarpad nyní dává tomuto ID videa přednost před doprovodnými parametry `list=` a `index=`, takže seed YouTube Mix již nemůže nahradit požadované video. Skutečné adresy `/playlist?list=...` se nadále otevírají jako kolekce.
+
+
 Verze 0.9.11 – 2026-09-22
 
 Ukládání souborů

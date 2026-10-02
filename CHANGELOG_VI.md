@@ -1,5 +1,29 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.12 – 2026-10-02
+
+Ghi podcast
+1. Đã thêm cơ chế dự phòng chống jitter thích ứng và thận trọng cho việc ghi micro. Trên các hệ thống bình thường, Sonarpad giữ nguyên đường đồng bộ hiện có; chỉ khi một phiên ghi có micro-jitter dấu thời gian WASAPI kéo dài dưới khoảng 1 ms, chương trình mới ngừng kéo giãn hoặc nén từng biến động gói nhỏ và giữ các gói micro liên tục. Sai lệch lớn hơn, gián đoạn WASAPI thực sự và lỗi dấu thời gian vẫn dùng cơ chế hiệu chỉnh hiện có. Chẩn đoán giờ cho biết cơ chế dự phòng có được kích hoạt hay không và bao nhiêu biên jitter nhỏ đã bị bỏ qua.
+
+Mô tả âm thanh bằng AI
+1. Đã thêm một fallback thận trọng cho các bản ghi hợp lệ có luồng video bắt đầu với một độ lệch thời gian nhỏ lặp lại, vốn có thể gây lỗi “invalid Gemini chunk timeline”. Sonarpad vẫn luôn thử timeline bình thường và fallback drift hiện có trước; chỉ khi cả hai đều thất bại và các đoạn có start-time nhỏ, nhất quán và lặp lại thì phần lệch này mới được chuẩn hóa chỉ trên các đoạn bị ảnh hưởng. Các độ lệch không nhất quán hoặc quá lớn vẫn bị từ chối, vì vậy những video vốn đã hoạt động tiếp tục dùng pipeline bình thường không thay đổi. Chẩn đoán giờ cũng ghi lại thời lượng và start-time của các đoạn khi timeline vẫn không hợp lệ.
+
+2. Đã sửa thêm một trường hợp `invalid Gemini chunk timeline` xuất hiện với một số bản ghi TV/phát trực tiếp. Khi FFmpeg tạo đúng số lượng đoạn phân tích dự kiến nhưng một số ít container báo thời lượng không hợp lý, Sonarpad giữ nguyên thời lượng đo thực tế của các đoạn bình thường, chỉ thay các giá trị metadata lệch rõ ràng bằng lịch phân đoạn đã biết và chỉ thực hiện tối đa 6% căn chỉnh cuối. Fallback này chỉ chạy sau khi các đường xử lý timeline hiện có thất bại; video bình thường không thay đổi và các bản ghi có lỗi thời gian lan rộng hoặc không nhất quán vẫn bị từ chối.
+
+Trình phát, YouTube và phát trực tuyến
+1. Đã sửa việc cô lập tiêu điểm trong khi phát nội dung đa phương tiện. Khi một tab trình phát BASS hoặc MPV được quản lý đang hoạt động, Tab/Shift+Tab không còn có thể đi vào các điều khiển ẩn của trình soạn thảo hoặc bảng giọng nói, và các lệnh trình phát như phím Cách vẫn được dành cho phát/tạm dừng thay vì kích hoạt các điều khiển không liên quan đang bị vô hiệu hóa như Streaming. Các yêu cầu trì hoãn đưa tiêu điểm trở lại trình soạn thảo cũng bị bỏ qua khi tab hiện tại là trình phát, mà không thay đổi các tab soạn thảo bình thường hay hộp thoại dạng modal.
+
+2. Đã sửa đường quay lại YouTube/MPV sau khi xem trước mô tả âm thanh bằng AI. Khi phần xem trước đóng và tab hiện tại vẫn đại diện cho cùng video YouTube, Sonarpad thực hiện đúng một lần kiểm tra khôi phục có trì hoãn và chỉ khởi động lại MPV nếu cả MPV lẫn BASS đều chưa hoạt động. Điều này loại bỏ trạng thái tạm thời “tab trình phát nhưng không có trình phát” mà không tạo tiến trình trùng lặp hoặc vòng lặp khởi động lại.
+
+3. Cải thiện các liên kết YouTube trực tiếp được dán vào “Phát phương tiện từ streaming”. Nếu tiêu đề chưa được biết từ tìm kiếm YouTube, Sonarpad giờ lấy tiêu đề thật của video bằng yt-dlp và dùng tiêu đề đó cho trình phát và tab, thay vì để lại địa chỉ `watch?v=...` khi có thể.
+
+4. Đã sửa tên tệp khi tải xuống từ phát trực tiếp YouTube/streaming. Trước khi Lưu thành, Sonarpad sẽ thử lấy lại tiêu đề YouTube nếu còn thiếu và thông thường đề xuất tiêu đề thật của video. Nếu vẫn không lấy được tiêu đề, YouTube giờ dùng `youtube_<video-id>` thay cho `stream_media` chung; `stream_media` chỉ còn là phương án dự phòng cho các luồng không phải YouTube.
+
+5. Đã sửa vòng lặp Esc vô hạn với các liên kết YouTube trực tiếp có tham số Mix/danh sách phát. Nếu yt-dlp chuyển từ URL như vậy sang một video đơn mà không mở cấp bộ sưu tập hoặc tìm kiếm thực sự, khi dừng phát Sonarpad giờ sẽ quay về trình soạn thảo thay vì mở lại cùng luồng. Các cấp tìm kiếm, danh sách phát và bộ sưu tập lồng nhau thực sự vẫn được khôi phục như trước.
+
+6. Đã sửa các liên kết video YouTube trực tiếp có kèm tham số Mix/danh sách phát. Khi URL được dán có chứa rõ `watch?v=<video-id>`, Sonarpad giờ ưu tiên ID video đó hơn các tham số phụ `list=` và `index=`, vì vậy video hạt giống của YouTube Mix không còn có thể thay thế video được yêu cầu. Các URL `/playlist?list=...` thực sự vẫn tiếp tục được mở dưới dạng bộ sưu tập.
+
+
 Phiên bản 0.9.11 – 2026-09-22
 
 Lưu tệp

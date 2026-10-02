@@ -365,9 +365,9 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertNotIn("SetFocus((*pointer).start_button);", returned)
 
     def test_audio_description_windows_block_player_keyboard_shortcuts(self):
+        start = MAIN.index("// Audiobook keyboard controls (ONLY if no secondary window is open)")
         keyboard = MAIN[
-            MAIN.index("// Audiobook keyboard controls (ONLY if no secondary window is open)"):
-            MAIN.index("// Exclude voice panel controls from player keyboard handling")
+            start:MAIN.index("let is_voice_panel_control =", start)
         ]
         self.assertIn("audio_description_window::blocks_parent_focus", keyboard)
         self.assertIn("state.audio_description_project_window", keyboard)

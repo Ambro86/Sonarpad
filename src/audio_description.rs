@@ -19,7 +19,10 @@ use rodio::Source;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -1069,6 +1072,229 @@ fn build_gemini_chunk_timeline(
     Some(chunks)
 }
 
+fn build_gemini_chunk_timeline_with_repeated_small_start_offset(
+    raw_chunks: &[(PathBuf, f64, f64)],
+    duration_sec: f64,
+    segment_seconds: u32,
+) -> Option<(Vec<AudioDescriptionPreparedChunk>, usize, f64)> {
+    if raw_chunks.len() < 2 || !duration_sec.is_finite() || duration_sec <= 0.0 {
+        return None;
+    }
+
+    let expected_sec = segment_seconds.max(1) as f64;
+    let max_small_start_sec = (expected_sec * 0.20).min(10.0);
+    let mut candidates = raw_chunks
+        .iter()
+        .enumerate()
+        .filter_map(|(index, (_, raw_duration, start_time))| {
+            if !raw_duration.is_finite()
+                || *raw_duration <= 0.0
+                || !start_time.is_finite()
+                || *start_time < 0.250
+                || *start_time > max_small_start_sec
+                || *raw_duration <= *start_time + 0.001
+            {
+                return None;
+            }
+            let local_duration = *raw_duration - *start_time;
+            if !local_duration.is_finite() || local_duration <= 0.001 {
+                return None;
+            }
+            let improves_expected = index + 1 == raw_chunks.len()
+                || (local_duration - expected_sec).abs() + 0.050
+                    < (*raw_duration - expected_sec).abs();
+            improves_expected.then_some(*start_time)
+        })
+        .collect::<Vec<_>>();
+
+    let minimum_candidates = (raw_chunks.len() * 7).div_ceil(10);
+    if candidates.len() < minimum_candidates.max(2) {
+        return None;
+    }
+
+    candidates.sort_by(|a, b| a.total_cmp(b));
+    let median_start = candidates[candidates.len() / 2];
+    let tolerance_sec = (median_start * 0.20).clamp(0.250, 1.0);
+    let mut adjusted_count = 0usize;
+    let mut adjusted_chunks = Vec::with_capacity(raw_chunks.len());
+
+    for (index, (path, raw_duration, start_time)) in raw_chunks.iter().enumerate() {
+        let mut duration = *raw_duration;
+        if start_time.is_finite()
+            && (*start_time - median_start).abs() <= tolerance_sec
+            && *raw_duration > *start_time + 0.001
+        {
+            let local_duration = *raw_duration - *start_time;
+            let improves_expected = index + 1 == raw_chunks.len()
+                || (local_duration - expected_sec).abs() + 0.050
+                    < (*raw_duration - expected_sec).abs();
+            if improves_expected && local_duration <= expected_sec * 2.0 {
+                duration = local_duration;
+                adjusted_count = adjusted_count.saturating_add(1);
+            }
+        }
+        adjusted_chunks.push((path.clone(), duration));
+    }
+
+    if adjusted_count < minimum_candidates.max(2) {
+        return None;
+    }
+
+    let raw_total = raw_chunks
+        .iter()
+        .map(|(_, duration, _)| *duration)
+        .sum::<f64>();
+    let adjusted_total = adjusted_chunks
+        .iter()
+        .map(|(_, duration)| *duration)
+        .sum::<f64>();
+    if !raw_total.is_finite()
+        || !adjusted_total.is_finite()
+        || adjusted_total <= 0.0
+        || adjusted_total >= raw_total
+    {
+        return None;
+    }
+    let correction_ratio = (raw_total - adjusted_total) / raw_total;
+    if !correction_ratio.is_finite() || correction_ratio <= 0.0 || correction_ratio > 0.10 {
+        return None;
+    }
+
+    if let Some(timeline) = build_gemini_chunk_timeline(&adjusted_chunks, duration_sec, false) {
+        return Some((timeline, adjusted_count, median_start));
+    }
+    build_gemini_chunk_timeline(&adjusted_chunks, duration_sec, true)
+        .map(|timeline| (timeline, adjusted_count, median_start))
+}
+
+fn build_gemini_chunk_timeline_with_segment_schedule_fallback(
+    raw_chunks: &[(PathBuf, f64, f64)],
+    duration_sec: f64,
+    segment_seconds: u32,
+) -> Option<(Vec<AudioDescriptionPreparedChunk>, usize, usize, f64)> {
+    if raw_chunks.len() < 2 || !duration_sec.is_finite() || duration_sec <= 0.0 {
+        return None;
+    }
+
+    let expected_sec = segment_seconds.max(1) as f64;
+    let expected_count = (duration_sec / expected_sec).ceil() as usize;
+    if expected_count != raw_chunks.len() {
+        return None;
+    }
+
+    let last_nominal_sec = duration_sec - expected_sec * (raw_chunks.len() - 1) as f64;
+    if !last_nominal_sec.is_finite()
+        || last_nominal_sec <= 0.001
+        || last_nominal_sec > expected_sec * 1.25
+    {
+        return None;
+    }
+
+    // FFmpeg's segment muxer can cut a little before/after the requested boundary
+    // because of keyframes. Preserve those real variations. Broadcast H.264 normally
+    // has frequent keyframes, so only durations more than about 8% away from the known
+    // segment schedule are treated as suspect metadata. This fallback is used only
+    // after the historical timeline paths failed.
+    let normal_tolerance_sec = (expected_sec * 0.08).clamp(2.0, 8.0);
+    let non_last_count = raw_chunks.len() - 1;
+    let plausible_non_last = raw_chunks[..non_last_count]
+        .iter()
+        .filter(|chunk| {
+            let duration = chunk.1;
+            duration.is_finite()
+                && duration > 0.001
+                && (duration - expected_sec).abs() <= normal_tolerance_sec
+        })
+        .count();
+    let minimum_plausible = (non_last_count * 6).div_ceil(10);
+    if plausible_non_last < minimum_plausible.max(1) {
+        return None;
+    }
+
+    // reset_timestamps=1 should make prepared analysis chunks local/zero-based. A
+    // small muxer rounding offset is fine, but if most chunks retain a real source
+    // clock this is not the pattern this fallback is designed to repair.
+    let near_zero_start_count = raw_chunks
+        .iter()
+        .filter(|chunk| {
+            let start_time = chunk.2;
+            start_time.is_finite() && start_time.abs() <= 0.500
+        })
+        .count();
+    let minimum_zero_starts = (raw_chunks.len() * 8).div_ceil(10);
+    if near_zero_start_count < minimum_zero_starts.max(2) {
+        return None;
+    }
+
+    let mut replaced_count = 0usize;
+    let mut repaired = Vec::with_capacity(raw_chunks.len());
+    for (index, (path, raw_duration, _)) in raw_chunks.iter().enumerate() {
+        let nominal = if index + 1 == raw_chunks.len() {
+            last_nominal_sec
+        } else {
+            expected_sec
+        };
+        let tolerance = if index + 1 == raw_chunks.len() {
+            (last_nominal_sec * 0.75).clamp(2.0, 8.0)
+        } else {
+            normal_tolerance_sec
+        };
+        let duration = if raw_duration.is_finite()
+            && *raw_duration > 0.001
+            && (*raw_duration - nominal).abs() <= tolerance
+        {
+            *raw_duration
+        } else {
+            replaced_count = replaced_count.saturating_add(1);
+            nominal
+        };
+        repaired.push((path.clone(), duration));
+    }
+
+    if replaced_count * 10 > raw_chunks.len() * 4 {
+        return None;
+    }
+    if replaced_count == 0 && plausible_non_last * 10 < non_last_count * 8 {
+        return None;
+    }
+
+    let repaired_total = repaired.iter().map(|(_, duration)| *duration).sum::<f64>();
+    if !repaired_total.is_finite() || repaired_total <= 0.0 {
+        return None;
+    }
+    let residual_ratio = (repaired_total - duration_sec).abs() / duration_sec;
+    if !residual_ratio.is_finite() || residual_ratio > 0.06 {
+        return None;
+    }
+
+    let scale = duration_sec / repaired_total;
+    if !scale.is_finite() || !(0.94..=1.06).contains(&scale) {
+        return None;
+    }
+
+    let mut timeline = Vec::with_capacity(repaired.len());
+    let mut cursor = 0.0_f64;
+    for (index, (path, duration)) in repaired.iter().enumerate() {
+        let start_sec = cursor;
+        let end_sec = if index + 1 == repaired.len() {
+            duration_sec
+        } else {
+            (start_sec + duration * scale).min(duration_sec)
+        };
+        if !end_sec.is_finite() || end_sec <= start_sec {
+            return None;
+        }
+        timeline.push(AudioDescriptionPreparedChunk {
+            path: path.to_string_lossy().to_string(),
+            start_sec,
+            end_sec,
+        });
+        cursor = end_sec;
+    }
+
+    Some((timeline, replaced_count, plausible_non_last, repaired_total))
+}
+
 fn clear_prepared_gemini_chunks(cache_dir: &Path) -> Result<(), String> {
     for entry in fs::read_dir(cache_dir)
         .map_err(|error| format!("Audio description: read chunk folder failed: {error}"))?
@@ -1247,6 +1473,7 @@ fn prepare_gemini_chunks(
 
     let path_count = paths.len();
     let mut measured_chunks = Vec::with_capacity(path_count);
+    let mut raw_chunk_timings = Vec::with_capacity(path_count);
     for path in paths {
         if cancel.load(Ordering::Relaxed) {
             return Err("cancelled".to_string());
@@ -1263,6 +1490,7 @@ fn prepare_gemini_chunks(
         let (raw_measured, format_start_sec) =
             crate::ffmpeg_export::media_duration_and_start_seconds(&path)
                 .unwrap_or((segment_seconds as f64, 0.0));
+        raw_chunk_timings.push((path.clone(), raw_measured, format_start_sec));
         let measured = normalize_prepared_gemini_chunk_duration(
             raw_measured,
             format_start_sec,
@@ -1318,6 +1546,98 @@ fn prepare_gemini_chunks(
             return Ok(chunks);
         }
     }
+
+    // A live/HLS recording can be a perfectly playable MP4 while carrying a small
+    // positive timestamp origin inherited from the broadcaster. When Sonarpad later
+    // remuxes that source into Matroska analysis chunks, the same small start_time can
+    // be reflected in the reported duration of nearly every chunk. The historical
+    // path and the existing <=2% drift fallback above intentionally stay unchanged.
+    // Only after both have failed, recognize a repeated, coherent, sub-10-second
+    // start_time and subtract it where doing so makes the chunk duration more
+    // plausible for the requested segment size. Inconsistent/large offsets remain a
+    // hard error so genuinely damaged files are never silently accepted.
+    if let Some((chunks, adjusted_count, median_start)) =
+        build_gemini_chunk_timeline_with_repeated_small_start_offset(
+            &raw_chunk_timings,
+            duration_sec,
+            segment_seconds,
+        )
+    {
+        crate::log_debug(&format!(
+            "Audio description: Gemini chunk timeline repeated-start fallback activated start_time={:.3}s adjusted_chunks={}/{} source_duration={:.3}s measured_total={:.3}s",
+            median_start, adjusted_count, path_count, duration_sec, measured_total
+        ));
+        return Ok(chunks);
+    }
+
+    // A second live-stream pattern keeps zero-based chunk timestamps but reports
+    // implausible duration metadata for a small minority of segments. Summing those
+    // container durations can exceed the source by several percent even though the
+    // FFmpeg segment count exactly matches the requested schedule. Repair only the
+    // outlier durations, preserve normal keyframe-sized variations, and accept the
+    // result only if the segment structure is strong enough for a bounded final
+    // reconciliation. The normal path and the historical <=2% fallback have already
+    // failed before this code is reached.
+    let segment_schedule_fallback = if measured_total.is_finite()
+        && measured_total > duration_sec
+        && excess_ratio.is_finite()
+        && excess_ratio > 0.02
+        && excess_ratio <= 0.10
+    {
+        build_gemini_chunk_timeline_with_segment_schedule_fallback(
+            &raw_chunk_timings,
+            duration_sec,
+            segment_seconds,
+        )
+    } else {
+        None
+    };
+    if let Some((chunks, replaced_count, plausible_count, repaired_total)) =
+        segment_schedule_fallback
+    {
+        crate::log_debug(&format!(
+            "Audio description: Gemini chunk timeline segment-schedule fallback activated replaced_chunks={}/{} plausible_non_last={} segment_seconds={} source_duration={:.3}s measured_total={:.3}s repaired_total={:.3}s",
+            replaced_count,
+            path_count,
+            plausible_count,
+            segment_seconds,
+            duration_sec,
+            measured_total,
+            repaired_total
+        ));
+        return Ok(chunks);
+    }
+
+    let timing_preview = raw_chunk_timings
+        .iter()
+        .take(8)
+        .enumerate()
+        .map(|(index, (_, duration, start))| format!("{}:{:.3}/{:.3}", index + 1, duration, start))
+        .collect::<Vec<_>>()
+        .join(",");
+    let mut largest_timings = raw_chunk_timings
+        .iter()
+        .enumerate()
+        .map(|(index, (_, duration, start))| (index + 1, *duration, *start))
+        .collect::<Vec<_>>();
+    largest_timings.sort_by(|left, right| right.1.total_cmp(&left.1));
+    let largest_preview = largest_timings
+        .iter()
+        .take(8)
+        .map(|(index, duration, start)| format!("{}:{:.3}/{:.3}", index, duration, start))
+        .collect::<Vec<_>>()
+        .join(",");
+    crate::log_debug(&format!(
+        "Audio description: invalid Gemini chunk timeline diagnostics source_duration={:.3}s measured_total={:.3}s excess={:.3}% segment_seconds={} chunks={} expected_chunks={} first_raw_duration/start=[{}] largest_raw_duration/start=[{}]",
+        duration_sec,
+        measured_total,
+        excess_ratio * 100.0,
+        segment_seconds,
+        path_count,
+        (duration_sec / segment_seconds.max(1) as f64).ceil() as usize,
+        timing_preview,
+        largest_preview
+    ));
 
     Err("Audio description: invalid Gemini chunk timeline".to_string())
 }
@@ -1767,6 +2087,11 @@ fn audio_description_tts_error_is_empty_output(error: &str) -> bool {
         || normalized.contains("zero samples")
 }
 
+fn audio_description_tts_error_is_empty_after_dictionary(error: &str) -> bool {
+    error.starts_with("Audio description: TTS cue ")
+        && error.ends_with(" is empty after dictionary/normalization")
+}
+
 fn wait_for_empty_tts_retry(cancel: &AtomicBool) -> Result<(), String> {
     const RETRY_DELAY: Duration = Duration::from_millis(750);
     const POLL_DELAY: Duration = Duration::from_millis(75);
@@ -1959,26 +2284,41 @@ where
                     let task = &tasks[index];
                     let cancel = cancel.clone();
                     handles.push(scope.spawn(move || {
-                        let (samples, sample_rate, channels) = synthesize_description(
+                        let synthesis = synthesize_description(
                             &task.text,
                             task.synthesis_index,
                             job,
                             cache_dir,
                             cancel,
-                        )?;
-                        Ok::<SynthesizedDescription, String>(SynthesizedDescription {
-                            original_index: task.original_index,
-                            text: task.text.clone(),
-                            desired_start_sec: task.desired_start_sec,
-                            visual_start_sec: task.visual_start_sec,
-                            visual_evidence_time_sec: task.visual_evidence_time_sec,
-                            mandatory: task.mandatory,
-                            slot_start_sec: task.slot_start_sec,
-                            slot_end_sec: task.slot_end_sec,
-                            samples,
-                            sample_rate,
-                            channels,
-                        })
+                        );
+                        let (samples, sample_rate, channels) = match synthesis {
+                            Ok(values) => values,
+                            Err(error)
+                                if audio_description_tts_error_is_empty_after_dictionary(&error) =>
+                            {
+                                crate::log_debug(&format!(
+                                    "Audio description: skipping TTS cue {} because it is empty after dictionary/normalization",
+                                    task.synthesis_index
+                                ));
+                                return Ok::<Option<SynthesizedDescription>, String>(None);
+                            }
+                            Err(error) => return Err(error),
+                        };
+                        Ok::<Option<SynthesizedDescription>, String>(Some(
+                            SynthesizedDescription {
+                                original_index: task.original_index,
+                                text: task.text.clone(),
+                                desired_start_sec: task.desired_start_sec,
+                                visual_start_sec: task.visual_start_sec,
+                                visual_evidence_time_sec: task.visual_evidence_time_sec,
+                                mandatory: task.mandatory,
+                                slot_start_sec: task.slot_start_sec,
+                                slot_end_sec: task.slot_end_sec,
+                                samples,
+                                sample_rate,
+                                channels,
+                            },
+                        ))
                     }));
                 }
                 handles
@@ -2000,7 +2340,7 @@ where
             job.tts_voice
         ));
     }
-    Ok(synthesized)
+    Ok(synthesized.into_iter().flatten().collect())
 }
 
 fn run_description_batches<T, B, P>(
@@ -3447,15 +3787,24 @@ pub fn apply_reanalyzed_audio_description_project_segment_and_reexport(
                 error: AudioDescriptionProjectEditError::Cancelled,
             });
         }
-        let rendered = synthesized
+        let Some(rendered) = synthesized
             .iter()
             .find(|candidate| candidate.original_index == description.id)
-            .ok_or_else(|| AudioDescriptionProjectBatchEditError {
+        else {
+            if audio_description_tts_chunks(&description.text, &job).is_empty() {
+                crate::log_debug(&format!(
+                    "Audio description segment apply: skipping fixed-slot cue {} because it is empty after dictionary/normalization",
+                    description.id
+                ));
+                continue;
+            }
+            return Err(AudioDescriptionProjectBatchEditError {
                 index: Some(index),
                 error: AudioDescriptionProjectEditError::Other(
                     "Audio description: synthesized fixed-slot description is missing".to_string(),
                 ),
-            })?;
+            });
+        };
         let frames = rendered.samples.len() / rendered.channels.max(1) as usize;
         let synthesized_duration_sec = frames as f64 / rendered.sample_rate.max(1) as f64;
         let available_duration_sec =
@@ -3977,6 +4326,440 @@ pub fn delete_audio_description_project_description(
     updated.updated_at_utc = chrono::Utc::now().to_rfc3339();
     save_audio_description_project(project_path, &updated)?;
     Ok(updated)
+}
+
+fn audio_description_recoded_source_path(input_path: &Path) -> PathBuf {
+    let parent = input_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = input_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("video");
+    parent.join(format!("{stem}_recoded.mp4"))
+}
+
+fn audio_description_source_is_recoded(input_path: &Path) -> bool {
+    input_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .is_some_and(|stem| stem.to_ascii_lowercase().ends_with("_recoded"))
+}
+
+fn audio_description_selected_audio_stream_index(
+    input_path: &Path,
+    preferred_audio_stream_index: Option<i32>,
+) -> Result<Option<i32>, String> {
+    let streams = crate::ffmpeg_source::list_audio_streams(input_path).map_err(|error| {
+        format!("Audio description: FFmpeg stream inspection before recode failed: {error}")
+    })?;
+    if streams.is_empty() {
+        return Ok(None);
+    }
+
+    let selected = preferred_audio_stream_index
+        .and_then(|preferred| streams.iter().find(|stream| stream.index == preferred))
+        .or_else(|| streams.iter().find(|stream| stream.is_default))
+        .or_else(|| streams.first());
+    Ok(selected.map(|stream| stream.index))
+}
+
+#[derive(Clone, Copy, Debug)]
+enum AudioDescriptionRecodeBackend {
+    NvidiaNvenc,
+    AmdAmf,
+    IntelQsv,
+    CpuLibx264Superfast,
+}
+
+impl AudioDescriptionRecodeBackend {
+    fn label(self) -> &'static str {
+        match self {
+            Self::NvidiaNvenc => "h264_nvenc",
+            Self::AmdAmf => "h264_amf",
+            Self::IntelQsv => "h264_qsv",
+            Self::CpuLibx264Superfast => "libx264-superfast",
+        }
+    }
+
+    fn append_video_args(self, command: &mut Command) {
+        match self {
+            Self::NvidiaNvenc => {
+                command
+                    .arg("-c:v")
+                    .arg("h264_nvenc")
+                    .arg("-preset")
+                    .arg("p1")
+                    .arg("-cq")
+                    .arg("18");
+            }
+            Self::AmdAmf => {
+                command
+                    .arg("-c:v")
+                    .arg("h264_amf")
+                    .arg("-quality")
+                    .arg("speed")
+                    .arg("-qp_i")
+                    .arg("18")
+                    .arg("-qp_p")
+                    .arg("18");
+            }
+            Self::IntelQsv => {
+                command
+                    .arg("-c:v")
+                    .arg("h264_qsv")
+                    .arg("-preset")
+                    .arg("veryfast")
+                    .arg("-global_quality")
+                    .arg("18");
+            }
+            Self::CpuLibx264Superfast => {
+                command
+                    .arg("-c:v")
+                    .arg("libx264")
+                    .arg("-preset")
+                    .arg("superfast")
+                    .arg("-crf")
+                    .arg("18");
+            }
+        }
+    }
+}
+
+fn audio_description_ffmpeg_candidates() -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Ok(exe_path) = std::env::current_exe()
+        && let Some(exe_dir) = exe_path.parent()
+    {
+        candidates.push(exe_dir.join("ffmpeg.exe"));
+        candidates.push(exe_dir.join("ffmpeg"));
+        candidates.push(exe_dir.join("bin").join("ffmpeg.exe"));
+        candidates.push(exe_dir.join("bin").join("ffmpeg"));
+        candidates.push(exe_dir.join("runtime").join("ffmpeg.exe"));
+        candidates.push(exe_dir.join("runtime").join("ffmpeg"));
+        candidates.push(exe_dir.join("runtime").join("ffmpeg").join("ffmpeg.exe"));
+        candidates.push(exe_dir.join("runtime").join("ffmpeg").join("ffmpeg"));
+        candidates.push(exe_dir.join("tools").join("ffmpeg.exe"));
+        candidates.push(exe_dir.join("tools").join("ffmpeg"));
+    }
+    candidates.push(PathBuf::from("ffmpeg.exe"));
+    candidates.push(PathBuf::from("ffmpeg"));
+    let mut unique = Vec::new();
+    for candidate in candidates {
+        if !unique
+            .iter()
+            .any(|existing: &PathBuf| existing == &candidate)
+        {
+            unique.push(candidate);
+        }
+    }
+    unique
+}
+
+fn audio_description_ffmpeg_is_usable(ffmpeg_executable: &Path) -> bool {
+    if ffmpeg_executable.components().count() > 1 && !ffmpeg_executable.exists() {
+        return false;
+    }
+
+    let mut command = Command::new(ffmpeg_executable);
+    command
+        .arg("-hide_banner")
+        .arg("-version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    command.creation_flags(0x08000000);
+
+    command.status().is_ok_and(|status| status.success())
+}
+
+fn locate_audio_description_ffmpeg_executable() -> Result<PathBuf, String> {
+    for candidate in audio_description_ffmpeg_candidates() {
+        if audio_description_ffmpeg_is_usable(&candidate) {
+            crate::log_debug(&format!(
+                "Audio description: timestamp recode will use ffmpeg executable {}",
+                candidate.display()
+            ));
+            return Ok(candidate);
+        }
+    }
+    Err(
+        "Audio description: could not locate a usable ffmpeg executable for timestamp recode"
+            .to_string(),
+    )
+}
+
+fn validate_audio_description_recode_output(output_path: &Path) -> Result<(), String> {
+    let metadata = fs::metadata(output_path).map_err(|error| {
+        format!("Audio description: timestamp recode output validation failed: {error}")
+    })?;
+    if metadata.len() == 0 {
+        crate::log_if_err!(
+            fs::remove_file(output_path),
+            "Audio description: remove empty recode output failed"
+        );
+        return Err("Audio description: timestamp recode produced an empty file".to_string());
+    }
+    if !crate::ffmpeg_source::has_real_video_stream(output_path).map_err(|error| {
+        format!("Audio description: timestamp recode video validation failed: {error}")
+    })? {
+        crate::log_if_err!(
+            fs::remove_file(output_path),
+            "Audio description: remove invalid recode output failed"
+        );
+        return Err(
+            "Audio description: timestamp recode produced a file without usable video".to_string(),
+        );
+    }
+    Ok(())
+}
+
+fn run_audio_description_ffmpeg_recode_once(
+    ffmpeg_executable: &Path,
+    input_path: &Path,
+    output_path: &Path,
+    selected_audio_stream_index: Option<i32>,
+    backend: AudioDescriptionRecodeBackend,
+    cancel: &Arc<AtomicBool>,
+) -> Result<(), String> {
+    if output_path.exists() {
+        crate::log_if_err!(
+            fs::remove_file(output_path),
+            "Audio description: remove stale recode attempt failed"
+        );
+    }
+
+    let mut command = Command::new(ffmpeg_executable);
+    if let Some(ffmpeg_dir) = ffmpeg_executable.parent()
+        && !ffmpeg_dir.as_os_str().is_empty()
+    {
+        command.current_dir(ffmpeg_dir);
+    }
+    command
+        .arg("-y")
+        .arg("-hide_banner")
+        .arg("-loglevel")
+        .arg("error")
+        .arg("-fflags")
+        .arg("+genpts")
+        .arg("-hwaccel")
+        .arg("auto")
+        .arg("-i")
+        .arg(input_path)
+        .arg("-map")
+        .arg("0:v:0")
+        .arg("-sn")
+        .arg("-dn")
+        .arg("-map_metadata")
+        .arg("-1")
+        .arg("-pix_fmt")
+        .arg("yuv420p")
+        .arg("-vf")
+        .arg("setpts=PTS-STARTPTS")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    if let Some(audio_stream_index) = selected_audio_stream_index {
+        command
+            .arg("-map")
+            .arg(format!("0:{audio_stream_index}"))
+            .arg("-c:a")
+            .arg("aac")
+            .arg("-b:a")
+            .arg("192k")
+            .arg("-af")
+            .arg("aresample=async=1:first_pts=0");
+    } else {
+        command.arg("-an");
+    }
+
+    backend.append_video_args(&mut command);
+    command
+        .arg("-movflags")
+        .arg("+faststart")
+        .arg("-avoid_negative_ts")
+        .arg("make_zero")
+        .arg(output_path);
+
+    #[cfg(windows)]
+    command.creation_flags(0x08000000);
+
+    crate::log_debug(&format!(
+        "Audio description: recoding timestamp-damaged source with ffmpeg backend={} input={} output={} preferred_audio_stream={:?} selected_audio_stream={:?}",
+        backend.label(),
+        input_path.display(),
+        output_path.display(),
+        selected_audio_stream_index,
+        selected_audio_stream_index
+    ));
+
+    let mut child = command.spawn().map_err(|error| {
+        format!(
+            "Audio description: could not start ffmpeg timestamp recode with backend {}: {error}",
+            backend.label()
+        )
+    })?;
+
+    loop {
+        if cancel.load(Ordering::Relaxed) {
+            crate::log_if_err!(
+                child.kill(),
+                "Audio description: stop timestamp recode process failed"
+            );
+            crate::log_if_err!(
+                child.wait(),
+                "Audio description: wait for cancelled timestamp recode process failed"
+            );
+            crate::log_if_err!(
+                fs::remove_file(output_path),
+                "Audio description: remove cancelled recode output failed"
+            );
+            return Err("cancelled".to_string());
+        }
+
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                if !status.success() {
+                    crate::log_if_err!(
+                        fs::remove_file(output_path),
+                        "Audio description: remove failed recode output failed"
+                    );
+                    return Err(format!(
+                        "Audio description: ffmpeg timestamp recode backend {} failed with status {status}",
+                        backend.label()
+                    ));
+                }
+                break;
+            }
+            Ok(None) => std::thread::sleep(Duration::from_millis(200)),
+            Err(error) => {
+                crate::log_if_err!(
+                    child.kill(),
+                    "Audio description: stop failed timestamp recode process failed"
+                );
+                crate::log_if_err!(
+                    child.wait(),
+                    "Audio description: wait for failed timestamp recode process failed"
+                );
+                crate::log_if_err!(
+                    fs::remove_file(output_path),
+                    "Audio description: remove failed recode output failed"
+                );
+                return Err(format!(
+                    "Audio description: could not monitor ffmpeg timestamp recode backend {}: {error}",
+                    backend.label()
+                ));
+            }
+        }
+    }
+
+    validate_audio_description_recode_output(output_path)
+}
+
+fn run_audio_description_ffmpeg_recode(
+    ffmpeg_executable: &Path,
+    input_path: &Path,
+    output_path: &Path,
+    preferred_audio_stream_index: Option<i32>,
+    cancel: &Arc<AtomicBool>,
+) -> Result<(), String> {
+    let selected_audio_stream_index =
+        audio_description_selected_audio_stream_index(input_path, preferred_audio_stream_index)?;
+    let backends = [
+        AudioDescriptionRecodeBackend::NvidiaNvenc,
+        AudioDescriptionRecodeBackend::AmdAmf,
+        AudioDescriptionRecodeBackend::IntelQsv,
+        AudioDescriptionRecodeBackend::CpuLibx264Superfast,
+    ];
+    let mut failures = Vec::new();
+
+    for backend in backends {
+        match run_audio_description_ffmpeg_recode_once(
+            ffmpeg_executable,
+            input_path,
+            output_path,
+            selected_audio_stream_index,
+            backend,
+            cancel,
+        ) {
+            Ok(()) => {
+                crate::log_debug(&format!(
+                    "Audio description: timestamp recode completed successfully with ffmpeg backend={}",
+                    backend.label()
+                ));
+                return Ok(());
+            }
+            Err(error) if error == "cancelled" => return Err(error),
+            Err(error) => {
+                crate::log_debug(&format!(
+                    "Audio description: ffmpeg timestamp recode backend={} failed and Sonarpad will try the next backend: {}",
+                    backend.label(),
+                    error
+                ));
+                failures.push(format!("{}: {}", backend.label(), error));
+            }
+        }
+    }
+
+    Err(format!(
+        "Audio description: all ffmpeg timestamp recode backends failed ({})",
+        failures.join(" | ")
+    ))
+}
+
+fn recode_audio_description_source_for_invalid_timeline(
+    input_path: &Path,
+    preferred_audio_stream_index: Option<i32>,
+    cancel: &Arc<AtomicBool>,
+) -> Result<PathBuf, String> {
+    if audio_description_source_is_recoded(input_path) {
+        return Err(
+            "Audio description: the already-recoded source still has an invalid Gemini chunk timeline"
+                .to_string(),
+        );
+    }
+
+    let final_path = audio_description_recoded_source_path(input_path);
+    let temporary_path = temporary_sibling_path(&final_path, "recode");
+    let ffmpeg_executable = locate_audio_description_ffmpeg_executable()?;
+
+    run_audio_description_ffmpeg_recode(
+        &ffmpeg_executable,
+        input_path,
+        &temporary_path,
+        preferred_audio_stream_index,
+        cancel,
+    )?;
+
+    if final_path.exists() {
+        fs::remove_file(&final_path).map_err(|error| {
+            crate::log_if_err!(
+                fs::remove_file(&temporary_path),
+                "Audio description: cleanup timestamp recode temporary file failed"
+            );
+            format!(
+                "Audio description: could not replace existing recoded source {}: {error}",
+                final_path.display()
+            )
+        })?;
+    }
+    fs::rename(&temporary_path, &final_path).map_err(|error| {
+        crate::log_if_err!(
+            fs::remove_file(&temporary_path),
+            "Audio description: cleanup timestamp recode temporary file failed"
+        );
+        format!(
+            "Audio description: could not finalize recoded source {}: {error}",
+            final_path.display()
+        )
+    })?;
+
+    crate::log_debug(&format!(
+        "Audio description: persistent timestamp recode completed original={} recoded={}",
+        input_path.display(),
+        final_path.display()
+    ));
+    Ok(final_path)
 }
 
 fn validate_job(job: &AudioDescriptionJob) -> Result<(), String> {
@@ -4901,6 +5684,7 @@ pub fn create_audio_description(
     cancel: Arc<AtomicBool>,
     mut callbacks: AudioDescriptionCallbacks,
 ) -> Result<AudioDescriptionOutcome, String> {
+    let _power_awake = crate::power_awake::acquire("audio-description-ai");
     validate_job(job)?;
     if cancel.load(Ordering::Relaxed) {
         return Err("cancelled".to_string());
@@ -4925,71 +5709,147 @@ pub fn create_audio_description(
     notify_progress(&mut callbacks, 0);
 
     let analysis_cache_dir = temporary_job_dir()?;
-    let preparation_result =
-        (|| -> Result<(f64, Option<PathBuf>, Vec<AudioDescriptionPreparedChunk>), String> {
-            let (raw_duration_sec, format_start_sec) =
-                crate::ffmpeg_export::media_duration_and_start_seconds(&job.input_path)
-                    .ok_or_else(|| {
-                        "Audio description: FFmpeg could not read media duration".to_string()
-                    })?;
-            let duration_sec = normalize_audio_description_source_duration(
-                &job.input_path,
+    let prepare_source = |callbacks: &mut AudioDescriptionCallbacks,
+                          source_path: &Path,
+                          cache_dir: &Path,
+                          audio_stream_index: Option<i32>|
+     -> Result<
+        (f64, Option<PathBuf>, Vec<AudioDescriptionPreparedChunk>),
+        String,
+    > {
+        fs::create_dir_all(cache_dir)
+            .map_err(|error| format!("Audio description: create analysis cache failed: {error}"))?;
+        let (raw_duration_sec, format_start_sec) =
+            crate::ffmpeg_export::media_duration_and_start_seconds(source_path).ok_or_else(
+                || "Audio description: FFmpeg could not read media duration".to_string(),
+            )?;
+        let duration_sec = normalize_audio_description_source_duration(
+            source_path,
+            raw_duration_sec,
+            format_start_sec,
+        );
+        if (duration_sec - raw_duration_sec).abs() > 0.001 {
+            crate::log_debug(&format!(
+                "Audio description: normalized source duration raw={:.3}s start_time={:.3}s local={:.3}s path={}",
                 raw_duration_sec,
                 format_start_sec,
-            );
-            if (duration_sec - raw_duration_sec).abs() > 0.001 {
-                crate::log_debug(&format!(
-                    "Audio description: normalized source duration raw={:.3}s start_time={:.3}s local={:.3}s path={}",
-                    raw_duration_sec,
-                    format_start_sec,
-                    duration_sec,
-                    job.input_path.display()
-                ));
-            }
-            if duration_sec <= 0.0 {
-                return Err("Audio description: selected media is empty".to_string());
-            }
-            let has_video =
-                crate::ffmpeg_source::has_real_video_stream(&job.input_path).map_err(|error| {
-                    format!("Audio description: FFmpeg video inspection failed: {error}")
-                })?;
-            if !has_video {
-                return Err(
-                    "Audio description: selected file has no usable video stream".to_string(),
-                );
-            }
-            let audio_streams =
-                crate::ffmpeg_source::list_audio_streams(&job.input_path).map_err(|error| {
-                    format!("Audio description: FFmpeg stream inspection failed: {error}")
-                })?;
-            let audio_wav_path = if audio_streams.is_empty() {
-                None
-            } else {
-                notify_status(
-                    &mut callbacks,
-                    "pyannote_prepare",
-                    "Decoding mono 16 kHz audio with Sonarpad FFmpeg libraries...",
-                );
-                let path = analysis_cache_dir.join("pyannote_input.wav");
-                write_pyannote_wav(&job.input_path, &path, job.audio_stream_index, &cancel)?;
-                Some(path)
-            };
-            notify_progress(&mut callbacks, 5);
-            notify_status(
-                &mut callbacks,
-                "chunk_prepare",
-                "Preparing Gemini video chunks with Sonarpad FFmpeg libraries...",
-            );
-            let chunks = prepare_gemini_chunks(
-                &job.input_path,
                 duration_sec,
-                &analysis_cache_dir,
+                source_path.display()
+            ));
+        }
+        if duration_sec <= 0.0 {
+            return Err("Audio description: selected media is empty".to_string());
+        }
+        let has_video =
+            crate::ffmpeg_source::has_real_video_stream(source_path).map_err(|error| {
+                format!("Audio description: FFmpeg video inspection failed: {error}")
+            })?;
+        if !has_video {
+            return Err("Audio description: selected file has no usable video stream".to_string());
+        }
+        let audio_streams =
+            crate::ffmpeg_source::list_audio_streams(source_path).map_err(|error| {
+                format!("Audio description: FFmpeg stream inspection failed: {error}")
+            })?;
+        let audio_wav_path = if audio_streams.is_empty() {
+            None
+        } else {
+            notify_status(
+                callbacks,
+                "pyannote_prepare",
+                "Decoding mono 16 kHz audio with Sonarpad FFmpeg libraries...",
+            );
+            let path = cache_dir.join("pyannote_input.wav");
+            write_pyannote_wav(source_path, &path, audio_stream_index, &cancel)?;
+            Some(path)
+        };
+        notify_progress(callbacks, 5);
+        notify_status(
+            callbacks,
+            "chunk_prepare",
+            "Preparing Gemini video chunks with Sonarpad FFmpeg libraries...",
+        );
+        let chunks = prepare_gemini_chunks(
+            source_path,
+            duration_sec,
+            cache_dir,
+            audio_stream_index,
+            &cancel,
+        )?;
+        notify_progress(callbacks, 10);
+        Ok((duration_sec, audio_wav_path, chunks))
+    };
+
+    let original_cache_dir = analysis_cache_dir.join("source");
+    let preparation_result = prepare_source(
+        &mut callbacks,
+        &job.input_path,
+        &original_cache_dir,
+        job.audio_stream_index,
+    );
+
+    let needs_timestamp_recode = matches!(
+        preparation_result.as_ref(),
+        Err(error) if error == "Audio description: invalid Gemini chunk timeline"
+    ) && !audio_description_source_is_recoded(&job.input_path);
+    if needs_timestamp_recode {
+        notify_status(
+            &mut callbacks,
+            "timestamp_recode_start",
+            "The source video has invalid timestamps. Sonarpad is creating a permanent normalized copy before continuing...",
+        );
+        crate::log_debug(&format!(
+            "Audio description: invalid Gemini chunk timeline detected; performing isolated permanent recode before restarting the original pipeline source={}",
+            job.input_path.display()
+        ));
+
+        let recoded_path = audio_description_recoded_source_path(&job.input_path);
+        let recoded_is_current = if recoded_path.is_file() {
+            match (
+                fs::metadata(&job.input_path).and_then(|metadata| metadata.modified()),
+                fs::metadata(&recoded_path).and_then(|metadata| metadata.modified()),
+            ) {
+                (Ok(source_modified), Ok(recoded_modified)) => recoded_modified >= source_modified,
+                _ => false,
+            }
+        } else {
+            false
+        };
+
+        let recoded_path = if recoded_is_current {
+            crate::log_debug(&format!(
+                "Audio description: reusing current persistent recoded source before clean pipeline restart path={}",
+                recoded_path.display()
+            ));
+            recoded_path
+        } else {
+            recode_audio_description_source_for_invalid_timeline(
+                &job.input_path,
                 job.audio_stream_index,
                 &cancel,
-            )?;
-            notify_progress(&mut callbacks, 10);
-            Ok((duration_sec, audio_wav_path, chunks))
-        })();
+            )?
+        };
+
+        notify_status(
+            &mut callbacks,
+            "timestamp_recode_done",
+            "Timestamp normalization completed. Sonarpad is restarting the normal audio-description pipeline on the recoded file...",
+        );
+        crate::log_if_err!(
+            fs::remove_dir_all(&analysis_cache_dir),
+            "Audio description cleanup operation failed"
+        );
+
+        let mut restarted_job = job.clone();
+        restarted_job.input_path = recoded_path;
+        restarted_job.audio_stream_index = None;
+        crate::log_debug(&format!(
+            "Audio description: restarting create_audio_description from the beginning with recoded source={} and otherwise unchanged job",
+            restarted_job.input_path.display()
+        ));
+        return create_audio_description(&restarted_job, cancel.clone(), callbacks);
+    }
+
     let (duration_sec, audio_wav_path, chunks) = match preparation_result {
         Ok(value) => value,
         Err(error) => {
@@ -5000,11 +5860,11 @@ pub fn create_audio_description(
             return Err(error);
         }
     };
-
     let resume = if job.resume_checkpoint_path.is_some() {
         match load_audio_description_partial_checkpoint(&checkpoint_path) {
             Ok(checkpoint)
-                if checkpoint.total_chunks == chunks.len()
+                if checkpoint.source_path == job.input_path
+                    && checkpoint.total_chunks == chunks.len()
                     && (checkpoint.source_duration_sec - duration_sec).abs() <= 0.5 =>
             {
                 Some(AudioDescriptionBridgeResume {
@@ -5604,6 +6464,7 @@ pub fn create_audio_description_dialogue_overlap_fallback(
     cancel: Arc<AtomicBool>,
     mut callbacks: AudioDescriptionCallbacks,
 ) -> Result<AudioDescriptionOutcome, String> {
+    let _power_awake = crate::power_awake::acquire("audio-description-ai");
     validate_job(job)?;
     if cancel.load(Ordering::Relaxed) {
         return Err("cancelled".to_string());
@@ -5864,10 +6725,11 @@ mod tests {
         audio_description_project_edit_available_duration, audio_description_project_path,
         audio_description_samples_have_signal, audio_description_tts_chunks,
         audio_description_tts_error_is_empty_output, build_audio_description_project,
-        build_gemini_chunk_timeline, choose_slot, delete_audio_description_project_description,
-        gemini_media_invalid_argument, gemini_media_processing_failed,
-        load_audio_description_character_catalog_context, load_audio_description_project,
-        merge_catalog_characters, merge_catalog_description,
+        build_gemini_chunk_timeline, build_gemini_chunk_timeline_with_repeated_small_start_offset,
+        build_gemini_chunk_timeline_with_segment_schedule_fallback, choose_slot,
+        delete_audio_description_project_description, gemini_media_invalid_argument,
+        gemini_media_processing_failed, load_audio_description_character_catalog_context,
+        load_audio_description_project, merge_catalog_characters, merge_catalog_description,
         normalize_audio_description_source_duration, normalize_catalog_characters,
         normalize_prepared_gemini_chunk_duration, save_audio_description_character_catalog,
         save_audio_description_project, schedule_synthesized_descriptions,
@@ -6004,6 +6866,140 @@ mod tests {
             (PathBuf::from("chunk3.mkv"), 1.0),
         ];
         assert!(build_gemini_chunk_timeline(&measured, 100.0, true).is_none());
+    }
+
+    #[test]
+    fn gemini_chunk_timeline_repeated_small_start_fallback_repairs_live_recording_chunks() {
+        let raw = vec![
+            (PathBuf::from("chunk1.mkv"), 86.88, 3.88),
+            (PathBuf::from("chunk2.mkv"), 86.88, 3.88),
+            (PathBuf::from("chunk3.mkv"), 86.88, 3.88),
+            (PathBuf::from("chunk4.mkv"), 35.88, 3.88),
+        ];
+        let result = build_gemini_chunk_timeline_with_repeated_small_start_offset(&raw, 284.0, 83)
+            .expect("repeated small start_time should be repairable");
+        assert_eq!(result.0.len(), 4);
+        assert_eq!(result.1, 4);
+        assert!((result.2 - 3.88).abs() < 0.001);
+        assert!((result.0.last().unwrap().end_sec - 284.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn gemini_chunk_timeline_repeated_start_fallback_rejects_inconsistent_offsets() {
+        let raw = vec![
+            (PathBuf::from("chunk1.mkv"), 86.88, 3.88),
+            (PathBuf::from("chunk2.mkv"), 84.20, 1.20),
+            (PathBuf::from("chunk3.mkv"), 90.00, 7.00),
+            (PathBuf::from("chunk4.mkv"), 35.88, 3.88),
+        ];
+        assert!(
+            build_gemini_chunk_timeline_with_repeated_small_start_offset(&raw, 284.0, 83,)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn gemini_chunk_timeline_repeated_start_fallback_rejects_large_offsets() {
+        let raw = vec![
+            (PathBuf::from("chunk1.mkv"), 103.0, 20.0),
+            (PathBuf::from("chunk2.mkv"), 103.0, 20.0),
+            (PathBuf::from("chunk3.mkv"), 103.0, 20.0),
+        ];
+        assert!(
+            build_gemini_chunk_timeline_with_repeated_small_start_offset(&raw, 249.0, 83,)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn gemini_chunk_timeline_segment_schedule_fallback_repairs_sparse_bad_duration_metadata() {
+        let duration = 5_402.795;
+        let segment_seconds = 83;
+        let mut raw = Vec::new();
+        for index in 0..66 {
+            let duration_sec = if index == 65 {
+                7.795
+            } else if matches!(index, 19 | 39 | 59) {
+                167.0
+            } else if index % 4 == 0 {
+                84.52
+            } else {
+                82.56
+            };
+            raw.push((
+                PathBuf::from(format!("chunk{:04}.mkv", index + 1)),
+                duration_sec,
+                if index == 0 { 0.040 } else { 0.0 },
+            ));
+        }
+
+        let (timeline, replaced, plausible, repaired_total) =
+            build_gemini_chunk_timeline_with_segment_schedule_fallback(
+                &raw,
+                duration,
+                segment_seconds,
+            )
+            .expect("sparse bad duration metadata should be repairable");
+        assert_eq!(timeline.len(), 66);
+        assert_eq!(replaced, 3);
+        assert!(plausible >= 62);
+        assert!((repaired_total - duration).abs() / duration < 0.02);
+        assert!((timeline.last().unwrap().end_sec - duration).abs() < 0.001);
+    }
+
+    #[test]
+    fn gemini_chunk_timeline_segment_schedule_fallback_handles_bounded_global_metadata_bias() {
+        let duration = 5_402.795;
+        let inflation = 1.04663;
+        let raw = (0..66)
+            .map(|index| {
+                let nominal = if index == 65 { 7.795 } else { 83.0 };
+                (
+                    PathBuf::from(format!("chunk{:04}.mkv", index + 1)),
+                    nominal * inflation,
+                    if index == 0 { 0.040 } else { 0.0 },
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let (timeline, replaced, plausible, repaired_total) =
+            build_gemini_chunk_timeline_with_segment_schedule_fallback(&raw, duration, 83)
+                .expect("bounded global duration bias should be repairable");
+        assert_eq!(timeline.len(), 66);
+        assert_eq!(replaced, 0);
+        assert_eq!(plausible, 65);
+        assert!((repaired_total - 5_654.72).abs() < 1.0);
+        assert!((timeline.last().unwrap().end_sec - duration).abs() < 0.001);
+    }
+
+    #[test]
+    fn gemini_chunk_timeline_segment_schedule_fallback_rejects_wrong_chunk_count() {
+        let raw = vec![
+            (PathBuf::from("chunk1.mkv"), 83.0, 0.0),
+            (PathBuf::from("chunk2.mkv"), 83.0, 0.0),
+            (PathBuf::from("chunk3.mkv"), 20.0, 0.0),
+        ];
+        assert!(
+            build_gemini_chunk_timeline_with_segment_schedule_fallback(&raw, 250.0, 83).is_none()
+        );
+    }
+
+    #[test]
+    fn gemini_chunk_timeline_segment_schedule_fallback_rejects_many_bad_chunks() {
+        let duration = 830.0;
+        let raw = (0..10)
+            .map(|index| {
+                (
+                    PathBuf::from(format!("chunk{:04}.mkv", index + 1)),
+                    if index < 6 { 130.0 } else { 83.0 },
+                    0.0,
+                )
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            build_gemini_chunk_timeline_with_segment_schedule_fallback(&raw, duration, 83)
+                .is_none()
+        );
     }
 
     #[test]

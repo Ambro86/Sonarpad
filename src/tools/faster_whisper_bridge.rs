@@ -575,6 +575,7 @@ fn download_file_from_url(
     user_agent: &str,
     download_progress: &mut Option<Box<dyn FnMut(i32) + Send>>,
 ) -> Result<(), String> {
+    let _power_awake = crate::power_awake::acquire("download");
     let parent = target_path
         .parent()
         .ok_or_else(|| "invalid download target path".to_string())?;
@@ -1095,6 +1096,7 @@ pub fn transcribe_wav(
     cancel: &Arc<AtomicBool>,
     mut progress_callbacks: BridgeProgressCallbacks,
 ) -> Result<String, String> {
+    let _power_awake = crate::power_awake::acquire("media-transcription");
     crate::log_debug(&format!(
         "Bridge: transcribe_wav start wav={} model={} cuda={} timestamps={} language={}",
         wav_path.display(),
@@ -1252,6 +1254,7 @@ pub fn transcribe_wav_with_shared_worker(
     cancel: &Arc<AtomicBool>,
     mut progress_callbacks: BridgeProgressCallbacks,
 ) -> Result<String, String> {
+    let _power_awake = crate::power_awake::acquire("media-transcription");
     if !shared_worker_allowed() {
         return transcribe_wav(
             wav_path,

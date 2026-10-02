@@ -863,6 +863,19 @@ class ChunkTimestampTests(unittest.TestCase):
         self.assertIn("exact evidence frame", prompt)
         self.assertIn("MUST fall inside", _system)
 
+    def test_unified_response_list_root_defers_to_json_repair_without_crashing(self):
+        statuses = []
+        response = (
+            '[{"start_time_mmss":"00:10.000",'
+            '"end_time_mmss":"00:12.000",'
+            '"description_text":"Azione visibile"}]'
+        )
+        descriptions, glossary, parse_ok = _parse_unified_response(response, statuses.append)
+        self.assertFalse(parse_ok)
+        self.assertEqual(descriptions, [])
+        self.assertEqual(glossary, [])
+        self.assertTrue(any("JSON root" in status for status in statuses))
+
     def test_visual_evidence_metadata_is_captured_without_changing_timestamps(self):
         _reset_visual_evidence_registry()
         response = (
