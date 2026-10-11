@@ -1,5 +1,41 @@
 # Änderungsprotokoll
 
+Version 0.9.13 – 2026-10-11
+
+Audio und Vorlesen
+1. Unter Optionen → Audio wurde ein globaler Sleep-Timer hinzugefügt. Er ist standardmäßig deaktiviert und lässt sich wie in der mobilen Version in Zehn-Minuten-Schritten von 10 bis 120 Minuten einstellen. Er gilt für das Vorlesen von Dokumenten sowie die Audio- und Videowiedergabe einschließlich verwalteter Streams. Nach Ablauf der Zeit wird das Vorlesen bzw. die Wiedergabe über die üblichen Stoppfunktionen beendet. Der Timer wird ausschließlich unter den Audiooptionen eingestellt; im Wiedergabemenü wurden keine neuen Befehle hinzugefügt.
+
+PDF-Dokumente
+2. Der PDF-Export von Umlauten, Akzenten und Unicode-Zeichen wurde korrigiert (z. B. ä, è und é). Sonarpad bettet nun eine unter Windows installierte Unicode-TrueType-Schrift in die PDF-Datei ein, damit beim erneuten Öffnen keine Zeichenfolgen wie „Ã¨“ erscheinen. Layout, Kopfzeile und Seitenzahlen bleiben unverändert.
+
+
+
+KI-Audiodeskription – Stabilität und Wiederaufnahme
+3. `generation_in_progress` wird jetzt als normale Wartephase behandelt. Der Client behält denselben Idempotenzschlüssel und wiederholt vorübergehende Netzwerk-/Serverfehler kontrolliert, ohne eine zweite kostenpflichtige Generierung zu starten.
+4. Beim Löschen eines bekannten Uploads wird die Sitzung bei `401 invalid_session` einmal erneuert.
+5. Beim Abbruch beendet sich der Python-Bridge-Prozess ohne irreführende Fehler am geschlossenen Ausgabekanal. Vorhandene Prüfpunkte und „Unterbrochene Audiodeskription fortsetzen“ bleiben erhalten.
+6. FFmpeg verwendet nur bei wiederholt beschädigten Audiopaketen einen isolierten Decoder-Fallback. Normale Dateien bleiben unverändert.
+
+7. Der Cache des Audiodeskriptions-Bridge wurde auf `audio_description_bridge_v9.exe` angehoben. Nach dem Sonarpad-Update wird der Bridge beim ersten Einsatz erneut heruntergeladen; ältere versionierte Caches werden nach Möglichkeit entfernt. Die Gemini/Pyannote-Pipeline bleibt unverändert. Vor der Veröffentlichung muss der aktualisierte Python-Bridge neu erstellt und das Asset `audio_description_bridge.exe` im GitHub-Release Sonarpad-Tools 0.7 ersetzt werden.
+
+Player, YouTube und Streaming
+8. **Zu Zeitpunkt springen (Strg+T)** für YouTube-Videos mit MPV behoben. Der vorhandene Dialog springt nun über MPV zur angegebenen Zeit; die Wiedergabemenüs aktivieren die Suche bei unterstützten Webvideos. Einschränkungen für Live-TV und direkte BASS-Streams bleiben bestehen.
+
+9. **Zu Zeitpunkt springen (Strg+T)** und die Suchfunktionen gelten nun für alle On-Demand-Inhalte: RaiPlay, Audiodeskriptionen von Rai und Sonarpad, La7 Play und YouTube. MPV erkennt den aktiven Player auch bei vom Anbieter geänderter Stream-URL. TV-Kanäle und Live-Übertragungen bleiben vom Springen ausgeschlossen. Die Audiodeskriptions-Pipeline bleibt unverändert.
+
+10. **Zu Zeitpunkt springen (Strg+T)** funktioniert nun auch bei lokalen AVI-, MP4-, MKV- und anderen Videodateien in MPV. Sonarpad ordnet die aktive Datei ihrer Registerkarte zu, auch wenn sich Großschreibung oder Schrägstriche im Windows-Pfad unterscheiden. BASS und die Wiedergabe bleiben unverändert; TV-Kanäle und Livestreams sind weiterhin ausgenommen.
+
+11. FFmpeg-Fallback für Audiodeskriptionen mit beschädigtem Ton verbessert. Fehlerhafte Audiopakete werden auch zwischen gültigen Paketen gezählt, sodass problematische Dekodierschleifen enden. Nur dann erfolgt ein begrenzter Wiederherstellungsversuch über die bereits mitgelieferten FFmpeg-Bibliotheken (avformat, avcodec und swresample) mit kurzem Überspringen beschädigter Abschnitte. Unvollständige WAV-Dateien werden verworfen; eine externe ffmpeg.exe ist nicht erforderlich. Die normale Gemini/Pyannote-Pipeline bleibt unverändert.
+
+PDF-Lesen und japanische OCR
+12. Verbesserter Import japanisch-englischer Lehrbücher. Bei gescannten PDFs nutzt Sonarpad weiterhin die Windows-OCR und erkennt mit installierter japanischer OCR-Funktion (ja-JP) auch Hiragana, Katakana und Kanji. Erkennungsergebnisse werden anhand ihrer Seitenpositionen kombiniert; Zeilen und eindeutig erkennbare Spalten bleiben erhalten. Bei PDFs mit eingebettetem japanischem Unicode-Text werden Zeilen nicht mehr zu langen Absätzen zusammengefügt. Seitenmarkierungen bleiben bestehen; keine Cloud-OCR oder externen Programme erforderlich.
+
+13. Die Installation der japanischen OCR ist jetzt optional. Beim Öffnen gescannter PDFs erscheint keine Installationsaufforderung mehr. Wer die Funktion benötigt, kann sie unter Werkzeuge > Lesen und Inhalte gezielt starten. Vor der Installation der offiziellen Windows-Komponente wird um Zustimmung gebeten. Übrige OCR-Funktionen und Audiobeschreibungen bleiben unverändert.
+
+15. Die optionale Installation der japanischen OCR zeigt nun ein barrierefreies Fortschrittsfenster in Sonarpad. Prozentwerte werden nur angezeigt, wenn Windows sie tatsächlich meldet; während des Wartens wird kein Fortschritt vorgetäuscht. Abschluss und nötiger Neustart werden gemeldet. Beim normalen Öffnen von PDFs erscheint kein Installationshinweis. Das Fenster bietet jetzt eine Schaltfläche Abbrechen und nutzt die Windows-PowerShell-Installation.
+
+16. Beim erneuten MP3-Export aus einem Audiodeskriptionsprojekt wird jetzt ein separates, barrierefreies Fortschrittsfenster mit Schaltfläche Abbrechen angezeigt. NVDA und JAWS navigieren nicht mehr durch die deaktivierten Bedienelemente des Projekteditors.
+
 Version 0.9.12 – 2026-10-02
 
 Podcast-Aufnahme

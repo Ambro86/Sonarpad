@@ -47,7 +47,15 @@ def _emit(prefix: str, value) -> None:
         text = json.dumps(value, ensure_ascii=True, separators=(",", ":"))
     else:
         text = str(value)
-    print(f"{prefix}:{text}", flush=True)
+    try:
+        print(f"{prefix}:{text}", flush=True)
+    except OSError as exc:
+        # On cancellation Windows can invalidate redirected stdout before the
+        # worker is terminated (BrokenPipeError / WinError 22). Do not emit
+        # another RESULT/traceback to the same already-closed pipe.
+        if isinstance(exc, BrokenPipeError) or exc.errno in (22, 32):
+            raise SystemExit(0) from None
+        raise
 
 
 def _status(stage: str, message: str, progress: int | None = None) -> None:

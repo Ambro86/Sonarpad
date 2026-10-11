@@ -1,0 +1,14 @@
+{
+    "conversation_id": "961f399a-305a-4dfd-ad4f-526724623856",
+    "status": "SUCCESS",
+    "response": "",
+    "duration_seconds": 6.1396602,
+    "num_turns": 1,
+    "usage": {
+        "input_tokens": 13099,
+        "output_tokens": 724,
+        "thinking_tokens": 645,
+        "cache_read_tokens": 8124,
+        "total_tokens": 13823
+    }
+}

@@ -37,7 +37,7 @@ pub fn open(parent: HWND) {
         }
         let has_player =
             with_state(parent, |state| state.active_audiobook.is_some()).unwrap_or(false);
-        if !has_player {
+        if !has_player && !crate::can_go_to_time_in_managed_mpv(parent) {
             return;
         }
 
@@ -263,18 +263,20 @@ fn go_to_time_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM
                             return LRESULT(0);
                         }
                     };
-                    let (path, duration) = with_state(parent, |state| {
-                        state.active_audiobook.as_ref().map(|p| {
-                            let duration = audiobook_duration_secs(&p.path);
-                            (p.path.clone(), duration)
+                    let managed_mpv = crate::can_go_to_time_in_managed_mpv(parent);
+                    let duration = if managed_mpv {
+                        crate::managed_mpv_duration_for_go_to_time(parent)
+                    } else {
+                        let path = with_state(parent, |state| {
+                            state.active_audiobook.as_ref().map(|p| p.path.clone())
                         })
-                    })
-                    .unwrap_or(None)
-                    .unwrap_or((std::path::PathBuf::new(), None));
-                    if path.as_os_str().is_empty() {
-                        crate::log_if_err!(crate::destroy_window_safe(hwnd));
-                        return LRESULT(0);
-                    }
+                        .flatten();
+                        let Some(path) = path else {
+                            crate::log_if_err!(crate::destroy_window_safe(hwnd));
+                            return LRESULT(0);
+                        };
+                        audiobook_duration_secs(&path)
+                    };
                     let mut seek_target = target as u64;
                     if let Some(max_secs) = duration
                         && seek_target > max_secs
@@ -286,7 +288,20 @@ fn go_to_time_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM
                         crate::log_if_err!(SetWindowTextW(status, PCWSTR(wide.as_ptr())));
                         nvda_speak(&msg);
                     }
-                    crate::log_if_err!(seek_audiobook_to(parent, seek_target));
+                    let seek_result = if managed_mpv {
+                        crate::seek_managed_mpv_to_time(parent, seek_target)
+                    } else {
+                        seek_audiobook_to(parent, seek_target)
+                    };
+                    if let Err(err) = seek_result {
+                        crate::log_debug(&format!("Go to time: absolute seek failed: {err}"));
+                        let status = GetDlgItem(hwnd, GO_TO_TIME_STATUS_ID as i32);
+                        let wide = to_wide(&err);
+                        crate::log_if_err!(SetWindowTextW(status, PCWSTR(wide.as_ptr())));
+                        nvda_speak(&err);
+                        SetFocus(input);
+                        return LRESULT(0);
+                    }
                     crate::log_if_err!(crate::destroy_window_safe(hwnd));
                     return LRESULT(0);
                 }

@@ -944,9 +944,21 @@ fn write_pyannote_wav(
         frame_sum = 0.0;
     }
 
+    // The iterator normally ends at EOF; a corruption guard ends it early.
+    // Never pass a truncated analysis WAV to Pyannote as if it were complete.
+    let decode_failure = source.decoding_failure().map(str::to_owned);
     writer
         .finalize()
         .map_err(|error| format!("Audio description: finalize Pyannote WAV failed: {error}"))?;
+    if let Some(failure) = decode_failure {
+        crate::log_if_err!(
+            fs::remove_file(output_path),
+            "Audio description: remove truncated Pyannote WAV after decode failure"
+        );
+        return Err(format!(
+            "Audio description: FFmpeg DLL Pyannote recovery needed: {failure}"
+        ));
+    }
     if written == 0 {
         crate::log_if_err!(
             fs::remove_file(output_path),
@@ -954,6 +966,196 @@ fn write_pyannote_wav(
         );
         return Err("Audio description: decoded soundtrack is empty".to_string());
     }
+    Ok(())
+}
+
+/// Recover severely corrupted audio using Sonarpad's existing FFmpeg DLLs.
+/// The ordinary WAV decoder runs first and is left unchanged. Only after its
+/// corruption guard stops decoding do we seek past a small damaged interval,
+/// reset FFmpeg's decoder/resampler and keep the original media clock by
+/// inserting silence in the *missing* interval. No ffmpeg.exe is involved.
+fn recover_pyannote_wav_with_ffmpeg_libraries(
+    input_path: &Path,
+    output_path: &Path,
+    preferred_audio_stream_index: Option<i32>,
+    source_duration_sec: f64,
+    cancel: &Arc<AtomicBool>,
+) -> Result<(), String> {
+    if cancel.load(Ordering::Relaxed) {
+        return Err("cancelled".to_string());
+    }
+    if !source_duration_sec.is_finite() || source_duration_sec <= 0.0 {
+        return Err(
+            "Audio description: invalid duration for FFmpeg DLL audio recovery".to_string(),
+        );
+    }
+    if output_path.exists() {
+        crate::log_if_err!(
+            fs::remove_file(output_path),
+            "Audio description: remove failed Pyannote WAV before native recovery"
+        );
+    }
+
+    // Force mono through the already bundled libswresample; the analysis
+    // sample-rate conversion remains Sonarpad's established WAV algorithm.
+    let mut source = crate::ffmpeg_source::FfmpegSource::try_new_with_forced_channels(
+        input_path,
+        0,
+        None,
+        preferred_audio_stream_index,
+        1,
+    )
+    .map_err(|error| format!("Audio description: FFmpeg DLL recovery decoder failed: {error}"))?;
+    let input_rate = source.sample_rate().max(1);
+    let output_step = input_rate as f64 / PYANNOTE_SAMPLE_RATE as f64;
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate: PYANNOTE_SAMPLE_RATE,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut writer = hound::WavWriter::create(output_path, spec).map_err(|error| {
+        format!("Audio description: create native recovery WAV failed: {error}")
+    })?;
+    let mut next_output_position = 0.0_f64;
+    let mut frame_index = 0_u64;
+    let mut previous_mono: Option<f32> = None;
+    let mut written = 0_u64;
+    let mut decoded_samples = 0_u64;
+    let mut resync_count = 0_u32;
+    let mut skipped_seconds = 0.0_f64;
+    // Restrict the amount of synthesized silence: the fallback must never
+    // transform a mostly broken soundtrack into apparently valid analysis.
+    let max_skipped_seconds = (source_duration_sec * 0.02).clamp(2.0, 45.0);
+    let max_output_samples = (source_duration_sec * PYANNOTE_SAMPLE_RATE as f64)
+        .ceil()
+        .min(u64::MAX as f64) as u64;
+
+    loop {
+        if cancel.load(Ordering::Relaxed) {
+            crate::log_if_err!(
+                writer.finalize(),
+                "Audio description: finalize cancelled native recovery WAV"
+            );
+            crate::log_if_err!(
+                fs::remove_file(output_path),
+                "Audio description: remove cancelled native recovery WAV"
+            );
+            return Err("cancelled".to_string());
+        }
+        if written >= max_output_samples {
+            break;
+        }
+        let Some(mono) = source.next() else {
+            let Some(failure) = source.decoding_failure() else {
+                break; // Genuine end-of-file.
+            };
+            let current_sec = written as f64 / PYANNOTE_SAMPLE_RATE as f64;
+            let next_sec = (current_sec + 1.0).min(source_duration_sec);
+            resync_count = resync_count.saturating_add(1);
+            skipped_seconds += next_sec - current_sec;
+            if resync_count > 45
+                || skipped_seconds > max_skipped_seconds
+                || next_sec <= current_sec + f64::EPSILON
+            {
+                crate::log_if_err!(
+                    writer.finalize(),
+                    "Audio description: finalize failed native FFmpeg recovery WAV"
+                );
+                crate::log_if_err!(
+                    fs::remove_file(output_path),
+                    "Audio description: remove failed native FFmpeg recovery WAV"
+                );
+                return Err(format!(
+                    "Audio description: FFmpeg DLL recovery exhausted corruption budget: {failure}"
+                ));
+            }
+            crate::log_debug(&format!(
+                "Audio description: FFmpeg DLL recovery seek={next_sec:.3}s attempt={resync_count} skipped={skipped_seconds:.3}s: {failure}"
+            ));
+            if let Err(error) = source.try_seek(Duration::from_secs_f64(next_sec)) {
+                crate::log_if_err!(
+                    writer.finalize(),
+                    "Audio description: finalize FFmpeg DLL failed seek WAV"
+                );
+                crate::log_if_err!(
+                    fs::remove_file(output_path),
+                    "Audio description: remove FFmpeg DLL failed seek WAV"
+                );
+                return Err(format!(
+                    "Audio description: FFmpeg DLL decoder could not resynchronize: {error}"
+                ));
+            }
+            let target_samples = (next_sec * PYANNOTE_SAMPLE_RATE as f64)
+                .round()
+                .min(max_output_samples as f64) as u64;
+            for _ in written..target_samples {
+                writer.write_sample(0_i16).map_err(|error| {
+                    format!("Audio description: write native recovery silence failed: {error}")
+                })?;
+            }
+            written = target_samples;
+            frame_index = (next_sec * input_rate as f64).round() as u64;
+            next_output_position = frame_index as f64;
+            previous_mono = None;
+            continue;
+        };
+
+        let mono = mono.clamp(-1.0, 1.0);
+        let current_position = frame_index as f64;
+        if let Some(previous) = previous_mono {
+            let previous_position = current_position - 1.0;
+            while next_output_position <= current_position + f64::EPSILON
+                && written < max_output_samples
+            {
+                if next_output_position >= previous_position {
+                    let fraction = (next_output_position - previous_position).clamp(0.0, 1.0);
+                    let interpolated = previous + (mono - previous) * fraction as f32;
+                    let pcm = (interpolated * i16::MAX as f32)
+                        .round()
+                        .clamp(i16::MIN as f32, i16::MAX as f32)
+                        as i16;
+                    writer.write_sample(pcm).map_err(|error| {
+                        format!("Audio description: write native recovery WAV failed: {error}")
+                    })?;
+                    written = written.saturating_add(1);
+                    decoded_samples = decoded_samples.saturating_add(1);
+                }
+                next_output_position += output_step;
+            }
+        } else if written < max_output_samples {
+            let pcm = (mono * i16::MAX as f32)
+                .round()
+                .clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+            writer.write_sample(pcm).map_err(|error| {
+                format!("Audio description: write native recovery WAV failed: {error}")
+            })?;
+            written = written.saturating_add(1);
+            decoded_samples = decoded_samples.saturating_add(1);
+            next_output_position = current_position + output_step;
+        }
+        previous_mono = Some(mono);
+        frame_index = frame_index.saturating_add(1);
+    }
+
+    writer.finalize().map_err(|error| {
+        format!("Audio description: finalize native recovery WAV failed: {error}")
+    })?;
+    let decoded_seconds = written as f64 / PYANNOTE_SAMPLE_RATE as f64;
+    if decoded_samples == 0
+        || (source_duration_sec > 30.0 && decoded_seconds < source_duration_sec * 0.8)
+    {
+        crate::log_if_err!(
+            fs::remove_file(output_path),
+            "Audio description: remove incomplete FFmpeg DLL recovery WAV"
+        );
+        return Err(format!(
+            "Audio description: FFmpeg DLL recovery produced incomplete audio ({decoded_seconds:.1}s, expected about {source_duration_sec:.1}s)"
+        ));
+    }
+    crate::log_debug(&format!(
+        "Audio description: FFmpeg DLL audio fallback succeeded; Pyannote WAV duration={decoded_seconds:.3}s resyncs={resync_count} silence={skipped_seconds:.3}s, normal Gemini/chunk pipeline unchanged"
+    ));
     Ok(())
 }
 
@@ -5760,7 +5962,30 @@ pub fn create_audio_description(
                 "Decoding mono 16 kHz audio with Sonarpad FFmpeg libraries...",
             );
             let path = cache_dir.join("pyannote_input.wav");
-            write_pyannote_wav(source_path, &path, audio_stream_index, &cancel)?;
+            match write_pyannote_wav(source_path, &path, audio_stream_index, &cancel) {
+                Ok(()) => {}
+                Err(error)
+                    if error
+                        .starts_with("Audio description: FFmpeg DLL Pyannote recovery needed:") =>
+                {
+                    notify_status(
+                        callbacks,
+                        "pyannote_audio_recovery",
+                        "Damaged audio detected. Recovering the soundtrack with bundled FFmpeg libraries...",
+                    );
+                    crate::log_debug(&format!(
+                        "Audio description: normal Pyannote audio decoder reached corruption safety limit; starting FFmpeg DLL fallback: {error}"
+                    ));
+                    recover_pyannote_wav_with_ffmpeg_libraries(
+                        source_path,
+                        &path,
+                        audio_stream_index,
+                        duration_sec,
+                        &cancel,
+                    )?;
+                }
+                Err(error) => return Err(error),
+            }
             Some(path)
         };
         notify_progress(callbacks, 5);

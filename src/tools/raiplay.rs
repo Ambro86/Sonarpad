@@ -308,12 +308,26 @@ fn collect_cards(
     Ok(())
 }
 
+// Nasconde solo la voce delle trasmissioni in diretta dal menu di RaiPlay.
+// I contenuti on demand e il menu TV indipendente di Sonarpad restano invariati.
+fn is_hidden_raiplay_live_section(label: &str) -> bool {
+    matches!(
+        label.trim().to_ascii_lowercase().as_str(),
+        "dirette" | "diretta" | "dirette tv" | "tv in diretta" | "live"
+    )
+}
+
 fn parse_root_section(section: &Value) -> Result<Option<BrowseItem>, String> {
     let raw_title = match string_field(section, "name") {
         Some(value) if !value.is_empty() => value,
         _ => return Ok(None),
     };
-    if raw_title.eq_ignore_ascii_case("Altro") {
+    if raw_title.eq_ignore_ascii_case("Altro")
+        || is_hidden_raiplay_live_section(&raw_title)
+        || string_field(section, "title")
+            .as_deref()
+            .is_some_and(is_hidden_raiplay_live_section)
+    {
         return Ok(None);
     }
     let title = if raw_title.eq_ignore_ascii_case("Cerca") {
@@ -856,4 +870,53 @@ fn resolve_raiplay_secret_key() -> Result<String, String> {
         }
     }
     Err("Chiave Luce mancante: inserisci il codice nelle impostazioni RSS/Podcast.".to_string())
+}
+
+#[cfg(test)]
+mod root_section_visibility_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn raiplay_live_section_is_hidden_from_root() {
+        for title in [
+            "Dirette",
+            " dirette ",
+            "DIRETTE",
+            "Diretta",
+            "Dirette TV",
+            "TV in diretta",
+            "Live",
+        ] {
+            let section = json!({"name": title, "elements": [{"title": "Rai 1"}]});
+            assert!(parse_root_section(&section).unwrap().is_none(), "{title}");
+        }
+    }
+
+    #[test]
+    fn raiplay_live_section_is_hidden_when_api_uses_title() {
+        let section =
+            json!({"name": "stream", "title": "Dirette", "elements": [{"title": "Rai 1"}]});
+        assert!(parse_root_section(&section).unwrap().is_none());
+    }
+
+    #[test]
+    fn raiplay_on_demand_sections_remain_visible() {
+        for title in [
+            "Esplora",
+            "Film",
+            "Serie TV",
+            "Documentari",
+            "Bambini",
+            "Cerca",
+        ] {
+            let section = json!({"name": title, "elements": [{"title": "Film on demand"}]});
+            let result = parse_root_section(&section).unwrap().unwrap();
+            assert_eq!(result.kind, BrowseItemKind::Page);
+            assert_eq!(
+                result.title,
+                if title == "Cerca" { "Esplora" } else { title }
+            );
+        }
+    }
 }

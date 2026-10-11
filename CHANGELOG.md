@@ -1,5 +1,46 @@
 # Changelog
 
+Version 0.9.13 – 2026-10-11
+
+Audio and reading
+1. Added a global sleep timer under Options → Audio, disabled by default, with 10–120-minute intervals matching mobile. The timer applies to document reading and audio/video playback, including managed streams, and uses the normal stop actions when time expires. It is configured only in Audio Options, without adding playback-menu commands.
+
+
+
+PDF documents
+2. Fixed PDF export of accented and other Unicode characters (for example, è, à and é). Sonarpad now embeds a Unicode TrueType font already installed on Windows, preventing corrupted text such as “Ã¨” when reopening the generated PDF. The existing layout, header and page numbers are preserved.
+
+
+
+AI audio description – stability and recovery
+3. Sonarpad AI now treats the backend `generation_in_progress` response as an expected polling state, not a Retry/Cancel error. Polling preserves the same idempotency key, preventing duplicate requests for work already in progress. Temporary network/server failures first retry with the same key for a bounded number of attempts; normal upstream error and compatibility fallbacks remain unchanged. Gemini analysis, alignment, speech output and billing logic are untouched.
+
+4. Cleanup of a known upload can renew an expired session once, only after an explicit `401 invalid_session`; no new generation is started. The backend remains responsible for abandoned upload cleanup.
+
+5. The Python bridge now exits quietly if the progress pipe has been closed during cancellation, without a misleading `OSError: Invalid argument` traceback. Existing partial checkpoints and the Resume interrupted audio description feature remain unchanged.
+
+6. Added an isolated FFmpeg playback decoder fallback only for repeated corrupt audio packets. A damaged decoder is reset once and, if corruption persists, playback stops cleanly instead of generating an unbounded error stream. Healthy media follows the previous decoding path.
+
+7. Bumped the audio-description bridge cache filename to `audio_description_bridge_v9.exe`. After installing this Sonarpad version, the first AI audio-description run downloads the bridge again and removes obsolete versioned cache files when possible. The Gemini/Pyannote pipeline is unchanged. **Before release**, rebuild the updated Python bridge and replace the `audio_description_bridge.exe` asset in the Sonarpad-Tools GitHub 0.7 release; otherwise the new cache would download the old worker.
+
+Player, YouTube and streaming
+8. Fixed **Go to Time (Ctrl+T)** for YouTube videos played using managed MPV: the existing time-entry dialog now seeks through MPV without requiring a BASS audio player. The playback menu also enables seek commands on seekable MPV web videos. Live TV and direct BASS streams retain their restrictions; normal playback, the AI audio-description pipeline and bridge are unchanged.
+
+9. Extended **Go to Time (Ctrl+T)** and the playback menu to all on-demand media: RaiPlay, Rai audio descriptions, Sonarpad audio descriptions, La7 Play and YouTube. MPV now recognizes its active player tab even when a provider resolves a different playback URL; known RaiPlay/La7 Play BASS recordings can also use the existing time dialog. TV channels, RaiPlay live broadcasts and other live streams remain non-seekable. No changes to Gemini, FFmpeg or the audio-description pipeline.
+
+10. Fixed **Go to Time (Ctrl+T)** for local AVI, MP4, MKV and other video files played with MPV (including *Jaws*). The client now matches the active local MPV file to its playback tab regardless of Windows path case or slash direction. The existing time dialog and absolute seeking work without switching to BASS or affecting playback. Commands remain unavailable for TV channels and live streams; audio-description processing is unchanged.
+
+11. Improved the FFmpeg fallback for audio descriptions of videos with damaged soundtracks. Sonarpad also counts invalid packets interleaved with valid ones and stops runaway decoding. Only after that safety stop, it retries using the FFmpeg DLLs already bundled with Sonarpad (avformat, avcodec and swresample), seeking past short damaged sections with a strict limit; incomplete WAVs are rejected. No external ffmpeg.exe is required for this fallback. The normal Gemini/Pyannote pipeline remains unchanged.
+
+PDF reading and Japanese OCR
+12. Improved PDF import for Japanese/English learning books. Image-only PDFs now use the existing Windows OCR engine with an additional Japanese (ja-JP) pass when its language capability is installed; the results are merged by page coordinates without duplicating overlapping text. Separate lines and, where reliably identifiable, columns are preserved. For PDFs with a Unicode text layer containing Japanese, existing line breaks are no longer flattened into long paragraphs. Page markers are retained. No cloud OCR or external executables are required. The normal PDF extraction path and all audio-description features remain unchanged.
+
+13. Japanese OCR installation is now optional: no installation prompts appear when opening a scanned PDF. Users who need hiragana, katakana or kanji recognition can choose Tools > Reading and content > Install Japanese OCR for PDFs (or the corresponding entry in the flat Tools menu). Sonarpad checks whether it is already available and asks for confirmation before starting the official Windows installation. Existing OCR and the audio-description pipeline are unchanged.
+
+15. The optional Japanese OCR installation now shows an accessible progress window within Sonarpad. Actual percentages appear when Windows reports them, without invented progress during waiting. Sonarpad announces completion and any required restart. Opening PDFs never triggers installation prompts. The window now includes a real Cancel button and uses the Windows PowerShell installation method.
+
+16. Re-exporting an MP3 from an audio-description project now opens a clean, accessible progress dialog with the existing progress information and **Cancel** button. NVDA and JAWS no longer navigate through the disabled project-editing controls; export, cancellation and saving are unchanged.
+
 Version 0.9.12 – 2026-10-02
 
 Podcast recording

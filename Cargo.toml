@@ -1,6 +1,6 @@
 [package]
 name = "sonarpad"
-version = "0.9.12"
+version = "0.9.13"
 edition = "2024"
 authors = ["Ambrogio Riili"]
 description = "A modern Notepad with PDF, DOCX, XLS, EPUB, Kindle and DAISY support and TTS capabilities."
@@ -132,6 +132,7 @@ languages = [
 [dependencies]
 windows = { version = "0.54", features = [
   "implement",
+  "Foundation_Collections",
   "Globalization",
   "Graphics_Capture",
   "Graphics_DirectX",

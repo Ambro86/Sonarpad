@@ -1,0 +1,14 @@
+{
+    "conversation_id": "16a20dc7-1533-4909-ad98-b3054642095a",
+    "status": "SUCCESS",
+    "response": "{\n  \"character_glossary\": [],\n  \"audio_descriptions\": [\n    {\n      \"start_time_mmss\": \"00:08.810\",\n      \"end_time_mmss\": \"00:14.222\",\n      \"description_text\": \"Flo cammina cauta tra i grandi alberi.\"\n    },\n    {\n      \"start_time_mmss\": \"00:19.492\",\n      \"end_time_mmss\": \"00:28.332\",\n      \"description_text\": \"Ernest esamina alcune impronte sul terreno fangoso.\"\n    },\n    {\n      \"start_time_mmss\": \"00:28.332\",\n      \"end_time_mmss\": \"00:37.172\",\n      \"description_text\": \"L'uomo solleva lo sguardo verso la fitta vegetazione.\"\n    }\n  ]\n}\n",
+    "duration_seconds": 64.9945743,
+    "num_turns": 1,
+    "usage": {
+        "input_tokens": 71302,
+        "output_tokens": 7376,
+        "thinking_tokens": 6332,
+        "cache_read_tokens": 288559,
+        "total_tokens": 78678
+    }
+}

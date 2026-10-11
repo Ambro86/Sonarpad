@@ -1,5 +1,41 @@
 # Přehled změn
 
+Verze 0.9.13 – 2026-10-11
+
+Zvuk a čtení
+1. Do Možnosti → Zvuk byl přidán společný časovač vypnutí, ve výchozím nastavení vypnutý, s volbou 10 až 120 minut v desetiminutových krocích stejně jako v mobilní verzi. Platí pro čtení dokumentů i přehrávání zvuku a videa, včetně spravovaných streamů. Po uplynutí nastavené doby zastaví čtení nebo přehrávání běžnými ovládacími příkazy. Nastavuje se výhradně v možnostech zvuku; do nabídky přehrávání nebyly přidány žádné nové příkazy.
+
+Dokumenty PDF
+2. Opraven export PDF se znaky Unicode a diakritikou (například č, ř, é). Sonarpad nyní do PDF vkládá písmo Unicode TrueType nainstalované ve Windows, takže po opětovném otevření nedochází k poškození textu, například na „Ã¨“. Rozložení, záhlaví a číslování stránek zůstávají zachovány.
+
+
+
+Audiopopis s AI – stabilita a obnovení
+3. Odpověď `generation_in_progress` nyní znamená běžné čekání. Klient používá stejný identifikátor požadavku a bezpečně opakuje dočasné síťové chyby bez duplicitního spuštění generování.
+4. Mazání nahraného souboru může po chybě `401 invalid_session` jednou obnovit relaci.
+5. Při zrušení se proces Python ukončí bez zavádějící chyby uzavřeného výstupu. Existující obnovení přerušeného audiopopisu zůstává beze změn.
+6. FFmpeg používá pouze při opakovaném poškození zvuku izolovaný obnovovací režim; běžné soubory zůstávají beze změn.
+
+7. Mezipaměť pomocného programu pro audiopopis nově používá `audio_description_bridge_v9.exe`. Po aktualizaci Sonarpadu se při prvním použití audiopopisu stáhne znovu; starší verzované soubory se pokud možno odstraní. Stávající postup Gemini/Pyannote se nemění. Před vydáním je nutné znovu sestavit Python bridge a nahradit `audio_description_bridge.exe` ve vydání Sonarpad-Tools 0.7 na GitHubu.
+
+Přehrávač, YouTube a streamování
+8. Opravena funkce **Přejít na čas (Ctrl+T)** u videí YouTube přehrávaných přes MPV. Stávající dialog nyní přesouvá přehrávání pomocí MPV a nabídka zpřístupňuje posouvání v podporovaných webových videích. Omezení živé televize a přímých streamů BASS zůstávají beze změny.
+
+9. Funkce **Přejít na čas (Ctrl+T)** a ovládání posunu jsou nyní dostupné pro obsah na vyžádání: RaiPlay, zvukové popisy Rai a Sonarpad, La7 Play a YouTube. MPV rozpozná aktivní kartu i po změně URL poskytovatelem. Televizní kanály a živé vysílání zůstávají bez možnosti posunu. Pipeline audiopopisu se nemění.
+
+10. Opraveno **Přejít na čas (Ctrl+T)** pro místní video soubory AVI, MP4, MKV a další formáty přehrávané v MPV. Sonarpad nyní správně přiřazuje aktivní soubor jeho kartě i při rozdílném zápisu cesty ve Windows. Přehrávání a BASS se nemění; televizní kanály a živé přenosy zůstávají bez posunu v čase.
+
+11. Vylepšena záložní obnova FFmpeg pro audiopopis videí s poškozeným zvukem. Počítají se i vadné pakety proložené platnými a nebezpečné dekódovací smyčky se zastaví. Jen při této chybě se obnova provádí pomocí knihoven FFmpeg již dodávaných se Sonarpadem (avformat, avcodec, swresample), s omezeným přeskočením poškozených úseků. Neúplné WAV se odmítají; externí ffmpeg.exe není potřeba. Běžná pipeline Gemini/Pyannote se nemění.
+
+Čtení PDF a japonské OCR
+12. Vylepšen import japonsko-anglických učebnic. Skenované PDF používají stávající OCR systému Windows a při instalované podpoře japonštiny (ja-JP) rozpoznávají také hiraganu, katakanu a kandži. Výsledky se slučují podle polohy na stránce; oddělené řádky a jednoznačně rozpoznané sloupce se zachovávají. U PDF s vloženým japonským textem Unicode se zachovávají konce řádků a označení stránek. Bez cloudu a externích programů.
+
+13. Instalace japonského OCR je nyní volitelná: při otevření skenovaného PDF se již nezobrazují výzvy. Požadovanou instalaci lze spustit pouze z nabídky Nástroje > Čtení a obsah. Před instalací oficiální součásti Windows je vyžadováno potvrzení. Ostatní OCR a audiopopisy se nemění.
+
+15. Volitelná instalace japonského OCR nyní zobrazuje v Sonarpadu přístupné okno průběhu. Skutečná procenta se zobrazí jen tehdy, když je Windows oznámí; během čekání se nevymýšlejí. Po dokončení Sonarpad oznámí výsledek a případný restart. Při běžném otevírání PDF se žádné upozornění nezobrazí. Okno nyní obsahuje tlačítko Zrušit a používá instalaci přes Windows PowerShell.
+
+16. Při opětovném exportu MP3 z projektu audiopopisu se nyní otevře samostatné přístupné okno s průběhem a tlačítkem Zrušit. NVDA a JAWS již neprocházejí zakázané ovládací prvky úprav projektu.
+
 Verze 0.9.12 – 2026-10-02
 
 Nahrávání podcastů

@@ -1,5 +1,48 @@
 # Changelog
 
+Versione 0.9.13 – 2026-10-11
+
+Audio e lettura
+1. Aggiunto in Opzioni → Audio il timer di spegnimento globale, disattivato per impostazione predefinita, con intervalli da 10 a 120 minuti (come su mobile). Il timer interessa la lettura dei documenti e la riproduzione audio/video, compresi gli stream gestiti; allo scadere interrompe la sessione usando i normali comandi del player. Si attiva soltanto dalle Opzioni Audio, senza nuovi comandi nei menu.
+
+
+
+Documenti PDF
+2. Corretta l’esportazione PDF dei caratteri accentati e Unicode (per esempio è, à ed é). Sonarpad incorpora ora nel PDF un font Unicode TrueType già installato in Windows, evitando caratteri errati come «Ã¨» alla riapertura. Restano invariati impaginazione, intestazione e numeri di pagina.
+
+
+
+Audiodescrizione con IA – stabilità e recupero
+3. Le risposte del server `generation_in_progress` vengono ora gestite dal client Sonarpad AI come normale attesa, senza riproporre il messaggio «Riprova / Annulla». La verifica riutilizza sempre la stessa chiave di idempotenza: una generazione già in corso non viene avviata una seconda volta. Gli errori temporanei di rete e del server vengono ritentati con la stessa chiave per un numero limitato di tentativi prima di tornare alla gestione già esistente. Non cambiano Gemini, la segmentazione, la sintesi, l’allineamento o il calcolo dei crediti.
+
+4. La pulizia di un upload usa un solo rinnovo della sessione esclusivamente se il server risponde `401 invalid_session`. Il client non avvia nuove generazioni durante tale recupero e lascia alla pulizia automatica del backend i file abbandonati.
+
+5. Resa silenziosa la terminazione del bridge Python quando Windows chiude il canale di avanzamento in seguito a un annullamento, evitando il messaggio spurio `OSError: Invalid argument`. La funzione esistente per riprendere un’audiodescrizione interrotta, i checkpoint e le parti già completate restano invariati.
+
+6. Aggiunto un fallback isolato per il lettore FFmpeg: solo dopo errori ripetuti su pacchetti audio corrotti il decoder tenta un recupero controllato e, se il flusso è irrecuperabile, termina la lettura invece di accumulare centinaia di errori. La decodifica normale non cambia.
+
+7. Aggiornata la cache del bridge audiodescrizioni a `audio_description_bridge_v9.exe`: dopo l’aggiornamento di Sonarpad, al primo utilizzo della funzione il bridge viene scaricato di nuovo; quando possibile, le vecchie cache versionate vengono eliminate. La pipeline Gemini/Pyannote resta invariata. **Prima della pubblicazione**, ricompilare il bridge Python aggiornato e sostituire l’asset `audio_description_bridge.exe` nella release 0.7 di Sonarpad-Tools su GitHub: altrimenti verrebbe scaricata ancora la versione precedente.
+
+Player, YouTube e streaming
+8. Corretto **Vai al tempo (Ctrl+T)** durante la riproduzione di video YouTube con MPV: la finestra esistente consente ora di raggiungere il punto richiesto tramite MPV senza richiedere un lettore audio BASS. Il menu abilita anche i comandi di spostamento per i video web riproducibili con MPV. Restano invariati i limiti delle dirette TV e degli stream diretti BASS, nonché la riproduzione normale e la pipeline audiodescrizioni.
+
+9. Estesa la funzione **Vai al tempo (Ctrl+T)** e i relativi comandi del menu a tutti i contenuti on demand: RaiPlay, Rai audiodescrizioni, Audiodescrizioni Sonarpad, La7 Play e YouTube. MPV riconosce ora il lettore attivo anche se il servizio restituisce un URL diverso da quello iniziale; le registrazioni RaiPlay/La7 Play gestite da BASS possono usare la finestra del tempo già esistente. **Canali TV e dirette** restano esclusi. Nessuna modifica alla pipeline Gemini, FFmpeg o audiodescrizioni.
+
+10. Corretto **Vai al tempo (Ctrl+T)** anche per i file video locali AVI, MP4, MKV e altri formati riprodotti con MPV, come *Lo Squalo*. Sonarpad associa la scheda al file locale effettivamente aperto, anche quando il percorso Windows presenta differenze di maiuscole o barre. Restano invariati la finestra esistente, il lettore BASS e la riproduzione; i canali TV e le dirette continuano a non consentire lo spostamento. Nessuna modifica alla pipeline di audiodescrizione.
+
+11. Rafforzato il fallback FFmpeg per le audiodescrizioni di video con audio danneggiato, come alcuni AVI di *Lo Squalo*. Sonarpad conta anche i pacchetti errati alternati a quelli validi e interrompe i cicli anomali. Solo in tal caso ritenta la decodifica usando le librerie FFmpeg già incluse (avformat, avcodec e swresample), saltando brevi intervalli corrotti con limiti rigorosi e rifiutando i WAV incompleti. **Non è necessario ffmpeg.exe né installare altri programmi.** La normale pipeline Gemini/Pyannote resta invariata.
+
+12. Nascosta la sezione **Dirette** dal menu RaiPlay. Film, serie e programmi on demand restano disponibili; la sezione TV separata di Sonarpad non cambia.
+
+Lettura PDF e OCR giapponese
+13. Migliorata l’apertura dei libri di giapponese con testo inglese. Nei PDF composti da scansioni, Sonarpad utilizza l’OCR Windows già esistente e, se è installata la funzionalità OCR giapponese (ja-JP), riconosce anche hiragana, katakana e kanji, combinando i risultati in base alla posizione senza duplicare il testo. Le righe e, quando riconoscibili con sicurezza, le colonne restano distinte. Nei PDF con testo Unicode giapponese incorporato non vengono più unite arbitrariamente righe diverse. Restano i riferimenti alle pagine. Nessun servizio cloud né eseguibile esterno; invariati i PDF normali e la pipeline audiodescrizioni.
+
+14. L’installazione dell’OCR giapponese è ora **facoltativa e non invasiva**: nessun avviso compare aprendo un PDF scansionato. Chi necessita di hiragana, katakana o kanji può scegliere **Strumenti > Lettura e contenuti > Installa OCR giapponese per PDF** (oppure la voce corrispondente nel menu Strumenti non raggruppato). Sonarpad verifica se il componente è già presente e chiede conferma prima dell’installazione ufficiale di Windows. OCR normale e pipeline audiodescrizioni invariati.
+
+15. L’installazione facoltativa dell’OCR giapponese dispone ora di una vera finestra di attesa con pulsante **Annulla**, accessibile a NVDA e JAWS. Usa l’installazione ufficiale di Windows tramite PowerShell, con annullamento confermato e indicazione chiara del risultato o dell’eventuale riavvio necessario; nessun avviso compare aprendo normalmente i PDF.
+
+16. Durante **Riesporta MP3** da un progetto di audiodescrizione, la barra di avanzamento e il pulsante **Annulla** sono ora in una finestra separata e accessibile a NVDA e JAWS. I comandi di modifica del progetto non interferiscono più con la navigazione; elaborazione, annullamento e salvataggio rimangono invariati.
+
 Versione 0.9.12 – 2026-10-02
 
 Registrazione podcast

@@ -1,5 +1,41 @@
 # Dnevnik izmena
 
+Verzija 0.9.13 – 2026-10-11
+
+Audio i čitanje
+1. U Opcije → Audio dodat je globalni tajmer za zaustavljanje, podrazumevano isključen, sa izborom od 10 do 120 minuta u koracima od 10 minuta, kao u mobilnoj verziji. Važi za čitanje dokumenata i reprodukciju zvuka i videa, uključujući upravljane strimove. Po isteku vremena zaustavlja čitanje ili reprodukciju uobičajenim komandama. Podešava se samo u audio opcijama; u meni za reprodukciju nisu dodate nove komande.
+
+PDF документи
+2. Исправљен је извоз PDF докумената са акцентованим и Unicode знаковима (нпр. è, à и é). Sonarpad сада уграђује Unicode TrueType фонт већ инсталиран у Windows, чиме се спречава погрешан приказ текста попут „Ã¨“ при поновном отварању. Изглед, заглавље и бројеви страница остају непромењени.
+
+
+
+AI audio-deskripcija – stabilnost i oporavak
+3. `generation_in_progress` sada predstavlja normalno čekanje. Klijent zadržava isti ključ zahteva i ponavlja privremene mrežne/server greške bez pokretanja druge naplatne generacije.
+4. Prilikom brisanja otpremljene datoteke, `401 invalid_session` dozvoljava jedno obnavljanje sesije.
+5. Pri otkazivanju Python proces se završava bez lažne greške zatvorenog izlaznog kanala. Postojeće kontrolne tačke i nastavak ostaju nepromenjeni.
+6. FFmpeg rezervni oporavak radi samo posle ponovljenih oštećenih audio-paketa; normalno dekodiranje nije promenjeno.
+
+7. Keš za modul audio-deskripcije sada koristi `audio_description_bridge_v9.exe`. Nakon ažuriranja Sonarpada modul se ponovo preuzima pri prvoj upotrebi, a starije verzije keša uklanjaju se kada je moguće. Gemini/Pyannote postupak ostaje nepromenjen. Pre objavljivanja potrebno je ponovo izgraditi Python modul i zameniti `audio_description_bridge.exe` u GitHub izdanju Sonarpad-Tools 0.7.
+
+Plejer, YouTube i strimovanje
+8. Ispravljena komanda **Idi na vreme (Ctrl+T)** za YouTube video-zapise koji se reprodukuju preko MPV-a. Postojeći dijalog sada omogućava premotavanje na željeno vreme, a meni omogućava premotavanje podržanih veb video-zapisa. Ograničenja TV programa uživo i direktnih BASS strimova ostaju ista.
+
+9. **Idi na vreme (Ctrl+T)** i premotavanje sada rade za sve sadržaje na zahtev: RaiPlay, audio-opise Rai i Sonarpad, La7 Play i YouTube. MPV prepoznaje aktivni plejer čak i kada provajder promeni URL. TV kanali i prenosi uživo ostaju bez mogućnosti premotavanja. Proces audio-opisa nije menjan.
+
+10. Ispravljena je opcija **Idi na vreme (Ctrl+T)** za lokalne AVI, MP4, MKV i druge video-datoteke u MPV plejeru. Sonarpad prepoznaje karticu aktivne datoteke bez obzira na velika slova i razdelnike Windows putanje. BASS i reprodukcija ostaju nepromenjeni; TV kanali i prenosi uživo i dalje su izuzeti.
+
+11. Poboljšan je FFmpeg rezervni oporavak za audio-opise video-zapisa sa oštećenim zvukom. Broje se i neispravni paketi između ispravnih kako bi se zaustavilo beskonačno dekodiranje. Tek tada se koriste FFmpeg biblioteke već uključene u Sonarpad (avformat, avcodec i swresample), uz ograničeno preskakanje kratkih oštećenih delova. Nepotpuni WAV fajlovi se odbacuju; spoljašnji ffmpeg.exe nije potreban. Standardni Gemini/Pyannote tok ostaje nepromenjen.
+
+Čitanje PDF-a i japanski OCR
+12. Poboljšano je otvaranje japansko-engleskih udžbenika. Skenirani PDF koristi postojeći Windows OCR, a ako je instaliran japanski OCR (ja-JP), prepoznaje hiraganu, katakanu i kandži. Rezultati se spajaju prema položaju na stranici uz očuvanje redova i jasno prepoznatljivih kolona. U PDF-u sa ugrađenim japanskim Unicode tekstom čuvaju se prelomi redova i oznake stranica. Nisu potrebni oblak ni spoljašnji programi.
+
+13. Instalacija japanskog OCR-a je sada opciona: otvaranje skeniranih PDF dokumenata više ne prikazuje upit. Po potrebi, instalacija se pokreće kroz Alatke > Čitanje i sadržaj. Potvrda je neophodna pre instalacije zvanične Windows komponente. Standardni OCR i audio-opisi ostaju nepromenjeni.
+
+15. Opciona instalacija japanskog OCR-a sada prikazuje pristupačan prozor napretka u Sonarpadu. Procenti se prikazuju samo kada ih Windows zaista prijavi, bez lažnog napretka tokom čekanja. Na kraju se saopštavaju rezultat i eventualna potreba za restartovanjem. Pri uobičajenom otvaranju PDF-a nema obaveštenja. Prozor sada ima dugme Otkaži i koristi instalaciju putem Windows PowerShell-a.
+
+16. Pri ponovnom izvozu MP3 datoteke iz projekta audio-deskripcije otvara se poseban pristupačan prozor sa napretkom i dugmetom Otkaži. NVDA i JAWS više ne prolaze kroz onemogućene kontrole uređivanja projekta.
+
 Verzija 0.9.12 – 2026-10-02
 
 Snimanje podkasta

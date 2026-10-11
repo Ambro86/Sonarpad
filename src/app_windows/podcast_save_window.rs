@@ -60,12 +60,19 @@ struct SaveState {
     status_text: String,
     current_pct: usize,
     has_real_progress: bool,
+    // No made-up percentage before an external installer reports real progress.
+    show_percentage: bool,
     opened_at: Instant,
     labels: SaveDialogLabels,
     show_cancel: bool,
     suppress_parent_restore: bool,
     disable_parent: bool,
     accessible_progress_context: bool,
+    // Keep the dialog caption stable while the accessible status field changes.
+    static_window_title: bool,
+    // Only the explicit Japanese OCR installer and MP3 re-export use this mode.
+    // Do not let IsDialogMessageW move Tab focus into an underlying editor.
+    cancel_only_tab_navigation: bool,
 }
 
 fn save_labels(language: Language) -> SaveDialogLabels {
@@ -78,6 +85,17 @@ fn save_labels(language: Language) -> SaveDialogLabels {
 }
 
 pub fn handle_navigation(hwnd: HWND, msg: &MSG) -> bool {
+    // IsDialogMessageW is too permissive here: on some NVDA/Windows setups it
+    // exposes focusable controls belonging to the disabled owner window.
+    // Consume Tab BEFORE the generic dialog handler, in both directions.
+    if msg.message == WM_KEYDOWN
+        && msg.wParam.0 as u32 == VK_TAB.0 as u32
+        && (msg.hwnd == hwnd || crate::is_child_safe(hwnd, msg.hwnd))
+        && with_save_state(hwnd, |state| state.cancel_only_tab_navigation).unwrap_or(false)
+    {
+        focus_cancel_button(hwnd);
+        return true;
+    }
     if msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN {
         let key = msg.wParam.0 as u32;
         if key == VK_ESCAPE.0 as u32 {
@@ -133,6 +151,30 @@ pub fn focus_cancel_button(hwnd: HWND) {
     }
 }
 
+/// The installer and MP3 re-export are waiting dialogs, not forms. Tab and
+/// Shift+Tab must stay on Cancel; status is a STATIC label and a native progress
+/// bar, never a keyboard-editable status field.
+pub fn restrict_tab_to_cancel(hwnd: HWND) {
+    if with_save_state(hwnd, |state| {
+        // Both callers use open_with_labels (show_status_field=false).
+        // Fail closed if a future change accidentally adds another tab stop:
+        // the message loop will keep focusing Cancel instead of that control.
+        state.cancel_only_tab_navigation = true;
+        if state.status_field.0 != 0 {
+            crate::log_debug(
+                "Progress cancel-only mode: unexpected status Edit field (Tab is blocked)",
+            );
+        }
+        if state.cancel_button.0 != 0 {
+            crate::set_focus_safe(state.cancel_button);
+        }
+    })
+    .is_none()
+    {
+        crate::log_debug("Failed to enable cancel-only Tab navigation");
+    }
+}
+
 pub fn focus_primary_control(hwnd: HWND) {
     if with_save_state(hwnd, |state| {
         if state.status_field.0 != 0 {
@@ -154,14 +196,36 @@ pub fn focus_primary_control(hwnd: HWND) {
     }
 }
 
+/// Do not append the current status to this window title. The separate status
+/// field continues to receive the same updates and the Cancel button is unchanged.
+pub fn keep_window_title_static(hwnd: HWND) {
+    if with_save_state(hwnd, |state| {
+        state.static_window_title = true;
+        unsafe {
+            if let Err(err) = SetWindowTextW(hwnd, PCWSTR(to_wide(&state.labels.title).as_ptr())) {
+                crate::log_debug(&format!(
+                    "Failed to keep progress window title static: {}",
+                    err
+                ));
+            }
+        }
+    })
+    .is_none()
+    {
+        crate::log_debug("Failed to keep progress window title static");
+    }
+}
+
 pub fn enable_accessible_progress_context(hwnd: HWND) {
     if with_save_state(hwnd, |state| {
         state.accessible_progress_context = true;
         refresh_accessible_status_field(state);
-        let title = format!("{} - {}", state.labels.title, state.status_text);
-        unsafe {
-            if let Err(err) = SetWindowTextW(hwnd, PCWSTR(to_wide(&title).as_ptr())) {
-                crate::log_debug(&format!("Failed to set accessible progress title: {}", err));
+        if !state.static_window_title {
+            let title = format!("{} - {}", state.labels.title, state.status_text);
+            unsafe {
+                if let Err(err) = SetWindowTextW(hwnd, PCWSTR(to_wide(&title).as_ptr())) {
+                    crate::log_debug(&format!("Failed to set accessible progress title: {}", err));
+                }
             }
         }
     })
@@ -178,6 +242,25 @@ pub fn suppress_parent_restore_on_close(hwnd: HWND) {
     .is_none()
     {
         crate::log_debug("Failed to set suppress_parent_restore on save window");
+    }
+}
+
+/// Keep the progress dialog accessible while the native installer has not yet
+/// reported a real percentage. Prevents the generic timer from inventing 1..95%.
+pub fn show_indeterminate_progress(hwnd: HWND) {
+    if with_save_state(hwnd, |state| {
+        state.has_real_progress = true;
+        state.show_percentage = false;
+        state.current_pct = 0;
+        crate::send_message_w_safe(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0));
+        update_progress_label(state);
+        if state.accessible_progress_context {
+            refresh_accessible_status_field(state);
+        }
+    })
+    .is_none()
+    {
+        crate::log_debug("Failed to switch installation progress to indeterminate");
     }
 }
 
@@ -532,12 +615,15 @@ fn save_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> L
                 status_text: labels.in_progress.clone(),
                 current_pct: 0,
                 has_real_progress: false,
+                show_percentage: true,
                 opened_at: Instant::now(),
                 labels,
                 show_cancel,
                 suppress_parent_restore: false,
                 disable_parent,
                 accessible_progress_context: false,
+                static_window_title: false,
+                cancel_only_tab_navigation: false,
             };
             unsafe {
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, Box::into_raw(Box::new(state)) as isize);
@@ -668,6 +754,7 @@ fn save_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> L
                 }
                 crate::send_message_w_safe(state.progress, PBM_SETPOS, WPARAM(pct), LPARAM(0));
                 state.has_real_progress = true;
+                state.show_percentage = true;
                 state.current_pct = pct;
                 update_progress_label(state);
             })
@@ -794,7 +881,11 @@ fn with_save_state<T>(hwnd: HWND, f: impl FnOnce(&mut SaveState) -> T) -> Option
 }
 
 fn update_progress_label(state: &SaveState) {
-    let text = format!("{} {}%", state.status_text, state.current_pct);
+    let text = if state.show_percentage {
+        format!("{} {}%", state.status_text, state.current_pct)
+    } else {
+        state.status_text.clone()
+    };
     unsafe {
         if let Err(e) = SetWindowTextW(state.label, PCWSTR(to_wide(&text).as_ptr())) {
             crate::log_debug(&format!("Failed to set label text: {}", e));
@@ -815,7 +906,11 @@ fn refresh_accessible_status_field(state: &SaveState) {
     if state.status_field.0 == 0 {
         return;
     }
-    let text = format!("{} {}%", state.status_text, state.current_pct);
+    let text = if state.show_percentage {
+        format!("{} {}%", state.status_text, state.current_pct)
+    } else {
+        state.status_text.clone()
+    };
     unsafe {
         if let Err(err) = SetWindowTextW(state.status_field, PCWSTR(to_wide(&text).as_ptr())) {
             crate::log_debug(&format!(
@@ -832,13 +927,15 @@ pub fn set_status_text(hwnd: HWND, text: &str) {
         update_progress_label(state);
         if state.accessible_progress_context {
             refresh_accessible_status_field(state);
-            let title = format!("{} - {}", state.labels.title, state.status_text);
-            unsafe {
-                if let Err(err) = SetWindowTextW(hwnd, PCWSTR(to_wide(&title).as_ptr())) {
-                    crate::log_debug(&format!(
-                        "Failed to update accessible progress title: {}",
-                        err
-                    ));
+            if !state.static_window_title {
+                let title = format!("{} - {}", state.labels.title, state.status_text);
+                unsafe {
+                    if let Err(err) = SetWindowTextW(hwnd, PCWSTR(to_wide(&title).as_ptr())) {
+                        crate::log_debug(&format!(
+                            "Failed to update accessible progress title: {}",
+                            err
+                        ));
+                    }
                 }
             }
         }

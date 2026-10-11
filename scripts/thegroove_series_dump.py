@@ -20,32 +20,39 @@ import requests
 
 def _pick_addon_root() -> Path:
     candidates = [
-        Path(
-            os.path.expandvars(
-                r"%USERPROFILE%\Downloads\plugin.video.thegroove360"
-            )
-        ),
-        Path(
-            os.path.expandvars(r"%APPDATA%\Kodi\addons\plugin.video.thegroove360")
-        ),
+        Path(os.path.expandvars(r"%APPDATA%\Kodi\addons\plugin.video.thegroove360")),
+        Path(os.path.expandvars(r"%USERPROFILE%\Downloads\plugin.video.thegroove360")),
     ]
     for candidate in candidates:
-        if candidate.is_dir():
+        if (candidate / "resources" / "modules" / "thegroove" / "Token.py").is_file():
             return candidate
     raise FileNotFoundError("plugin.video.thegroove360 non trovato")
+
+
+def _load_server_url(addon_root: Path) -> str:
+    token_json = addon_root / "resources" / "modules" / "thegroove" / "token.json"
+    try:
+        payload = json.loads(token_json.read_text(encoding="utf-8"))
+        url = str(payload.get("url") or "").strip()
+        if url:
+            return url if url.endswith("/") else url + "/"
+    except (OSError, json.JSONDecodeError):
+        pass
+    return "https://thegroove360.org/"
 
 
 ADDON_ROOT = _pick_addon_root()
 if str(ADDON_ROOT) not in sys.path:
     sys.path.insert(0, str(ADDON_ROOT))
 
-SERVER_URL = "https://thegroove360.org/"
+SERVER_URL = _load_server_url(ADDON_ROOT)
 ITEM_BLOCK_RE = re.compile(
     r"(<item>(?:.*?)</item>|<dir>(?:.*?)</dir>|<plugin>(?:.*?)</plugin>)",
     re.MULTILINE | re.DOTALL,
 )
 TAG_RE = re.compile(r"\[/?[A-Z]+(?: [^\]]+)?\]")
 INTERACTIVE_SECTIONS = [
+    ("Ricerca", ""),
     ("Serie TV", "/thegroove/scripters/Torrent/path=serieTG360.php"),
     ("Film", "/thegroove/scripters/Torrent/path=filmTG360.php"),
     ("TV Show", "/thegroove/scripters/Torrent/path=showTG360.php"),
@@ -271,7 +278,7 @@ def crawl_catalog(
 
         for item in parse_items(xml):
             clean_label = strip_formatting(item.label)
-            if clean_label and item.url.lower() not in {"ignore", "ignora"}:
+            if not is_noise(item):
                 out.append(
                     CatalogEntry(
                         label=item.label,
@@ -325,10 +332,88 @@ def resolve_final_redirect_url(url: str) -> str:
 
 
 def strip_formatting(text: str) -> str:
-    text = TAG_RE.sub("", text)
-    text = text.replace(" ", "'")
+    text = TAG_RE.sub("", text or "")
+    text = text.replace("\xa0", " ")
     text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    return text.strip(" -|")
+
+
+def is_noise(item: Item) -> bool:
+    url = (item.url or "").strip()
+    lowered = url.casefold()
+    if lowered in {"ignore", "ignora"}:
+        return True
+    if not strip_formatting(item.label):
+        return True
+    if lowered.startswith("$doregex[") or lowered.startswith("plugin://"):
+        return True
+    return False
+
+
+def matches_section(section: str, item: Item) -> bool:
+    blob = f"{item.label} {item.url}".casefold()
+    if section == "Serie TV":
+        return "serietv_" in blob
+    if section == "Film":
+        return "serietv_" not in blob and "anime" not in blob
+    if section == "Anime":
+        return "anime" in blob
+    if section == "Documentari":
+        return "docu" in blob
+    if section == "TV Show":
+        return "show" in blob and "serietv_" not in blob
+    if section == "Sport":
+        return "sport" in blob
+    if section == "TV / IPTV":
+        return "tvhome" in blob or "iptv" in blob
+    return True
+
+
+def search_backend(client: TheGrooveClient, query: str) -> list[tuple[int, str, Item]]:
+    query = query.strip()
+    if not query:
+        return []
+    page = f"/thegroove/php_search?par={query}"
+    xml = client.fetch_page(page)
+    return [
+        (0, page, item)
+        for item in parse_items(xml)
+        if not is_noise(item)
+    ]
+
+
+def collect_playable(
+    client: TheGrooveClient,
+    item: Item,
+    depth: int = 0,
+    max_depth: int = 2,
+) -> list[EpisodeChoice]:
+    label = strip_formatting(item.label) or "senza titolo"
+    http_subs = [(name, url) for name, url in item.sublinks if url.startswith("http")]
+    if http_subs:
+        return [
+            EpisodeChoice(
+                label=strip_formatting(name) or label,
+                url=url,
+                source_page=item.url if item.url.startswith("/thegroove/") else "",
+            )
+            for name, url in http_subs
+        ]
+    if item.url.startswith("http") and not item.is_folder:
+        return [EpisodeChoice(label=label, url=item.url, source_page="")]
+    if depth >= max_depth or not item.is_folder or not item.url.startswith("/thegroove/"):
+        return []
+    try:
+        children = parse_items(client.fetch_page(item.url))
+    except Exception as exc:
+        print(f"[skip] {item.url} -> {exc}", file=sys.stderr)
+        return []
+    found: list[EpisodeChoice] = []
+    for child in children:
+        if is_noise(child):
+            continue
+        found.extend(collect_playable(client, child, depth + 1, max_depth))
+    return found
 
 
 def safe_filename(text: str) -> str:
@@ -414,18 +499,7 @@ def collect_episode_choices(
 ) -> list[EpisodeChoice]:
     out: list[EpisodeChoice] = []
     for _, _, item in matches:
-        if not item.url or not item.is_folder:
-            continue
-        child_xml = client.fetch_page(item.url)
-        for child in parse_items(child_xml):
-            if child.url and not child.is_folder:
-                out.append(
-                    EpisodeChoice(
-                        label=strip_formatting(child.label),
-                        url=child.url,
-                        source_page=item.url,
-                    )
-                )
+        out.extend(collect_playable(client, item))
     return out
 
 
@@ -453,7 +527,7 @@ def collect_section_entries(
             continue
 
         for item in parse_items(xml):
-            if item.url.lower() not in {"ignore", "ignora"} and strip_formatting(item.label):
+            if not is_noise(item):
                 out.append((depth, normalized, item))
             if depth < max_depth and item.is_folder and item.url:
                 queue.append((depth + 1, item.url))
@@ -543,13 +617,14 @@ def run_interactive(client: TheGrooveClient, args: argparse.Namespace) -> int:
     query = input("Parola di ricerca: ").strip()
     print(f"\nRicerca in: {section_label}")
     if query:
-        matches, _ = crawl_for_query(
-            client,
-            start_page=start_page,
-            query=query,
-            max_depth=args.depth,
-            max_pages=args.max_pages,
-        )
+        matches = search_backend(client, query)
+        if section_label != "Ricerca":
+            filtered = [item for item in matches if matches_section(section_label, item[2])]
+            if filtered:
+                matches = filtered
+    elif not start_page:
+        print("Scrivi una parola di ricerca.")
+        return 1
     else:
         matches = collect_section_entries(
             client,
@@ -674,7 +749,8 @@ def main() -> int:
     parser.add_argument("--query", default="famiglia addams")
     parser.add_argument(
         "--start-page",
-        default="/thegroove/scripters/Torrent/path=serieTG360.php",
+        default="",
+        help="Se valorizzata, scorre quella pagina invece della ricerca php_search.",
     )
     parser.add_argument("--depth", type=int, default=2)
     parser.add_argument("--max-pages", type=int, default=120)
@@ -686,17 +762,22 @@ def main() -> int:
 
     client = TheGrooveClient(ADDON_ROOT)
     if args.dump_all:
+        if not args.start_page:
+            args.start_page = "/thegroove/scripters/Torrent/path=serieTG360.php"
         return dump_catalog(client, args)
     if args.interactive or len(sys.argv) == 1:
         return run_interactive(client, args)
 
-    matches, pages = crawl_for_query(
-        client,
-        start_page=args.start_page,
-        query=args.query,
-        max_depth=args.depth,
-        max_pages=args.max_pages,
-    )
+    if args.start_page:
+        matches, _pages = crawl_for_query(
+            client,
+            start_page=args.start_page,
+            query=args.query,
+            max_depth=args.depth,
+            max_pages=args.max_pages,
+        )
+    else:
+        matches = search_backend(client, args.query)
 
     if not matches:
         print("Nessun match trovato.")
@@ -714,14 +795,24 @@ def main() -> int:
     if not args.show_children:
         return 0
 
-    target = matches[0][2]
-    if not target.url or not target.is_folder:
-        print("Il primo match non e' una cartella interna.")
+    episodes = collect_episode_choices(client, [matches[0]])
+    if not episodes:
+        print("Il primo match non ha episodi o link apribili.")
         return 0
 
-    print("\nContenuto della pagina figlia:")
-    child_xml = client.fetch_page(target.url)
-    print_episode_page(parse_items(child_xml), resolve_sibnet=args.resolve_sibnet)
+    print("\nContenuto:")
+    for episode in episodes:
+        print(f"- {episode.label}")
+        raw = episode.url
+        final = raw
+        print(f"  raw:   {raw}")
+        if args.resolve_sibnet:
+            try:
+                final = resolve_known_host(raw)
+            except Exception:
+                final = raw
+        if args.resolve_sibnet and final != raw:
+            print(f"  final: {final}")
     return 0
 
 

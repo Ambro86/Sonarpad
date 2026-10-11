@@ -34,6 +34,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, PWSTR};
 
+use super::podcast_save_window::{self, SaveDialogLabels};
 use crate::accessibility::to_wide;
 use crate::audio_description::{
     AudioDescriptionCallbacks, AudioDescriptionOutcome, AudioDescriptionProject,
@@ -234,6 +235,7 @@ struct WindowState {
     selected_index: Option<usize>,
     drafts: HashMap<usize, String>,
     running: bool,
+    export_progress_dialog: HWND,
     cancel: Option<Arc<AtomicBool>>,
     preview_cancel: Option<Arc<AtomicBool>>,
     preview_generation: Arc<AtomicU64>,
@@ -648,7 +650,50 @@ fn show_project_info(hwnd: HWND, language: Language, message: &str) {
     }
 }
 
+/// Catch Tab for the re-export progress popup before any unrelated global
+/// window (for example a changelog window) gets to handle dialog navigation.
+/// This is deliberately a no-op when the project is not exporting.
+pub fn handle_export_progress_tab_early(
+    hwnd: HWND,
+    msg: &windows::Win32::UI::WindowsAndMessaging::MSG,
+) -> bool {
+    if msg.message != WM_KEYDOWN || msg.wParam.0 as u32 != VK_TAB.0 as u32 {
+        return false;
+    }
+    let dialog = unsafe {
+        let state_ptr =
+            GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                as *const WindowState;
+        if state_ptr.is_null() {
+            HWND(0)
+        } else {
+            (*state_ptr).export_progress_dialog
+        }
+    };
+    dialog.0 != 0
+        && (msg.hwnd == dialog || crate::is_child_safe(dialog, msg.hwnd))
+        && podcast_save_window::handle_navigation(dialog, msg)
+}
+
 pub fn handle_navigation(hwnd: HWND, msg: &windows::Win32::UI::WindowsAndMessaging::MSG) -> bool {
+    // The export progress dialog is owned by the project editor but it is a
+    // separate top-level window, not a child. Route keyboard accessibility to
+    // that dialog first, never to the project's many disabled editing controls.
+    let export_dialog = unsafe {
+        let state_ptr =
+            GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                as *const WindowState;
+        if state_ptr.is_null() {
+            HWND(0)
+        } else {
+            (*state_ptr).export_progress_dialog
+        }
+    };
+    if export_dialog.0 != 0
+        && (msg.hwnd == export_dialog || crate::is_child_safe(export_dialog, msg.hwnd))
+    {
+        return podcast_save_window::handle_navigation(export_dialog, msg);
+    }
     if msg.hwnd != hwnd && !crate::is_child_safe(hwnd, msg.hwnd) {
         return false;
     }
@@ -2263,11 +2308,39 @@ fn start_export(hwnd: HWND, state: &mut WindowState) {
     stop_preview(state);
     let project_path = state.project_path.clone();
     let project = state.project.clone();
+    let language_labels = labels(state.language);
+    // Use the same clean progress dialog as the other long-running tasks:
+    // a static status label, progress bar and Cancel button. Do not create
+    // a read-only Edit control (which would clutter NVDA/JAWS Tab navigation).
+    let dialog = podcast_save_window::open_with_labels(
+        hwnd,
+        state.language,
+        SaveDialogLabels {
+            title: i18n::tr(
+                state.language,
+                "audio_description.project.export_dialog_title",
+            ),
+            in_progress: language_labels.exporting.clone(),
+            cancel: language_labels.cancel.clone(),
+            cancel_confirm: i18n::tr(
+                state.language,
+                "audio_description.project.export_cancel_confirm",
+            ),
+        },
+        true,
+    );
+    if dialog.0 != 0 {
+        state.export_progress_dialog = dialog;
+        podcast_save_window::disable_fake_progress(dialog);
+        podcast_save_window::keep_window_title_static(dialog);
+        podcast_save_window::enable_accessible_progress_context(dialog);
+        podcast_save_window::restrict_tab_to_cancel(dialog);
+    }
     let cancel = Arc::new(AtomicBool::new(false));
     state.cancel = Some(cancel.clone());
     state.running = true;
     set_controls_enabled(state, false);
-    set_text(state.status, &labels(state.language).exporting);
+    set_text(state.status, &language_labels.exporting);
     unsafe { SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0)) };
 
     thread::spawn(move || {
@@ -3044,6 +3117,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     selected_index: None,
                     drafts: HashMap::new(),
                     running: false,
+                    export_progress_dialog: HWND(0),
                     cancel: None,
                     preview_cancel: None,
                     preview_generation: Arc::new(AtomicU64::new(0)),
@@ -3565,6 +3639,26 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 }
                 LRESULT(0)
             }
+            podcast_save_window::WM_PODCAST_SAVE_CANCEL => {
+                let pointer =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut WindowState;
+                if !pointer.is_null() {
+                    let state = &mut *pointer;
+                    if state.running && state.export_progress_dialog == HWND(lparam.0) {
+                        if let Some(cancel) = state.cancel.as_ref() {
+                            cancel.store(true, Ordering::SeqCst);
+                        }
+                        let message = labels(state.language).canceling;
+                        set_text(state.status, &message);
+                        podcast_save_window::set_status_text(
+                            state.export_progress_dialog,
+                            &message,
+                        );
+                    }
+                }
+                LRESULT(0)
+            }
             WM_PROJECT_PROGRESS => {
                 let pointer =
                     GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
@@ -3576,6 +3670,18 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         WPARAM(wparam.0.min(100)),
                         LPARAM(0),
                     );
+                    if (*pointer).export_progress_dialog.0 != 0 {
+                        let dialog = (*pointer).export_progress_dialog;
+                        SendMessageW(
+                            dialog,
+                            podcast_save_window::WM_PODCAST_SAVE_PROGRESS,
+                            WPARAM(wparam.0.min(100)),
+                            LPARAM(0),
+                        );
+                        // Keep the read-only accessible status in sync with the
+                        // progress bar, so NVDA can read the same real percentage.
+                        podcast_save_window::set_status_text(dialog, &get_text((*pointer).status));
+                    }
                 }
                 LRESULT(0)
             }
@@ -3595,6 +3701,12 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         &message,
                     );
                     set_text((*pointer).status, &localized);
+                    if (*pointer).export_progress_dialog.0 != 0 {
+                        podcast_save_window::set_status_text(
+                            (*pointer).export_progress_dialog,
+                            &localized,
+                        );
+                    }
                 }
                 LRESULT(0)
             }
@@ -3611,6 +3723,16 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     return LRESULT(0);
                 }
                 let state = &mut *pointer;
+                // Close the clean modal before restoring the project controls
+                // and showing any success/error message. Its WM_NCDESTROY
+                // restores the owner, focus and normal editor accessibility.
+                let export_dialog = std::mem::replace(&mut state.export_progress_dialog, HWND(0));
+                if export_dialog.0 != 0 && crate::is_window_handle_valid(export_dialog) {
+                    crate::log_if_err!(
+                        DestroyWindow(export_dialog),
+                        "Audio description project: closing export progress dialog failed"
+                    );
+                }
                 state.running = false;
                 state.cancel = None;
                 set_controls_enabled(state, true);

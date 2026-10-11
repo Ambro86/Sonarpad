@@ -59,6 +59,7 @@ mod audio_monitor;
 mod audio_utils;
 mod dialogue_voice;
 mod i18n;
+mod japanese_ocr_installer;
 mod podcast;
 mod podcast_recorder;
 mod power_awake;
@@ -296,6 +297,7 @@ const WM_START_CONTEXT_WHISPER_TRANSCRIPTION: u32 = WM_APP + 47;
 const WM_START_YOUTUBE_CONTEXT_AUDIO_DESCRIPTION: u32 = WM_APP + 48;
 const WM_START_RAIPLAY_CONTEXT_AUDIO_DESCRIPTION: u32 = WM_APP + 49;
 const WM_START_LA7_CONTEXT_AUDIO_DESCRIPTION: u32 = WM_APP + 50;
+const WM_JAPANESE_OCR_INSTALL_UPDATE: u32 = WM_APP + 52;
 const WM_RESTART_YOUTUBE_MPV_AFTER_PREVIEW: u32 = WM_APP + 51;
 const FOCUS_EDITOR_TIMER_ID: usize = 1;
 const FOCUS_EDITOR_TIMER_ID2: usize = 2;
@@ -422,6 +424,73 @@ fn gemini_model_uses_compat_fallback(model: &str) -> bool {
 const CHAPTER_ANNOUNCE_TIMER_ID: usize = 5;
 const SPELLCHECK_HIGHLIGHT_TIMER_ID: usize = 6;
 const AUDIO_PLAYLIST_TIMER_ID: usize = 7;
+
+#[derive(Default)]
+struct GlobalSleepTimerState {
+    configured_minutes: u32,
+    started: Option<Instant>,
+    expired: bool,
+}
+
+static GLOBAL_SLEEP_TIMER: LazyLock<Mutex<GlobalSleepTimerState>> =
+    LazyLock::new(|| Mutex::new(GlobalSleepTimerState::default()));
+
+/// One countdown for all Sonarpad reading and media playback. It is armed by
+/// the first active session and survives changes between tracks/documents.
+/// Pausing a session does not prolong the sleep timer.
+fn check_global_sleep_timer(hwnd: HWND) {
+    let (minutes, active) = with_state(hwnd, |state| {
+        (
+            state.settings.sleep_timer_minutes,
+            state.tts_session.is_some()
+                || state.active_audiobook.is_some()
+                || state.active_mpv_session.is_some(),
+        )
+    })
+    .unwrap_or((0, false));
+    let mut should_stop = false;
+    {
+        let Ok(mut timer) = GLOBAL_SLEEP_TIMER.lock() else {
+            log_debug("Global sleep timer: state lock poisoned");
+            return;
+        };
+        if minutes != timer.configured_minutes {
+            timer.configured_minutes = minutes;
+            timer.started = None;
+            timer.expired = false;
+        }
+        if minutes == 0 || !active {
+            timer.started = None;
+            timer.expired = false;
+            return;
+        }
+        if !timer.expired {
+            if let Some(started) = timer.started {
+                if started.elapsed() >= Duration::from_secs(minutes as u64 * 60) {
+                    timer.expired = true;
+                    should_stop = true;
+                }
+            } else {
+                timer.started = Some(Instant::now());
+                log_debug(&format!(
+                    "Global sleep timer: armed for {} minutes",
+                    minutes
+                ));
+            }
+        }
+    }
+    if should_stop {
+        log_debug("Global sleep timer: expired; stopping reading and media playback");
+        tts_engine::stop_tts_playback(hwnd);
+        if with_state(hwnd, |state| state.active_audiobook.is_some()).unwrap_or(false) {
+            audio_player::stop_audiobook_playback(hwnd);
+        }
+        if is_mpv_playback_active(hwnd) {
+            stop_managed_mpv_playback(hwnd);
+        }
+    }
+}
+
 const SPELLCHECK_HIGHLIGHT_DEBOUNCE_MS: u32 = 100;
 const PDF_OCR_PROMPT_TIMEOUT_COPYDATA_SECS: u64 = 30;
 const COPYDATA_OPEN_FILE: usize = 1;
@@ -785,6 +854,7 @@ fn should_focus_existing_window_after_copydata(result: isize) -> bool {
 }
 
 fn tracked_progress_modal_while_main_disabled(hwnd: HWND) -> HWND {
+    let japanese_ocr_dialog = japanese_ocr_installer::active_dialog();
     with_state(hwnd, |state| {
         [
             state.podcast_save_window,
@@ -792,6 +862,7 @@ fn tracked_progress_modal_while_main_disabled(hwnd: HWND) -> HWND {
             state.transcription_progress_window,
             state.replace_progress_window,
             state.editor_translation_progress_window,
+            japanese_ocr_dialog,
         ]
         .into_iter()
         .find(|candidate| {
@@ -4583,6 +4654,7 @@ pub(crate) fn launch_raiplay_in_mpv_with_resume(
         render_video,
         select_raiplay_audio_track,
         external_audio_url,
+        source_is_live,
     ) = match crate::tools::raiplay::resolve_playback_target(url)? {
         crate::tools::raiplay::PlaybackTarget::DirectStream {
             url: audio_only_url,
@@ -4606,11 +4678,17 @@ pub(crate) fn launch_raiplay_in_mpv_with_resume(
                 render_video,
                 render_video && rai_origin == RaiAudioOrigin::RaiPlay,
                 external_audio_url,
+                is_live,
             )
         }
-        crate::tools::raiplay::PlaybackTarget::Download(resolved_url) => {
-            (resolved_url.clone(), resolved_url, show_video, false, None)
-        }
+        crate::tools::raiplay::PlaybackTarget::Download(resolved_url) => (
+            resolved_url.clone(),
+            resolved_url,
+            show_video,
+            false,
+            None,
+            false,
+        ),
     };
     log_debug(&format!(
         "Managed mpv Rai launch: origin={:?} show_video={} render_video={} playback_url={} media_url={} external_audio={} select_raiplay_audio_track={}",
@@ -4707,7 +4785,7 @@ pub(crate) fn launch_raiplay_in_mpv_with_resume(
                     ipc_path: ipc_path.clone(),
                     process_id: child.id(),
                 });
-                state.active_mpv_is_live_tv = false;
+                state.active_mpv_is_live_tv = source_is_live;
                 state.active_mpv_ipc = persistent_pipe;
                 state.active_mpv_status = Some(MpvPlaybackStatus {
                     volume: initial_mpv_volume,
@@ -7859,22 +7937,111 @@ pub(crate) fn is_live_tv_playback_active(hwnd: HWND) -> bool {
     .unwrap_or(false)
 }
 
+/// All on-demand managed MPV content (YouTube, RaiPlay, La7 Play and
+/// Sonarpad/Rai audio-description catalogues) shares the existing Go to Time
+/// dialog. The live flag continues to forbid TV channels and live broadcasts.
+pub(crate) fn can_go_to_time_in_managed_mpv(hwnd: HWND) -> bool {
+    should_route_player_command_to_mpv(hwnd) && !is_live_tv_playback_active(hwnd)
+}
+
+/// A few provider recordings can still be played by BASS rather than MPV.
+/// Enable seeking only for a *known* on-demand RaiPlay/La7 Play recording:
+/// generic HTTP radio/live streams stay non-seekable.
+pub(crate) fn can_go_to_time_in_bass_on_demand(hwnd: HWND) -> bool {
+    with_state(hwnd, |state| {
+        state.active_audiobook.as_ref().is_some_and(|player| {
+            is_direct_stream_url_path(&player.path)
+                && matches!(
+                    state.active_podcast_episode_from_rai,
+                    RaiAudioOrigin::RaiPlay | RaiAudioOrigin::La7Play
+                )
+                && state.raiplay_live_audio_variants.is_empty()
+        })
+    })
+    .unwrap_or(false)
+}
+
+/// A duration is optional while a YouTube stream is still loading. MPV will
+/// validate the requested absolute seek even when it cannot report duration.
+pub(crate) fn managed_mpv_duration_for_go_to_time(hwnd: HWND) -> Option<u64> {
+    if !can_go_to_time_in_managed_mpv(hwnd) {
+        return None;
+    }
+    query_managed_mpv_property(hwnd, "duration")
+        .ok()
+        .and_then(|value| value.as_f64())
+        .filter(|duration| duration.is_finite() && *duration > 0.0)
+        .map(|duration| duration.floor() as u64)
+}
+
+pub(crate) fn seek_managed_mpv_to_time(hwnd: HWND, seconds: u64) -> Result<(), String> {
+    if !can_go_to_time_in_managed_mpv(hwnd) {
+        return Err("Nessun video MPV ricercabile attivo.".to_string());
+    }
+    let result = try_send_command_to_managed_mpv(
+        hwnd,
+        &format!(r#"{{"command":["seek",{},"absolute"]}}"#, seconds),
+    );
+    if result.is_ok() {
+        stop_mpv_subtitle_speech(hwnd, "go_to_time");
+    }
+    result
+}
+
+/// Compare local MPV media sources without depending on the tab's MPV hint.
+/// Windows accepts either slash direction and path case; remote URLs deliberately
+/// use their existing, separate provider-specific routing.
+fn local_mpv_source_matches_document(path: &Path, source: &str) -> bool {
+    if is_direct_stream_url_path(path)
+        || source.starts_with("http://")
+        || source.starts_with("https://")
+    {
+        return false;
+    }
+    path.to_string_lossy()
+        .replace('/', "\\")
+        .eq_ignore_ascii_case(&source.replace('/', "\\"))
+}
+
 fn should_route_player_command_to_mpv(hwnd: HWND) -> bool {
     with_state(hwnd, |state| {
-        if state.active_mpv_session.is_none() {
+        if state.active_mpv_session.is_none() || state.active_audiobook.is_some() {
             return false;
         }
-        let current_doc_path = state.docs.get(state.current).and_then(|doc| {
-            if matches!(doc.format, FileFormat::Audiobook) {
-                doc.path.as_ref()
-            } else {
-                None
-            }
-        });
-        match (current_doc_path, state.active_podcast_episode_url.as_ref()) {
-            (Some(path), Some(active_url)) => path.to_string_lossy() == active_url.as_str(),
-            (Some(_), None) => false,
-            (None, _) => false,
+        let Some(doc) = state.docs.get(state.current) else {
+            return false;
+        };
+        if !matches!(doc.format, FileFormat::Audiobook) {
+            return false;
+        }
+        let Some(path) = doc.path.as_deref() else {
+            return false;
+        };
+
+        if !is_direct_stream_url_path(path) {
+            // A local AVI/MP4/MKV opened via File > Open plays in managed MPV,
+            // but its tab can lack the podcast/stream marker or inherit a
+            // slightly different Windows path spelling. Match *this* file to
+            // the active MPV source, not merely any open media tab.
+            let active_local_source = state
+                .active_podcast_episode_url
+                .as_deref()
+                .or(state.active_podcast_episode_media_url.as_deref());
+            return match active_local_source {
+                Some(source) => local_mpv_source_matches_document(path, source),
+                None => doc.prefer_mpv_playback,
+            };
+        }
+
+        // Remote VOD providers may resolve the original catalogue URL to a
+        // completely different HLS/audio URL. Their MPV tab marker remains
+        // authoritative, without relaxing the live-TV guard in can_go_to_time.
+        if doc.prefer_mpv_playback {
+            return true;
+        }
+        match state.active_podcast_episode_url.as_ref() {
+            Some(active_url) => path.to_string_lossy() == active_url.as_str(),
+            None => false,
         }
     })
     .unwrap_or(false)
@@ -9370,6 +9537,17 @@ pub(crate) fn handle_player_command(hwnd: HWND, command: PlayerCommand) {
                 }
                 result
             }
+            PlayerCommand::GoToTime => {
+                if is_live_tv_playback_active(hwnd) {
+                    let message = i18n::tr(language, "playback.direct_stream_command_disabled");
+                    if !message.is_empty() {
+                        crate::accessibility::screen_reader_speak(&message);
+                    }
+                } else {
+                    app_windows::go_to_time_window::open(hwnd);
+                }
+                return;
+            }
             PlayerCommand::AnnounceTime => announce_mpv_time(hwnd),
             _ => {
                 let message = i18n::tr(language, "playback.direct_stream_command_disabled");
@@ -9405,7 +9583,14 @@ pub(crate) fn handle_player_command(hwnd: HWND, command: PlayerCommand) {
             | PlayerCommand::Pitch(_)
             | PlayerCommand::PitchReset
     ) && is_direct_stream_playback_active(hwnd)
-        && !is_raiplay_stream_playback_active(hwnd);
+        && !is_raiplay_stream_playback_active(hwnd)
+        && !(matches!(
+            command,
+            PlayerCommand::Seek(_)
+                | PlayerCommand::SeekToStart
+                | PlayerCommand::SeekToEnd
+                | PlayerCommand::GoToTime
+        ) && can_go_to_time_in_bass_on_demand(hwnd));
     if disable_seek_for_live_raiplay || disable_seek_rate_pitch {
         let language = { with_state(hwnd, |state| state.settings.language) }.unwrap_or_default();
         let message = i18n::tr(language, "playback.direct_stream_command_disabled");
@@ -10374,6 +10559,30 @@ fn run_app(
                 continue;
             }
             log_alt_raw_key_probe(hwnd, &msg);
+            // The Japanese OCR installer and MP3 re-export are single-action
+            // modal progress windows. Consume Tab/Shift+Tab here, before the
+            // global Ctrl+Tab handler or another open window's accessibility
+            // handler can redirect focus to an editor or read-only Edit field.
+            if msg.message == WM_KEYDOWN && msg.wParam.0 as u32 == VK_TAB.0 as u32 {
+                let japanese_dialog = japanese_ocr_installer::active_dialog();
+                if japanese_dialog.0 != 0
+                    && (msg.hwnd == japanese_dialog
+                        || crate::is_child_safe(japanese_dialog, msg.hwnd))
+                    && app_windows::podcast_save_window::handle_navigation(japanese_dialog, &msg)
+                {
+                    continue;
+                }
+                let project_window =
+                    with_state(hwnd, |state| state.audio_description_project_window)
+                        .unwrap_or(HWND(0));
+                if project_window.0 != 0
+                    && app_windows::audio_description_project_window::handle_export_progress_tab_early(
+                        project_window, &msg,
+                    )
+                {
+                    continue;
+                }
+            }
             // Priority 1: Global navigation keys (Ctrl+Tab)
             if msg.message == WM_KEYDOWN
                 && msg.wParam.0 as u32 == VK_TAB.0 as u32
@@ -11114,6 +11323,15 @@ fn run_app(
                     return;
                 }
 
+                let japanese_dialog = japanese_ocr_installer::active_dialog();
+                if japanese_dialog.0 != 0
+                    && (msg.hwnd == japanese_dialog
+                        || crate::is_child_safe(japanese_dialog, msg.hwnd))
+                    && app_windows::podcast_save_window::handle_navigation(japanese_dialog, &msg)
+                {
+                    handled = true;
+                    return;
+                }
                 if state.podcast_save_window.0 != 0
                     && (msg.hwnd == state.podcast_save_window
                         || crate::is_child_safe(state.podcast_save_window, msg.hwnd))
@@ -12662,6 +12880,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     return LRESULT(0);
                 }
                 if wparam.0 == AUDIO_PLAYLIST_TIMER_ID {
+                    check_global_sleep_timer(hwnd);
                     handle_audio_playlist_timer(hwnd);
                     return LRESULT(0);
                 }
@@ -13168,6 +13387,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 }
                 LRESULT(0)
             }
+            WM_JAPANESE_OCR_INSTALL_UPDATE => {
+                japanese_ocr_installer::handle_update(hwnd, lparam);
+                LRESULT(0)
+            }
             WM_UPDATE_PROGRESS_SET => {
                 let pct = wparam.0.min(100);
                 let dialog =
@@ -13225,6 +13448,13 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
             }
             app_windows::podcast_save_window::WM_PODCAST_SAVE_CANCEL => {
                 let source_hwnd = HWND(lparam.0);
+                if japanese_ocr_installer::cancel(
+                    hwnd,
+                    source_hwnd,
+                    with_state(hwnd, |state| state.settings.language).unwrap_or_default(),
+                ) {
+                    return LRESULT(0);
+                }
                 let is_podcast_save = with_state(hwnd, |state| {
                     source_hwnd.0 != 0 && state.podcast_save_window == source_hwnd
                 })
@@ -14722,6 +14952,13 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     IDM_WINDOW_CLOSE_ALL => {
                         log_debug("Menu: Close all documents");
                         editor_manager::close_all_documents(hwnd);
+                        LRESULT(0)
+                    }
+                    IDM_TOOLS_INSTALL_JAPANESE_OCR => {
+                        log_debug("Menu: user requested optional Japanese PDF OCR installation");
+                        let language =
+                            with_state(hwnd, |state| state.settings.language).unwrap_or_default();
+                        offer_japanese_ocr_installation_on_request(hwnd, language);
                         LRESULT(0)
                     }
                     IDM_TOOLS_OPTIONS => {
@@ -23462,6 +23699,39 @@ fn start_ocr_for_pdf(
     });
 }
 
+// The optional Japanese OCR feature is available from the Tools menu only.
+// Do not prompt everyone opening a scanned PDF: absence of text is not evidence
+// that the document contains Japanese characters.
+fn offer_japanese_ocr_installation_on_request(hwnd: HWND, language: Language) {
+    // Explicit Tools-menu action only: never interrupt ordinary PDF opening.
+    if win_ocr::japanese_ocr_is_available() {
+        show_info(
+            hwnd,
+            language,
+            &i18n::tr(language, "app.pdf_japanese_ocr_installed"),
+        );
+        return;
+    }
+
+    let text = i18n::tr(language, "app.pdf_japanese_ocr_install_prompt");
+    let title = i18n::tr(language, "app.pdf_japanese_ocr_install_title");
+    let text_w = to_wide(&text);
+    let title_w = to_wide(&title);
+    // User opened the Tools command; ask again before requesting UAC elevation.
+    let choice = message_box_modal(
+        hwnd,
+        PCWSTR(text_w.as_ptr()),
+        PCWSTR(title_w.as_ptr()),
+        MB_YESNO | MB_ICONINFORMATION,
+    );
+    if choice != IDYES {
+        log_debug("PDF OCR: Japanese installation declined; continuing existing OCR");
+        return;
+    }
+
+    japanese_ocr_installer::start(hwnd, language);
+}
+
 fn handle_pdf_loaded(hwnd: HWND, payload: PdfLoadResult) {
     unsafe {
         let PdfLoadResult {
@@ -23517,6 +23787,9 @@ fn handle_pdf_loaded(hwnd: HWND, payload: PdfLoadResult) {
                 push_recent_file(hwnd, &path);
             }
             Ok(PdfTextResult::NoText) => {
+                // Never offer language installation automatically for scanned PDFs.
+                // The usual OCR proceeds unchanged; Japanese support can be
+                // installed on request from Tools > Reading and content.
                 start_ocr_for_pdf(hwnd, hwnd_edit, path, from_copydata, language);
             }
             Err(message) => {

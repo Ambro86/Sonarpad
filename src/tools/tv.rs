@@ -12,6 +12,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use url::Url;
 
 const TV_CHANNELS_URL: &str = "https://sonarpad.com/api/tv_channels_resolver.php?resolve=0";
+const PLUTO_GUIDE_URL: &str = "https://sonarpad.com/api/pluto_guide.php";
 const TV_API_CLIENT_TOKEN: &str = match option_env!("SONARPAD_ROUTE_CLIENT_TOKEN") {
     Some(token) => token,
     None => "",
@@ -169,6 +170,192 @@ struct TvChannelsCache {
 }
 
 pub(crate) fn load_current_programs(
+    channels: &[TvChannel],
+) -> Result<HashMap<String, TvProgram>, String> {
+    let (pluto, others): (Vec<_>, Vec<_>) = channels.iter().cloned().partition(is_pluto_channel);
+    let oggi = (!others.is_empty()).then(|| load_oggi_current_programs(&others));
+    let pluto = (!pluto.is_empty()).then(|| load_pluto_current_programs(&pluto));
+    merge_current_program_sources(oggi, pluto)
+}
+
+fn merge_current_program_sources(
+    oggi: Option<Result<HashMap<String, TvProgram>, String>>,
+    pluto: Option<Result<HashMap<String, TvProgram>, String>>,
+) -> Result<HashMap<String, TvProgram>, String> {
+    let mut programs = HashMap::new();
+    let mut success = false;
+    let mut error = None;
+    for result in [oggi, pluto].into_iter().flatten() {
+        match result {
+            Ok(source) => {
+                success = true;
+                programs.extend(source);
+            }
+            Err(err) => {
+                crate::log_debug(&format!("TV guide source unavailable: {err}"));
+                error = Some(err);
+            }
+        }
+    }
+    if !success && let Some(error) = error {
+        return Err(error);
+    }
+    Ok(programs)
+}
+
+fn is_pluto_channel(channel: &TvChannel) -> bool {
+    Url::parse(&channel.url).is_ok_and(|url| url.path().eq_ignore_ascii_case("/api/pluto.php"))
+        || channel.category.trim().eq_ignore_ascii_case("Pluto TV")
+        || channel.tvg_id.to_ascii_lowercase().starts_with("pluto-")
+}
+
+fn pluto_channel_id(channel: &TvChannel) -> Option<String> {
+    if !is_pluto_channel(channel) {
+        return None;
+    }
+    let url = Url::parse(&channel.url).ok()?;
+    let (_, id) = url.query_pairs().find(|(key, _)| key == "id")?;
+    let id = id.trim();
+    (id.len() >= 20 && id.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .then(|| id.to_ascii_lowercase())
+}
+
+fn fetch_pluto_guide(parameters: &[(&str, &str)]) -> Result<Value, String> {
+    let client = Client::builder()
+        .user_agent(DEFAULT_USER_AGENT)
+        .timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|err| {
+            crate::i18n::tr_tv_f("tv.error.guide_init", &[("error", &err.to_string())])
+        })?;
+    let response = client
+        .get(PLUTO_GUIDE_URL)
+        .header(TV_API_TOKEN_HEADER, TV_API_CLIENT_TOKEN)
+        .header(ROUTE_API_TOKEN_HEADER, TV_API_CLIENT_TOKEN)
+        .query(parameters)
+        .send()
+        .map_err(|err| {
+            crate::i18n::tr_tv_f("tv.error.guide_download", &[("error", &err.to_string())])
+        })?;
+    if !response.status().is_success() {
+        return Err(crate::i18n::tr_tv_f(
+            "tv.error.guide_http",
+            &[("status", &response.status().as_u16().to_string())],
+        ));
+    }
+    response.json().map_err(|err| {
+        crate::i18n::tr_tv_f(
+            "tv.error.guide_invalid_response",
+            &[("error", &err.to_string())],
+        )
+    })
+}
+
+fn parse_pluto_program(item: &Value) -> Option<TvProgram> {
+    let object = item.as_object()?;
+    let title = object.get("title")?.as_str()?.trim();
+    if title.is_empty()
+        || title.eq_ignore_ascii_case("Programma non specificato")
+        || title.eq_ignore_ascii_case("no info available")
+    {
+        return None;
+    }
+    let start_time = read_json_i64(object, "startTime", "start_time");
+    let end_time = read_json_i64(object, "endTime", "end_time");
+    if start_time <= 0 || end_time <= start_time {
+        return None;
+    }
+    Some(TvProgram {
+        title: title.to_string(),
+        start_time,
+        end_time,
+        description: object
+            .get("description")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .trim()
+            .to_string(),
+    })
+}
+
+fn parse_pluto_current_programs(
+    root: &Value,
+    channels: &[TvChannel],
+    now: i64,
+) -> Result<HashMap<String, TvProgram>, String> {
+    let items = root
+        .get("programs")
+        .and_then(Value::as_object)
+        .ok_or_else(|| crate::i18n::tr_tv("tv.error.guide_missing_programs"))?;
+    let mut programs = HashMap::new();
+    for channel in channels {
+        let Some(id) = pluto_channel_id(channel) else {
+            continue;
+        };
+        let Some(program) = items.get(&id).and_then(parse_pluto_program) else {
+            continue;
+        };
+        if program.start_time > now
+            || (program.end_time <= now
+                && now - program.start_time > TV_GUIDE_FALLBACK_MAX_AGE_SECS)
+        {
+            continue;
+        }
+        programs.insert(format!("pluto:{id}"), program);
+    }
+    Ok(programs)
+}
+
+fn load_pluto_current_programs(
+    channels: &[TvChannel],
+) -> Result<HashMap<String, TvProgram>, String> {
+    let root = fetch_pluto_guide(&[("mode", "now")])?;
+    parse_pluto_current_programs(&root, channels, Local::now().timestamp())
+}
+
+fn parse_pluto_day_guide(root: &Value) -> Result<Vec<TvProgram>, String> {
+    let items = root
+        .get("programs")
+        .and_then(Value::as_array)
+        .ok_or_else(|| crate::i18n::tr_tv("tv.error.guide_missing_programs"))?;
+    let mut programs: Vec<_> = items.iter().filter_map(parse_pluto_program).collect();
+    programs.sort_by_key(|program| program.start_time);
+    programs.dedup_by(|a, b| {
+        a.start_time == b.start_time && a.end_time == b.end_time && a.title == b.title
+    });
+    Ok(programs)
+}
+
+fn load_pluto_channel_guide(
+    channel: &TvChannel,
+    date: NaiveDate,
+) -> Result<Vec<TvProgram>, String> {
+    let Some(id) = pluto_channel_id(channel) else {
+        return Ok(Vec::new());
+    };
+    let date = date.format("%Y-%m-%d").to_string();
+    let key = format!("pluto:{id}:{date}");
+    let cache = TV_CHANNEL_GUIDE_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(cache) = cache.lock()
+        && let Some(cached) = cache.get(&key)
+        && cached.fetched_at.elapsed() < TV_GUIDE_CACHE_TTL
+    {
+        return Ok(cached.programs.clone());
+    }
+    let programs = parse_pluto_day_guide(&fetch_pluto_guide(&[("id", &id), ("date", &date)])?)?;
+    if let Ok(mut cache) = cache.lock() {
+        cache.insert(
+            key,
+            CachedTvChannelGuide {
+                fetched_at: Instant::now(),
+                programs: programs.clone(),
+            },
+        );
+    }
+    Ok(programs)
+}
+
+fn load_oggi_current_programs(
     channels: &[TvChannel],
 ) -> Result<HashMap<String, TvProgram>, String> {
     let now = Local::now();
@@ -365,6 +552,9 @@ pub(crate) fn load_channel_guide(
     channel: &TvChannel,
     date: NaiveDate,
 ) -> Result<Vec<TvProgram>, String> {
+    if is_pluto_channel(channel) {
+        return load_pluto_channel_guide(channel, date);
+    }
     let date_text = date.format("%Y-%m-%d").to_string();
     let requested_channel = guide_channel_name(channel);
     let requested_normalized = normalize_channel_name(requested_channel);
@@ -668,6 +858,11 @@ pub(crate) fn current_program_for_channel<'a>(
 }
 
 fn guide_lookup_keys(channel: &TvChannel) -> Vec<String> {
+    if is_pluto_channel(channel) {
+        return pluto_channel_id(channel)
+            .map(|id| vec![format!("pluto:{id}")])
+            .unwrap_or_default();
+    }
     let mut keys = Vec::new();
     for value in [&channel.name, &channel.tvg_name, &channel.tvg_id] {
         push_normalized_guide_key(&mut keys, value);
@@ -1296,6 +1491,166 @@ fn normalize_search_text(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn pluto_test_channel(id: &str, name: &str) -> TvChannel {
+        serde_json::from_value(serde_json::json!({
+            "name": name, "url": format!("https://sonarpad.com/api/pluto.php?id={id}"),
+            "category": "Serie", "tvg_name": name
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    #[ignore = "Requires the live Sonarpad API and SONARPAD_ROUTE_CLIENT_TOKEN at build time"]
+    fn pluto_live_now_and_day_guide() {
+        assert!(
+            !TV_API_CLIENT_TOKEN.is_empty(),
+            "Missing TV API build token"
+        );
+        let channels = vec![
+            pluto_test_channel("661f8f4c307fa30008033ab5", "Pluto TV Alieni"),
+            pluto_test_channel("691c5b2e74baa89ef7230baf", "Nina"),
+            pluto_test_channel("60a2837f8154ab0007c4dcdf", "Le sorelle McLeod"),
+        ];
+        let current = load_current_programs(&channels).expect("Live Pluto now endpoint");
+        assert!(!current.is_empty());
+        for channel in &channels {
+            let guide = load_channel_guide(channel, Local::now().date_naive())
+                .expect("Live Pluto day guide");
+            assert!(!guide.is_empty());
+            assert!(
+                guide
+                    .windows(2)
+                    .all(|pair| pair[0].start_time <= pair[1].start_time)
+            );
+            if let Some(program) = current_program_for_channel(&current, channel) {
+                assert!(guide.iter().any(
+                    |item| item.start_time == program.start_time && item.title == program.title
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn pluto_uses_ids_without_colliding_with_terrestrial_names() {
+        let id = "661f8f4c307fa30008033ab5";
+        let pluto = pluto_test_channel(id, "Gambero Rosso");
+        let mut terrestrial = pluto.clone();
+        terrestrial.url = "https://example.test/live.m3u8".to_string();
+        assert!(!is_pluto_channel(&terrestrial));
+        let root = serde_json::json!({"programs": {id: {
+            "title": "Titolo Pluto", "startTime": 100, "endTime": 200
+        }}});
+        let mut current = parse_pluto_current_programs(&root, &[pluto.clone()], 150).unwrap();
+        current.insert(
+            normalize_channel_name("Gambero Rosso"),
+            TvProgram {
+                title: "Titolo DTT".to_string(),
+                start_time: 100,
+                end_time: 200,
+                description: String::new(),
+            },
+        );
+        assert_eq!(
+            current_program_for_channel(&current, &pluto).unwrap().title,
+            "Titolo Pluto"
+        );
+        assert_eq!(
+            current_program_for_channel(&current, &terrestrial)
+                .unwrap()
+                .title,
+            "Titolo DTT"
+        );
+        current.remove(&format!("pluto:{id}"));
+        assert!(current_program_for_channel(&current, &pluto).is_none());
+        assert!(guide_lookup_keys(&pluto_test_channel("invalid", "Gambero Rosso")).is_empty());
+    }
+
+    #[test]
+    fn pluto_now_filters_unknown_future_expired_and_placeholder_programs() {
+        let id = "661f8f4c307fa30008033ab5";
+        let channel = pluto_test_channel(id, "Pluto TV Alieni");
+        for (title, start, end) in [
+            ("Programma non specificato", 29900, 30100),
+            ("no info available", 29900, 30100),
+            ("Futuro", 30100, 30200),
+            ("Scaduto", 100, 200),
+            ("Errato", 29900, 100),
+        ] {
+            let root = serde_json::json!({"programs": {id: {
+                "title": title, "startTime": start, "endTime": end
+            }}});
+            assert!(
+                parse_pluto_current_programs(&root, &[channel.clone()], 30000)
+                    .unwrap()
+                    .is_empty()
+            );
+        }
+        let root = serde_json::json!({"programs": {"unknown": {
+            "title": "Altro canale", "startTime": 29900, "endTime": 30100
+        }}});
+        assert!(
+            parse_pluto_current_programs(&root, &[channel], 30000)
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn pluto_day_guide_sorts_preserves_details_and_ignores_placeholders() {
+        let first = serde_json::json!({"title": "La Città Sotterranea",
+            "startTime": "100", "endTime": 200, "description": "Descrizione episodio"});
+        let root = serde_json::json!({"programs": [
+            {"title": "Dopo", "startTime": 200, "endTime": 300},
+            first.clone(), first,
+            {"title": "Programma non specificato", "startTime": 300, "endTime": 400},
+            {"title": "Errato", "startTime": 200, "endTime": 100}, null
+        ]});
+        let programs = parse_pluto_day_guide(&root).unwrap();
+        assert_eq!(programs.len(), 2);
+        assert_eq!(programs[0].title, "La Città Sotterranea");
+        assert_eq!(programs[0].description, "Descrizione episodio");
+        assert_eq!(programs[1].title, "Dopo");
+        assert!(
+            parse_pluto_day_guide(&serde_json::json!({"programs": []}))
+                .unwrap()
+                .is_empty()
+        );
+        assert!(parse_pluto_day_guide(&serde_json::json!({"error": "unavailable"})).is_err());
+    }
+
+    #[test]
+    fn guide_provider_failures_do_not_hide_the_other_provider() {
+        let programs = HashMap::from([(
+            "pluto:test".to_string(),
+            TvProgram {
+                title: "Programma disponibile".to_string(),
+                start_time: 100,
+                end_time: 200,
+                description: String::new(),
+            },
+        )]);
+        let result = merge_current_program_sources(
+            Some(Err("Oggi offline".to_string())),
+            Some(Ok(programs.clone())),
+        )
+        .unwrap();
+        assert_eq!(result.len(), 1);
+        let result = merge_current_program_sources(
+            Some(Ok(programs)),
+            Some(Err("Pluto offline".to_string())),
+        )
+        .unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(
+            merge_current_program_sources(None, Some(Err("Pluto offline".to_string()))).is_err()
+        );
+        assert!(
+            merge_current_program_sources(None, None)
+                .unwrap()
+                .is_empty()
+        );
+    }
 
     #[test]
     fn strips_numeric_prefix_only_when_numeric() {

@@ -958,6 +958,13 @@ pub fn list_audio_streams(path: &Path) -> Result<Vec<AudioStreamInfo>, String> {
     Ok(streams)
 }
 
+// A damaged AVI soundtrack can alternate accepted and invalid packets without
+// emitting any audio frame. Limit both a single output window and the stream
+// since the last seek, so a corrupt source cannot loop indefinitely.
+fn ffmpeg_corruption_budget_exceeded(window_errors: u32, stream_errors: u32) -> bool {
+    window_errors >= 96 || stream_errors >= 128
+}
+
 pub struct FfmpegSource {
     api: &'static FfmpegApi,
     fmt_ctx: *mut AVFormatContext,
@@ -986,6 +993,10 @@ pub struct FfmpegSource {
     total_duration: Option<Duration>,
     eof: bool,
     sent_eof: bool,
+    // Set only when corruption prevents us from continuing safely.
+    // The audio-description pipeline can then use the bundled FFmpeg DLL recovery fallback.
+    decoding_failure: Option<String>,
+    bad_packets_since_seek: u32,
 }
 
 // SAFETY: FfmpegSource is used only on the playback thread.
@@ -1308,6 +1319,8 @@ impl FfmpegSource {
             total_duration,
             eof: false,
             sent_eof: false,
+            decoding_failure: None,
+            bad_packets_since_seek: 0,
         };
 
         if start_seconds > 0.0 {
@@ -1604,6 +1617,10 @@ impl FfmpegSource {
         ))
     }
 
+    pub(crate) fn decoding_failure(&self) -> Option<&str> {
+        self.decoding_failure.as_deref()
+    }
+
     fn refill(&mut self) -> bool {
         if self.eof {
             log_debug("FFmpeg refill: already eof");
@@ -1614,6 +1631,15 @@ impl FfmpegSource {
         self.buffer_pos = 0;
         self.buffer_start_pts_us = None;
         self.buffer_frame_count = 0;
+        // Fallback only: stop retrying a severely corrupt audio stream
+        // indefinitely. No change to the normal packet/decoder path.
+        let mut consecutive_bad_packets = 0_u32;
+        // Do not use *only* consecutive failures: damaged AVI/MP3 streams can
+        // alternate bad packets with accepted packets without ever outputting
+        // a decoded frame. The former counter repeatedly returns to zero in
+        // that situation and the loop can run through hundreds of bad packets.
+        let mut bad_packets_this_refill = 0_u32;
+        let mut decoder_recovered = false;
 
         loop {
             match self.receive_frame() {
@@ -1621,6 +1647,14 @@ impl FfmpegSource {
                 Ok(false) => {}
                 Err(err) => {
                     log_debug(&format!("FFmpeg refill: receive_frame error: {}", err));
+                    if !decoder_recovered {
+                        decoder_recovered = true;
+                        unsafe { (self.api.avcodec_flush_buffers)(self.codec_ctx) };
+                        log_debug("FFmpeg refill: decoder recovery fallback after invalid frame");
+                        continue;
+                    }
+                    self.decoding_failure = Some(err);
+                    self.eof = true;
                     return false;
                 }
             }
@@ -1662,11 +1696,42 @@ impl FfmpegSource {
 
             let send_ret = unsafe { (self.api.avcodec_send_packet)(self.codec_ctx, self.packet) };
             crate::ffmpeg_source::av_packet_unref_safe(self.api, self.packet);
-            if send_ret < 0 {
-                log_debug(&format!(
-                    "FFmpeg: send_packet failed: {}",
-                    ffmpeg_err(self.api, send_ret)
-                ));
+            if send_ret < 0 && !is_eagain(send_ret) {
+                consecutive_bad_packets = consecutive_bad_packets.saturating_add(1);
+                bad_packets_this_refill = bad_packets_this_refill.saturating_add(1);
+                self.bad_packets_since_seek = self.bad_packets_since_seek.saturating_add(1);
+                // This guard is fallback-only: healthy streams never enter it.
+                // A single refill without an audio frame must have a finite
+                // corruption budget, even when accepted packets reset the
+                // consecutive error streak. The caller can then attempt bounded native FFmpeg DLL
+                // resynchronization without leaving the ordinary decoder loop running.
+                if ffmpeg_corruption_budget_exceeded(
+                    bad_packets_this_refill,
+                    self.bad_packets_since_seek,
+                ) {
+                    self.decoding_failure = Some(format!(
+                        "FFmpeg: excessive damaged audio packets (window={bad_packets_this_refill}, since_seek={}); native DLL recovery required",
+                        self.bad_packets_since_seek
+                    ));
+                    log_debug(self.decoding_failure.as_deref().unwrap_or_default());
+                    self.eof = true;
+                    return false;
+                }
+                if consecutive_bad_packets <= 3 || consecutive_bad_packets.is_multiple_of(32) {
+                    log_debug(&format!(
+                        "FFmpeg: send_packet failed (consecutive={}): {}",
+                        consecutive_bad_packets,
+                        ffmpeg_err(self.api, send_ret)
+                    ));
+                }
+                if consecutive_bad_packets == 32 {
+                    // Recover only after sustained corruption. Do not modify
+                    // the decoder state of healthy audio sources.
+                    unsafe { (self.api.avcodec_flush_buffers)(self.codec_ctx) };
+                    log_debug("FFmpeg: resetting decoder after 32 bad packets (fallback)");
+                }
+            } else {
+                consecutive_bad_packets = 0;
             }
         }
     }
@@ -1751,6 +1816,8 @@ impl Source for FfmpegSource {
         self.buffer_frame_count = 0;
         self.eof = false;
         self.sent_eof = false;
+        self.decoding_failure = None;
+        self.bad_packets_since_seek = 0;
         let pos_us = pos.as_micros().min(i64::MAX as u128) as i64;
         let mut next_pts = pos_us;
         if let Some(offset) = self.pts_offset_us {
@@ -1800,5 +1867,24 @@ impl Drop for FfmpegSource {
                 (self.api.avformat_close_input)(&mut self.fmt_ctx);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod corrupt_packet_guard_tests {
+    use super::ffmpeg_corruption_budget_exceeded;
+
+    #[test]
+    fn healthy_decoding_and_small_intermittent_errors_do_not_trigger_recovery() {
+        assert!(!ffmpeg_corruption_budget_exceeded(0, 0));
+        assert!(!ffmpeg_corruption_budget_exceeded(3, 30));
+        assert!(!ffmpeg_corruption_budget_exceeded(95, 127));
+    }
+
+    #[test]
+    fn repeated_errors_trigger_even_when_good_packets_reset_consecutive_streak() {
+        // A successful packet does not reset either of the safety budgets.
+        assert!(ffmpeg_corruption_budget_exceeded(96, 100));
+        assert!(ffmpeg_corruption_budget_exceeded(2, 128));
     }
 }

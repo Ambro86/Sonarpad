@@ -1,0 +1,14 @@
+{
+    "conversation_id": "3f52f414-d04d-49e9-acbf-a1cbf649fd76",
+    "status": "SUCCESS",
+    "response": "{\n  \"character_glossary\": [],\n  \"audio_descriptions\": []\n}\n",
+    "duration_seconds": 9.5054905,
+    "num_turns": 1,
+    "usage": {
+        "input_tokens": 14847,
+        "output_tokens": 1203,
+        "thinking_tokens": 1130,
+        "cache_read_tokens": 20265,
+        "total_tokens": 16050
+    }
+}

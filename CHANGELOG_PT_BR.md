@@ -1,5 +1,41 @@
 # Changelog
 
+Versão 0.9.13 – 2026-10-11
+
+Áudio e leitura
+1. Foi adicionado um timer de desligamento global em Opções → Áudio, desativado por padrão, com períodos de 10 a 120 minutos em intervalos de 10 minutos, como na versão para dispositivos móveis. Ele se aplica à leitura de documentos e à reprodução de áudio e vídeo, incluindo transmissões gerenciadas. Quando o tempo termina, interrompe a leitura ou reprodução usando os comandos habituais de parada. A configuração fica exclusivamente nas opções de áudio, sem novos comandos no menu de reprodução.
+
+Documentos PDF
+2. Corrigida a exportação de caracteres acentuados e Unicode para PDF (por exemplo, á, è e é). O Sonarpad agora incorpora ao PDF uma fonte Unicode TrueType já instalada no Windows, evitando texto corrompido como “Ã¨” ao reabrir o arquivo. O layout, o cabeçalho e os números de página são preservados.
+
+
+
+Audiodescrição com IA – estabilidade e recuperação
+3. `generation_in_progress` agora indica uma espera normal. O cliente mantém a mesma chave de idempotência e repete falhas temporárias de rede/servidor sem iniciar outra geração paga.
+4. Ao excluir um arquivo enviado, `401 invalid_session` permite renovar a sessão uma única vez.
+5. Ao cancelar, o processo Python termina sem um erro enganoso do canal de saída fechado. A retomada e os checkpoints existentes não mudam.
+6. O FFmpeg usa um fallback isolado apenas após erros repetidos em pacotes de áudio corrompidos; arquivos normais não são afetados.
+
+7. O cache do módulo de audiodescrição passou a usar `audio_description_bridge_v9.exe`. Depois da atualização do Sonarpad, o módulo será baixado novamente no primeiro uso; os caches antigos serão removidos quando possível. O fluxo Gemini/Pyannote permanece inalterado. Antes do lançamento, é necessário recompilar o módulo Python e substituir `audio_description_bridge.exe` na versão 0.7 do Sonarpad-Tools no GitHub.
+
+Player, YouTube e streaming
+8. Corrigido **Ir para o tempo (Ctrl+T)** nos vídeos do YouTube reproduzidos pelo MPV. A janela existente agora permite avançar até o tempo desejado via MPV, e o menu habilita a busca em vídeos da web compatíveis. As restrições de TV ao vivo e streams diretos BASS permanecem inalteradas.
+
+9. **Ir para o tempo (Ctrl+T)** e os controles de busca agora funcionam em todos os conteúdos sob demanda: RaiPlay, audiodescrições Rai e Sonarpad, La7 Play e YouTube. O MPV identifica o player ativo mesmo quando o serviço muda a URL. Canais de TV e transmissões ao vivo continuam sem busca. A geração de audiodescrições não foi alterada.
+
+10. Corrigido **Ir para o tempo (Ctrl+T)** para vídeos locais AVI, MP4, MKV e outros formatos reproduzidos pelo MPV. O Sonarpad identifica a aba do arquivo ativo mesmo com diferenças de maiúsculas e barras no caminho do Windows. O BASS e a reprodução permanecem intactos; canais de TV e transmissões ao vivo continuam excluídos.
+
+11. Reforçado o fallback FFmpeg para audiodescrições de vídeos com áudio danificado. Pacotes inválidos intercalados com pacotes válidos também são contados, evitando ciclos de decodificação. Só então a recuperação utiliza as bibliotecas FFmpeg já incluídas no Sonarpad (avformat, avcodec e swresample), pulando trechos curtos danificados sob limites rígidos. WAVs incompletos são rejeitados; não é necessário ffmpeg.exe externo. O fluxo Gemini/Pyannote permanece inalterado.
+
+Leitura de PDF e OCR japonês
+12. Melhorada a importação de livros de japonês e inglês. PDFs digitalizados utilizam o OCR do Windows já existente e, com o recurso japonês (ja-JP) instalado, reconhecem hiragana, katakana e kanji. Os resultados são combinados pela posição na página, preservando linhas e colunas claramente identificáveis. PDFs com texto Unicode japonês incorporado mantêm as quebras de linha e os marcadores de página. Sem OCR na nuvem ou programas externos.
+
+13. A instalação do OCR japonês agora é opcional: não há mais avisos ao abrir PDFs digitalizados. Quem precisar pode iniciar pelo menu Ferramentas > Leitura e conteúdo. O Sonarpad pede confirmação antes de instalar o componente oficial do Windows. O OCR normal e as audiodescrições permanecem inalterados.
+
+15. A instalação opcional do OCR japonês agora mostra uma janela de progresso acessível no Sonarpad. As porcentagens só aparecem quando o Windows realmente as informa, sem simular avanço durante a espera. Ao terminar, o resultado e a possível necessidade de reiniciar são anunciados. Nenhum aviso aparece ao abrir PDFs normalmente. A janela agora inclui o botão Cancelar e usa a instalação pelo Windows PowerShell.
+
+16. Ao reexportar um MP3 de um projeto de audiodescrição, o Sonarpad abre uma janela de progresso separada e acessível com o botão Cancelar. NVDA e JAWS não percorrem mais os controles desativados do editor.
+
 Versão 0.9.12 – 2026-10-02
 
 Gravação de podcasts

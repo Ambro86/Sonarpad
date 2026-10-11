@@ -1,0 +1,14 @@
+{
+    "conversation_id": "44101af3-ef52-4d57-9dda-e5764596d298",
+    "status": "SUCCESS",
+    "response": "{\n  \"character_glossary\": [\n    {\n      \"id\": \"flo\",\n      \"name\": \"Flo\",\n      \"description\": \"Protagonista della serie, figlia di Ernest ed Anna e sorella di Franz e Jack. Bambina di circa 9-10 anni, vivace e curiosa. Ha i capelli corti.\"\n    }\n  ],\n  \"audio_descriptions\": []\n}\n",
+    "duration_seconds": 7.9792421000000004,
+    "num_turns": 1,
+    "usage": {
+        "input_tokens": 9580,
+        "output_tokens": 1073,
+        "thinking_tokens": 977,
+        "cache_read_tokens": 8107,
+        "total_tokens": 10653
+    }
+}

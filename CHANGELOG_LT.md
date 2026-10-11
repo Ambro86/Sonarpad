@@ -1,5 +1,41 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.13 – 2026-10-11
+
+Garsas ir skaitymas
+1. Parinktyse → Garsas pridėtas bendras išsijungimo laikmatis. Pagal numatytuosius nustatymus jis išjungtas; kaip ir mobiliojoje versijoje, galima pasirinkti nuo 10 iki 120 minučių kas 10 minučių. Laikmatis taikomas dokumentų skaitymui ir garso bei vaizdo atkūrimui, įskaitant valdomus srautus. Pasibaigus nustatytam laikui skaitymas arba atkūrimas sustabdomas įprastomis stabdymo komandomis. Laikmatis nustatomas tik garso parinktyse, neįtraukiant naujų komandų į atkūrimo meniu.
+
+PDF dokumentai
+2. Ištaisytas PDF eksportas su kirčiuotais ir kitais „Unicode“ simboliais (pvz., ė, ą ir é). Sonarpad dabar į PDF įterpia sistemoje „Windows“ įdiegtą „TrueType Unicode“ šriftą, kad pakartotinai atidarius failą nebūtų sugadintų simbolių, tokių kaip „Ã¨“. Išdėstymas, antraštė ir puslapių numeriai nekeičiami.
+
+
+
+DI garsinis vaizdavimas – stabilumas ir atkūrimas
+3. `generation_in_progress` dabar laikoma įprastu laukimu. Klientas išsaugo tą patį užklausos identifikatorių ir saugiai kartoja laikinai nepavykusias užklausas, nepradėdamas antro generavimo.
+4. Šalinant įkeltą failą po `401 invalid_session` seansas gali būti atnaujintas vieną kartą.
+5. Nutraukiant Python procesą neberodoma klaidinanti uždaryto išvesties kanalo klaida. Esamas darbo tęsimas nepakeistas.
+6. FFmpeg atsarginis atkūrimas veikia tik pasikartojant sugadintiems garso paketams; įprastas dekodavimas nesikeičia.
+
+7. Audiodeskripcijos pagalbinės programos talpyklos failas pakeistas į `audio_description_bridge_v9.exe`. Atnaujinus Sonarpad, pirmą kartą naudojant funkciją failas bus atsisiųstas iš naujo, o senesnės versijos, jei įmanoma, pašalintos. Gemini/Pyannote procesas nekeičiamas. Prieš leidimą reikia iš naujo sukompiliuoti Python programą ir pakeisti `audio_description_bridge.exe` GitHub Sonarpad-Tools 0.7 leidime.
+
+Grotuvas, „YouTube“ ir srautinis perdavimas
+8. Ištaisyta **Pereiti į laiką (Ctrl+T)** funkcija „YouTube“ vaizdo įrašams, atkuriamiems per MPV. Esamas dialogo langas dabar leidžia pereiti į pasirinktą laiką; meniu įgalina paiešką palaikomuose interneto vaizdo įrašuose. Tiesioginės televizijos ir tiesioginių BASS srautų apribojimai nesikeičia.
+
+9. **Pereiti į laiką (Ctrl+T)** funkcija ir atsukimo komandos dabar veikia visame užsakomajame turinyje: RaiPlay, Rai ir Sonarpad garsiniuose aprašymuose, La7 Play bei YouTube. MPV atpažįsta aktyvų grotuvą net pasikeitus tiekėjo URL. TV kanalai ir tiesioginės transliacijos lieka neatsukamos. Garsinio aprašymo procesas nekeičiamas.
+
+10. Ištaisyta **Pereiti į laiką (Ctrl+T)** funkcija vietiniams AVI, MP4, MKV ir kitiems per MPV leidžiamiems vaizdo įrašams. Sonarpad susieja aktyvų failą su jo skirtuku net kai Windows kelias užrašytas skirtingai. BASS ir atkūrimas nekeisti; TV kanalai bei tiesioginės transliacijos lieka neatsukamos.
+
+11. Patobulintas FFmpeg atsarginis atkūrimas garsiniam vaizdo įrašų su pažeistu garsu aprašymui. Skaičiuojami ir tarp tinkamų paketų pasitaikantys sugadinti paketai, todėl pavojingi dekodavimo ciklai sustabdomi. Tik tada atkūrimas bandomas naudojant su Sonarpad pateikiamas FFmpeg bibliotekas (avformat, avcodec, swresample), ribotai praleidžiant pažeistas atkarpas. Nepilni WAV atmetami; išorinis ffmpeg.exe nereikalingas. Įprasta Gemini/Pyannote eiga nekeičiama.
+
+PDF skaitymas ir japonų OCR
+12. Patobulintas japonų ir anglų kalbų vadovėlių atvėrimas. Nuskaitytiems PDF naudojamas esamas Windows OCR, o įdiegus japonų OCR (ja-JP) atpažįstami ir hiraganos, katakanos bei kandži ženklai. Rezultatai sujungiami pagal padėtį puslapyje, išsaugant eilutes ir aiškiai atpažįstamus stulpelius. PDF su įterptu japonišku Unicode tekstu išlaikomi eilučių lūžiai ir puslapių žymos. Be debesijos ir išorinių programų.
+
+13. Japonų OCR diegimas dabar pasirenkamas: atveriant nuskaitytus PDF, pranešimas neberodomas. Jei reikia, įdiegimą galima pradėti per Įrankiai > Skaitymas ir turinys. Prieš diegiant oficialų „Windows“ komponentą prašoma patvirtinimo. Įprastas OCR ir garsiniai aprašymai nesikeičia.
+
+15. Pasirinktinis japonų OCR diegimas dabar rodomas pasiekiamame Sonarpad eigos lange. Procentai rodomi tik tada, kai juos iš tikrųjų pateikia Windows, be išgalvotos eigos. Baigus pranešamas rezultatas ir būtinybė perkrauti sistemą. Įprastai atveriant PDF perspėjimai nerodomi. Lange dabar yra mygtukas Atšaukti; naudojamas Windows PowerShell diegimas.
+
+16. Pakartotinai eksportuojant MP3 iš garsinio aprašymo projekto dabar atidaromas atskiras prieinamas eigos langas su mygtuku Atšaukti. NVDA ir JAWS nebeperžiūri išjungtų projekto redagavimo valdiklių.
+
 Versija 0.9.12 – 2026-10-02
 
 Tinklalaidžių įrašymas

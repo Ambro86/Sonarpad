@@ -1,0 +1,14 @@
+{
+    "conversation_id": "446be58d-20b0-4651-9e20-694e91c6755d",
+    "status": "SUCCESS",
+    "response": "{\n  \"character_glossary\": [],\n  \"audio_descriptions\": [\n    {\n      \"start_time_mmss\": \"00:39\",\n      \"end_time_mmss\": \"00:50\",\n      \"description_text\": \"Flo runs along the sandy shore.\"\n    },\n    {\n      \"start_time_mmss\": \"00:51\",\n      \"end_time_mmss\": \"01:02\",\n      \"description_text\": \"She pauses to examine broken branches.\"\n    },\n    {\n      \"start_time_mmss\": \"01:11\",\n      \"end_time_mmss\": \"01:13\",\n      \"description_text\": \"Anna Robinson looks toward the ocean.\"\n    },\n    {\n      \"start_time_mmss\": \"01:48\",\n      \"end_time_mmss\": \"01:53\",\n      \"description_text\": \"Franz Robinson slowly tunes his guitar.\"\n    },\n    {\n      \"start_time_mmss\": \"02:12\",\n      \"end_time_mmss\": \"02:23\",\n      \"description_text\": \"Jack Robinson gently pets the small Mercre.\"\n    }\n  ]\n}\n",
+    "duration_seconds": 33.0449293,
+    "num_turns": 1,
+    "usage": {
+        "input_tokens": 32131,
+        "output_tokens": 5039,
+        "thinking_tokens": 4229,
+        "cache_read_tokens": 56825,
+        "total_tokens": 37170
+    }
+}

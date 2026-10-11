@@ -118,6 +118,7 @@ const OPTIONS_ID_DIALOGUE_SECONDARY_VOICE_PITCH_EDIT: usize = 6102;
 const OPTIONS_ID_DIALOGUE_SECONDARY_VOICE_VOLUME_EDIT: usize = 6103;
 const OPTIONS_ID_SHOW_MEDIA_SAVE_CONFIRMATION: usize = 6104;
 const OPTIONS_ID_AUDIO_SKIP: usize = 6010;
+const OPTIONS_ID_SLEEP_TIMER: usize = 6150;
 const OPTIONS_ID_AUDIO_SPLIT: usize = 6011;
 const OPTIONS_ID_AUDIOBOOK_SAVE_FOLDER: usize = 6064;
 const OPTIONS_ID_AUDIOBOOK_SAVE_FOLDER_BROWSE: usize = 6065;
@@ -1008,6 +1009,8 @@ struct OptionsDialogState {
     checkbox_tts_manual: HWND,
     label_audio_skip: HWND,
     combo_audio_skip: HWND,
+    label_sleep_timer: HWND,
+    combo_sleep_timer: HWND,
     label_default_save_folder_kind: HWND,
     combo_default_save_folder_kind: HWND,
     label_audiobook_save_folder: HWND,
@@ -1291,6 +1294,7 @@ struct OptionsLabels {
     label_shortcut_reset: String,
     label_shortcut_reset_all: String,
     label_audio_skip: String,
+    label_sleep_timer: String,
     label_default_save_folder_kind: String,
     option_default_save_folder_audiobooks: String,
     option_default_save_folder_audio_descriptions: String,
@@ -1547,6 +1551,7 @@ fn options_labels(language: Language) -> OptionsLabels {
         label_shortcut_reset: shortcuts_reset_label(language),
         label_shortcut_reset_all: shortcuts_reset_all_label(language),
         label_audio_skip: i18n::tr(language, "options.label.audio_skip"),
+        label_sleep_timer: i18n::tr(language, "options.label.sleep_timer"),
         label_default_save_folder_kind: {
             let value = i18n::tr(language, "options.label.default_save_folder_kind");
             if value == "options.label.default_save_folder_kind" {
@@ -4433,6 +4438,36 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                 );
                 y += 40;
 
+                let label_sleep_timer = CreateWindowExW(
+                    Default::default(),
+                    WC_STATIC,
+                    PCWSTR(to_wide(&labels.label_sleep_timer).as_ptr()),
+                    WS_CHILD | WS_VISIBLE,
+                    20,
+                    y,
+                    140,
+                    20,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let combo_sleep_timer = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_COMBOBOXW,
+                    PCWSTR::null(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                    170,
+                    y - 2,
+                    300,
+                    180,
+                    hwnd,
+                    HMENU(OPTIONS_ID_SLEEP_TIMER as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                y += 40;
+
                 let label_default_save_folder_kind = CreateWindowExW(
                     Default::default(),
                     WC_STATIC,
@@ -6484,6 +6519,8 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     button_tts_insert_pause,
                     label_audio_skip,
                     combo_audio_skip,
+                    label_sleep_timer,
+                    combo_sleep_timer,
                     label_default_save_folder_kind,
                     combo_default_save_folder_kind,
                     label_audiobook_save_folder,
@@ -6699,6 +6736,8 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     checkbox_tts_manual,
                     label_audio_skip,
                     combo_audio_skip,
+                    label_sleep_timer,
+                    combo_sleep_timer,
                     label_default_save_folder_kind,
                     combo_default_save_folder_kind,
                     label_audiobook_save_folder,
@@ -9294,6 +9333,32 @@ fn initialize_options_dialog(hwnd: HWND) {
             WPARAM(selected_idx.or(default_idx).unwrap_or(0)),
             LPARAM(0),
         );
+        // Same choices as Sonarpad Mobile: Disabled, then 10..120 in 10 minute steps.
+        if let Some(combo) = with_options_state(hwnd, |state| state.combo_sleep_timer) {
+            SendMessageW(combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
+            let off = i18n::tr(settings.language, "options.sleep_timer.disabled");
+            for (index, minutes) in (0_u32..=120).step_by(10).enumerate() {
+                let label = if minutes == 0 {
+                    off.clone()
+                } else {
+                    format!("{} min", minutes)
+                };
+                let idx = SendMessageW(
+                    combo,
+                    CB_ADDSTRING,
+                    WPARAM(0),
+                    LPARAM(to_wide(&label).as_ptr() as isize),
+                )
+                .0 as usize;
+                SendMessageW(combo, CB_SETITEMDATA, WPARAM(idx), LPARAM(minutes as isize));
+                if minutes == settings.sleep_timer_minutes {
+                    SendMessageW(combo, CB_SETCURSEL, WPARAM(idx), LPARAM(0));
+                }
+                if index == 0 && settings.sleep_timer_minutes > 120 {
+                    SendMessageW(combo, CB_SETCURSEL, WPARAM(idx), LPARAM(0));
+                }
+            }
+        }
         if with_options_state(hwnd, |state| {
             state.default_save_folder_selection = DEFAULT_SAVE_FOLDER_AUDIOBOOK;
             state.default_save_folder_audiobook = settings.audiobook_save_folder.clone();
@@ -12764,6 +12829,18 @@ fn apply_options_dialog(hwnd: HWND) {
             .0;
             settings.audiobook_skip_seconds = skip_secs as u32;
         }
+        if let Some(combo) = with_options_state(hwnd, |state| state.combo_sleep_timer) {
+            let sel = SendMessageW(combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
+            if sel >= 0 {
+                let minutes =
+                    SendMessageW(combo, CB_GETITEMDATA, WPARAM(sel as usize), LPARAM(0)).0 as u32;
+                settings.sleep_timer_minutes = if minutes <= 120 && minutes.is_multiple_of(10) {
+                    minutes
+                } else {
+                    0
+                };
+            }
+        }
 
         let split_sel = SendMessageW(combo_audio_split, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
         if split_sel >= 0 {
@@ -14127,6 +14204,14 @@ fn layout_audio_tab(state: &OptionsDialogState, scroll_offset: i32) -> i32 {
         OPTIONS_COMBO_HEIGHT,
     );
     y = layout_label_control(
+        "label_sleep_timer",
+        state.label_sleep_timer,
+        "combo_sleep_timer",
+        state.combo_sleep_timer,
+        y,
+        OPTIONS_COMBO_HEIGHT,
+    );
+    y = layout_label_control(
         "label_default_save_folder_kind",
         state.label_default_save_folder_kind,
         "combo_default_save_folder_kind",
@@ -14864,6 +14949,8 @@ fn set_active_tab(hwnd: HWND, index: i32) {
         for control in [
             state.label_audio_skip,
             state.combo_audio_skip,
+            state.label_sleep_timer,
+            state.combo_sleep_timer,
             state.label_default_save_folder_kind,
             state.combo_default_save_folder_kind,
             state.label_audiobook_save_folder,

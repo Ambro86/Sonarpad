@@ -1,5 +1,41 @@
 # Ändringslogg
 
+Version 0.9.13 – 2026-10-11
+
+Ljud och uppläsning
+1. En gemensam insomningstimer har lagts till under Alternativ → Ljud. Den är avstängd som standard och kan ställas in på 10 till 120 minuter i steg om 10 minuter, precis som i mobilversionen. Timern gäller både uppläsning av dokument och uppspelning av ljud och video, inklusive hanterade strömmar. När tiden löper ut stoppas uppläsningen eller uppspelningen med de vanliga stoppkommandona. Timern ställs endast in i ljudalternativen; inga nya kommandon har lagts till i uppspelningsmenyn.
+
+PDF-dokument
+2. Rättade PDF-export av accenttecken och andra Unicode-tecken (till exempel è, å och é). Sonarpad bäddar nu in ett Unicode TrueType-typsnitt som redan är installerat i Windows, så att felaktiga tecken som ”Ã¨” inte visas när PDF-filen öppnas igen. Layout, sidhuvud och sidnummer bevaras.
+
+
+
+AI-syntolkning – stabilitet och återhämtning
+3. `generation_in_progress` hanteras nu som normal väntan. Klienten behåller samma idempotensnyckel och försöker igen vid tillfälliga nätverks-/serverfel utan att starta en ny debiterad generering.
+4. Vid radering av en uppladdad fil kan sessionen förnyas en gång efter `401 invalid_session`.
+5. Vid avbrytning avslutas Python-processen utan ett missvisande fel från en stängd utmatningskanal. Befintliga kontrollpunkter och återupptagning ändras inte.
+6. FFmpeg använder en isolerad reservlösning endast vid upprepade skadade ljudpaket; vanlig avkodning ändras inte.
+
+7. Ljudbeskrivningsbryggans cachefil har uppdaterats till `audio_description_bridge_v9.exe`. Efter uppdatering av Sonarpad hämtas bryggan på nytt vid första användningen; äldre versionsfiler tas bort när det går. Gemini/Pyannote-flödet är oförändrat. Före publicering måste Python-bryggan byggas om och `audio_description_bridge.exe` i GitHub-utgåvan Sonarpad-Tools 0.7 ersättas.
+
+Spelare, YouTube och strömning
+8. Åtgärdat **Gå till tid (Ctrl+T)** för YouTube-videor som spelas med MPV. Den befintliga dialogrutan söker nu till angiven tid via MPV, och menyn aktiverar sökning i kompatibla webbvideor. Begränsningar för direktsänd TV och direkta BASS-strömmar är oförändrade.
+
+9. **Gå till tid (Ctrl+T)** och sökkommandona fungerar nu för allt innehåll på begäran: RaiPlay, syntolkningar från Rai och Sonarpad, La7 Play och YouTube. MPV känner igen den aktiva spelaren även om leverantören byter strömningsadress. TV-kanaler och direktsändningar kan fortfarande inte sökas. Syntolkningskedjan är oförändrad.
+
+10. **Gå till tid (Ctrl+T)** fungerar nu även för lokala AVI-, MP4-, MKV- och andra videofiler som spelas upp med MPV. Sonarpad kopplar den aktiva filen till rätt flik även om Windows-sökvägen skiljer sig åt i skiftläge eller snedstreck. BASS och uppspelningen är oförändrade; TV-kanaler och direktsändningar är fortfarande undantagna.
+
+11. Förbättrat FFmpeg-reservläge för ljudbeskrivning av videor med skadat ljud. Ogiltiga ljudpaket räknas även mellan giltiga paket så att avkodningsslingor stoppas. Först då används FFmpeg-biblioteken som redan följer med Sonarpad (avformat, avcodec och swresample), med begränsat hopp över korta skadade avsnitt. Ofullständiga WAV-filer avvisas; en extern ffmpeg.exe behövs inte. Den normala Gemini/Pyannote-processen är oförändrad.
+
+PDF-läsning och japansk OCR
+12. Förbättrad import av japansk-engelska läroböcker. Skannade PDF-filer använder befintlig Windows-OCR och kan känna igen hiragana, katakana och kanji när japanskt OCR-stöd (ja-JP) är installerat. Resultaten sammanfogas efter position, med bevarade rader och tydligt identifierbara kolumner. PDF-filer med inbäddad japansk Unicode-text behåller radbrytningar och sidmarkörer. Ingen molntjänst eller extern programvara krävs.
+
+13. Installationen av japansk OCR är nu valfri: ingen fråga visas när skannade PDF-filer öppnas. Funktionen kan vid behov installeras via Verktyg > Läsning och innehåll. Sonarpad ber om bekräftelse före installationen av den officiella Windows-komponenten. Vanlig OCR och syntolkning påverkas inte.
+
+15. Den valfria installationen av japansk OCR visar nu ett tillgängligt förloppsfönster i Sonarpad. Procentsatser visas endast när Windows faktiskt rapporterar dem, utan påhittade framsteg under väntan. Resultatet och eventuellt behov av omstart meddelas. Inga installationsfrågor visas när PDF-filer öppnas normalt. Fönstret har nu knappen Avbryt och använder installation via Windows PowerShell.
+
+16. Vid omexport av MP3 från ett syntolkningsprojekt öppnas nu ett separat, tillgängligt förloppsfönster med knappen Avbryt. NVDA och JAWS behöver inte längre gå igenom inaktiverade kontroller i projektredigeraren.
+
 Version 0.9.12 – 2026-10-02
 
 Podcastinspelning

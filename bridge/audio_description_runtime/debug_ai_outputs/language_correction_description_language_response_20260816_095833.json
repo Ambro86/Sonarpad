@@ -1,0 +1,14 @@
+{
+    "conversation_id": "a5cc49d2-33c2-41b9-a808-d6841e71c68b",
+    "status": "SUCCESS",
+    "response": "{\"descriptions\": [{\"index\": 0, \"text\": \"Flo corre lungo la riva sabbiosa.\"}, {\"index\": 1, \"text\": \"Si ferma ad esaminare dei rami spezzati.\"}, {\"index\": 2, \"text\": \"Anna Robinson guarda verso l'oceano.\"}, {\"index\": 3, \"text\": \"Franz Robinson accorda lentamente la sua chitarra.\"}, {\"index\": 4, \"text\": \"Jack Robinson accarezza dolcemente il piccolo Mercre.\"}]}\n",
+    "duration_seconds": 5.8826226,
+    "num_turns": 1,
+    "usage": {
+        "input_tokens": 8679,
+        "output_tokens": 762,
+        "thinking_tokens": 648,
+        "cache_read_tokens": 8105,
+        "total_tokens": 9441
+    }
+}

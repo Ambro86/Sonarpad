@@ -1,5 +1,41 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.13 – 2026-10-11
+
+Âm thanh và đọc tài liệu
+1. Đã thêm bộ hẹn giờ dừng toàn cục trong Tùy chọn → Âm thanh, mặc định tắt, cho phép chọn từ 10 đến 120 phút với bước 10 phút như trên phiên bản di động. Bộ hẹn giờ áp dụng cho việc đọc tài liệu và phát âm thanh/video, bao gồm cả các luồng được quản lý. Khi hết thời gian, chương trình dừng đọc hoặc phát bằng các lệnh dừng thông thường. Chỉ có thể cài đặt trong tùy chọn âm thanh; không thêm lệnh mới vào menu phát.
+
+Tài liệu PDF
+2. Đã sửa lỗi xuất PDF với ký tự có dấu và Unicode (ví dụ è, à và tiếng Việt có dấu). Sonarpad hiện nhúng phông chữ Unicode TrueType có sẵn trong Windows vào PDF, tránh lỗi văn bản như “Ã¨” khi mở lại. Bố cục, đầu trang và số trang được giữ nguyên.
+
+
+
+Mô tả âm thanh bằng AI – độ ổn định và khôi phục
+3. `generation_in_progress` giờ là trạng thái chờ bình thường. Ứng dụng giữ nguyên khóa chống lặp yêu cầu và thử lại lỗi mạng hoặc máy chủ tạm thời mà không khởi tạo lần tạo nội dung tính phí thứ hai.
+4. Khi xóa tệp đã tải lên, lỗi `401 invalid_session` cho phép làm mới phiên một lần.
+5. Khi hủy, tiến trình Python thoát mà không báo lỗi nhầm do kênh đầu ra đã đóng. Tính năng tiếp tục công việc và checkpoint hiện có không thay đổi.
+6. FFmpeg chỉ áp dụng chế độ dự phòng khi gặp nhiều gói âm thanh bị hỏng liên tiếp; giải mã thông thường không đổi.
+
+7. Bộ nhớ đệm của trình hỗ trợ mô tả âm thanh đã được đổi thành `audio_description_bridge_v9.exe`. Sau khi cập nhật Sonarpad, trình hỗ trợ sẽ được tải lại ở lần sử dụng đầu tiên; các bản lưu đệm cũ được xóa khi có thể. Quy trình Gemini/Pyannote không thay đổi. Trước khi phát hành, cần biên dịch lại trình hỗ trợ Python và thay tệp `audio_description_bridge.exe` trong bản phát hành Sonarpad-Tools 0.7 trên GitHub.
+
+Trình phát, YouTube và phát trực tuyến
+8. Đã sửa chức năng **Đi tới thời gian (Ctrl+T)** cho video YouTube phát bằng MPV. Hộp thoại hiện có giờ có thể chuyển tới mốc thời gian qua MPV và menu cho phép tua video web được hỗ trợ. Các hạn chế đối với TV trực tiếp và luồng BASS trực tiếp không thay đổi.
+
+9. **Đi tới thời gian (Ctrl+T)** và tua video hiện hoạt động với mọi nội dung theo yêu cầu: RaiPlay, thuyết minh âm thanh Rai và Sonarpad, La7 Play và YouTube. MPV nhận diện trình phát đang hoạt động ngay cả khi nhà cung cấp đổi URL. Các kênh TV và chương trình phát trực tiếp vẫn không được tua. Quy trình tạo thuyết minh âm thanh không thay đổi.
+
+10. Đã sửa **Đi tới thời gian (Ctrl+T)** cho các tệp video AVI, MP4, MKV và những định dạng cục bộ khác phát bằng MPV. Sonarpad xác định đúng thẻ của tệp đang phát ngay cả khi đường dẫn Windows khác chữ hoa/chữ thường hoặc dấu gạch. BASS và phát lại giữ nguyên; kênh truyền hình và phát trực tiếp vẫn không thể tua.
+
+11. Cải thiện cơ chế phục hồi FFmpeg cho mô tả âm thanh của video có tiếng bị hỏng. Các gói lỗi xen giữa gói hợp lệ cũng được đếm để dừng vòng lặp giải mã. Chỉ khi đó, Sonarpad mới sử dụng các thư viện FFmpeg đã tích hợp (avformat, avcodec và swresample), bỏ qua các đoạn hỏng ngắn trong giới hạn nghiêm ngặt. WAV không đầy đủ sẽ bị từ chối; không cần ffmpeg.exe bên ngoài. Quy trình Gemini/Pyannote thông thường không thay đổi.
+
+Đọc PDF và OCR tiếng Nhật
+12. Cải thiện việc mở giáo trình tiếng Nhật và tiếng Anh. PDF dạng ảnh tiếp tục dùng OCR tích hợp của Windows; nếu đã cài thành phần OCR tiếng Nhật (ja-JP), Sonarpad còn nhận dạng hiragana, katakana và kanji. Kết quả được ghép theo vị trí trên trang, giữ các dòng riêng và các cột được nhận diện rõ. PDF có văn bản Unicode tiếng Nhật giữ nguyên dấu xuống dòng và đánh dấu trang. Không cần OCR đám mây hoặc chương trình bên ngoài.
+
+13. Việc cài OCR tiếng Nhật giờ là tùy chọn: không còn lời nhắc khi mở PDF quét. Người cần có thể chọn Công cụ > Đọc và nội dung để cài. Sonarpad yêu cầu xác nhận trước khi cài thành phần Windows chính thức. OCR thông thường và mô tả âm thanh không thay đổi.
+
+15. Việc cài đặt OCR tiếng Nhật tùy chọn nay hiển thị cửa sổ tiến trình hỗ trợ trình đọc màn hình trong Sonarpad. Phần trăm chỉ xuất hiện khi Windows thực sự cung cấp, không có tiến trình giả trong lúc chờ. Sonarpad thông báo kết quả và yêu cầu khởi động lại nếu có. Việc mở PDF bình thường không hiện lời nhắc cài đặt. Cửa sổ hiện có nút Hủy và sử dụng cài đặt qua Windows PowerShell.
+
+16. Khi xuất lại MP3 từ dự án mô tả âm thanh, Sonarpad giờ mở một cửa sổ tiến trình riêng, dễ tiếp cận với nút Hủy. NVDA và JAWS không còn duyệt qua các nút chỉnh sửa dự án đã bị vô hiệu hóa.
+
 Phiên bản 0.9.12 – 2026-10-02
 
 Ghi podcast

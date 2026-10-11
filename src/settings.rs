@@ -756,6 +756,9 @@ pub struct AppSettings {
     pub indent_space_width: u32,
     pub move_cursor_during_reading: bool,
     pub audiobook_skip_seconds: u32,
+    /// Global reading and media sleep timer; 0 disables it.
+    #[serde(default)]
+    pub sleep_timer_minutes: u32,
     pub audiobook_playback_speed: f32,
     pub audiobook_playback_pitch: f32,
     pub audiobook_playback_volume: f32,
@@ -1305,6 +1308,7 @@ impl Default for AppSettings {
             indent_space_width: default_indent_space_width(),
             move_cursor_during_reading: false,
             audiobook_skip_seconds: 60,
+            sleep_timer_minutes: 0,
             audiobook_playback_speed: 1.0,
             audiobook_playback_pitch: 0.0,
             audiobook_playback_volume: 1.0,

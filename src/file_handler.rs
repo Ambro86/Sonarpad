@@ -11,12 +11,12 @@ use lopdf::{Dictionary as LoDictionary, Document as LoDocument, Object as LoObje
 use pdf_extract::extract_text;
 use pdfium_render::prelude::*;
 use printpdf::{
-    BuiltinFont, Color, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, Point, Pt, Rgb, TextItem,
+    Color, Mm, Op, ParsedFont, PdfDocument, PdfPage, PdfSaveOptions, Point, Pt, Rgb, TextItem,
 };
 use quick_xml::events::Event;
 use quick_xml::reader::Reader as XmlReader;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use windows::Win32::Globalization::{
     CP_ACP, MULTI_BYTE_TO_WIDE_CHAR_FLAGS, MultiByteToWideChar, WideCharToMultiByte,
@@ -2067,6 +2067,22 @@ mod tests {
     }
 
     #[test]
+    fn japanese_pdf_lines_are_not_flattened() {
+        let input = "Ai: こんにちは\nJean: こんばんは\nThird line";
+        let result = super::normalize_pdf_paragraphs(input);
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn latin_pdf_keeps_legacy_paragraph_normalization() {
+        let input = "A moderately long example line\nSecond line continues that thought";
+        assert_eq!(
+            super::normalize_pdf_paragraphs(input),
+            "A moderately long example line Second line continues that thought"
+        );
+    }
+
+    #[test]
     fn pdf_embedded_nuls_are_removed_without_truncating_following_text() {
         let cleaned = strip_embedded_nuls("testo prima\0testo dopo".to_string(), "unit test");
 
@@ -3630,6 +3646,17 @@ fn is_pdf_parse_error(err: &str) -> bool {
 }
 
 fn normalize_pdf_paragraphs(text: &str) -> String {
+    // Japanese teaching material often puts a separate expression, dialogue
+    // turn or table cell on each hard line. Preserve its line boundaries
+    // rather than joining distinct exercises into long paragraphs. Ordinary
+    // Latin-script PDFs retain their existing paragraph normalization.
+    if text.chars().any(is_japanese_pdf_character) {
+        return text
+            .lines()
+            .map(str::trim_end)
+            .collect::<Vec<_>>()
+            .join("\n");
+    }
     let mut out = String::new();
     let mut current = String::new();
     let avg_len = average_pdf_line_len(text);
@@ -3676,6 +3703,14 @@ fn normalize_pdf_paragraphs(text: &str) -> String {
     }
     flush_pdf_paragraph(&mut out, &mut current);
     out
+}
+
+fn is_japanese_pdf_character(ch: char) -> bool {
+    matches!(ch,
+        '\u{3040}'..='\u{30ff}' | '\u{31f0}'..='\u{31ff}'
+        | '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}'
+        | '\u{ff66}'..='\u{ff9f}'
+    )
 }
 
 fn flush_pdf_paragraph(out: &mut String, current: &mut String) {
@@ -3806,6 +3841,48 @@ pub fn write_pdf_text(
         icc_profile: None,
     });
 
+    // Built-in PDF fonts expect a legacy single-byte character encoding.
+    // Writing Rust UTF-8 strings with those fonts turns è into Ã¨ when the
+    // PDF is opened again. Use an embedded TrueType Unicode font instead.
+    // Load the installed Windows fonts at runtime; no font files are shipped.
+    let windows_dir = std::env::var_os("WINDIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
+    let fonts_dir = windows_dir.join("Fonts");
+    let mut doc = PdfDocument::new(title);
+    let mut unicode_fonts = None;
+    for (regular_file, bold_file) in [
+        ("segoeui.ttf", "segoeuib.ttf"),
+        ("arial.ttf", "arialbd.ttf"),
+        ("calibri.ttf", "calibrib.ttf"),
+        ("tahoma.ttf", "tahomabd.ttf"),
+    ] {
+        let (Ok(regular_bytes), Ok(bold_bytes)) = (
+            std::fs::read(fonts_dir.join(regular_file)),
+            std::fs::read(fonts_dir.join(bold_file)),
+        ) else {
+            continue;
+        };
+        let mut warnings = Vec::new();
+        if let (Some(regular), Some(bold)) = (
+            ParsedFont::from_bytes(&regular_bytes, 0, &mut warnings),
+            ParsedFont::from_bytes(&bold_bytes, 0, &mut warnings),
+        ) {
+            unicode_fonts = Some((doc.add_font(&regular), doc.add_font(&bold)));
+            crate::log_debug(&format!(
+                "PDF: Unicode fonts loaded from Windows: {regular_file}, {bold_file}"
+            ));
+            break;
+        }
+    }
+    let (body_font, heading_font) = unicode_fonts.ok_or_else(|| {
+        i18n::tr_f(
+            language,
+            "file_handler.file_save_error",
+            &[("err", "No compatible Windows Unicode TrueType fonts found")],
+        )
+    })?;
+
     // Build PDF pages
     let mut pdf_pages: Vec<PdfPage> = Vec::new();
     for (page_index, page_lines) in page_contents.iter().enumerate() {
@@ -3817,14 +3894,14 @@ pub fn write_pdf_text(
         ops.push(Op::SetTextCursor {
             pos: Point::new(Mm(margin), Mm(header_y)),
         });
-        ops.push(Op::SetFontSizeBuiltinFont {
+        ops.push(Op::SetFontSize {
             size: Pt(header_font_size),
-            font: BuiltinFont::HelveticaBold,
+            font: heading_font.clone(),
         });
         ops.push(Op::SetFillColor { col: black.clone() });
-        ops.push(Op::WriteTextBuiltinFont {
+        ops.push(Op::WriteText {
             items: vec![TextItem::Text(title.to_string())],
-            font: BuiltinFont::HelveticaBold,
+            font: heading_font.clone(),
         });
         ops.push(Op::EndTextSection);
 
@@ -3841,14 +3918,14 @@ pub fn write_pdf_text(
         ops.push(Op::SetTextCursor {
             pos: Point::new(Mm(margin), Mm(margin - 6.0)),
         });
-        ops.push(Op::SetFontSizeBuiltinFont {
+        ops.push(Op::SetFontSize {
             size: Pt(9.0),
-            font: BuiltinFont::Helvetica,
+            font: body_font.clone(),
         });
         ops.push(Op::SetFillColor { col: black.clone() });
-        ops.push(Op::WriteTextBuiltinFont {
+        ops.push(Op::WriteText {
             items: vec![TextItem::Text(page_label)],
-            font: BuiltinFont::Helvetica,
+            font: body_font.clone(),
         });
         ops.push(Op::EndTextSection);
 
@@ -3863,14 +3940,14 @@ pub fn write_pdf_text(
             ops.push(Op::SetTextCursor {
                 pos: Point::new(Mm(margin + line.indent), Mm(y)),
             });
-            ops.push(Op::SetFontSizeBuiltinFont {
+            ops.push(Op::SetFontSize {
                 size: Pt(line.font_size),
-                font: BuiltinFont::Helvetica,
+                font: body_font.clone(),
             });
             ops.push(Op::SetFillColor { col: black.clone() });
-            ops.push(Op::WriteTextBuiltinFont {
+            ops.push(Op::WriteText {
                 items: vec![TextItem::Text(line.text.clone())],
-                font: BuiltinFont::Helvetica,
+                font: body_font.clone(),
             });
             ops.push(Op::EndTextSection);
             y -= line_height;
@@ -3879,8 +3956,7 @@ pub fn write_pdf_text(
         pdf_pages.push(PdfPage::new(page_width, page_height, ops));
     }
 
-    // Create document and save
-    let mut doc = PdfDocument::new(title);
+    // Save the document with its embedded Unicode font mappings.
     let bytes = doc
         .with_pages(pdf_pages)
         .save(&PdfSaveOptions::default(), &mut Vec::new());

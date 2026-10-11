@@ -172,6 +172,7 @@ pub const IDM_TOOLS_LIBRIVOX: usize = 5025;
 pub const IDM_TOOLS_LA7_PLAY: usize = 5026;
 pub const IDM_TOOLS_CREATE_AUDIO_DESCRIPTION: usize = 5027;
 pub const IDM_TOOLS_SONARPAD_AUDIODESCRIZIONI: usize = 5028;
+pub const IDM_TOOLS_INSTALL_JAPANESE_OCR: usize = 5029;
 pub const IDM_HELP_GUIDE: usize = 7001;
 pub const IDM_HELP_ABOUT: usize = 7002;
 pub const IDM_HELP_CHECK_UPDATES: usize = 7003;
@@ -764,7 +765,15 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
                 &play_pause,
             );
             append_menu_string(playback_menu, MF_STRING, IDM_PLAYBACK_STOP, &stop);
-            let seek_flags = if direct_stream_playback {
+            // Provider recordings (including RaiPlay, La7 Play and both AD
+            // catalogues) use the same time navigation as YouTube. Live TV and
+            // non-seekable direct HTTP radio streams retain their restrictions.
+            let seekable_on_demand = crate::can_go_to_time_in_managed_mpv(hwnd)
+                || crate::can_go_to_time_in_bass_on_demand(hwnd);
+            let seek_flags = if live_tv_playback
+                || raiplay_live_stream_playback
+                || (direct_stream_playback && !seekable_on_demand)
+            {
                 MF_STRING | MF_GRAYED
             } else {
                 MF_STRING
@@ -781,7 +790,7 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
                 IDM_PLAYBACK_SEEK_BACKWARD,
                 &seek_backward,
             );
-            if !live_tv_playback {
+            if !live_tv_playback && !raiplay_live_stream_playback {
                 append_menu_string(
                     playback_menu,
                     seek_flags,
@@ -886,14 +895,10 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
                     );
                 }
             }
-            if !live_tv_playback {
+            if !live_tv_playback && !raiplay_live_stream_playback {
                 append_menu_string(
                     playback_menu,
-                    if direct_stream_playback {
-                        MF_STRING | MF_GRAYED
-                    } else {
-                        MF_STRING
-                    },
+                    seek_flags,
                     IDM_PLAYBACK_GO_TO_TIME,
                     &go_to_time,
                 );
@@ -1697,6 +1702,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                 IDM_TOOLS_LIBRIVOX,
                 &labels.menu_librivox,
             );
+            append_menu_string(
+                reading_content_menu,
+                MF_STRING,
+                IDM_TOOLS_INSTALL_JAPANESE_OCR,
+                &i18n::tr(language, "menu.install_japanese_pdf_ocr"),
+            );
             if language == Language::Italian {
                 append_menu_string(
                     reading_content_menu,
@@ -1882,6 +1893,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                 MF_STRING,
                 IDM_TOOLS_LIBRIVOX,
                 &labels.menu_librivox,
+            );
+            append_menu_string(
+                tools_menu,
+                MF_STRING,
+                IDM_TOOLS_INSTALL_JAPANESE_OCR,
+                &i18n::tr(language, "menu.install_japanese_pdf_ocr"),
             );
             if language == Language::Italian {
                 append_menu_string(
