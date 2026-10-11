@@ -9,12 +9,13 @@ SAVE = (ROOT / 'src/app_windows/podcast_save_window.rs').read_text('utf-8')
 class ProjectCleanExportDialogTests(unittest.TestCase):
     def test_standalone_progress_has_cancel_and_status(self):
         export = PROJECT.split('fn start_export(',1)[1].split('fn window_proc_inner(',1)[0]
-        self.assertIn('open_with_labels_and_status_field(', export)
-        self.assertIn('language_labels.export.clone()', export)
+        self.assertIn('podcast_save_window::open_with_labels(', export)
+        self.assertNotIn('open_with_labels_and_status_field(', export)
+        self.assertIn('language_labels.exporting.clone()', export)
         self.assertIn('language_labels.cancel.clone()', export)
         self.assertIn('audio_description.project.export_cancel_confirm', export)
         self.assertIn('podcast_save_window::enable_accessible_progress_context(dialog)', export)
-        self.assertIn('podcast_save_window::focus_primary_control(dialog)', export)
+        self.assertIn('podcast_save_window::restrict_tab_to_cancel(dialog)', export)
         self.assertIn('set_controls_enabled(state, false)',export)
     def test_message_routing_and_real_cancel(self):
         self.assertIn('podcast_save_window::handle_navigation(export_dialog, msg)', PROJECT)
