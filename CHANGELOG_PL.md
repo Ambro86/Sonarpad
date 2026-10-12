@@ -3,15 +3,15 @@
 Wersja 0.9.14 – 2026-10-12
 
 Głosy Edge, audiobooki i audiodeskrypcja
-1. **Bardziej niezawodne głosy Edge.** Sonarpad korzysta teraz z nowszego połączenia głosowego Microsoft Edge podczas czytania i tworzenia audiobooków. Jeśli jest niedostępne, może automatycznie spróbować poprzedniego połączenia. Wybrany głos pozostaje bez zmian.
+1. Bardziej niezawodne głosy Edge. Sonarpad korzysta teraz z nowszego połączenia głosowego Microsoft Edge podczas czytania i tworzenia audiobooków. Jeśli jest niedostępne, może automatycznie spróbować poprzedniego połączenia. Wybrany głos pozostaje bez zmian.
 
-2. **Mniej przerw.** Gdy Microsoft odrzuci żądanie lub połączenie zostanie zerwane, Sonarpad sam ponawia próbę i w razie potrzeby chwilę czeka. Nie kończy zadania po kilku nieudanych próbach, a użytkownik może zawsze wybrać **Anuluj**.
+2. Mniej przerw. Gdy Microsoft odrzuci żądanie lub połączenie zostanie zerwane, Sonarpad sam ponawia próbę i w razie potrzeby chwilę czeka. Nie kończy zadania po kilku nieudanych próbach, a użytkownik może zawsze wybrać Anuluj.
 
-3. **Bez urwanych zdań.** Jeśli część dźwięku nie dotrze w całości, Sonarpad odrzuci ją i wygeneruje ponownie tylko ten fragment. Ukończone części pozostają zachowane. Audiobooki i audiodeskrypcje nadal obsługują do 8 równoczesnych żądań.
+3. Bez urwanych zdań. Jeśli część dźwięku nie dotrze w całości, Sonarpad odrzuci ją i wygeneruje ponownie tylko ten fragment. Ukończone części pozostają zachowane. Audiobooki i audiodeskrypcje nadal obsługują do 8 równoczesnych żądań.
 
-4. **Czytelniejsza diagnostyka.** W dzienniku widać, które połączenie Edge rzeczywiście dostarczyło dźwięk, dzięki czemu łatwiej znaleźć przyczynę problemu.
+4. Czytelniejsza diagnostyka. W dzienniku widać, które połączenie Edge rzeczywiście dostarczyło dźwięk, dzięki czemu łatwiej znaleźć przyczynę problemu.
 
-5. **Przejrzystszy postęp.** Podczas zapisywania i eksportowania audiodeskrypcji procent jest wpisywany do dziennika tylko wtedy, gdy się zmieni. Powtarzające się wpisy już go nie zaśmiecają, a pasek postępu działa normalnie.
+5. Przejrzystszy postęp. Podczas zapisywania i eksportowania audiodeskrypcji procent jest wpisywany do dziennika tylko wtedy, gdy się zmieni. Powtarzające się wpisy już go nie zaśmiecają, a pasek postępu działa normalnie.
 
 ---
 
@@ -34,11 +34,11 @@ Audiodeskrypcja AI – stabilność i odzyskiwanie
 7. Zmieniono nazwę pamięci podręcznej modułu audiodeskrypcji na `audio_description_bridge_v9.exe`. Po aktualizacji Sonarpada moduł zostanie ponownie pobrany przy pierwszym użyciu, a starsze wersje pamięci podręcznej zostaną w miarę możliwości usunięte. Proces Gemini/Pyannote pozostaje bez zmian. Przed publikacją należy ponownie zbudować moduł Python i zastąpić plik `audio_description_bridge.exe` w wydaniu Sonarpad-Tools 0.7 na GitHubie.
 
 Odtwarzacz, YouTube i transmisje
-8. Naprawiono **Przejdź do czasu (Ctrl+T)** dla filmów YouTube odtwarzanych przez MPV. Dotychczasowe okno umożliwia teraz przewijanie przez MPV, a menu aktywuje przewijanie w obsługiwanych filmach internetowych. Ograniczenia telewizji na żywo i bezpośrednich strumieni BASS pozostają bez zmian.
+8. Naprawiono Przejdź do czasu (Ctrl+T) dla filmów YouTube odtwarzanych przez MPV. Dotychczasowe okno umożliwia teraz przewijanie przez MPV, a menu aktywuje przewijanie w obsługiwanych filmach internetowych. Ograniczenia telewizji na żywo i bezpośrednich strumieni BASS pozostają bez zmian.
 
-9. **Przejdź do czasu (Ctrl+T)** i przewijanie działają teraz także w treściach na żądanie: RaiPlay, audiodeskrypcjach Rai i Sonarpad, La7 Play oraz YouTube. MPV rozpoznaje aktywny odtwarzacz także po zmianie adresu URL przez dostawcę. Kanały TV i transmisje na żywo nadal nie pozwalają na przewijanie. Proces tworzenia audiodeskrypcji pozostaje bez zmian.
+9. Przejdź do czasu (Ctrl+T) i przewijanie działają teraz także w treściach na żądanie: RaiPlay, audiodeskrypcjach Rai i Sonarpad, La7 Play oraz YouTube. MPV rozpoznaje aktywny odtwarzacz także po zmianie adresu URL przez dostawcę. Kanały TV i transmisje na żywo nadal nie pozwalają na przewijanie. Proces tworzenia audiodeskrypcji pozostaje bez zmian.
 
-10. Poprawiono **Przejdź do czasu (Ctrl+T)** dla lokalnych plików wideo AVI, MP4, MKV i innych odtwarzanych przez MPV. Sonarpad wiąże aktywny plik z właściwą kartą niezależnie od wielkości liter i ukośników w ścieżce Windows. BASS i odtwarzanie pozostają bez zmian; kanały TV i transmisje na żywo są nadal wyłączone.
+10. Poprawiono Przejdź do czasu (Ctrl+T) dla lokalnych plików wideo AVI, MP4, MKV i innych odtwarzanych przez MPV. Sonarpad wiąże aktywny plik z właściwą kartą niezależnie od wielkości liter i ukośników w ścieżce Windows. BASS i odtwarzanie pozostają bez zmian; kanały TV i transmisje na żywo są nadal wyłączone.
 
 11. Ulepszono awaryjne odzyskiwanie dźwięku FFmpeg przy audiodeskrypcji uszkodzonych filmów. Zliczane są też błędne pakiety przeplatane poprawnymi, aby przerwać zapętlone dekodowanie. Dopiero wtedy odzyskiwanie korzysta z bibliotek FFmpeg już dołączonych do Sonarpad (avformat, avcodec i swresample), z ograniczonym pomijaniem krótkich uszkodzonych fragmentów. Niepełne WAV są odrzucane; zewnętrzny ffmpeg.exe nie jest potrzebny. Zwykły proces Gemini/Pyannote pozostaje bez zmian.
 

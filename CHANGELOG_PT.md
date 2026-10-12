@@ -3,15 +3,15 @@
 Versão 0.9.14 – 2026-10-12
 
 Vozes do Edge, audiolivros e audiodescrição
-1. **Vozes do Edge mais fiáveis.** O Sonarpad utiliza agora a ligação de voz mais recente do Microsoft Edge para ler textos e criar audiolivros. Se não estiver disponível, pode experimentar automaticamente a ligação anterior. A voz escolhida mantém-se.
+1. Vozes do Edge mais fiáveis. O Sonarpad utiliza agora a ligação de voz mais recente do Microsoft Edge para ler textos e criar audiolivros. Se não estiver disponível, pode experimentar automaticamente a ligação anterior. A voz escolhida mantém-se.
 
-2. **Menos interrupções.** Se a Microsoft rejeitar um pedido ou a ligação cair, o Sonarpad volta a tentar sozinho, aguardando quando necessário. Já não desiste após algumas tentativas e pode sempre selecionar **Cancelar**.
+2. Menos interrupções. Se a Microsoft rejeitar um pedido ou a ligação cair, o Sonarpad volta a tentar sozinho, aguardando quando necessário. Já não desiste após algumas tentativas e pode sempre selecionar Cancelar.
 
-3. **Sem frases cortadas.** Se uma parte do áudio chegar incompleta, o Sonarpad descarta-a e volta a gerar apenas essa parte, mantendo o que já estava concluído. Os audiolivros e as audiodescrições continuam a permitir até 8 pedidos em simultâneo.
+3. Sem frases cortadas. Se uma parte do áudio chegar incompleta, o Sonarpad descarta-a e volta a gerar apenas essa parte, mantendo o que já estava concluído. Os audiolivros e as audiodescrições continuam a permitir até 8 pedidos em simultâneo.
 
-4. **Diagnóstico mais claro.** Os registos mostram qual a ligação Edge que realmente produziu o áudio, facilitando a identificação de problemas.
+4. Diagnóstico mais claro. Os registos mostram qual a ligação Edge que realmente produziu o áudio, facilitando a identificação de problemas.
 
-5. **Progresso mais organizado.** Ao guardar ficheiros ou exportar audiodescrições, a percentagem só é registada quando muda. As mensagens repetidas deixam de encher o registo e a barra de progresso continua a funcionar normalmente.
+5. Progresso mais organizado. Ao guardar ficheiros ou exportar audiodescrições, a percentagem só é registada quando muda. As mensagens repetidas deixam de encher o registo e a barra de progresso continua a funcionar normalmente.
 
 ---
 
@@ -34,11 +34,11 @@ Audiodescrição com IA – estabilidade e recuperação
 7. A cache do módulo de audiodescrição passou a utilizar `audio_description_bridge_v9.exe`. Após atualizar o Sonarpad, o módulo é descarregado novamente na primeira utilização; as caches antigas são removidas quando possível. A pipeline Gemini/Pyannote permanece inalterada. Antes da publicação, é necessário recompilar o módulo Python e substituir `audio_description_bridge.exe` na versão 0.7 do Sonarpad-Tools no GitHub.
 
 Leitor, YouTube e streaming
-8. Corrigido **Ir para o tempo (Ctrl+T)** nos vídeos do YouTube reproduzidos com MPV. A janela existente permite agora procurar um instante através do MPV, e o menu ativa a navegação temporal nos vídeos web compatíveis. As restrições da televisão em direto e dos streams diretos BASS mantêm-se.
+8. Corrigido Ir para o tempo (Ctrl+T) nos vídeos do YouTube reproduzidos com MPV. A janela existente permite agora procurar um instante através do MPV, e o menu ativa a navegação temporal nos vídeos web compatíveis. As restrições da televisão em direto e dos streams diretos BASS mantêm-se.
 
-9. **Ir para o tempo (Ctrl+T)** e os comandos de procura passam a funcionar em todos os conteúdos a pedido: RaiPlay, audiodescrições Rai e Sonarpad, La7 Play e YouTube. O MPV identifica o leitor ativo mesmo quando o serviço altera o URL. Os canais de TV e as emissões em direto continuam excluídos. A geração de audiodescrição não foi alterada.
+9. Ir para o tempo (Ctrl+T) e os comandos de procura passam a funcionar em todos os conteúdos a pedido: RaiPlay, audiodescrições Rai e Sonarpad, La7 Play e YouTube. O MPV identifica o leitor ativo mesmo quando o serviço altera o URL. Os canais de TV e as emissões em direto continuam excluídos. A geração de audiodescrição não foi alterada.
 
-10. Corrigido **Ir para o tempo (Ctrl+T)** para ficheiros de vídeo locais AVI, MP4, MKV e outros formatos reproduzidos com MPV. O Sonarpad associa o ficheiro ativo ao separador correto mesmo com diferenças nas maiúsculas e barras do caminho Windows. BASS e reprodução mantêm-se inalterados; canais de TV e diretos continuam excluídos.
+10. Corrigido Ir para o tempo (Ctrl+T) para ficheiros de vídeo locais AVI, MP4, MKV e outros formatos reproduzidos com MPV. O Sonarpad associa o ficheiro ativo ao separador correto mesmo com diferenças nas maiúsculas e barras do caminho Windows. BASS e reprodução mantêm-se inalterados; canais de TV e diretos continuam excluídos.
 
 11. Reforçada a recuperação FFmpeg para audiodescrições de vídeos com áudio danificado. São contabilizados pacotes inválidos intercalados com pacotes válidos, interrompendo ciclos de descodificação. Só então a recuperação utiliza as bibliotecas FFmpeg já incluídas no Sonarpad (avformat, avcodec e swresample), saltando trechos danificados curtos com limites rigorosos. WAV incompletos são rejeitados; não é necessário ffmpeg.exe externo. A sequência Gemini/Pyannote mantém-se inalterada.
 

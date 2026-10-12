@@ -3,15 +3,15 @@
 Version 0.9.14 – 2026-10-12
 
 Edge voices, audiobooks and audio descriptions
-1. **More reliable Edge voices.** Sonarpad now uses the newer Microsoft Edge speech connection for reading and audiobooks. If it is unavailable, Sonarpad can automatically try the previous connection. Your chosen voice stays the same.
+1. More reliable Edge voices. Sonarpad now uses the newer Microsoft Edge speech connection for reading and audiobooks. If it is unavailable, Sonarpad can automatically try the previous connection. Your chosen voice stays the same.
 
-2. **Fewer interruptions.** If Microsoft rejects a request or the connection drops, Sonarpad tries again on its own, waiting when necessary. It no longer gives up after just a few attempts, and you can always choose **Cancel**.
+2. Fewer interruptions. If Microsoft rejects a request or the connection drops, Sonarpad tries again on its own, waiting when necessary. It no longer gives up after just a few attempts, and you can always choose Cancel.
 
-3. **No cut-off sentences.** If part of the audio is incomplete, Sonarpad discards it and generates just that part again, keeping the work already finished. Audiobooks and audio descriptions still support up to 8 simultaneous requests.
+3. No cut-off sentences. If part of the audio is incomplete, Sonarpad discards it and generates just that part again, keeping the work already finished. Audiobooks and audio descriptions still support up to 8 simultaneous requests.
 
-4. **Clearer diagnostics.** The logs show which Edge connection actually produced the audio, making it easier to understand what worked when troubleshooting.
+4. Clearer diagnostics. The logs show which Edge connection actually produced the audio, making it easier to understand what worked when troubleshooting.
 
-5. **Cleaner progress reports.** When saving files or exporting audio descriptions, the percentage is logged only when it changes. The log no longer fills up with identical messages, while the progress bar keeps working normally.
+5. Cleaner progress reports. When saving files or exporting audio descriptions, the percentage is logged only when it changes. The log no longer fills up with identical messages, while the progress bar keeps working normally.
 
 ---
 
@@ -36,14 +36,14 @@ AI audio description – stability and recovery
 
 6. Added an isolated FFmpeg playback decoder fallback only for repeated corrupt audio packets. A damaged decoder is reset once and, if corruption persists, playback stops cleanly instead of generating an unbounded error stream. Healthy media follows the previous decoding path.
 
-7. Bumped the audio-description bridge cache filename to `audio_description_bridge_v9.exe`. After installing this Sonarpad version, the first AI audio-description run downloads the bridge again and removes obsolete versioned cache files when possible. The Gemini/Pyannote pipeline is unchanged. **Before release**, rebuild the updated Python bridge and replace the `audio_description_bridge.exe` asset in the Sonarpad-Tools GitHub 0.7 release; otherwise the new cache would download the old worker.
+7. Bumped the audio-description bridge cache filename to `audio_description_bridge_v9.exe`. After installing this Sonarpad version, the first AI audio-description run downloads the bridge again and removes obsolete versioned cache files when possible. The Gemini/Pyannote pipeline is unchanged. Before release, rebuild the updated Python bridge and replace the `audio_description_bridge.exe` asset in the Sonarpad-Tools GitHub 0.7 release; otherwise the new cache would download the old worker.
 
 Player, YouTube and streaming
-8. Fixed **Go to Time (Ctrl+T)** for YouTube videos played using managed MPV: the existing time-entry dialog now seeks through MPV without requiring a BASS audio player. The playback menu also enables seek commands on seekable MPV web videos. Live TV and direct BASS streams retain their restrictions; normal playback, the AI audio-description pipeline and bridge are unchanged.
+8. Fixed Go to Time (Ctrl+T) for YouTube videos played using managed MPV: the existing time-entry dialog now seeks through MPV without requiring a BASS audio player. The playback menu also enables seek commands on seekable MPV web videos. Live TV and direct BASS streams retain their restrictions; normal playback, the AI audio-description pipeline and bridge are unchanged.
 
-9. Extended **Go to Time (Ctrl+T)** and the playback menu to all on-demand media: RaiPlay, Rai audio descriptions, Sonarpad audio descriptions, La7 Play and YouTube. MPV now recognizes its active player tab even when a provider resolves a different playback URL; known RaiPlay/La7 Play BASS recordings can also use the existing time dialog. TV channels, RaiPlay live broadcasts and other live streams remain non-seekable. No changes to Gemini, FFmpeg or the audio-description pipeline.
+9. Extended Go to Time (Ctrl+T) and the playback menu to all on-demand media: RaiPlay, Rai audio descriptions, Sonarpad audio descriptions, La7 Play and YouTube. MPV now recognizes its active player tab even when a provider resolves a different playback URL; known RaiPlay/La7 Play BASS recordings can also use the existing time dialog. TV channels, RaiPlay live broadcasts and other live streams remain non-seekable. No changes to Gemini, FFmpeg or the audio-description pipeline.
 
-10. Fixed **Go to Time (Ctrl+T)** for local AVI, MP4, MKV and other video files played with MPV (including *Jaws*). The client now matches the active local MPV file to its playback tab regardless of Windows path case or slash direction. The existing time dialog and absolute seeking work without switching to BASS or affecting playback. Commands remain unavailable for TV channels and live streams; audio-description processing is unchanged.
+10. Fixed Go to Time (Ctrl+T) for local AVI, MP4, MKV and other video files played with MPV (including *Jaws*). The client now matches the active local MPV file to its playback tab regardless of Windows path case or slash direction. The existing time dialog and absolute seeking work without switching to BASS or affecting playback. Commands remain unavailable for TV channels and live streams; audio-description processing is unchanged.
 
 11. Improved the FFmpeg fallback for audio descriptions of videos with damaged soundtracks. Sonarpad also counts invalid packets interleaved with valid ones and stops runaway decoding. Only after that safety stop, it retries using the FFmpeg DLLs already bundled with Sonarpad (avformat, avcodec and swresample), seeking past short damaged sections with a strict limit; incomplete WAVs are rejected. No external ffmpeg.exe is required for this fallback. The normal Gemini/Pyannote pipeline remains unchanged.
 
@@ -54,7 +54,7 @@ PDF reading and Japanese OCR
 
 15. The optional Japanese OCR installation now shows an accessible progress window within Sonarpad. Actual percentages appear when Windows reports them, without invented progress during waiting. Sonarpad announces completion and any required restart. Opening PDFs never triggers installation prompts. The window now includes a real Cancel button and uses the Windows PowerShell installation method.
 
-16. Re-exporting an MP3 from an audio-description project now opens a clean, accessible progress dialog with the existing progress information and **Cancel** button. NVDA and JAWS no longer navigate through the disabled project-editing controls; export, cancellation and saving are unchanged.
+16. Re-exporting an MP3 from an audio-description project now opens a clean, accessible progress dialog with the existing progress information and Cancel button. NVDA and JAWS no longer navigate through the disabled project-editing controls; export, cancellation and saving are unchanged.
 
 Version 0.9.12 – 2026-10-02
 

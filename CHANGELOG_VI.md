@@ -3,15 +3,15 @@
 Phiên bản 0.9.14 – 2026-10-12
 
 Giọng Edge, sách nói và mô tả âm thanh
-1. **Giọng Edge đáng tin cậy hơn.** Sonarpad hiện dùng kết nối giọng nói mới hơn của Microsoft Edge để đọc văn bản và tạo sách nói. Nếu kết nối này không hoạt động, ứng dụng có thể tự thử kết nối cũ. Giọng đã chọn vẫn được giữ nguyên.
+1. Giọng Edge đáng tin cậy hơn. Sonarpad hiện dùng kết nối giọng nói mới hơn của Microsoft Edge để đọc văn bản và tạo sách nói. Nếu kết nối này không hoạt động, ứng dụng có thể tự thử kết nối cũ. Giọng đã chọn vẫn được giữ nguyên.
 
-2. **Ít bị gián đoạn hơn.** Nếu Microsoft từ chối yêu cầu hoặc kết nối bị ngắt, Sonarpad sẽ tự thử lại và chờ khi cần thiết. Ứng dụng không bỏ cuộc chỉ sau vài lần thử, và bạn luôn có thể chọn **Hủy**.
+2. Ít bị gián đoạn hơn. Nếu Microsoft từ chối yêu cầu hoặc kết nối bị ngắt, Sonarpad sẽ tự thử lại và chờ khi cần thiết. Ứng dụng không bỏ cuộc chỉ sau vài lần thử, và bạn luôn có thể chọn Hủy.
 
-3. **Không còn câu bị cắt ngang.** Nếu một đoạn âm thanh nhận được không đầy đủ, Sonarpad sẽ bỏ đoạn đó và chỉ tạo lại phần chưa hoàn tất, giữ nguyên những phần đã xong. Sách nói và mô tả âm thanh vẫn hỗ trợ tối đa 8 yêu cầu đồng thời.
+3. Không còn câu bị cắt ngang. Nếu một đoạn âm thanh nhận được không đầy đủ, Sonarpad sẽ bỏ đoạn đó và chỉ tạo lại phần chưa hoàn tất, giữ nguyên những phần đã xong. Sách nói và mô tả âm thanh vẫn hỗ trợ tối đa 8 yêu cầu đồng thời.
 
-4. **Chẩn đoán dễ hiểu hơn.** Nhật ký cho biết kết nối Edge nào thực sự tạo ra âm thanh, giúp tìm nguyên nhân khi có sự cố.
+4. Chẩn đoán dễ hiểu hơn. Nhật ký cho biết kết nối Edge nào thực sự tạo ra âm thanh, giúp tìm nguyên nhân khi có sự cố.
 
-5. **Thông báo tiến độ gọn gàng hơn.** Khi lưu tệp hoặc xuất mô tả âm thanh, tỷ lệ phần trăm chỉ được ghi khi có thay đổi. Những dòng giống nhau không còn tràn ngập nhật ký, trong khi thanh tiến độ vẫn hoạt động bình thường.
+5. Thông báo tiến độ gọn gàng hơn. Khi lưu tệp hoặc xuất mô tả âm thanh, tỷ lệ phần trăm chỉ được ghi khi có thay đổi. Những dòng giống nhau không còn tràn ngập nhật ký, trong khi thanh tiến độ vẫn hoạt động bình thường.
 
 ---
 
@@ -34,11 +34,11 @@ Mô tả âm thanh bằng AI – độ ổn định và khôi phục
 7. Bộ nhớ đệm của trình hỗ trợ mô tả âm thanh đã được đổi thành `audio_description_bridge_v9.exe`. Sau khi cập nhật Sonarpad, trình hỗ trợ sẽ được tải lại ở lần sử dụng đầu tiên; các bản lưu đệm cũ được xóa khi có thể. Quy trình Gemini/Pyannote không thay đổi. Trước khi phát hành, cần biên dịch lại trình hỗ trợ Python và thay tệp `audio_description_bridge.exe` trong bản phát hành Sonarpad-Tools 0.7 trên GitHub.
 
 Trình phát, YouTube và phát trực tuyến
-8. Đã sửa chức năng **Đi tới thời gian (Ctrl+T)** cho video YouTube phát bằng MPV. Hộp thoại hiện có giờ có thể chuyển tới mốc thời gian qua MPV và menu cho phép tua video web được hỗ trợ. Các hạn chế đối với TV trực tiếp và luồng BASS trực tiếp không thay đổi.
+8. Đã sửa chức năng Đi tới thời gian (Ctrl+T) cho video YouTube phát bằng MPV. Hộp thoại hiện có giờ có thể chuyển tới mốc thời gian qua MPV và menu cho phép tua video web được hỗ trợ. Các hạn chế đối với TV trực tiếp và luồng BASS trực tiếp không thay đổi.
 
-9. **Đi tới thời gian (Ctrl+T)** và tua video hiện hoạt động với mọi nội dung theo yêu cầu: RaiPlay, thuyết minh âm thanh Rai và Sonarpad, La7 Play và YouTube. MPV nhận diện trình phát đang hoạt động ngay cả khi nhà cung cấp đổi URL. Các kênh TV và chương trình phát trực tiếp vẫn không được tua. Quy trình tạo thuyết minh âm thanh không thay đổi.
+9. Đi tới thời gian (Ctrl+T) và tua video hiện hoạt động với mọi nội dung theo yêu cầu: RaiPlay, thuyết minh âm thanh Rai và Sonarpad, La7 Play và YouTube. MPV nhận diện trình phát đang hoạt động ngay cả khi nhà cung cấp đổi URL. Các kênh TV và chương trình phát trực tiếp vẫn không được tua. Quy trình tạo thuyết minh âm thanh không thay đổi.
 
-10. Đã sửa **Đi tới thời gian (Ctrl+T)** cho các tệp video AVI, MP4, MKV và những định dạng cục bộ khác phát bằng MPV. Sonarpad xác định đúng thẻ của tệp đang phát ngay cả khi đường dẫn Windows khác chữ hoa/chữ thường hoặc dấu gạch. BASS và phát lại giữ nguyên; kênh truyền hình và phát trực tiếp vẫn không thể tua.
+10. Đã sửa Đi tới thời gian (Ctrl+T) cho các tệp video AVI, MP4, MKV và những định dạng cục bộ khác phát bằng MPV. Sonarpad xác định đúng thẻ của tệp đang phát ngay cả khi đường dẫn Windows khác chữ hoa/chữ thường hoặc dấu gạch. BASS và phát lại giữ nguyên; kênh truyền hình và phát trực tiếp vẫn không thể tua.
 
 11. Cải thiện cơ chế phục hồi FFmpeg cho mô tả âm thanh của video có tiếng bị hỏng. Các gói lỗi xen giữa gói hợp lệ cũng được đếm để dừng vòng lặp giải mã. Chỉ khi đó, Sonarpad mới sử dụng các thư viện FFmpeg đã tích hợp (avformat, avcodec và swresample), bỏ qua các đoạn hỏng ngắn trong giới hạn nghiêm ngặt. WAV không đầy đủ sẽ bị từ chối; không cần ffmpeg.exe bên ngoài. Quy trình Gemini/Pyannote thông thường không thay đổi.
 

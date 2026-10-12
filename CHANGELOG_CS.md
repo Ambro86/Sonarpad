@@ -3,15 +3,15 @@
 Verze 0.9.14 – 2026-10-12
 
 Hlasy Edge, audioknihy a audiopopis
-1. **Spolehlivější hlasy Edge.** Sonarpad nyní při čtení a tvorbě audioknih používá novější připojení k hlasové službě Microsoft Edge. Pokud není dostupné, může automaticky vyzkoušet původní připojení. Vybraný hlas zůstává stejný.
+1. Spolehlivější hlasy Edge. Sonarpad nyní při čtení a tvorbě audioknih používá novější připojení k hlasové službě Microsoft Edge. Pokud není dostupné, může automaticky vyzkoušet původní připojení. Vybraný hlas zůstává stejný.
 
-2. **Méně přerušení.** Pokud Microsoft požadavek odmítne nebo se spojení přeruší, Sonarpad to sám zkusí znovu a podle potřeby chvíli počká. Nevzdá to po několika pokusech a kdykoli můžete zvolit **Zrušit**.
+2. Méně přerušení. Pokud Microsoft požadavek odmítne nebo se spojení přeruší, Sonarpad to sám zkusí znovu a podle potřeby chvíli počká. Nevzdá to po několika pokusech a kdykoli můžete zvolit Zrušit.
 
-3. **Žádné useknuté věty.** Pokud se část zvuku nestáhne celá, Sonarpad ji zahodí a znovu vytvoří jen tuto část. Již dokončená práce zůstane zachována. Audioknihy i audiopopis mohou nadále využívat až 8 souběžných požadavků.
+3. Žádné useknuté věty. Pokud se část zvuku nestáhne celá, Sonarpad ji zahodí a znovu vytvoří jen tuto část. Již dokončená práce zůstane zachována. Audioknihy i audiopopis mohou nadále využívat až 8 souběžných požadavků.
 
-4. **Srozumitelnější diagnostika.** V záznamech je vidět, které připojení Edge skutečně vytvořilo zvuk. Případné potíže tak lze snáze vyšetřit.
+4. Srozumitelnější diagnostika. V záznamech je vidět, které připojení Edge skutečně vytvořilo zvuk. Případné potíže tak lze snáze vyšetřit.
 
-5. **Přehlednější průběh.** Při ukládání a exportu audiopopisu se procento zapisuje jen tehdy, když se změní. Záznam už nezaplňují stejné zprávy a ukazatel průběhu funguje dál jako dříve.
+5. Přehlednější průběh. Při ukládání a exportu audiopopisu se procento zapisuje jen tehdy, když se změní. Záznam už nezaplňují stejné zprávy a ukazatel průběhu funguje dál jako dříve.
 
 ---
 
@@ -34,11 +34,11 @@ Audiopopis s AI – stabilita a obnovení
 7. Mezipaměť pomocného programu pro audiopopis nově používá `audio_description_bridge_v9.exe`. Po aktualizaci Sonarpadu se při prvním použití audiopopisu stáhne znovu; starší verzované soubory se pokud možno odstraní. Stávající postup Gemini/Pyannote se nemění. Před vydáním je nutné znovu sestavit Python bridge a nahradit `audio_description_bridge.exe` ve vydání Sonarpad-Tools 0.7 na GitHubu.
 
 Přehrávač, YouTube a streamování
-8. Opravena funkce **Přejít na čas (Ctrl+T)** u videí YouTube přehrávaných přes MPV. Stávající dialog nyní přesouvá přehrávání pomocí MPV a nabídka zpřístupňuje posouvání v podporovaných webových videích. Omezení živé televize a přímých streamů BASS zůstávají beze změny.
+8. Opravena funkce Přejít na čas (Ctrl+T) u videí YouTube přehrávaných přes MPV. Stávající dialog nyní přesouvá přehrávání pomocí MPV a nabídka zpřístupňuje posouvání v podporovaných webových videích. Omezení živé televize a přímých streamů BASS zůstávají beze změny.
 
-9. Funkce **Přejít na čas (Ctrl+T)** a ovládání posunu jsou nyní dostupné pro obsah na vyžádání: RaiPlay, zvukové popisy Rai a Sonarpad, La7 Play a YouTube. MPV rozpozná aktivní kartu i po změně URL poskytovatelem. Televizní kanály a živé vysílání zůstávají bez možnosti posunu. Pipeline audiopopisu se nemění.
+9. Funkce Přejít na čas (Ctrl+T) a ovládání posunu jsou nyní dostupné pro obsah na vyžádání: RaiPlay, zvukové popisy Rai a Sonarpad, La7 Play a YouTube. MPV rozpozná aktivní kartu i po změně URL poskytovatelem. Televizní kanály a živé vysílání zůstávají bez možnosti posunu. Pipeline audiopopisu se nemění.
 
-10. Opraveno **Přejít na čas (Ctrl+T)** pro místní video soubory AVI, MP4, MKV a další formáty přehrávané v MPV. Sonarpad nyní správně přiřazuje aktivní soubor jeho kartě i při rozdílném zápisu cesty ve Windows. Přehrávání a BASS se nemění; televizní kanály a živé přenosy zůstávají bez posunu v čase.
+10. Opraveno Přejít na čas (Ctrl+T) pro místní video soubory AVI, MP4, MKV a další formáty přehrávané v MPV. Sonarpad nyní správně přiřazuje aktivní soubor jeho kartě i při rozdílném zápisu cesty ve Windows. Přehrávání a BASS se nemění; televizní kanály a živé přenosy zůstávají bez posunu v čase.
 
 11. Vylepšena záložní obnova FFmpeg pro audiopopis videí s poškozeným zvukem. Počítají se i vadné pakety proložené platnými a nebezpečné dekódovací smyčky se zastaví. Jen při této chybě se obnova provádí pomocí knihoven FFmpeg již dodávaných se Sonarpadem (avformat, avcodec, swresample), s omezeným přeskočením poškozených úseků. Neúplné WAV se odmítají; externí ffmpeg.exe není potřeba. Běžná pipeline Gemini/Pyannote se nemění.
 

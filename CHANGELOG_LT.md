@@ -3,15 +3,15 @@
 Versija 0.9.14 – 2026-10-12
 
 Edge balsai, garsinės knygos ir garsinis vaizdavimas
-1. **Patikimesni Edge balsai.** Skaitymui ir garsinių knygų kūrimui Sonarpad dabar naudoja naujesnį Microsoft Edge kalbos ryšį. Jei jis nepasiekiamas, automatiškai gali išbandyti ankstesnį ryšį. Pasirinktas balsas nesikeičia.
+1. Patikimesni Edge balsai. Skaitymui ir garsinių knygų kūrimui Sonarpad dabar naudoja naujesnį Microsoft Edge kalbos ryšį. Jei jis nepasiekiamas, automatiškai gali išbandyti ankstesnį ryšį. Pasirinktas balsas nesikeičia.
 
-2. **Mažiau nutrūkimų.** Jei Microsoft atmeta užklausą arba ryšys nutrūksta, Sonarpad bando dar kartą ir prireikus palaukia. Programa nepasiduoda po kelių bandymų, o jūs bet kada galite pasirinkti **Atšaukti**.
+2. Mažiau nutrūkimų. Jei Microsoft atmeta užklausą arba ryšys nutrūksta, Sonarpad bando dar kartą ir prireikus palaukia. Programa nepasiduoda po kelių bandymų, o jūs bet kada galite pasirinkti Atšaukti.
 
-3. **Nebėra nukirstų sakinių.** Jei dalis garso gaunama nepilna, Sonarpad ją atmeta ir iš naujo sukuria tik tą dalį. Jau atliktas darbas išsaugomas. Garsinėms knygoms ir garsiniam vaizdavimui tebepalaikomos iki 8 vienu metu vykdomų užklausų.
+3. Nebėra nukirstų sakinių. Jei dalis garso gaunama nepilna, Sonarpad ją atmeta ir iš naujo sukuria tik tą dalį. Jau atliktas darbas išsaugomas. Garsinėms knygoms ir garsiniam vaizdavimui tebepalaikomos iki 8 vienu metu vykdomų užklausų.
 
-4. **Aiškesnė diagnostika.** Žurnale matyti, kuris Edge ryšys iš tikrųjų pateikė garsą, todėl lengviau išsiaiškinti problemas.
+4. Aiškesnė diagnostika. Žurnale matyti, kuris Edge ryšys iš tikrųjų pateikė garsą, todėl lengviau išsiaiškinti problemas.
 
-5. **Tvarkingesnė eigos informacija.** Išsaugant failus ar eksportuojant garsinį vaizdavimą, procentas į žurnalą įrašomas tik jam pasikeitus. Vienodi pranešimai nebesikaupia, o eigos juosta ir toliau veikia įprastai.
+5. Tvarkingesnė eigos informacija. Išsaugant failus ar eksportuojant garsinį vaizdavimą, procentas į žurnalą įrašomas tik jam pasikeitus. Vienodi pranešimai nebesikaupia, o eigos juosta ir toliau veikia įprastai.
 
 ---
 
@@ -34,11 +34,11 @@ DI garsinis vaizdavimas – stabilumas ir atkūrimas
 7. Audiodeskripcijos pagalbinės programos talpyklos failas pakeistas į `audio_description_bridge_v9.exe`. Atnaujinus Sonarpad, pirmą kartą naudojant funkciją failas bus atsisiųstas iš naujo, o senesnės versijos, jei įmanoma, pašalintos. Gemini/Pyannote procesas nekeičiamas. Prieš leidimą reikia iš naujo sukompiliuoti Python programą ir pakeisti `audio_description_bridge.exe` GitHub Sonarpad-Tools 0.7 leidime.
 
 Grotuvas, „YouTube“ ir srautinis perdavimas
-8. Ištaisyta **Pereiti į laiką (Ctrl+T)** funkcija „YouTube“ vaizdo įrašams, atkuriamiems per MPV. Esamas dialogo langas dabar leidžia pereiti į pasirinktą laiką; meniu įgalina paiešką palaikomuose interneto vaizdo įrašuose. Tiesioginės televizijos ir tiesioginių BASS srautų apribojimai nesikeičia.
+8. Ištaisyta Pereiti į laiką (Ctrl+T) funkcija „YouTube“ vaizdo įrašams, atkuriamiems per MPV. Esamas dialogo langas dabar leidžia pereiti į pasirinktą laiką; meniu įgalina paiešką palaikomuose interneto vaizdo įrašuose. Tiesioginės televizijos ir tiesioginių BASS srautų apribojimai nesikeičia.
 
-9. **Pereiti į laiką (Ctrl+T)** funkcija ir atsukimo komandos dabar veikia visame užsakomajame turinyje: RaiPlay, Rai ir Sonarpad garsiniuose aprašymuose, La7 Play bei YouTube. MPV atpažįsta aktyvų grotuvą net pasikeitus tiekėjo URL. TV kanalai ir tiesioginės transliacijos lieka neatsukamos. Garsinio aprašymo procesas nekeičiamas.
+9. Pereiti į laiką (Ctrl+T) funkcija ir atsukimo komandos dabar veikia visame užsakomajame turinyje: RaiPlay, Rai ir Sonarpad garsiniuose aprašymuose, La7 Play bei YouTube. MPV atpažįsta aktyvų grotuvą net pasikeitus tiekėjo URL. TV kanalai ir tiesioginės transliacijos lieka neatsukamos. Garsinio aprašymo procesas nekeičiamas.
 
-10. Ištaisyta **Pereiti į laiką (Ctrl+T)** funkcija vietiniams AVI, MP4, MKV ir kitiems per MPV leidžiamiems vaizdo įrašams. Sonarpad susieja aktyvų failą su jo skirtuku net kai Windows kelias užrašytas skirtingai. BASS ir atkūrimas nekeisti; TV kanalai bei tiesioginės transliacijos lieka neatsukamos.
+10. Ištaisyta Pereiti į laiką (Ctrl+T) funkcija vietiniams AVI, MP4, MKV ir kitiems per MPV leidžiamiems vaizdo įrašams. Sonarpad susieja aktyvų failą su jo skirtuku net kai Windows kelias užrašytas skirtingai. BASS ir atkūrimas nekeisti; TV kanalai bei tiesioginės transliacijos lieka neatsukamos.
 
 11. Patobulintas FFmpeg atsarginis atkūrimas garsiniam vaizdo įrašų su pažeistu garsu aprašymui. Skaičiuojami ir tarp tinkamų paketų pasitaikantys sugadinti paketai, todėl pavojingi dekodavimo ciklai sustabdomi. Tik tada atkūrimas bandomas naudojant su Sonarpad pateikiamas FFmpeg bibliotekas (avformat, avcodec, swresample), ribotai praleidžiant pažeistas atkarpas. Nepilni WAV atmetami; išorinis ffmpeg.exe nereikalingas. Įprasta Gemini/Pyannote eiga nekeičiama.
 

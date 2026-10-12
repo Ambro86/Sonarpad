@@ -3,15 +3,15 @@
 Verzija 0.9.14 – 2026-10-12
 
 Edge glasovi, audio-knjige i audio-opisi
-1. **Pouzdaniji Edge glasovi.** Sonarpad sada koristi noviju govornu vezu Microsoft Edge-a za čitanje i pravljenje audio-knjiga. Ako nije dostupna, može automatski da proba prethodnu vezu. Izabrani glas ostaje isti.
+1. Pouzdaniji Edge glasovi. Sonarpad sada koristi noviju govornu vezu Microsoft Edge-a za čitanje i pravljenje audio-knjiga. Ako nije dostupna, može automatski da proba prethodnu vezu. Izabrani glas ostaje isti.
 
-2. **Manje prekida.** Ako Microsoft odbije zahtev ili se veza prekine, Sonarpad sam pokušava ponovo i po potrebi sačeka. Ne odustaje nakon nekoliko pokušaja, a uvek možete izabrati **Otkaži**.
+2. Manje prekida. Ako Microsoft odbije zahtev ili se veza prekine, Sonarpad sam pokušava ponovo i po potrebi sačeka. Ne odustaje nakon nekoliko pokušaja, a uvek možete izabrati Otkaži.
 
-3. **Bez odsečenih rečenica.** Ako deo zvuka stigne nepotpun, Sonarpad ga odbacuje i ponovo pravi samo taj deo, čuvajući već završeni posao. Audio-knjige i audio-opisi i dalje podržavaju do 8 istovremenih zahteva.
+3. Bez odsečenih rečenica. Ako deo zvuka stigne nepotpun, Sonarpad ga odbacuje i ponovo pravi samo taj deo, čuvajući već završeni posao. Audio-knjige i audio-opisi i dalje podržavaju do 8 istovremenih zahteva.
 
-4. **Jasnija dijagnostika.** U dnevniku se vidi koja Edge veza je zaista proizvela zvuk, pa je lakše otkriti uzrok problema.
+4. Jasnija dijagnostika. U dnevniku se vidi koja Edge veza je zaista proizvela zvuk, pa je lakše otkriti uzrok problema.
 
-5. **Uredniji prikaz napretka.** Tokom čuvanja i izvoza audio-opisa procenat se beleži samo kada se promeni. Iste poruke više ne zatrpavaju dnevnik, a traka napretka nastavlja normalno da radi.
+5. Uredniji prikaz napretka. Tokom čuvanja i izvoza audio-opisa procenat se beleži samo kada se promeni. Iste poruke više ne zatrpavaju dnevnik, a traka napretka nastavlja normalno da radi.
 
 ---
 
@@ -34,11 +34,11 @@ AI audio-deskripcija – stabilnost i oporavak
 7. Keš za modul audio-deskripcije sada koristi `audio_description_bridge_v9.exe`. Nakon ažuriranja Sonarpada modul se ponovo preuzima pri prvoj upotrebi, a starije verzije keša uklanjaju se kada je moguće. Gemini/Pyannote postupak ostaje nepromenjen. Pre objavljivanja potrebno je ponovo izgraditi Python modul i zameniti `audio_description_bridge.exe` u GitHub izdanju Sonarpad-Tools 0.7.
 
 Plejer, YouTube i strimovanje
-8. Ispravljena komanda **Idi na vreme (Ctrl+T)** za YouTube video-zapise koji se reprodukuju preko MPV-a. Postojeći dijalog sada omogućava premotavanje na željeno vreme, a meni omogućava premotavanje podržanih veb video-zapisa. Ograničenja TV programa uživo i direktnih BASS strimova ostaju ista.
+8. Ispravljena komanda Idi na vreme (Ctrl+T) za YouTube video-zapise koji se reprodukuju preko MPV-a. Postojeći dijalog sada omogućava premotavanje na željeno vreme, a meni omogućava premotavanje podržanih veb video-zapisa. Ograničenja TV programa uživo i direktnih BASS strimova ostaju ista.
 
-9. **Idi na vreme (Ctrl+T)** i premotavanje sada rade za sve sadržaje na zahtev: RaiPlay, audio-opise Rai i Sonarpad, La7 Play i YouTube. MPV prepoznaje aktivni plejer čak i kada provajder promeni URL. TV kanali i prenosi uživo ostaju bez mogućnosti premotavanja. Proces audio-opisa nije menjan.
+9. Idi na vreme (Ctrl+T) i premotavanje sada rade za sve sadržaje na zahtev: RaiPlay, audio-opise Rai i Sonarpad, La7 Play i YouTube. MPV prepoznaje aktivni plejer čak i kada provajder promeni URL. TV kanali i prenosi uživo ostaju bez mogućnosti premotavanja. Proces audio-opisa nije menjan.
 
-10. Ispravljena je opcija **Idi na vreme (Ctrl+T)** za lokalne AVI, MP4, MKV i druge video-datoteke u MPV plejeru. Sonarpad prepoznaje karticu aktivne datoteke bez obzira na velika slova i razdelnike Windows putanje. BASS i reprodukcija ostaju nepromenjeni; TV kanali i prenosi uživo i dalje su izuzeti.
+10. Ispravljena je opcija Idi na vreme (Ctrl+T) za lokalne AVI, MP4, MKV i druge video-datoteke u MPV plejeru. Sonarpad prepoznaje karticu aktivne datoteke bez obzira na velika slova i razdelnike Windows putanje. BASS i reprodukcija ostaju nepromenjeni; TV kanali i prenosi uživo i dalje su izuzeti.
 
 11. Poboljšan je FFmpeg rezervni oporavak za audio-opise video-zapisa sa oštećenim zvukom. Broje se i neispravni paketi između ispravnih kako bi se zaustavilo beskonačno dekodiranje. Tek tada se koriste FFmpeg biblioteke već uključene u Sonarpad (avformat, avcodec i swresample), uz ograničeno preskakanje kratkih oštećenih delova. Nepotpuni WAV fajlovi se odbacuju; spoljašnji ffmpeg.exe nije potreban. Standardni Gemini/Pyannote tok ostaje nepromenjen.
 

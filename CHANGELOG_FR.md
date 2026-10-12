@@ -3,15 +3,15 @@
 Version 0.9.14 – 2026-10-12
 
 Voix Edge, livres audio et audiodescription
-1. **Des voix Edge plus fiables.** Sonarpad utilise désormais la connexion vocale plus récente de Microsoft Edge pour la lecture et la création de livres audio. Si elle n'est pas disponible, l'ancienne connexion peut être essayée automatiquement. La voix choisie ne change pas.
+1. Des voix Edge plus fiables. Sonarpad utilise désormais la connexion vocale plus récente de Microsoft Edge pour la lecture et la création de livres audio. Si elle n'est pas disponible, l'ancienne connexion peut être essayée automatiquement. La voix choisie ne change pas.
 
-2. **Moins d'interruptions.** Si Microsoft refuse une demande ou si la connexion se coupe, Sonarpad réessaie tout seul, avec une pause si nécessaire. Il ne s'arrête plus après quelques tentatives et vous pouvez toujours choisir **Annuler**.
+2. Moins d'interruptions. Si Microsoft refuse une demande ou si la connexion se coupe, Sonarpad réessaie tout seul, avec une pause si nécessaire. Il ne s'arrête plus après quelques tentatives et vous pouvez toujours choisir Annuler.
 
-3. **Fini les phrases coupées.** Si une partie du son arrive incomplète, Sonarpad l'écarte et régénère uniquement cette partie, sans perdre les passages déjà terminés. Les livres audio et l'audiodescription peuvent toujours utiliser jusqu'à 8 demandes simultanées.
+3. Fini les phrases coupées. Si une partie du son arrive incomplète, Sonarpad l'écarte et régénère uniquement cette partie, sans perdre les passages déjà terminés. Les livres audio et l'audiodescription peuvent toujours utiliser jusqu'à 8 demandes simultanées.
 
-4. **Diagnostic plus clair.** Les journaux indiquent quelle connexion Edge a réellement produit le son, pour mieux comprendre ce qui s'est passé en cas de problème.
+4. Diagnostic plus clair. Les journaux indiquent quelle connexion Edge a réellement produit le son, pour mieux comprendre ce qui s'est passé en cas de problème.
 
-5. **Progression plus lisible.** Lors des enregistrements et de l'exportation des audiodescriptions, le pourcentage n'est inscrit que lorsqu'il change. Les messages identiques ne s'accumulent plus et la barre de progression fonctionne normalement.
+5. Progression plus lisible. Lors des enregistrements et de l'exportation des audiodescriptions, le pourcentage n'est inscrit que lorsqu'il change. Les messages identiques ne s'accumulent plus et la barre de progression fonctionne normalement.
 
 ---
 
@@ -34,11 +34,11 @@ Audiodescription par IA – stabilité et reprise
 7. Le nom du cache du module d’audiodescription devient `audio_description_bridge_v9.exe`. Après la mise à jour de Sonarpad, le module est téléchargé de nouveau lors de la première utilisation et les anciennes versions en cache sont supprimées si possible. La chaîne Gemini/Pyannote reste inchangée. Avant publication, il faut reconstruire le module Python et remplacer l’asset `audio_description_bridge.exe` de la version 0.7 de Sonarpad-Tools sur GitHub.
 
 Lecteur, YouTube et streaming
-8. Correction de **Aller au temps (Ctrl+T)** pour les vidéos YouTube lues avec MPV. La boîte de dialogue existante permet maintenant de se déplacer via MPV et le menu autorise la recherche dans les vidéos web compatibles. Les restrictions de la télévision en direct et des flux directs BASS restent inchangées.
+8. Correction de Aller au temps (Ctrl+T) pour les vidéos YouTube lues avec MPV. La boîte de dialogue existante permet maintenant de se déplacer via MPV et le menu autorise la recherche dans les vidéos web compatibles. Les restrictions de la télévision en direct et des flux directs BASS restent inchangées.
 
-9. **Aller au temps (Ctrl+T)** et les commandes de déplacement fonctionnent désormais pour tous les contenus à la demande : RaiPlay, audiodescriptions Rai et Sonarpad, La7 Play et YouTube. MPV reconnaît le lecteur actif même si le fournisseur modifie l’URL du flux. Les chaînes TV et les directs restent exclus. La chaîne de production des audiodescriptions reste inchangée.
+9. Aller au temps (Ctrl+T) et les commandes de déplacement fonctionnent désormais pour tous les contenus à la demande : RaiPlay, audiodescriptions Rai et Sonarpad, La7 Play et YouTube. MPV reconnaît le lecteur actif même si le fournisseur modifie l’URL du flux. Les chaînes TV et les directs restent exclus. La chaîne de production des audiodescriptions reste inchangée.
 
-10. Correction de **Aller au temps (Ctrl+T)** pour les vidéos locales AVI, MP4, MKV et autres formats lus par MPV. Sonarpad reconnaît l’onglet du fichier actif malgré les différences de casse ou de séparateurs dans le chemin Windows. BASS et la lecture restent inchangés ; les chaînes TV et les directs restent exclus.
+10. Correction de Aller au temps (Ctrl+T) pour les vidéos locales AVI, MP4, MKV et autres formats lus par MPV. Sonarpad reconnaît l’onglet du fichier actif malgré les différences de casse ou de séparateurs dans le chemin Windows. BASS et la lecture restent inchangés ; les chaînes TV et les directs restent exclus.
 
 11. Renforcement du repli FFmpeg pour l’audiodescription de vidéos dont le son est endommagé. Les paquets invalides sont comptés même lorsqu’ils alternent avec des paquets valides, afin d’arrêter les boucles de décodage. Ce n’est qu’alors que les bibliothèques FFmpeg déjà intégrées à Sonarpad (avformat, avcodec et swresample) tentent une récupération limitée en sautant de courts passages endommagés. Les WAV incomplets sont rejetés ; aucun ffmpeg.exe externe n’est nécessaire. Le parcours normal Gemini/Pyannote reste inchangé.
 

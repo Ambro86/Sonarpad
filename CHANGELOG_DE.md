@@ -3,15 +3,15 @@
 Version 0.9.14 – 2026-10-12
 
 Edge-Stimmen, Hörbücher und Audiodeskriptionen
-1. **Zuverlässigere Edge-Stimmen.** Sonarpad nutzt beim Vorlesen und Erstellen von Hörbüchern jetzt die neuere Sprachverbindung von Microsoft Edge. Ist sie nicht erreichbar, kann automatisch die bisherige Verbindung versucht werden. Die gewählte Stimme bleibt erhalten.
+1. Zuverlässigere Edge-Stimmen. Sonarpad nutzt beim Vorlesen und Erstellen von Hörbüchern jetzt die neuere Sprachverbindung von Microsoft Edge. Ist sie nicht erreichbar, kann automatisch die bisherige Verbindung versucht werden. Die gewählte Stimme bleibt erhalten.
 
-2. **Weniger Unterbrechungen.** Wenn Microsoft eine Anfrage ablehnt oder die Verbindung abbricht, versucht Sonarpad es selbstständig erneut und wartet bei Bedarf etwas länger. Nach wenigen Versuchen ist also nicht einfach Schluss. Mit **Abbrechen** können Sie den Vorgang jederzeit beenden.
+2. Weniger Unterbrechungen. Wenn Microsoft eine Anfrage ablehnt oder die Verbindung abbricht, versucht Sonarpad es selbstständig erneut und wartet bei Bedarf etwas länger. Nach wenigen Versuchen ist also nicht einfach Schluss. Mit Abbrechen können Sie den Vorgang jederzeit beenden.
 
-3. **Keine abgeschnittenen Sätze.** Kommt ein Audioteil nicht vollständig an, verwirft Sonarpad ihn und erstellt nur diesen Teil erneut. Bereits fertige Abschnitte bleiben erhalten. Für Hörbücher und Audiodeskriptionen sind weiterhin bis zu 8 gleichzeitige Anfragen möglich.
+3. Keine abgeschnittenen Sätze. Kommt ein Audioteil nicht vollständig an, verwirft Sonarpad ihn und erstellt nur diesen Teil erneut. Bereits fertige Abschnitte bleiben erhalten. Für Hörbücher und Audiodeskriptionen sind weiterhin bis zu 8 gleichzeitige Anfragen möglich.
 
-4. **Verständlichere Diagnose.** Im Protokoll steht, welche Edge-Verbindung tatsächlich Audio geliefert hat. So lassen sich Probleme leichter nachvollziehen.
+4. Verständlichere Diagnose. Im Protokoll steht, welche Edge-Verbindung tatsächlich Audio geliefert hat. So lassen sich Probleme leichter nachvollziehen.
 
-5. **Übersichtlichere Fortschrittsanzeige.** Beim Speichern und Exportieren von Audiodeskriptionen wird ein Prozentwert nur noch protokolliert, wenn er sich ändert. Doppelte Meldungen entfallen, während die Fortschrittsanzeige normal weiterläuft.
+5. Übersichtlichere Fortschrittsanzeige. Beim Speichern und Exportieren von Audiodeskriptionen wird ein Prozentwert nur noch protokolliert, wenn er sich ändert. Doppelte Meldungen entfallen, während die Fortschrittsanzeige normal weiterläuft.
 
 ---
 
@@ -34,11 +34,11 @@ KI-Audiodeskription – Stabilität und Wiederaufnahme
 7. Der Cache des Audiodeskriptions-Bridge wurde auf `audio_description_bridge_v9.exe` angehoben. Nach dem Sonarpad-Update wird der Bridge beim ersten Einsatz erneut heruntergeladen; ältere versionierte Caches werden nach Möglichkeit entfernt. Die Gemini/Pyannote-Pipeline bleibt unverändert. Vor der Veröffentlichung muss der aktualisierte Python-Bridge neu erstellt und das Asset `audio_description_bridge.exe` im GitHub-Release Sonarpad-Tools 0.7 ersetzt werden.
 
 Player, YouTube und Streaming
-8. **Zu Zeitpunkt springen (Strg+T)** für YouTube-Videos mit MPV behoben. Der vorhandene Dialog springt nun über MPV zur angegebenen Zeit; die Wiedergabemenüs aktivieren die Suche bei unterstützten Webvideos. Einschränkungen für Live-TV und direkte BASS-Streams bleiben bestehen.
+8. Zu Zeitpunkt springen (Strg+T) für YouTube-Videos mit MPV behoben. Der vorhandene Dialog springt nun über MPV zur angegebenen Zeit; die Wiedergabemenüs aktivieren die Suche bei unterstützten Webvideos. Einschränkungen für Live-TV und direkte BASS-Streams bleiben bestehen.
 
-9. **Zu Zeitpunkt springen (Strg+T)** und die Suchfunktionen gelten nun für alle On-Demand-Inhalte: RaiPlay, Audiodeskriptionen von Rai und Sonarpad, La7 Play und YouTube. MPV erkennt den aktiven Player auch bei vom Anbieter geänderter Stream-URL. TV-Kanäle und Live-Übertragungen bleiben vom Springen ausgeschlossen. Die Audiodeskriptions-Pipeline bleibt unverändert.
+9. Zu Zeitpunkt springen (Strg+T) und die Suchfunktionen gelten nun für alle On-Demand-Inhalte: RaiPlay, Audiodeskriptionen von Rai und Sonarpad, La7 Play und YouTube. MPV erkennt den aktiven Player auch bei vom Anbieter geänderter Stream-URL. TV-Kanäle und Live-Übertragungen bleiben vom Springen ausgeschlossen. Die Audiodeskriptions-Pipeline bleibt unverändert.
 
-10. **Zu Zeitpunkt springen (Strg+T)** funktioniert nun auch bei lokalen AVI-, MP4-, MKV- und anderen Videodateien in MPV. Sonarpad ordnet die aktive Datei ihrer Registerkarte zu, auch wenn sich Großschreibung oder Schrägstriche im Windows-Pfad unterscheiden. BASS und die Wiedergabe bleiben unverändert; TV-Kanäle und Livestreams sind weiterhin ausgenommen.
+10. Zu Zeitpunkt springen (Strg+T) funktioniert nun auch bei lokalen AVI-, MP4-, MKV- und anderen Videodateien in MPV. Sonarpad ordnet die aktive Datei ihrer Registerkarte zu, auch wenn sich Großschreibung oder Schrägstriche im Windows-Pfad unterscheiden. BASS und die Wiedergabe bleiben unverändert; TV-Kanäle und Livestreams sind weiterhin ausgenommen.
 
 11. FFmpeg-Fallback für Audiodeskriptionen mit beschädigtem Ton verbessert. Fehlerhafte Audiopakete werden auch zwischen gültigen Paketen gezählt, sodass problematische Dekodierschleifen enden. Nur dann erfolgt ein begrenzter Wiederherstellungsversuch über die bereits mitgelieferten FFmpeg-Bibliotheken (avformat, avcodec und swresample) mit kurzem Überspringen beschädigter Abschnitte. Unvollständige WAV-Dateien werden verworfen; eine externe ffmpeg.exe ist nicht erforderlich. Die normale Gemini/Pyannote-Pipeline bleibt unverändert.
 

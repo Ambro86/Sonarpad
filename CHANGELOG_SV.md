@@ -3,15 +3,15 @@
 Version 0.9.14 – 2026-10-12
 
 Edge-röster, ljudböcker och syntolkning
-1. **Pålitligare Edge-röster.** Sonarpad använder nu Microsoft Edges nyare talanslutning för uppläsning och ljudböcker. Om den inte är tillgänglig kan den tidigare anslutningen provas automatiskt. Din valda röst behålls.
+1. Pålitligare Edge-röster. Sonarpad använder nu Microsoft Edges nyare talanslutning för uppläsning och ljudböcker. Om den inte är tillgänglig kan den tidigare anslutningen provas automatiskt. Din valda röst behålls.
 
-2. **Färre avbrott.** Om Microsoft avvisar en begäran eller anslutningen bryts försöker Sonarpad igen på egen hand och väntar vid behov. Arbetet avslutas inte efter bara några försök, och du kan alltid välja **Avbryt**.
+2. Färre avbrott. Om Microsoft avvisar en begäran eller anslutningen bryts försöker Sonarpad igen på egen hand och väntar vid behov. Arbetet avslutas inte efter bara några försök, och du kan alltid välja Avbryt.
 
-3. **Inga avklippta meningar.** Om en del av ljudet inte kommer fram helt kastar Sonarpad den och skapar bara den delen på nytt. Det som redan är klart sparas. Ljudböcker och syntolkning stöder fortfarande upp till 8 samtidiga begäranden.
+3. Inga avklippta meningar. Om en del av ljudet inte kommer fram helt kastar Sonarpad den och skapar bara den delen på nytt. Det som redan är klart sparas. Ljudböcker och syntolkning stöder fortfarande upp till 8 samtidiga begäranden.
 
-4. **Tydligare diagnostik.** Loggen visar vilken Edge-anslutning som faktiskt levererade ljudet, så att det blir lättare att hitta orsaken till problem.
+4. Tydligare diagnostik. Loggen visar vilken Edge-anslutning som faktiskt levererade ljudet, så att det blir lättare att hitta orsaken till problem.
 
-5. **Renare förloppsrapporter.** När filer sparas eller syntolkning exporteras loggas procenttalet bara när det ändras. Identiska meddelanden fyller inte längre loggen och förloppsindikatorn fungerar som vanligt.
+5. Renare förloppsrapporter. När filer sparas eller syntolkning exporteras loggas procenttalet bara när det ändras. Identiska meddelanden fyller inte längre loggen och förloppsindikatorn fungerar som vanligt.
 
 ---
 
@@ -34,11 +34,11 @@ AI-syntolkning – stabilitet och återhämtning
 7. Ljudbeskrivningsbryggans cachefil har uppdaterats till `audio_description_bridge_v9.exe`. Efter uppdatering av Sonarpad hämtas bryggan på nytt vid första användningen; äldre versionsfiler tas bort när det går. Gemini/Pyannote-flödet är oförändrat. Före publicering måste Python-bryggan byggas om och `audio_description_bridge.exe` i GitHub-utgåvan Sonarpad-Tools 0.7 ersättas.
 
 Spelare, YouTube och strömning
-8. Åtgärdat **Gå till tid (Ctrl+T)** för YouTube-videor som spelas med MPV. Den befintliga dialogrutan söker nu till angiven tid via MPV, och menyn aktiverar sökning i kompatibla webbvideor. Begränsningar för direktsänd TV och direkta BASS-strömmar är oförändrade.
+8. Åtgärdat Gå till tid (Ctrl+T) för YouTube-videor som spelas med MPV. Den befintliga dialogrutan söker nu till angiven tid via MPV, och menyn aktiverar sökning i kompatibla webbvideor. Begränsningar för direktsänd TV och direkta BASS-strömmar är oförändrade.
 
-9. **Gå till tid (Ctrl+T)** och sökkommandona fungerar nu för allt innehåll på begäran: RaiPlay, syntolkningar från Rai och Sonarpad, La7 Play och YouTube. MPV känner igen den aktiva spelaren även om leverantören byter strömningsadress. TV-kanaler och direktsändningar kan fortfarande inte sökas. Syntolkningskedjan är oförändrad.
+9. Gå till tid (Ctrl+T) och sökkommandona fungerar nu för allt innehåll på begäran: RaiPlay, syntolkningar från Rai och Sonarpad, La7 Play och YouTube. MPV känner igen den aktiva spelaren även om leverantören byter strömningsadress. TV-kanaler och direktsändningar kan fortfarande inte sökas. Syntolkningskedjan är oförändrad.
 
-10. **Gå till tid (Ctrl+T)** fungerar nu även för lokala AVI-, MP4-, MKV- och andra videofiler som spelas upp med MPV. Sonarpad kopplar den aktiva filen till rätt flik även om Windows-sökvägen skiljer sig åt i skiftläge eller snedstreck. BASS och uppspelningen är oförändrade; TV-kanaler och direktsändningar är fortfarande undantagna.
+10. Gå till tid (Ctrl+T) fungerar nu även för lokala AVI-, MP4-, MKV- och andra videofiler som spelas upp med MPV. Sonarpad kopplar den aktiva filen till rätt flik även om Windows-sökvägen skiljer sig åt i skiftläge eller snedstreck. BASS och uppspelningen är oförändrade; TV-kanaler och direktsändningar är fortfarande undantagna.
 
 11. Förbättrat FFmpeg-reservläge för ljudbeskrivning av videor med skadat ljud. Ogiltiga ljudpaket räknas även mellan giltiga paket så att avkodningsslingor stoppas. Först då används FFmpeg-biblioteken som redan följer med Sonarpad (avformat, avcodec och swresample), med begränsat hopp över korta skadade avsnitt. Ofullständiga WAV-filer avvisas; en extern ffmpeg.exe behövs inte. Den normala Gemini/Pyannote-processen är oförändrad.
 
