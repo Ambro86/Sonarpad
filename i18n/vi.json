@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "Đã lưu sách nói thành công.",
   "tts.cancelled": "Thao tác đã bị hủy.",
   "tts.chunk_download_error": "Lỗi tải đoạn dữ liệu: {err}",
+  "tts.edge_access_denied": "Dịch vụ giọng nói Edge đã từ chối yêu cầu (HTTP 403 Forbidden). Hiện không thể tạo sách nói bằng giọng Edge này. Hãy thử lại sau hoặc chọn công cụ giọng nói khác có sẵn, chẳng hạn SAPI5 hoặc Google, trong Tùy chọn.",
   "tts.chunk_download_retry": "Lỗi tải đoạn dữ liệu (lần thử {attempt}/{max}): {err}. Đang thử lại...",
   "tts.chunk_download_retry_wait": "Lỗi tải đoạn dữ liệu {index}: {err}. Đang thử lại sau 5 giây...",
   "tts.preview_text": "Đây là âm thanh nghe thử.",

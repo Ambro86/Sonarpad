@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "ऑडियोबुक सफलतापूर्वक सहेजी गई।",
   "tts.cancelled": "कार्य रद्द किया गया।",
   "tts.chunk_download_error": "Chunk डाउनलोड त्रुटि: {err}",
+  "tts.edge_access_denied": "Edge वॉइस सेवा ने अनुरोध अस्वीकार कर दिया (HTTP 403 Forbidden)। फिलहाल इस Edge आवाज़ से ऑडियोबुक नहीं बनाई जा सकती। बाद में फिर प्रयास करें या विकल्पों में SAPI5 या Google जैसा कोई अन्य उपलब्ध भाषण इंजन चुनें।",
   "tts.chunk_download_retry": "Chunk डाउनलोड त्रुटि (प्रयास {attempt}/{max}): {err}. पुनः प्रयास किया जा रहा है...",
   "tts.chunk_download_retry_wait": "Chunk डाउनलोड त्रुटि {index}: {err}. 5 सेकंड में पुनः प्रयास किया जाएगा...",
   "tts.preview_text": "यह वॉइस पूर्वावलोकन है।",

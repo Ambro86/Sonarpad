@@ -48,6 +48,154 @@ use crate::subtitle_wasapi::{decode_mp3_to_pcm, resample_pcm};
 
 pub const WSS_URL_BASE: &str =
     "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
+// Edge 155 is the primary Read Aloud endpoint; a real synthesis test
+// successfully received MP3 audio using the compatible v1 GEC signature.
+// The earlier endpoint remains a fallback when the modern connection fails.
+// Do not log authentication parameters or reuse captured browser credentials.
+const EDGE_READ_ALOUD_MODERN_URL: &str =
+    "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1";
+const EDGE_READ_ALOUD_MODERN_GEC_VERSION: &str = "1-155.0.4283.45";
+const EDGE_READ_ALOUD_LEGACY_GEC_VERSION: &str = "1-132.0.2917.39";
+const EDGE_READ_ALOUD_MODERN_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0";
+const EDGE_READ_ALOUD_LEGACY_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0";
+
+#[derive(Clone, Copy)]
+enum EdgeReadAloudRoute {
+    Legacy,
+    ModernCompatible,
+}
+
+impl EdgeReadAloudRoute {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Legacy => "legacy (speech.platform.bing.com)",
+            Self::ModernCompatible => "Edge 155 (api.msedgeservices.com)",
+        }
+    }
+}
+
+// No secrets or per-session URL parameters are ever included in diagnostics.
+fn edge_read_aloud_request(
+    route: EdgeReadAloudRoute,
+    request_id: &str,
+) -> Result<tungstenite::http::Request<()>, String> {
+    let gec = generate_sec_ms_gec();
+    let (url_base, key_name, gec_version, user_agent) = match route {
+        EdgeReadAloudRoute::Legacy => (
+            WSS_URL_BASE,
+            "TrustedClientToken",
+            EDGE_READ_ALOUD_LEGACY_GEC_VERSION,
+            EDGE_READ_ALOUD_LEGACY_USER_AGENT,
+        ),
+        EdgeReadAloudRoute::ModernCompatible => (
+            EDGE_READ_ALOUD_MODERN_URL,
+            "Ocp-Apim-Subscription-Key",
+            EDGE_READ_ALOUD_MODERN_GEC_VERSION,
+            EDGE_READ_ALOUD_MODERN_USER_AGENT,
+        ),
+    };
+    let url_str = format!(
+        "{}?{}={}&ConnectionId={}&Sec-MS-GEC={}&Sec-MS-GEC-Version={}",
+        url_base, key_name, TRUSTED_CLIENT_TOKEN, request_id, gec, gec_version
+    );
+    let url = Url::parse(&url_str).map_err(|err| err.to_string())?;
+    let mut request = url
+        .as_str()
+        .into_client_request()
+        .map_err(|err: tungstenite::Error| err.to_string())?;
+    let headers = request.headers_mut();
+    headers.insert("Pragma", HeaderValue::from_static("no-cache"));
+    headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
+    headers.insert(
+        "Origin",
+        HeaderValue::from_static("chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"),
+    );
+    headers.insert("User-Agent", HeaderValue::from_static(user_agent));
+    headers.insert(
+        "Accept-Encoding",
+        HeaderValue::from_static("gzip, deflate, br"),
+    );
+    headers.insert(
+        "Accept-Language",
+        HeaderValue::from_static("en-US,en;q=0.9"),
+    );
+    let cookie = format!("muid={};", generate_muid());
+    headers.insert(
+        "Cookie",
+        HeaderValue::from_str(&cookie).map_err(|err| err.to_string())?,
+    );
+    Ok(request)
+}
+
+type EdgeReadAloudSocket =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+
+async fn connect_edge_read_aloud_route(
+    route: EdgeReadAloudRoute,
+    request_id: &str,
+    connect_timeout: Duration,
+) -> Result<EdgeReadAloudSocket, String> {
+    let request = edge_read_aloud_request(route, request_id)?;
+    match tokio::time::timeout(connect_timeout, connect_async(request)).await {
+        Ok(Ok((ws, _response))) => Ok(ws),
+        Ok(Err(tungstenite::Error::Http(response))) => {
+            Err(format!("HTTP error: {}", response.status()))
+        }
+        Ok(Err(err)) => Err(err.to_string()),
+        Err(_) => Err("WebSocket connect timeout".to_string()),
+    }
+}
+
+// Include the endpoint with the socket so diagnostics can distinguish
+// WebSocket acceptance (HTTP 101) from actually receiving synthesized audio.
+async fn connect_edge_read_aloud(
+    request_id: &str,
+    connect_timeout: Duration,
+) -> Result<(EdgeReadAloudSocket, EdgeReadAloudRoute), String> {
+    let primary = EdgeReadAloudRoute::ModernCompatible;
+    match connect_edge_read_aloud_route(primary, request_id, connect_timeout).await {
+        Ok(ws) => {
+            crate::log_debug(&format!(
+                "Edge TTS: WebSocket connected (HTTP 101), endpoint={} [PRIMARY]",
+                primary.label()
+            ));
+            Ok((ws, primary))
+        }
+        Err(primary_err) => {
+            let backup = EdgeReadAloudRoute::Legacy;
+            crate::log_debug(&format!(
+                "Edge TTS: primary endpoint={} failed: {}; trying fallback={}",
+                primary.label(),
+                primary_err,
+                backup.label()
+            ));
+            match connect_edge_read_aloud_route(backup, request_id, connect_timeout).await {
+                Ok(ws) => {
+                    crate::log_debug(&format!(
+                        "Edge TTS: WebSocket connected (HTTP 101), endpoint={} [FALLBACK]; primary failed: {}",
+                        backup.label(),
+                        primary_err
+                    ));
+                    Ok((ws, backup))
+                }
+                Err(backup_err) => {
+                    crate::log_debug(&format!(
+                        "Edge TTS: both endpoints rejected connection: primary={} error={}; fallback={} error={}",
+                        primary.label(),
+                        primary_err,
+                        backup.label(),
+                        backup_err
+                    ));
+                    Err(format!(
+                        "Edge 155: {}; legacy fallback: {}",
+                        primary_err, backup_err
+                    ))
+                }
+            }
+        }
+    }
+}
+
 pub const MAX_TTS_TEXT_LEN: usize = 3000;
 pub const MAX_TTS_TEXT_LEN_LONG: usize = 2000;
 pub const MAX_TTS_FIRST_CHUNK_LEN_LONG: usize = 800;
@@ -1846,8 +1994,14 @@ fn tts_playback_inner(req: TtsPlaybackRequest) {
                             }
                             return;
                         }
-                        tokio::time::sleep(Duration::from_millis(edge_retry_delay_ms(&e, attempt)))
-                            .await;
+                        if !async_sleep_with_cancellation(
+                            cancel_downloader.as_ref(),
+                            Duration::from_millis(edge_retry_delay_ms(&e, attempt)),
+                        )
+                        .await
+                        {
+                            return;
+                        }
                         attempt = attempt.saturating_add(1);
                     }
                 }
@@ -2160,11 +2314,34 @@ fn is_edge_connection_retry_error(err: &str) -> bool {
 }
 
 fn is_edge_forbidden_error(err: &str) -> bool {
-    err.to_ascii_lowercase().contains("403 forbidden")
+    // Some WebSocket clients include "Forbidden", others report only the status
+    // code. In both cases the user-selected Edge voice keeps retrying until
+    // cancellation; never promote an HTTP 403 to a terminal audiobook error.
+    let lower = err.to_ascii_lowercase();
+    lower.contains("403 forbidden")
+        || lower.contains("http error: 403")
+        || lower.contains("http 403")
+        || lower.contains("status code: 403")
+        || lower.contains("status: 403")
 }
 
+fn is_edge_rate_limited_error(err: &str) -> bool {
+    let lower = err.to_ascii_lowercase();
+    lower.contains("429 too many requests")
+        || lower.contains("http error: 429")
+        || lower.contains("http 429")
+        || lower.contains("status code: 429")
+        || lower.contains("status: 429")
+}
+
+const EDGE_INCOMPLETE_TURN_ERROR: &str =
+    "Edge WS: turn.end not received (connection closed before synthesis completed)";
+
 fn is_edge_retry_forever_error(err: &str) -> bool {
-    is_edge_connection_retry_error(err) || is_edge_forbidden_error(err)
+    is_edge_connection_retry_error(err)
+        || is_edge_forbidden_error(err)
+        || is_edge_rate_limited_error(err)
+        || err.contains(EDGE_INCOMPLETE_TURN_ERROR)
 }
 
 fn is_edge_audiobook_transient_error(err: &str) -> bool {
@@ -2200,13 +2377,20 @@ fn is_edge_audiobook_transient_error(err: &str) -> bool {
 }
 
 fn edge_retry_delay_ms(err: &str, attempt: usize) -> u64 {
+    // A 429 can represent server-wide throttling. Wait progressively rather
+    // than immediately sending more WebSocket handshakes; cancellation is
+    // checked in each caller during the longer wait.
+    if is_edge_rate_limited_error(err) {
+        let exponent = attempt.saturating_sub(1).min(4) as u32;
+        return 5_000u64.saturating_mul(1u64 << exponent).min(60_000);
+    }
     let lower = err.to_ascii_lowercase();
     let base_ms = if is_edge_retry_forever_error(err) || lower.contains("timeout") {
-        250
+        250u64
     } else {
-        400
+        400u64
     };
-    (attempt as u64).saturating_mul(base_ms as u64).min(2000)
+    (attempt as u64).saturating_mul(base_ms).min(2000)
 }
 
 pub async fn download_audio_chunk(
@@ -2330,48 +2514,8 @@ async fn download_audio_chunk_attempt(
     tts_volume: i32,
     cancel: Option<&AtomicBool>,
 ) -> Result<Vec<u8>, String> {
-    let sec_ms_gec = generate_sec_ms_gec();
-    let sec_ms_gec_version = "1-132.0.2917.39";
-
-    let url_str = format!(
-        "{}?TrustedClientToken={}&ConnectionId={}&Sec-MS-GEC={}&Sec-MS-GEC-Version={}",
-        WSS_URL_BASE, TRUSTED_CLIENT_TOKEN, request_id, sec_ms_gec, sec_ms_gec_version
-    );
-    let url = Url::parse(&url_str).map_err(|err| err.to_string())?;
-
-    let mut request = url
-        .as_str()
-        .into_client_request()
-        .map_err(|e: tungstenite::Error| e.to_string())?;
-    let headers = request.headers_mut();
-    headers.insert("Pragma", HeaderValue::from_static("no-cache"));
-    headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
-    headers.insert(
-        "Origin",
-        HeaderValue::from_static("chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"),
-    );
-    headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0"));
-    headers.insert(
-        "Accept-Encoding",
-        HeaderValue::from_static("gzip, deflate, br"),
-    );
-    headers.insert(
-        "Accept-Language",
-        HeaderValue::from_static("en-US,en;q=0.9"),
-    );
-    let cookie = format!("muid={};", generate_muid());
-    headers.insert(
-        "Cookie",
-        HeaderValue::from_str(&cookie).map_err(|err| err.to_string())?,
-    );
-
-    let connect_timeout = Duration::from_secs(5);
-    let (ws_stream, _) = match tokio::time::timeout(connect_timeout, connect_async(request)).await {
-        Ok(res) => res.map_err(|e: tungstenite::Error| e.to_string())?,
-        Err(_) => {
-            return Err("WebSocket connect timeout".to_string());
-        }
-    };
+    let (ws_stream, edge_route) =
+        connect_edge_read_aloud(request_id, Duration::from_secs(5)).await?;
     if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
         return Err("cancelled".to_string());
     }
@@ -2410,6 +2554,7 @@ async fn download_audio_chunk_attempt(
         .map_err(|e: tungstenite::Error| e.to_string())?;
 
     let mut audio_data = Vec::new();
+    let mut turn_completed = false;
     loop {
         if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
             return Err("cancelled".to_string());
@@ -2421,9 +2566,11 @@ async fn download_audio_chunk_attempt(
         let Some(msg) = next else {
             break;
         };
-        let msg: Message = msg.map_err(|e: tungstenite::Error| e.to_string())?;
+        let msg: Message =
+            msg.map_err(|e: tungstenite::Error| format!("{EDGE_INCOMPLETE_TURN_ERROR}: {e}"))?;
         match msg {
             Message::Text(text) if text.contains("Path:turn.end") => {
+                turn_completed = true;
                 break;
             }
             Message::Text(_) => {}
@@ -2441,55 +2588,55 @@ async fn download_audio_chunk_attempt(
             _ => {}
         }
     }
+    if !turn_completed {
+        crate::log_debug(&format!(
+            "Edge TTS: INCOMPLETE TURN, endpoint={} discarded_audio_bytes={} path=single_chunk",
+            edge_route.label(),
+            audio_data.len()
+        ));
+        return Err(EDGE_INCOMPLETE_TURN_ERROR.to_string());
+    }
+    if !audio_data.is_empty() {
+        crate::log_debug(&format!(
+            "Edge TTS: SYNTHESIS SUCCEEDED, endpoint={} audio_bytes={} path=single_chunk",
+            edge_route.label(),
+            audio_data.len()
+        ));
+    }
     Ok(audio_data)
 }
 
-async fn read_edge_audio_turn(
-    read: &mut futures_util::stream::SplitStream<
-        tokio_tungstenite::WebSocketStream<
-            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-        >,
-    >,
-) -> Result<Vec<u8>, String> {
+// Keep all frames of one SSML request private until Edge explicitly confirms
+// completion with Path:turn.end.  A graceful close or end-of-stream can occur
+// after valid MP3 frames and must NEVER be treated as a finished chunk.
+async fn read_edge_audio_turn<S>(read: &mut S) -> Result<Vec<u8>, String>
+where
+    S: futures_util::Stream<Item = Result<Message, tungstenite::Error>> + Unpin,
+{
     let mut audio_data = Vec::new();
-    while let Some(msg) = read.next().await {
-        let msg: Message = msg.map_err(|e: tungstenite::Error| e.to_string())?;
-        match msg {
-            Message::Text(text) if text.contains("Path:turn.end") => {
-                break;
-            }
-            Message::Text(_) => {}
-            Message::Binary(data) => match parse_edge_binary_audio_payload(&data) {
-                Ok(Some(audio)) => {
-                    audio_data.extend_from_slice(&audio);
-                }
-                Ok(None) => continue,
-                Err(err) => {
-                    log_debug(&err);
-                    continue;
-                }
-            },
-            Message::Close(_) => break,
-            _ => {}
-        }
-    }
+    read_edge_audio_turn_to_writer(read, &mut audio_data).await?;
     Ok(audio_data)
 }
 
-async fn read_edge_audio_turn_to_writer(
-    read: &mut futures_util::stream::SplitStream<
-        tokio_tungstenite::WebSocketStream<
-            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-        >,
-    >,
+async fn read_edge_audio_turn_to_writer<S>(
+    read: &mut S,
     buffer: &mut Vec<u8>,
-) -> Result<bool, String> {
+) -> Result<bool, String>
+where
+    S: futures_util::Stream<Item = Result<Message, tungstenite::Error>> + Unpin,
+{
     let mut audio_received = false;
-    while let Some(msg) = read.next().await {
-        let msg: Message = msg.map_err(|e: tungstenite::Error| e.to_string())?;
+    while let Some(next) = read.next().await {
+        let msg = match next {
+            Ok(msg) => msg,
+            Err(err) => {
+                buffer.clear();
+                return Err(format!("{EDGE_INCOMPLETE_TURN_ERROR}: {err}"));
+            }
+        };
         match msg {
             Message::Text(text) if text.contains("Path:turn.end") => {
-                break;
+                return Ok(audio_received);
             }
             Message::Text(_) => {}
             Message::Binary(data) => match parse_edge_binary_audio_payload(&data) {
@@ -2507,7 +2654,10 @@ async fn read_edge_audio_turn_to_writer(
             _ => {}
         }
     }
-    Ok(audio_received)
+    // The caller retries exactly this uncommitted chunk; all earlier chunks
+    // have already been acknowledged and are not regenerated.
+    buffer.clear();
+    Err(EDGE_INCOMPLETE_TURN_ERROR.to_string())
 }
 
 async fn download_edge_chunks_ws(
@@ -2521,49 +2671,9 @@ async fn download_edge_chunks_ws(
 ) -> Result<usize, String> {
     let first_audio_timeout = Duration::from_secs(60);
     const FIRST_AUDIO_RETRIES: usize = 1;
-    let sec_ms_gec = generate_sec_ms_gec();
-    let sec_ms_gec_version = "1-132.0.2917.39";
     let request_id = Uuid::new_v4().simple().to_string();
-
-    let url_str = format!(
-        "{}?TrustedClientToken={}&ConnectionId={}&Sec-MS-GEC={}&Sec-MS-GEC-Version={}",
-        WSS_URL_BASE, TRUSTED_CLIENT_TOKEN, request_id, sec_ms_gec, sec_ms_gec_version
-    );
-    let url = Url::parse(&url_str).map_err(|err| err.to_string())?;
-
-    let mut request = url
-        .as_str()
-        .into_client_request()
-        .map_err(|e: tungstenite::Error| e.to_string())?;
-    let headers = request.headers_mut();
-    headers.insert("Pragma", HeaderValue::from_static("no-cache"));
-    headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
-    headers.insert(
-        "Origin",
-        HeaderValue::from_static("chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"),
-    );
-    headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0"));
-    headers.insert(
-        "Accept-Encoding",
-        HeaderValue::from_static("gzip, deflate, br"),
-    );
-    headers.insert(
-        "Accept-Language",
-        HeaderValue::from_static("en-US,en;q=0.9"),
-    );
-    let cookie = format!("muid={};", generate_muid());
-    headers.insert(
-        "Cookie",
-        HeaderValue::from_str(&cookie).map_err(|err| err.to_string())?,
-    );
-
-    let connect_timeout = Duration::from_secs(10);
-    let (ws_stream, _) = match tokio::time::timeout(connect_timeout, connect_async(request)).await {
-        Ok(res) => res.map_err(|e: tungstenite::Error| e.to_string())?,
-        Err(_) => {
-            return Err("WebSocket connect timeout".to_string());
-        }
-    };
+    let (ws_stream, edge_route) =
+        connect_edge_read_aloud(&request_id, Duration::from_secs(10)).await?;
     crate::log_debug("Edge WS: connected.");
     let (mut write, mut read) = ws_stream.split();
 
@@ -2722,6 +2832,13 @@ async fn download_edge_chunks_ws(
             processed_count = processed_count.saturating_add(1);
             continue;
         }
+        if sent_count == 0 {
+            crate::log_debug(&format!(
+                "Edge TTS: SYNTHESIS SUCCEEDED, endpoint={} audio_bytes={} path=streaming",
+                edge_route.label(),
+                audio.len()
+            ));
+        }
         if let Some(tx) = audio_tx {
             let len = chunk.original_len;
             if tx
@@ -2757,49 +2874,9 @@ async fn download_edge_chunk_ws(
     idx: usize,
 ) -> Result<Vec<u8>, String> {
     let first_audio_timeout = Duration::from_secs(60);
-    let sec_ms_gec = generate_sec_ms_gec();
-    let sec_ms_gec_version = "1-132.0.2917.39";
     let request_id = Uuid::new_v4().simple().to_string();
-
-    let url_str = format!(
-        "{}?TrustedClientToken={}&ConnectionId={}&Sec-MS-GEC={}&Sec-MS-GEC-Version={}",
-        WSS_URL_BASE, TRUSTED_CLIENT_TOKEN, request_id, sec_ms_gec, sec_ms_gec_version
-    );
-    let url = Url::parse(&url_str).map_err(|err| err.to_string())?;
-
-    let mut request = url
-        .as_str()
-        .into_client_request()
-        .map_err(|e: tungstenite::Error| e.to_string())?;
-    let headers = request.headers_mut();
-    headers.insert("Pragma", HeaderValue::from_static("no-cache"));
-    headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
-    headers.insert(
-        "Origin",
-        HeaderValue::from_static("chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"),
-    );
-    headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0"));
-    headers.insert(
-        "Accept-Encoding",
-        HeaderValue::from_static("gzip, deflate, br"),
-    );
-    headers.insert(
-        "Accept-Language",
-        HeaderValue::from_static("en-US,en;q=0.9"),
-    );
-    let cookie = format!("muid={};", generate_muid());
-    headers.insert(
-        "Cookie",
-        HeaderValue::from_str(&cookie).map_err(|err| err.to_string())?,
-    );
-
-    let connect_timeout = Duration::from_secs(10);
-    let (ws_stream, _) = match tokio::time::timeout(connect_timeout, connect_async(request)).await {
-        Ok(res) => res.map_err(|e: tungstenite::Error| e.to_string())?,
-        Err(_) => {
-            return Err("WebSocket connect timeout".to_string());
-        }
-    };
+    let (ws_stream, edge_route) =
+        connect_edge_read_aloud(&request_id, Duration::from_secs(10)).await?;
     crate::log_debug(&format!("Edge WS: connected (chunk {}).", idx));
     let (mut write, mut read) = ws_stream.split();
 
@@ -2885,6 +2962,12 @@ async fn download_edge_chunk_ws(
     let text_bytes_len = chunk.text_to_read.len();
     let audio_bytes_len = chunk_buffer.len();
     crate::log_debug(&format!(
+        "Edge TTS: SYNTHESIS SUCCEEDED, endpoint={} audio_bytes={} chunk_index={} path=audiobook",
+        edge_route.label(),
+        audio_bytes_len,
+        idx
+    ));
+    crate::log_debug(&format!(
         "Edge WS: chunk completed (chunk_index={} text_bytes={} utf16_len={} audio_bytes={})",
         idx, text_bytes_len, text_utf16_len, audio_bytes_len
     ));
@@ -2928,8 +3011,14 @@ async fn download_edge_chunk_ws_with_retry(
                 if !retry_forever && attempt >= max_retries {
                     break err;
                 }
-                tokio::time::sleep(Duration::from_millis(edge_retry_delay_ms(err_str, attempt)))
-                    .await;
+                if !async_sleep_with_cancellation(
+                    options.cancel,
+                    Duration::from_millis(edge_retry_delay_ms(err_str, attempt)),
+                )
+                .await
+                {
+                    return Err(cancelled_message(options.language));
+                }
                 attempt = attempt.saturating_add(1);
             }
         }
@@ -3016,11 +3105,14 @@ async fn download_edge_audiobook_chunk_validated(
             return Err(err);
         }
 
-        tokio::time::sleep(Duration::from_millis(edge_retry_delay_ms(
-            &err,
-            validation_attempt,
-        )))
-        .await;
+        if !async_sleep_with_cancellation(
+            options.cancel,
+            Duration::from_millis(edge_retry_delay_ms(&err, validation_attempt)),
+        )
+        .await
+        {
+            return Err(cancelled_message(options.language));
+        }
         validation_attempt = validation_attempt.saturating_add(1);
     }
 }
@@ -7637,6 +7729,92 @@ mod tests {
         assert_eq!(joined, text);
     }
 
+    // No live Microsoft connection is required: feed synthetic frames into
+    // exactly the same async reader used by streaming and audiobook export.
+    #[tokio::test]
+    async fn edge_turn_end_commits_one_complete_audio_chunk() {
+        use futures_util::stream;
+        use tokio_tungstenite::tungstenite::{Error as WsError, protocol::Message};
+
+        let header = b"Path:audio\r\nContent-Type:audio/mpeg";
+        let mut frame = Vec::new();
+        frame.extend_from_slice(&(header.len() as u16).to_be_bytes());
+        frame.extend_from_slice(header);
+        frame.extend_from_slice(b"valid-mp3-frames");
+        let mut frames = stream::iter(vec![
+            Ok::<Message, WsError>(Message::Binary(frame.into())),
+            Ok(Message::Text("Path:turn.end".into())),
+        ]);
+        let audio = super::read_edge_audio_turn(&mut frames)
+            .await
+            .expect("turn.end must permit the buffered audio");
+        assert_eq!(audio.as_slice(), b"valid-mp3-frames");
+    }
+
+    #[tokio::test]
+    async fn edge_close_before_turn_end_discards_partial_mp3() {
+        use futures_util::stream;
+        use tokio_tungstenite::tungstenite::{Error as WsError, protocol::Message};
+
+        let header = b"Path:audio\r\nContent-Type:audio/mpeg";
+        let mut frame = Vec::new();
+        frame.extend_from_slice(&(header.len() as u16).to_be_bytes());
+        frame.extend_from_slice(header);
+        frame.extend_from_slice(b"partial-mp3");
+        let mut frames = stream::iter(vec![
+            Ok::<Message, WsError>(Message::Binary(frame.into())),
+            Ok(Message::Close(None)),
+        ]);
+        let mut buffer = Vec::new();
+        let err = super::read_edge_audio_turn_to_writer(&mut frames, &mut buffer)
+            .await
+            .expect_err("a close without turn.end must not succeed");
+        assert!(err.contains("turn.end not received"));
+        assert!(buffer.is_empty(), "never expose a partial audio chunk");
+        assert!(super::is_edge_retry_forever_error(&err));
+        assert!(super::is_edge_audiobook_transient_error(&err));
+    }
+
+    #[tokio::test]
+    async fn edge_eof_before_turn_end_retries_instead_of_succeeding() {
+        use futures_util::stream;
+        use tokio_tungstenite::tungstenite::{Error as WsError, protocol::Message};
+        let mut frames = stream::iter(vec![Ok::<Message, WsError>(Message::Text(
+            "Path:turn.start".into(),
+        ))]);
+        let err = super::read_edge_audio_turn(&mut frames)
+            .await
+            .expect_err("stream EOF without turn.end must fail");
+        assert!(err.contains("turn.end not received"));
+        assert!(super::should_retry_audiobook_segment(
+            TtsEngine::Edge,
+            500,
+            &err
+        ));
+    }
+
+    #[tokio::test]
+    async fn edge_socket_error_discards_partial_audio() {
+        use futures_util::stream;
+        use tokio_tungstenite::tungstenite::{Error as WsError, protocol::Message};
+        let header = b"Path:audio\r\nContent-Type:audio/mpeg";
+        let mut frame = Vec::new();
+        frame.extend_from_slice(&(header.len() as u16).to_be_bytes());
+        frame.extend_from_slice(header);
+        frame.extend_from_slice(b"partial-mp3");
+        let mut frames = stream::iter(vec![
+            Ok::<Message, WsError>(Message::Binary(frame.into())),
+            Err(WsError::ConnectionClosed),
+        ]);
+        let mut buffer = Vec::new();
+        let err = super::read_edge_audio_turn_to_writer(&mut frames, &mut buffer)
+            .await
+            .expect_err("a socket error must invalidate the current chunk");
+        assert!(err.contains("turn.end not received"));
+        assert!(buffer.is_empty());
+        assert!(super::is_edge_retry_forever_error(&err));
+    }
+
     #[test]
     fn edge_binary_audio_payload_parses_valid_audio_frame() {
         let header = b"Path:audio\r\nContent-Type:audio/mpeg";
@@ -10594,7 +10772,12 @@ async fn synthesize_mixed_chunk_with_retry(
         match synthesize_segment_to_wav(&chunk.text_to_read, synth, target).await {
             Ok(wav_path) => return Ok(Some(wav_path)),
             Err(err) => {
-                let retry_delay = audiobook_retry_delay(attempt);
+                let retry_delay =
+                    if synth.engine == TtsEngine::Edge && is_edge_rate_limited_error(&err) {
+                        Duration::from_millis(edge_retry_delay_ms(&err, attempt))
+                    } else {
+                        audiobook_retry_delay(attempt)
+                    };
                 let retry_until_cancelled = synth.engine == TtsEngine::Google
                     || (synth.engine == TtsEngine::Edge && is_edge_audiobook_transient_error(&err));
                 crate::log_debug(&format!(
@@ -11674,6 +11857,59 @@ mod google_audiobook_optimization_tests {
             NON_GOOGLE_AUDIOBOOK_MAX_ATTEMPTS,
             "temporary failure"
         ));
+    }
+
+    #[test]
+    fn edge_403_from_either_transport_keeps_retrying_until_cancelled() {
+        for err in [
+            "HTTP error: 403 Forbidden",
+            "HTTP error: 403",
+            "HTTP 403",
+            "server response status code: 403",
+            "server response status: 403",
+            "HTTP error: 403 Forbidden; modern compatibility: HTTP error: 403",
+        ] {
+            assert!(is_edge_forbidden_error(err), "unrecognized refusal: {err}");
+            assert!(is_edge_retry_forever_error(err));
+            assert!(is_edge_audiobook_transient_error(err));
+            assert!(should_retry_audiobook_segment(TtsEngine::Edge, 500, err));
+        }
+        assert!(!is_edge_forbidden_error("HTTP error: 404 Not Found"));
+        assert!(!is_edge_forbidden_error(
+            "HTTP error: 500 Internal Server Error"
+        ));
+    }
+
+    #[test]
+    fn edge_route_order_and_diagnostics_are_explicit() {
+        assert_eq!(
+            EdgeReadAloudRoute::ModernCompatible.label(),
+            "Edge 155 (api.msedgeservices.com)"
+        );
+        assert_eq!(
+            EdgeReadAloudRoute::Legacy.label(),
+            "legacy (speech.platform.bing.com)"
+        );
+        assert_eq!(EDGE_READ_ALOUD_MODERN_GEC_VERSION, "1-155.0.4283.45");
+    }
+
+    #[test]
+    fn edge_429_retries_with_progressive_cooldown() {
+        for err in [
+            "HTTP error: 429 Too Many Requests",
+            "HTTP error: 429",
+            "status code: 429",
+        ] {
+            assert!(is_edge_rate_limited_error(err));
+            assert!(is_edge_retry_forever_error(err));
+            assert!(should_retry_audiobook_segment(TtsEngine::Edge, 500, err));
+        }
+        assert_eq!(edge_retry_delay_ms("HTTP error: 429", 1), 5_000);
+        assert_eq!(edge_retry_delay_ms("HTTP error: 429", 2), 10_000);
+        assert_eq!(edge_retry_delay_ms("HTTP error: 429", 3), 20_000);
+        assert_eq!(edge_retry_delay_ms("HTTP error: 429", 5), 60_000);
+        assert_eq!(edge_retry_delay_ms("HTTP error: 403", 5), 1_250);
+        assert!(!is_edge_rate_limited_error("HTTP error: 403"));
     }
 
     #[test]

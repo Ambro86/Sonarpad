@@ -1824,6 +1824,7 @@
   "tts.audiobook_saved": "Audiolivro salvo com sucesso.",
   "tts.cancelled": "Operação cancelada.",
   "tts.chunk_download_error": "Erro ao baixar trecho: {err}",
+  "tts.edge_access_denied": "O serviço de voz Edge recusou a solicitação (HTTP 403 Forbidden). Não é possível criar o audiolivro com essa voz Edge no momento. Tente novamente mais tarde ou selecione outro mecanismo de voz disponível, como SAPI5 ou Google, nas Opções.",
   "tts.chunk_download_retry": "Erro ao baixar trecho (tentativa {attempt}/{max}): {err}. Tentando novamente...",
   "tts.chunk_download_retry_wait": "Erro ao baixar trecho {index}: {err}. Tentando novamente em 5 segundos...",
   "tts.preview_text": "Esta é uma amostra da voz.",

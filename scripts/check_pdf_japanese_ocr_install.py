@@ -51,7 +51,7 @@ for p in paths:
 for p in [*root.glob('CHANGELOG*.md'), root / 'CHANGELOG-HI.txt']:
     intro = p.read_text(encoding='utf-8').split('Version', 1)[0]
     text = p.read_text(encoding='utf-8')
-    assert '0.9.13' in text[:120], p
+    assert '0.9.14' in text[:120], p
     assert '2026-10-10' in text[:120], p
     assert '13. ' in text[:9000], p
 print('OK: no automatic OCR installation prompts; optional menu action in two menu modes; explicit consent; 17 languages')

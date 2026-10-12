@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "Audio-knjiga je uspešno sačuvana.",
   "tts.cancelled": "Operacija je otkazana.",
   "tts.chunk_download_error": "Greška pri preuzimanju segmenta: {err}",
+  "tts.edge_access_denied": "Edge glasovni servis je odbio zahtev (HTTP 403 Forbidden). Audio-knjiga trenutno ne može da se napravi ovim Edge glasom. Pokušajte kasnije ili u opcijama izaberite drugi dostupni govorni mehanizam, kao što su SAPI5 ili Google.",
   "tts.chunk_download_retry": "Greška pri preuzimanju segmenta (pokušaj {attempt}/{max}): {err}. Pokušavam ponovo...",
   "tts.chunk_download_retry_wait": "Greška pri preuzimanju segmenta {index}: {err}. Pokušavam ponovo za 5 sekundi...",
   "tts.preview_text": "Ovo je pregled glasa.",

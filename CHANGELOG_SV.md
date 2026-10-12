@@ -1,5 +1,20 @@
 # Ändringslogg
 
+Version 0.9.14 – 2026-10-12
+
+Edge-röster, ljudböcker och syntolkning
+1. **Pålitligare Edge-röster.** Sonarpad använder nu Microsoft Edges nyare talanslutning för uppläsning och ljudböcker. Om den inte är tillgänglig kan den tidigare anslutningen provas automatiskt. Din valda röst behålls.
+
+2. **Färre avbrott.** Om Microsoft avvisar en begäran eller anslutningen bryts försöker Sonarpad igen på egen hand och väntar vid behov. Arbetet avslutas inte efter bara några försök, och du kan alltid välja **Avbryt**.
+
+3. **Inga avklippta meningar.** Om en del av ljudet inte kommer fram helt kastar Sonarpad den och skapar bara den delen på nytt. Det som redan är klart sparas. Ljudböcker och syntolkning stöder fortfarande upp till 8 samtidiga begäranden.
+
+4. **Tydligare diagnostik.** Loggen visar vilken Edge-anslutning som faktiskt levererade ljudet, så att det blir lättare att hitta orsaken till problem.
+
+5. **Renare förloppsrapporter.** När filer sparas eller syntolkning exporteras loggas procenttalet bara när det ändras. Identiska meddelanden fyller inte längre loggen och förloppsindikatorn fungerar som vanligt.
+
+---
+
 Version 0.9.13 – 2026-10-11
 
 Ljud och uppläsning

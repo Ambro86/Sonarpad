@@ -1,5 +1,20 @@
 # Änderungsprotokoll
 
+Version 0.9.14 – 2026-10-12
+
+Edge-Stimmen, Hörbücher und Audiodeskriptionen
+1. **Zuverlässigere Edge-Stimmen.** Sonarpad nutzt beim Vorlesen und Erstellen von Hörbüchern jetzt die neuere Sprachverbindung von Microsoft Edge. Ist sie nicht erreichbar, kann automatisch die bisherige Verbindung versucht werden. Die gewählte Stimme bleibt erhalten.
+
+2. **Weniger Unterbrechungen.** Wenn Microsoft eine Anfrage ablehnt oder die Verbindung abbricht, versucht Sonarpad es selbstständig erneut und wartet bei Bedarf etwas länger. Nach wenigen Versuchen ist also nicht einfach Schluss. Mit **Abbrechen** können Sie den Vorgang jederzeit beenden.
+
+3. **Keine abgeschnittenen Sätze.** Kommt ein Audioteil nicht vollständig an, verwirft Sonarpad ihn und erstellt nur diesen Teil erneut. Bereits fertige Abschnitte bleiben erhalten. Für Hörbücher und Audiodeskriptionen sind weiterhin bis zu 8 gleichzeitige Anfragen möglich.
+
+4. **Verständlichere Diagnose.** Im Protokoll steht, welche Edge-Verbindung tatsächlich Audio geliefert hat. So lassen sich Probleme leichter nachvollziehen.
+
+5. **Übersichtlichere Fortschrittsanzeige.** Beim Speichern und Exportieren von Audiodeskriptionen wird ein Prozentwert nur noch protokolliert, wenn er sich ändert. Doppelte Meldungen entfallen, während die Fortschrittsanzeige normal weiterläuft.
+
+---
+
 Version 0.9.13 – 2026-10-11
 
 Audio und Vorlesen

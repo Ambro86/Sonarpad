@@ -1,5 +1,20 @@
 # Dnevnik izmena
 
+Verzija 0.9.14 – 2026-10-12
+
+Edge glasovi, audio-knjige i audio-opisi
+1. **Pouzdaniji Edge glasovi.** Sonarpad sada koristi noviju govornu vezu Microsoft Edge-a za čitanje i pravljenje audio-knjiga. Ako nije dostupna, može automatski da proba prethodnu vezu. Izabrani glas ostaje isti.
+
+2. **Manje prekida.** Ako Microsoft odbije zahtev ili se veza prekine, Sonarpad sam pokušava ponovo i po potrebi sačeka. Ne odustaje nakon nekoliko pokušaja, a uvek možete izabrati **Otkaži**.
+
+3. **Bez odsečenih rečenica.** Ako deo zvuka stigne nepotpun, Sonarpad ga odbacuje i ponovo pravi samo taj deo, čuvajući već završeni posao. Audio-knjige i audio-opisi i dalje podržavaju do 8 istovremenih zahteva.
+
+4. **Jasnija dijagnostika.** U dnevniku se vidi koja Edge veza je zaista proizvela zvuk, pa je lakše otkriti uzrok problema.
+
+5. **Uredniji prikaz napretka.** Tokom čuvanja i izvoza audio-opisa procenat se beleži samo kada se promeni. Iste poruke više ne zatrpavaju dnevnik, a traka napretka nastavlja normalno da radi.
+
+---
+
 Verzija 0.9.13 – 2026-10-11
 
 Audio i čitanje

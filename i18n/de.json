@@ -1824,6 +1824,7 @@
   "tts.audiobook_saved": "Hörbuch erfolgreich gespeichert.",
   "tts.cancelled": "Vorgang abgebrochen.",
   "tts.chunk_download_error": "Fehler beim Herunterladen des Abschnitts: {err}",
+  "tts.edge_access_denied": "Der Edge-Sprachdienst hat die Anfrage abgelehnt (HTTP 403 Forbidden). Das Hörbuch kann derzeit nicht mit dieser Edge-Stimme erstellt werden. Versuche es später erneut oder wähle unter Optionen eine andere verfügbare Sprachausgabe, etwa SAPI5 oder Google.",
   "tts.chunk_download_retry": "Fehler beim Herunterladen des Abschnitts (Versuch {attempt}/{max}): {err}. Erneuter Versuch...",
   "tts.chunk_download_retry_wait": "Fehler beim Herunterladen des Abschnitts {index}: {err}. Erneuter Versuch in 5 Sekunden...",
   "tts.preview_text": "Dies ist eine Stimmvorschau.",

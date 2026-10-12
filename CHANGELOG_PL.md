@@ -1,5 +1,20 @@
 # Dziennik zmian
 
+Wersja 0.9.14 – 2026-10-12
+
+Głosy Edge, audiobooki i audiodeskrypcja
+1. **Bardziej niezawodne głosy Edge.** Sonarpad korzysta teraz z nowszego połączenia głosowego Microsoft Edge podczas czytania i tworzenia audiobooków. Jeśli jest niedostępne, może automatycznie spróbować poprzedniego połączenia. Wybrany głos pozostaje bez zmian.
+
+2. **Mniej przerw.** Gdy Microsoft odrzuci żądanie lub połączenie zostanie zerwane, Sonarpad sam ponawia próbę i w razie potrzeby chwilę czeka. Nie kończy zadania po kilku nieudanych próbach, a użytkownik może zawsze wybrać **Anuluj**.
+
+3. **Bez urwanych zdań.** Jeśli część dźwięku nie dotrze w całości, Sonarpad odrzuci ją i wygeneruje ponownie tylko ten fragment. Ukończone części pozostają zachowane. Audiobooki i audiodeskrypcje nadal obsługują do 8 równoczesnych żądań.
+
+4. **Czytelniejsza diagnostyka.** W dzienniku widać, które połączenie Edge rzeczywiście dostarczyło dźwięk, dzięki czemu łatwiej znaleźć przyczynę problemu.
+
+5. **Przejrzystszy postęp.** Podczas zapisywania i eksportowania audiodeskrypcji procent jest wpisywany do dziennika tylko wtedy, gdy się zmieni. Powtarzające się wpisy już go nie zaśmiecają, a pasek postępu działa normalnie.
+
+---
+
 Wersja 0.9.13 – 2026-10-11
 
 Dźwięk i czytanie

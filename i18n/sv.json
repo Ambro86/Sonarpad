@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "Ljudbok sparad.",
   "tts.cancelled": "Åtgärden avbröts.",
   "tts.chunk_download_error": "Fel vid nedladdning av del: {err}",
+  "tts.edge_access_denied": "Edge-taltjänsten nekade begäran (HTTP 403 Forbidden). Det går för närvarande inte att skapa ljudboken med denna Edge-röst. Försök igen senare eller välj en annan tillgänglig talsyntes, till exempel SAPI5 eller Google, under Alternativ.",
   "tts.chunk_download_retry": "Fel vid nedladdning av del (försök {attempt}/{max}): {err}. Försöker igen...",
   "tts.chunk_download_retry_wait": "Fel vid nedladdning av del {index}: {err}. Försöker igen om 5 sekunder...",
   "tts.preview_text": "Detta är en röstförhandsvisning.",

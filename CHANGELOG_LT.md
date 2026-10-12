@@ -1,5 +1,20 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.14 – 2026-10-12
+
+Edge balsai, garsinės knygos ir garsinis vaizdavimas
+1. **Patikimesni Edge balsai.** Skaitymui ir garsinių knygų kūrimui Sonarpad dabar naudoja naujesnį Microsoft Edge kalbos ryšį. Jei jis nepasiekiamas, automatiškai gali išbandyti ankstesnį ryšį. Pasirinktas balsas nesikeičia.
+
+2. **Mažiau nutrūkimų.** Jei Microsoft atmeta užklausą arba ryšys nutrūksta, Sonarpad bando dar kartą ir prireikus palaukia. Programa nepasiduoda po kelių bandymų, o jūs bet kada galite pasirinkti **Atšaukti**.
+
+3. **Nebėra nukirstų sakinių.** Jei dalis garso gaunama nepilna, Sonarpad ją atmeta ir iš naujo sukuria tik tą dalį. Jau atliktas darbas išsaugomas. Garsinėms knygoms ir garsiniam vaizdavimui tebepalaikomos iki 8 vienu metu vykdomų užklausų.
+
+4. **Aiškesnė diagnostika.** Žurnale matyti, kuris Edge ryšys iš tikrųjų pateikė garsą, todėl lengviau išsiaiškinti problemas.
+
+5. **Tvarkingesnė eigos informacija.** Išsaugant failus ar eksportuojant garsinį vaizdavimą, procentas į žurnalą įrašomas tik jam pasikeitus. Vienodi pranešimai nebesikaupia, o eigos juosta ir toliau veikia įprastai.
+
+---
+
 Versija 0.9.13 – 2026-10-11
 
 Garsas ir skaitymas

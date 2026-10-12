@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "Livre audio enregistré avec succès.",
   "tts.cancelled": "Opération annulée.",
   "tts.chunk_download_error": "Erreur de téléchargement du fragment : {err}",
+  "tts.edge_access_denied": "Le service vocal Edge a refusé la requête (HTTP 403 Forbidden). La création du livre audio avec cette voix Edge est actuellement impossible. Réessayez plus tard ou choisissez un autre moteur vocal disponible, tel que SAPI5 ou Google, dans les options.",
   "tts.chunk_download_retry": "Erreur de téléchargement du fragment (tentative {attempt}/{max}) : {err}. Nouvelle tentative...",
   "tts.chunk_download_retry_wait": "Erreur de téléchargement du fragment {index} : {err}. Nouvelle tentative dans 5 secondes...",
   "tts.preview_text": "Ceci est un aperçu vocal.",

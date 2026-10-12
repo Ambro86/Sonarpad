@@ -1,5 +1,20 @@
 # Přehled změn
 
+Verze 0.9.14 – 2026-10-12
+
+Hlasy Edge, audioknihy a audiopopis
+1. **Spolehlivější hlasy Edge.** Sonarpad nyní při čtení a tvorbě audioknih používá novější připojení k hlasové službě Microsoft Edge. Pokud není dostupné, může automaticky vyzkoušet původní připojení. Vybraný hlas zůstává stejný.
+
+2. **Méně přerušení.** Pokud Microsoft požadavek odmítne nebo se spojení přeruší, Sonarpad to sám zkusí znovu a podle potřeby chvíli počká. Nevzdá to po několika pokusech a kdykoli můžete zvolit **Zrušit**.
+
+3. **Žádné useknuté věty.** Pokud se část zvuku nestáhne celá, Sonarpad ji zahodí a znovu vytvoří jen tuto část. Již dokončená práce zůstane zachována. Audioknihy i audiopopis mohou nadále využívat až 8 souběžných požadavků.
+
+4. **Srozumitelnější diagnostika.** V záznamech je vidět, které připojení Edge skutečně vytvořilo zvuk. Případné potíže tak lze snáze vyšetřit.
+
+5. **Přehlednější průběh.** Při ukládání a exportu audiopopisu se procento zapisuje jen tehdy, když se změní. Záznam už nezaplňují stejné zprávy a ukazatel průběhu funguje dál jako dříve.
+
+---
+
 Verze 0.9.13 – 2026-10-11
 
 Zvuk a čtení

@@ -739,28 +739,34 @@ fn save_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> L
             crate::def_window_proc_w_safe(hwnd, msg, wparam, lparam)
         }
         WM_PODCAST_SAVE_PROGRESS => {
-            // This message is processed by the UI thread even when a long-running
-            // operation is using a nested message pump. Treat that as a genuine
-            // UI heartbeat so the watchdog does not report a false hang.
+            // Keep the watchdog heartbeat for every posted progress message,
+            // including duplicates, so a busy nested message pump stays alive.
             crate::watchdog::heartbeat();
             let pct = wparam.0.min(100);
-            crate::log_debug(&format!(
-                "podcast_save_window progress message: hwnd={:?} pct={}",
-                hwnd, pct
-            ));
-            if with_save_state(hwnd, |state| {
+            let progress_changed = with_save_state(hwnd, |state| {
                 if pct == 0 && state.current_pct == 0 && !state.has_real_progress {
-                    return;
+                    return false;
+                }
+                // Avoid redundant logging, native progress updates and accessible
+                // label changes for repeated percentages. The first real update
+                // must still be applied after fake/timer-based progress.
+                if state.has_real_progress && state.current_pct == pct {
+                    return false;
                 }
                 crate::send_message_w_safe(state.progress, PBM_SETPOS, WPARAM(pct), LPARAM(0));
                 state.has_real_progress = true;
                 state.show_percentage = true;
                 state.current_pct = pct;
                 update_progress_label(state);
-            })
-            .is_none()
-            {
-                crate::log_debug("Failed to access save state");
+                true
+            });
+            match progress_changed {
+                Some(true) => crate::log_debug(&format!(
+                    "podcast_save_window progress message: hwnd={:?} pct={}",
+                    hwnd, pct
+                )),
+                Some(false) => {}
+                None => crate::log_debug("Failed to access save state"),
             }
             LRESULT(0)
         }

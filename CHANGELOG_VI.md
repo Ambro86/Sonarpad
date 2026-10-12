@@ -1,5 +1,20 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.14 – 2026-10-12
+
+Giọng Edge, sách nói và mô tả âm thanh
+1. **Giọng Edge đáng tin cậy hơn.** Sonarpad hiện dùng kết nối giọng nói mới hơn của Microsoft Edge để đọc văn bản và tạo sách nói. Nếu kết nối này không hoạt động, ứng dụng có thể tự thử kết nối cũ. Giọng đã chọn vẫn được giữ nguyên.
+
+2. **Ít bị gián đoạn hơn.** Nếu Microsoft từ chối yêu cầu hoặc kết nối bị ngắt, Sonarpad sẽ tự thử lại và chờ khi cần thiết. Ứng dụng không bỏ cuộc chỉ sau vài lần thử, và bạn luôn có thể chọn **Hủy**.
+
+3. **Không còn câu bị cắt ngang.** Nếu một đoạn âm thanh nhận được không đầy đủ, Sonarpad sẽ bỏ đoạn đó và chỉ tạo lại phần chưa hoàn tất, giữ nguyên những phần đã xong. Sách nói và mô tả âm thanh vẫn hỗ trợ tối đa 8 yêu cầu đồng thời.
+
+4. **Chẩn đoán dễ hiểu hơn.** Nhật ký cho biết kết nối Edge nào thực sự tạo ra âm thanh, giúp tìm nguyên nhân khi có sự cố.
+
+5. **Thông báo tiến độ gọn gàng hơn.** Khi lưu tệp hoặc xuất mô tả âm thanh, tỷ lệ phần trăm chỉ được ghi khi có thay đổi. Những dòng giống nhau không còn tràn ngập nhật ký, trong khi thanh tiến độ vẫn hoạt động bình thường.
+
+---
+
 Phiên bản 0.9.13 – 2026-10-11
 
 Âm thanh và đọc tài liệu

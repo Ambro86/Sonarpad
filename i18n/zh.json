@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "有声书已成功保存。",
   "tts.cancelled": "操作已取消。",
   "tts.chunk_download_error": "分块下载错误：{err}",
+  "tts.edge_access_denied": "Edge 语音服务拒绝了请求（HTTP 403 Forbidden）。目前无法使用此 Edge 语音创建有声书。请稍后重试，或在选项中选择其他可用的语音引擎，例如 SAPI5 或 Google。",
   "tts.chunk_download_retry": "分块下载错误（尝试 {attempt}/{max}）：{err}。重试中...",
   "tts.chunk_download_retry_wait": "分块下载错误 {index}: {err}。5秒后重试...",
   "tts.preview_text": "这是语音预览。",

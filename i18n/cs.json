@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "Audiokniha úspěšně uložena.",
   "tts.cancelled": "Operace zrušena.",
   "tts.chunk_download_error": "Chyba stahování části: {err}",
+  "tts.edge_access_denied": "Hlasová služba Edge odmítla požadavek (HTTP 403 Forbidden). Audioknihu nyní nelze s tímto hlasem Edge vytvořit. Zkuste to později nebo v možnostech vyberte jiný dostupný hlasový modul, například SAPI5 nebo Google.",
   "tts.chunk_download_retry": "Chyba stahování části (pokus {attempt}/{max}): {err}. Opakování...",
   "tts.chunk_download_retry_wait": "Chyba stahování části {index}: {err}. Opakování za 5 sekund...",
   "tts.preview_text": "Toto je náhled hlasu.",

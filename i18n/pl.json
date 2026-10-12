@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "Audiobook zapisany pomyślnie.",
   "tts.cancelled": "Operacja anulowana.",
   "tts.chunk_download_error": "Błąd pobierania fragmentu: {err}",
+  "tts.edge_access_denied": "Usługa głosowa Edge odrzuciła żądanie (HTTP 403 Forbidden). Nie można teraz utworzyć audiobooka z użyciem tego głosu Edge. Spróbuj ponownie później lub wybierz w opcjach inny dostępny silnik mowy, np. SAPI5 albo Google.",
   "tts.chunk_download_retry": "Błąd pobierania fragmentu (próba {attempt}/{max}): {err}. Ponawianie...",
   "tts.chunk_download_retry_wait": "Błąd pobierania fragmentu {index}: {err}. Ponawianie za 5 sekund...",
   "tts.preview_text": "To jest próbka głosu.",

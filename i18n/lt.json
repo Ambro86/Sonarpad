@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "Garso knyga sėkmingai išsaugota.",
   "tts.cancelled": "Operacija atšaukta.",
   "tts.chunk_download_error": "Dalių atsisiuntimo klaida: {err}",
+  "tts.edge_access_denied": "Edge balso paslauga atmetė užklausą (HTTP 403 Forbidden). Šiuo metu garso knygos su šiuo Edge balsu sukurti negalima. Bandykite vėliau arba parinktyse pasirinkite kitą galimą kalbos sintezės variklį, pvz., SAPI5 arba Google.",
   "tts.chunk_download_retry": "Dalių atsisiuntimo klaida (bandymas {attempt}/{max}): {err}. Bandoma dar kartą...",
   "tts.chunk_download_retry_wait": "Dalių atsisiuntimo klaida {index}: {err}. Bandysiu dar kartą po 5 sekundžių...",
   "tts.preview_text": "Tai yra balso peržiūra.",

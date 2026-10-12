@@ -1,5 +1,20 @@
 # Changelog
 
+Versión 0.9.14 – 2026-10-12
+
+Voces de Edge, audiolibros y audiodescripciones
+1. **Voces de Edge más fiables.** Sonarpad utiliza ahora la conexión de voz más reciente de Microsoft Edge para leer textos y crear audiolibros. Si no está disponible, puede probar automáticamente la conexión anterior. Se conserva la voz elegida.
+
+2. **Menos interrupciones.** Si Microsoft rechaza una solicitud o se corta la conexión, Sonarpad vuelve a intentarlo por su cuenta y espera cuando hace falta. Ya no abandona el trabajo después de unos pocos intentos y siempre puedes pulsar **Cancelar**.
+
+3. **Sin frases cortadas.** Si una parte del audio llega incompleta, Sonarpad la descarta y vuelve a generar únicamente esa parte, conservando lo que ya estaba terminado. Los audiolibros y las audiodescripciones siguen admitiendo hasta 8 solicitudes simultáneas.
+
+4. **Diagnósticos más claros.** El registro indica qué conexión de Edge ha producido realmente el audio, para facilitar la búsqueda de problemas.
+
+5. **Progreso más ordenado.** Al guardar archivos o exportar audiodescripciones, el porcentaje solo se registra cuando cambia. Se evitan miles de mensajes iguales y la barra de progreso sigue funcionando con normalidad.
+
+---
+
 Versión 0.9.13 – 2026-10-11
 
 Audio y lectura

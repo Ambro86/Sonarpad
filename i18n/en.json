@@ -1772,6 +1772,7 @@
   "tts.audiobook_saved": "Audiobook saved successfully.",
   "tts.cancelled": "Operation cancelled.",
   "tts.chunk_download_error": "Chunk download error: {err}",
+  "tts.edge_access_denied": "The Edge speech service denied the request (HTTP 403 Forbidden). The audiobook cannot be created with this Edge voice at the moment. Try again later or choose another available speech engine, such as SAPI5 or Google, in Options.",
   "tts.chunk_download_retry": "Chunk download error (attempt {attempt}/{max}): {err}. Retrying...",
   "tts.chunk_download_retry_wait": "Chunk download error {index}: {err}. Retrying in 5 seconds...",
   "tts.preview_text": "This is a voice preview.",

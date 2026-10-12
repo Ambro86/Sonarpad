@@ -1,5 +1,20 @@
 # Journal des modifications
 
+Version 0.9.14 – 2026-10-12
+
+Voix Edge, livres audio et audiodescription
+1. **Des voix Edge plus fiables.** Sonarpad utilise désormais la connexion vocale plus récente de Microsoft Edge pour la lecture et la création de livres audio. Si elle n'est pas disponible, l'ancienne connexion peut être essayée automatiquement. La voix choisie ne change pas.
+
+2. **Moins d'interruptions.** Si Microsoft refuse une demande ou si la connexion se coupe, Sonarpad réessaie tout seul, avec une pause si nécessaire. Il ne s'arrête plus après quelques tentatives et vous pouvez toujours choisir **Annuler**.
+
+3. **Fini les phrases coupées.** Si une partie du son arrive incomplète, Sonarpad l'écarte et régénère uniquement cette partie, sans perdre les passages déjà terminés. Les livres audio et l'audiodescription peuvent toujours utiliser jusqu'à 8 demandes simultanées.
+
+4. **Diagnostic plus clair.** Les journaux indiquent quelle connexion Edge a réellement produit le son, pour mieux comprendre ce qui s'est passé en cas de problème.
+
+5. **Progression plus lisible.** Lors des enregistrements et de l'exportation des audiodescriptions, le pourcentage n'est inscrit que lorsqu'il change. Les messages identiques ne s'accumulent plus et la barre de progression fonctionne normalement.
+
+---
+
 Version 0.9.13 – 2026-10-11
 
 Audio et lecture

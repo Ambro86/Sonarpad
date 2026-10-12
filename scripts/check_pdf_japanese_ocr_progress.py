@@ -41,7 +41,7 @@ for p in langs:
     for key in ('app.pdf_japanese_ocr_install_progress', 'app.pdf_japanese_ocr_install_success', 'app.pdf_japanese_ocr_install_restart', 'app.pdf_japanese_ocr_install_error', 'app.pdf_japanese_ocr_install_cancel_confirm', 'app.pdf_japanese_ocr_install_canceling', 'app.pdf_japanese_ocr_install_cancelled'):
         assert d.get(key), (p.name, key)
 cl = (root/'CHANGELOG_IT.md').read_text(encoding='utf-8')
-assert cl.startswith('# Changelog\n\nVersione 0.9.13 – 2026-10-11')
+assert cl.startswith('# Changelog\n\nVersione 0.9.14 – 2026-10-12')
 assert '15. L’installazione facoltativa' in cl
 assert '12. Nascosta la sezione **Dirette** dal menu RaiPlay' in cl
 print('OK: explicit consent, elevated PowerShell Add-WindowsCapability, modal cancel, accurate indeterminate progress, 17 languages, no PDF-open prompt')
