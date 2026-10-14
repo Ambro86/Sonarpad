@@ -235,6 +235,7 @@ struct WindowState {
     tts_volume: i32,
     source_volume_combo: HWND,
     mix_preview: MixPreview,
+    progress_label: HWND,
     progress: HWND,
     status: HWND,
     start_button: HWND,
@@ -1912,6 +1913,14 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
             }
         }
         ShowWindow(
+            state.progress_label,
+            if enabled && state.resume_mode {
+                SW_HIDE
+            } else {
+                SW_SHOW
+            },
+        );
+        ShowWindow(
             state.progress,
             if enabled && state.resume_mode {
                 SW_HIDE
@@ -3309,14 +3318,15 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 let source_volume =
                     with_state(parent, |app| app.settings.audio_description_source_volume)
                         .unwrap_or(1.0);
-                let (source_volume_combo, stop_mix_preview_button) = mix_preview::create_controls(
-                    hwnd,
-                    language,
-                    hfont,
-                    644,
-                    (ID_SOURCE_VOLUME, ID_STOP_MIX_PREVIEW),
-                    source_volume,
-                );
+                let (source_volume_label, source_volume_combo, stop_mix_preview_button) =
+                    mix_preview::create_controls(
+                        hwnd,
+                        language,
+                        hfont,
+                        644,
+                        (ID_SOURCE_VOLUME, ID_STOP_MIX_PREVIEW),
+                        source_volume,
+                    );
                 let bitrate_label = create_label(
                     hwnd,
                     &i18n::tr(language, "audio_description.bitrate"),
@@ -3345,10 +3355,18 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 let bitrate = with_state(parent, |app| app.settings.audio_description_bitrate_kbps)
                     .unwrap_or(192);
                 select_bitrate(bitrate_combo, bitrate);
+                // Give the progress bar its own accessible name rather than letting
+                // screen readers infer it from the preceding audio settings labels.
+                let progress_name = format!(
+                    "{}: {}",
+                    labels.title,
+                    i18n::tr(language, "batch_audiobooks.progress_label")
+                );
+                let progress_label = create_label(hwnd, &progress_name, 16, 702, 650, hfont);
                 let progress = CreateWindowExW(
                     Default::default(),
                     PROGRESS_CLASSW,
-                    PCWSTR::null(),
+                    PCWSTR(to_wide(&progress_name).as_ptr()),
                     WS_CHILD | WS_VISIBLE,
                     16,
                     724,
@@ -3568,6 +3586,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     tts_volume,
                     source_volume_combo,
                     mix_preview: MixPreview::default(),
+                    progress_label,
                     progress,
                     status,
                     start_button,
@@ -3577,6 +3596,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     setup_controls: vec![
                         bitrate_label,
                         bitrate_combo,
+                        source_volume_label,
                         source_volume_combo,
                         stop_mix_preview_button,
                         input_label,

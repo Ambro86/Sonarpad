@@ -1,5 +1,23 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.16 – 2026-10-14
+
+1. Pataisytas DI garsinio vaizdavimo kūrimo langas: vykdant užduotį procentai aiškiai rodo eigą, o ne filmo garsumą ar bitų spartą. Atnaujintos visų 17 kalbų etiketės.
+
+2. Garso konvertavimas pervadintas į medijos konvertavimą ir perkeltas iš Balso į Įrankiai → Multimedija; Ctrl+Shift+A išlieka. Palaikomas garso konvertavimas, garso išgavimas iš vaizdo, MP4/AVI/MOV, vaizdo kūrimas iš garso ir paveikslėlio bei 16/24/32 bitų ir 32 bitų slankiojo kablelio WAV. Naudojamos tik įtrauktos FFmpeg bibliotekos, be ffmpeg.exe.
+
+3. Pataisytas OGG konvertavimas bei AVI takelių laiko žymos ir persipynimas. Laikini failai apsaugo esamą paskirties failą klaidos ar atšaukimo atveju. Atlikta 60 konvertavimo bandymų su tikrais maždaug 30 sekundžių fragmentais.
+
+4. DI garsinį vaizdavimą galima kurti ir suderinamiems vaizdo srautams, atidarytiems per srautinio garso atkūrimą, net nerodant vaizdo.
+
+5. Pataisytas atsisiuntimo formatų parinkimas, įskaitant srautus be kodeko duomenų. Pašalinta 720p pirmenybė, dėl kurios galėjo būti parenkamas daug lėtesnis srautas nei išsaugant mediją. Žurnaluose įrašomas greitis, dydis, formatas, laikas ir atsisiuntimo eiga.
+
+6. Pagerintas nutrūkusio garsinio vaizdavimo tęsimas iš senesnių įrašų ir suderinamumo segmentų. Keičiant formatą baigti segmentai išsaugomi, kai sutampa laiko ribos; kitu atveju darbas sustabdomas neprarandant išsaugotos eigos. Saugesnis įrašymas ir išlaikytos scenų laiko nuorodos.
+
+7. Garsinio vaizdavimo bridge talpykla pakeista iš v10 į v11: pirmą kartą naudojant po atnaujinimo komponentas atsisiunčiamas iš naujo. Bridge reikia iš naujo sukompiliuoti ir paskelbti kartu su šia versija.
+
+---
+
 Versija 0.9.15 – 2026-10-14
 
 1. Garsinis vaizdavimas: pridėta parinktis leisti aprašymus neverbalinių vokalizacijų metu.

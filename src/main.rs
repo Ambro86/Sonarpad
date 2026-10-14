@@ -50,6 +50,7 @@ mod editor_manager;
 mod ffmpeg_dyn;
 mod ffmpeg_export;
 mod ffmpeg_source;
+mod media_conversion;
 mod stream_recording;
 mod subtitle_wasapi;
 mod subtitles;

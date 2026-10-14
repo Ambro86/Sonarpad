@@ -1,5 +1,23 @@
 # Přehled změn
 
+Verze 0.9.16 – 2026-10-14
+
+1. Opraveno okno pro vytváření audiopopisu pomocí AI: procenta během zpracování jasně označují průběh audiopopisu, nikoli hlasitost filmu nebo datový tok. Popisky aktualizovány ve všech 17 jazycích.
+
+2. Převést zvuk se mění na Převést média a přesouvá se z nabídky Hlas do Nástroje → Multimédia; Ctrl+Shift+A zůstává. Podporuje převod zvuku, extrakci zvuku z videa, MP4/AVI/MOV, video ze zvuku a obrázku a WAV 16/24/32 bitů nebo 32bitový float. Používá pouze přibalené knihovny FFmpeg, bez ffmpeg.exe.
+
+3. Opraven převod OGG a časování a prokládání stop AVI. Dočasné výstupní soubory chrání existující cíl při chybě či zrušení. Ověřeno 60 převodů skutečných ukázek o délce přibližně 30 sekund.
+
+4. Vytváření audiopopisu pomocí AI je dostupné i pro kompatibilní videostreamy otevřené přes přehrávání streamovaného zvuku, bez nutnosti zobrazit video.
+
+5. Opraven výběr formátů pro stahování audiopopisu, včetně streamů bez údajů o kodeku. Odstraněna přednost 720p, která mohla vybrat mnohem pomalejší stream než Uložit média. Protokoly obsahují rychlost, velikost, formát, uplynulý čas a průběh stahování.
+
+6. Vylepšeno pokračování přerušeného audiopopisu, včetně starších uložených stavů a kompatibilních segmentů. Změna formátu zachová dokončené segmenty, pokud souhlasí časové hranice; jinak se zpracování zastaví bez ztráty uloženého postupu. Bezpečnější ukládání a zachování časových údajů scén.
+
+7. Mezipaměť bridge pro audiopopis zvýšena z v10 na v11: při prvním použití po aktualizaci se komponenta znovu stáhne. Bridge je nutné znovu sestavit a zveřejnit s touto verzí.
+
+---
+
 Verze 0.9.15 – 2026-10-14
 
 1. Audiopopis: přidána možnost povolit popisy během neverbálních hlasových projevů.

@@ -1,5 +1,23 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.16 – 2026-10-14
+
+1. Sửa cửa sổ tạo mô tả âm thanh bằng AI: trong khi xử lý, phần trăm thể hiện rõ tiến độ mô tả âm thanh, không nhầm với âm lượng phim hoặc tốc độ bit. Cập nhật nhãn trong cả 17 ngôn ngữ.
+
+2. Chuyển đổi âm thanh đổi tên thành Chuyển đổi phương tiện và chuyển từ Giọng nói sang Công cụ → Đa phương tiện, giữ Ctrl+Shift+A. Hỗ trợ chuyển đổi âm thanh, trích xuất âm thanh từ video, MP4/AVI/MOV, tạo video từ âm thanh và hình ảnh, WAV 16/24/32 bit hoặc số thực 32 bit. Chỉ dùng thư viện FFmpeg tích hợp, không dùng ffmpeg.exe.
+
+3. Sửa chuyển đổi OGG, thời gian và cách xen kẽ các luồng AVI. Tệp kết quả tạm thời bảo vệ tệp đích hiện có khi xảy ra lỗi hoặc hủy. Đã thử 60 phép chuyển đổi trên các đoạn thực tế dài khoảng 30 giây.
+
+4. Có thể tạo mô tả âm thanh bằng AI cho luồng video tương thích mở qua phát âm thanh trực tuyến, ngay cả khi không hiển thị video.
+
+5. Sửa lựa chọn định dạng tải cho mô tả âm thanh, kể cả luồng thiếu thông tin codec. Bỏ ưu tiên 720p có thể chọn luồng chậm hơn nhiều so với Lưu phương tiện. Nhật ký ghi tốc độ, kích thước, định dạng, thời gian và tiến độ tải.
+
+6. Cải thiện tiếp tục mô tả âm thanh bị gián đoạn, kể cả điểm lưu cũ và các đoạn tương thích. Khi đổi định dạng, các đoạn đã hoàn tất được giữ nếu ranh giới thời gian khớp; nếu không, quá trình dừng mà không mất tiến độ đã lưu. Lưu tiến độ an toàn hơn và giữ các mốc thời gian của cảnh.
+
+7. Nâng bộ nhớ đệm bridge mô tả âm thanh từ v10 lên v11: tải lại thành phần ở lần dùng đầu tiên sau khi cập nhật. Cần biên dịch lại và phát hành bridge cùng phiên bản này.
+
+---
+
 Phiên bản 0.9.15 – 2026-10-14
 
 1. Mô tả âm thanh: thêm tùy chọn cho phép mô tả trong các đoạn phát âm không thành lời.

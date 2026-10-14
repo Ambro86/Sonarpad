@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(debug_assertions)]
 const BRIDGE_DEBUG_FILE_NAME: &str = "audio_description_bridge.exe";
-const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v10.exe";
+const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v11.exe";
 const BRIDGE_MIN_VALID_SIZE_BYTES: u64 = 5_000_000;
 const BRIDGE_DOWNLOAD_URLS: [&str; 2] = [
     "https://github.com/Ambro86/Sonarpad-Tools/releases/download/0.7/audio_description_bridge.exe",

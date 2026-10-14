@@ -1,5 +1,23 @@
 # Ändringslogg
 
+Version 0.9.16 – 2026-10-14
+
+1. Rättat fönstret för att skapa syntolkning med AI: procenttalet under arbetet visar tydligt syntolkningens förlopp, inte filmvolym eller bithastighet. Etiketter uppdaterade på alla 17 språk.
+
+2. Konvertera ljud heter nu Konvertera media och flyttas från Röst till Verktyg → Multimedia, med oförändrat Ctrl+Shift+A. Stöder ljudkonvertering, ljudextraktion ur video, MP4/AVI/MOV, video från ljud med bild samt WAV med 16/24/32 bitar eller 32-bitars flyttal. Använder enbart de medföljande FFmpeg-biblioteken, utan ffmpeg.exe.
+
+3. Rättat OGG-konvertering samt AVI-tidsstämplar och sammanflätning av spår. Tillfälliga utdatafiler skyddar en befintlig målfil vid fel eller avbrott. Testat 60 konverteringar med verkliga utdrag på cirka 30 sekunder.
+
+4. Syntolkning med AI kan skapas för kompatibla videoströmmar som öppnats via uppspelning av strömmande ljud, även utan att videon visas.
+
+5. Rättat formatval för syntolkningshämtningar, även för strömmar utan kodekinformation. Tagit bort prioriteringen av 720p som kunde välja en mycket långsammare ström än Spara media. Loggarna visar hastighet, storlek, format, förfluten tid och hämtningsförlopp.
+
+6. Förbättrat återupptagande av avbruten syntolkning, inklusive äldre sparade lägen och kompatibilitetssegment. Formatbyten bevarar färdiga segment när tidsgränserna stämmer; annars stoppas arbetet utan att sparade framsteg förloras. Säkrare sparande och bevarade tidsreferenser till scener.
+
+7. Syntolkningsbridgens cache höjd från v10 till v11: komponenten hämtas på nytt vid första användningen efter uppdateringen. Bridgen måste byggas om och publiceras tillsammans med denna version.
+
+---
+
 Version 0.9.15 – 2026-10-14
 
 1. Ljudbeskrivningar: ett alternativ har lagts till för att tillåta beskrivningar under icke-verbala röstljud.

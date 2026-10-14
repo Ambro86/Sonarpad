@@ -1,5 +1,23 @@
 # Changelog
 
+Version 0.9.16 – 2026-10-14
+
+1. Fixed the Create AI audio description window: while processing, the percentage clearly identifies audio-description progress rather than movie volume or bitrate. Labels updated in all 17 languages.
+
+2. Convert audio becomes Convert media and moves from Voice to Tools → Multimedia, retaining Ctrl+Shift+A. Supports audio conversion, extracting audio from video, MP4/AVI/MOV, creating video from audio with an image, and 16/24/32-bit or 32-bit float WAV, using only the bundled FFmpeg libraries without ffmpeg.exe.
+
+3. Fixed OGG conversion and AVI timing and track interleaving. Results are staged in temporary files, so errors or cancellation do not replace an existing destination. Tested 60 conversions on real excerpts of approximately 30 seconds.
+
+4. Made Create AI audio description available for compatible video streams opened through Play streaming audio, even when video display is disabled.
+
+5. Fixed format selection for audio-description downloads, accepting streams with missing codec information. Removed the 720p preference that could select a much slower stream than Save media. Added download speed, size, format, elapsed time and progress to the logs.
+
+6. Improved resuming interrupted audio descriptions, including older checkpoints and compatibility-mode segments. Format changes preserve completed segments when time boundaries match; incompatible layouts stop without discarding saved progress. Made checkpoint replacement safer and preserved scene timing references.
+
+7. Updated the audio-description bridge cache from v10 to v11, causing a fresh download on first use after updating. The bridge must be rebuilt and published with this release.
+
+---
+
 Version 0.9.15 – 2026-10-14
 
 1. Audio descriptions: added an option to allow descriptions during non-verbal vocalizations.

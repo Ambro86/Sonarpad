@@ -1,5 +1,23 @@
 # Dziennik zmian
 
+Wersja 0.9.16 – 2026-10-14
+
+1. Poprawiono okno tworzenia audiodeskrypcji przez AI: procent podczas pracy jednoznacznie oznacza postęp audiodeskrypcji, a nie głośność filmu lub przepływność. Zaktualizowano etykiety we wszystkich 17 językach.
+
+2. Konwertuj audio zmienia nazwę na Konwertuj multimedia i trafia z menu Głos do Narzędzia → Multimedia, zachowując Ctrl+Shift+A. Obsługuje konwersję audio, wyodrębnianie dźwięku z wideo, MP4/AVI/MOV, film z dźwięku i obrazu oraz WAV 16/24/32 bity i 32-bitowy float. Korzysta wyłącznie z dołączonych bibliotek FFmpeg, bez ffmpeg.exe.
+
+3. Poprawiono konwersję OGG oraz czasowanie i przeplatanie ścieżek AVI. Pliki tymczasowe chronią istniejący plik docelowy przy błędzie lub anulowaniu. Sprawdzono 60 konwersji rzeczywistych fragmentów trwających około 30 sekund.
+
+4. Tworzenie audiodeskrypcji przez AI jest dostępne także dla zgodnych strumieni wideo otwartych przez odtwarzanie audio ze strumienia, bez konieczności wyświetlania obrazu.
+
+5. Poprawiono wybór formatów pobieranych do audiodeskrypcji, także bez informacji o kodeku. Usunięto preferencję 720p, która mogła wybierać strumień znacznie wolniejszy niż Zapisz multimedia. Dzienniki zawierają prędkość, rozmiar, format, czas i postęp pobierania.
+
+6. Usprawniono wznawianie przerwanych audiodeskrypcji, również ze starszych zapisów i segmentów zgodności. Zmiana formatu zachowuje ukończone segmenty, gdy ich granice czasowe pasują; w przeciwnym razie zatrzymuje pracę bez utraty zapisanego postępu. Bezpieczniejsze zapisywanie i zachowanie czasów scen.
+
+7. Pamięć podręczna bridge audiodeskrypcji zmieniona z v10 na v11: przy pierwszym użyciu po aktualizacji składnik zostanie pobrany ponownie. Bridge należy ponownie skompilować i opublikować z tą wersją.
+
+---
+
 Wersja 0.9.15 – 2026-10-14
 
 1. Audiodeskrypcja: dodano opcję zezwalającą na opisy podczas niewerbalnych wokalizacji.

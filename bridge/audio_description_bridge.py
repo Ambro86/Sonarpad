@@ -411,6 +411,23 @@ def _normalise_descriptions(
     return result
 
 
+def _checkpoint_descriptions(descriptions_so_far) -> list[dict]:
+    rows = []
+    for item in descriptions_so_far:
+        if not isinstance(item, (list, tuple)) or len(item) < 3:
+            continue
+        row = {
+            "start_sec": float(item[0]),
+            "end_sec": float(item[1]),
+            "text": str(item[2] or ""),
+        }
+        evidence = audio_describer.get_visual_evidence_time(row["start_sec"], row["text"])
+        if evidence is not None:
+            row["visual_evidence_time_sec"] = evidence
+        rows.append(row)
+    return rows
+
+
 def run(request: dict) -> dict:
     _validate_request(request)
     _configure_omni(request)
@@ -464,17 +481,7 @@ def run(request: dict) -> dict:
         completed_chunks, total_chunks, descriptions_so_far, character_glossary, gemini_model,
         verified_nonverbal_ids=None,
     ):
-        rows = []
-        for item in descriptions_so_far:
-            if not isinstance(item, (list, tuple)) or len(item) < 3:
-                continue
-            rows.append(
-                {
-                    "start_sec": float(item[0]),
-                    "end_sec": float(item[1]),
-                    "text": str(item[2] or ""),
-                }
-            )
+        rows = _checkpoint_descriptions(descriptions_so_far)
         _emit(
             "CHECKPOINT",
             {

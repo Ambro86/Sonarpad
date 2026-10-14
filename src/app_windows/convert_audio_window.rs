@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::sync::{
-    Arc,
+    Arc, Mutex,
     atomic::{AtomicBool, Ordering},
 };
 
@@ -27,7 +27,7 @@ use crate::accessibility::to_wide;
 use crate::app_windows::podcast_save_window::{self, SaveDialogLabels};
 use crate::ffmpeg_export::{
     ConvertAudioFormat, ConvertAudioQuality, ConvertAudioSettings, build_ffmpeg_args,
-    convert_audio_file, validate_mp3_bitrate,
+    validate_mp3_bitrate,
 };
 use crate::i18n;
 use crate::settings::{FileFormat, Language};
@@ -44,11 +44,17 @@ const CONVERT_ID_QUALITY_EDIT: usize = 9606;
 const CONVERT_ID_QUALITY_COMBO: usize = 9607;
 const CONVERT_ID_CONVERT: usize = 9608;
 const CONVERT_ID_CLOSE: usize = 9609;
+const CONVERT_ID_IMAGE_EDIT: usize = 9610;
+const CONVERT_ID_IMAGE_BROWSE: usize = 9611;
+
+const WM_CONVERT_INPUT_CHANGED: u32 = windows::Win32::UI::WindowsAndMessaging::WM_APP + 142;
+
+const WM_CONVERT_PROGRESS: u32 = windows::Win32::UI::WindowsAndMessaging::WM_APP + 141;
 
 const WM_CONVERT_DONE: u32 = windows::Win32::UI::WindowsAndMessaging::WM_APP + 140;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum AudioFormat {
+enum MediaFormat {
     Mp3,
     Aac,
     M4b,
@@ -57,6 +63,9 @@ enum AudioFormat {
     Flac,
     Wav,
     Aiff,
+    Mp4,
+    Avi,
+    Mov,
 }
 
 struct ConvertLabels {
@@ -76,6 +85,8 @@ struct ConvertLabels {
     quality_bitrate: String,
     quality_ogg: String,
     quality_flac: String,
+    quality_wav: String,
+    wav_float: String,
     status_ready: String,
     status_running: String,
     status_done: String,
@@ -95,6 +106,10 @@ struct ConvertWindowState {
     hwnd: HWND,
     parent: HWND,
     input_edit: HWND,
+    input_probe: Arc<Mutex<(String, Option<bool>)>>,
+    image_label: HWND,
+    image_edit: HWND,
+    image_browse: HWND,
     output_edit: HWND,
     format_combo: HWND,
     quality_label: HWND,
@@ -127,6 +142,8 @@ fn labels(language: Language) -> ConvertLabels {
         quality_bitrate: i18n::tr(language, "convert_audio.quality.bitrate"),
         quality_ogg: i18n::tr(language, "convert_audio.quality.ogg"),
         quality_flac: i18n::tr(language, "convert_audio.quality.flac"),
+        quality_wav: i18n::tr(language, "convert_audio.quality.wav"),
+        wav_float: i18n::tr(language, "convert_audio.wav_float"),
         status_ready: i18n::tr(language, "convert_audio.status.ready"),
         status_running: i18n::tr(language, "convert_audio.status.running"),
         status_done: i18n::tr(language, "convert_audio.status.done"),
@@ -200,7 +217,7 @@ pub fn open(parent: HWND) {
             140,
             140,
             660,
-            330,
+            390,
             parent,
             HMENU(0),
             hinstance,
@@ -454,14 +471,65 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     None,
                 );
 
+                for label in ["MP4", "AVI", "MOV"] {
+                    SendMessageW(
+                        format_combo,
+                        CB_ADDSTRING,
+                        WPARAM(0),
+                        LPARAM(to_wide(label).as_ptr() as isize),
+                    );
+                }
+                let image_label = CreateWindowExW(
+                    Default::default(),
+                    WC_STATIC,
+                    PCWSTR(to_wide(&i18n::tr(language, "convert_audio.image")).as_ptr()),
+                    WS_CHILD,
+                    20,
+                    230,
+                    200,
+                    22,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let image_edit = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_EDIT,
+                    PCWSTR::null(),
+                    WS_CHILD | WS_TABSTOP | WINDOW_STYLE(ES_AUTOHSCROLL as u32),
+                    240,
+                    228,
+                    260,
+                    24,
+                    hwnd,
+                    HMENU(CONVERT_ID_IMAGE_EDIT as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let image_browse = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.browse).as_ptr()),
+                    WS_CHILD | WS_TABSTOP,
+                    512,
+                    226,
+                    100,
+                    28,
+                    hwnd,
+                    HMENU(CONVERT_ID_IMAGE_BROWSE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+
                 let status_label = CreateWindowExW(
                     Default::default(),
                     WC_STATIC,
                     PCWSTR(to_wide(&labels.status_ready).as_ptr()),
                     WS_CHILD | WS_VISIBLE,
                     20,
-                    232,
-                    340,
+                    292,
+                    310,
                     20,
                     hwnd,
                     HMENU(0),
@@ -473,9 +541,9 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     WC_BUTTON,
                     PCWSTR(to_wide(&labels.button_convert).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_DEFPUSHBUTTON as u32),
-                    400,
-                    226,
-                    100,
+                    340,
+                    286,
+                    160,
                     30,
                     hwnd,
                     HMENU(CONVERT_ID_CONVERT as isize),
@@ -488,7 +556,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     PCWSTR(to_wide(&labels.button_close).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     512,
-                    226,
+                    286,
                     100,
                     30,
                     hwnd,
@@ -498,6 +566,9 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                 );
 
                 for control in [
+                    image_label,
+                    image_edit,
+                    image_browse,
                     input_label,
                     input_edit,
                     input_browse,
@@ -522,6 +593,10 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     hwnd,
                     parent,
                     input_edit,
+                    input_probe: Arc::new(Mutex::new((String::new(), None))),
+                    image_label,
+                    image_edit,
+                    image_browse,
                     output_edit,
                     format_combo,
                     quality_label,
@@ -536,7 +611,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     running: false,
                 });
 
-                update_quality_controls(&mut state, AudioFormat::Mp3, &labels);
+                update_quality_controls(&mut state, MediaFormat::Mp3, &labels);
                 ShowWindow(
                     state.quality_combo,
                     windows::Win32::UI::WindowsAndMessaging::SW_HIDE,
@@ -583,11 +658,31 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                 let labels = labels(state.language);
 
                 match cmd_id {
+                    CONVERT_ID_INPUT_EDIT
+                        if notify as u32 == windows::Win32::UI::WindowsAndMessaging::EN_CHANGE =>
+                    {
+                        // Defer updates: SetWindowText can notify while another handler owns state.
+                        if let Err(error) =
+                            PostMessageW(hwnd, WM_CONVERT_INPUT_CHANGED, WPARAM(0), LPARAM(0))
+                        {
+                            log_debug(&format!("Convert media input notification failed: {error}"));
+                        }
+                    }
+                    CONVERT_ID_IMAGE_BROWSE => {
+                        if !state.running
+                            && let Some(path) =
+                                open_input_dialog(state.hwnd, state.language, &labels, true)
+                        {
+                            set_edit_text(state.image_edit, &path);
+                        }
+                    }
                     CONVERT_ID_INPUT_BROWSE => {
                         if state.running {
                             return LRESULT(0);
                         }
-                        if let Some(path) = open_input_dialog(state.hwnd, state.language, &labels) {
+                        if let Some(path) =
+                            open_input_dialog(state.hwnd, state.language, &labels, false)
+                        {
                             set_edit_text(state.input_edit, &path);
                             if get_edit_text(state.output_edit).is_empty()
                                 && let Some(suggested) = build_default_output_path(
@@ -652,7 +747,10 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                             show_error(state.parent, state.language, &labels.error_no_output);
                             return LRESULT(0);
                         }
-                        if input_text == output_text {
+                        if crate::media_conversion::same_file(
+                            Path::new(&input_text),
+                            Path::new(&output_text),
+                        ) {
                             show_error(state.parent, state.language, &labels.error_same_path);
                             return LRESULT(0);
                         }
@@ -666,13 +764,34 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                             }
                         };
 
+                        let image_text = get_edit_text(state.image_edit);
+                        let needs_image =
+                            is_video(format) && is_audio_only_input(Path::new(&input_text));
+                        if needs_image && image_text.trim().is_empty() {
+                            show_error(
+                                state.parent,
+                                state.language,
+                                &i18n::tr(state.language, "convert_audio.error.no_image"),
+                            );
+                            return LRESULT(0);
+                        }
+                        if needs_image
+                            && !image_text.is_empty()
+                            && crate::media_conversion::same_file(
+                                Path::new(&image_text),
+                                Path::new(&output_text),
+                            )
+                        {
+                            show_error(state.parent, state.language, &labels.error_same_path);
+                            return LRESULT(0);
+                        }
                         let settings = ConvertAudioSettings {
                             format: map_format(format),
                             quality,
                         };
 
                         let args = build_ffmpeg_args(&settings);
-                        log_debug(&format!("Convert audio args: {}", args.join(" ")));
+                        log_debug(&format!("Convert media audio settings: {}", args.join(" ")));
 
                         state.running = true;
                         set_status(state, &labels.status_running);
@@ -694,6 +813,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                             );
                             if dialog.0 != 0 {
                                 state.status_dialog = dialog;
+                                podcast_save_window::disable_fake_progress(dialog);
                             }
                         }
 
@@ -702,12 +822,30 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                         let hwnd_target = state.hwnd;
 
                         std::thread::spawn(move || {
-                            let result = convert_audio_file(
+                            let image = if !needs_image || image_text.trim().is_empty() {
+                                None
+                            } else {
+                                Some(PathBuf::from(image_text))
+                            };
+                            let result = crate::media_conversion::convert(
                                 &input,
                                 &output,
                                 &settings,
-                                Some(cancel_flag),
-                                None,
+                                is_video(format),
+                                image.as_deref(),
+                                cancel_flag,
+                                &mut |pct| {
+                                    if let Err(error) = PostMessageW(
+                                        hwnd_target,
+                                        WM_CONVERT_PROGRESS,
+                                        WPARAM(pct as usize),
+                                        LPARAM(0),
+                                    ) {
+                                        log_debug(&format!(
+                                            "Failed to post media conversion progress: {error}"
+                                        ));
+                                    }
+                                },
                             )
                             .map(|_| output);
                             let boxed = Box::new(result);
@@ -744,6 +882,32 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     return LRESULT(0);
                 }
                 DefWindowProcW(hwnd, msg, wparam, lparam)
+            }
+            WM_CONVERT_INPUT_CHANGED => {
+                let ptr =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut ConvertWindowState;
+                if !ptr.is_null() {
+                    update_image_controls(&*ptr);
+                }
+                LRESULT(0)
+            }
+            WM_CONVERT_PROGRESS => {
+                let ptr =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut ConvertWindowState;
+                if !ptr.is_null() {
+                    let state = &*ptr;
+                    if state.running && state.status_dialog.0 != 0 {
+                        SendMessageW(
+                            state.status_dialog,
+                            podcast_save_window::WM_PODCAST_SAVE_PROGRESS,
+                            WPARAM(wparam.0.min(100)),
+                            LPARAM(0),
+                        );
+                    }
+                }
+                LRESULT(0)
             }
             WM_CONVERT_DONE => {
                 let ptr =
@@ -782,7 +946,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     }
                     Err(err) => {
                         if err == "Conversion canceled." {
-                            log_debug("Convert audio canceled by user");
+                            log_debug("Convert media canceled by user");
                             set_status(state, &labels.status_ready);
                             show_info(
                                 state.parent,
@@ -790,7 +954,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                                 &i18n::tr(state.language, "tts.cancelled"),
                             );
                         } else {
-                            log_debug(&format!("Convert audio failed: {}", err));
+                            log_debug(&format!("Convert media failed: {}", err));
                             set_status(state, &labels.status_ready);
                             show_error(state.parent, state.language, &labels.error_failed);
                         }
@@ -856,29 +1020,41 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
     }
 }
 
-fn current_format(combo: HWND) -> AudioFormat {
+fn is_video(format: MediaFormat) -> bool {
+    matches!(
+        format,
+        MediaFormat::Mp4 | MediaFormat::Avi | MediaFormat::Mov
+    )
+}
+
+fn current_format(combo: HWND) -> MediaFormat {
     let sel = crate::send_message_w_safe(combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
     match sel {
-        1 => AudioFormat::Aac,
-        2 => AudioFormat::M4b,
-        3 => AudioFormat::Opus,
-        4 => AudioFormat::Ogg,
-        5 => AudioFormat::Flac,
-        6 => AudioFormat::Wav,
-        7 => AudioFormat::Aiff,
-        _ => AudioFormat::Mp3,
+        1 => MediaFormat::Aac,
+        2 => MediaFormat::M4b,
+        3 => MediaFormat::Opus,
+        4 => MediaFormat::Ogg,
+        5 => MediaFormat::Flac,
+        6 => MediaFormat::Wav,
+        7 => MediaFormat::Aiff,
+        8 => MediaFormat::Mp4,
+        9 => MediaFormat::Avi,
+        10 => MediaFormat::Mov,
+        _ => MediaFormat::Mp3,
     }
 }
 
-fn map_format(format: AudioFormat) -> ConvertAudioFormat {
+fn map_format(format: MediaFormat) -> ConvertAudioFormat {
     match format {
-        AudioFormat::Mp3 => ConvertAudioFormat::Mp3,
-        AudioFormat::Aac | AudioFormat::M4b => ConvertAudioFormat::Aac,
-        AudioFormat::Opus => ConvertAudioFormat::Opus,
-        AudioFormat::Ogg => ConvertAudioFormat::Ogg,
-        AudioFormat::Flac => ConvertAudioFormat::Flac,
-        AudioFormat::Wav => ConvertAudioFormat::Wav,
-        AudioFormat::Aiff => ConvertAudioFormat::Aiff,
+        MediaFormat::Mp3 => ConvertAudioFormat::Mp3,
+        MediaFormat::Aac | MediaFormat::M4b => ConvertAudioFormat::Aac,
+        MediaFormat::Opus => ConvertAudioFormat::Opus,
+        MediaFormat::Ogg => ConvertAudioFormat::Ogg,
+        MediaFormat::Flac => ConvertAudioFormat::Flac,
+        MediaFormat::Wav => ConvertAudioFormat::Wav,
+        MediaFormat::Aiff => ConvertAudioFormat::Aiff,
+        MediaFormat::Mp4 | MediaFormat::Mov => ConvertAudioFormat::Aac,
+        MediaFormat::Avi => ConvertAudioFormat::Mp3,
     }
 }
 
@@ -899,20 +1075,23 @@ fn current_media_path(parent: HWND) -> Option<PathBuf> {
     }
 }
 
-fn extension_for_format(format: AudioFormat) -> &'static str {
+fn extension_for_format(format: MediaFormat) -> &'static str {
     match format {
-        AudioFormat::Mp3 => "mp3",
-        AudioFormat::Aac => "m4a",
-        AudioFormat::M4b => "m4b",
-        AudioFormat::Opus => "opus",
-        AudioFormat::Ogg => "ogg",
-        AudioFormat::Flac => "flac",
-        AudioFormat::Wav => "wav",
-        AudioFormat::Aiff => "aiff",
+        MediaFormat::Mp3 => "mp3",
+        MediaFormat::Aac => "m4a",
+        MediaFormat::M4b => "m4b",
+        MediaFormat::Opus => "opus",
+        MediaFormat::Ogg => "ogg",
+        MediaFormat::Flac => "flac",
+        MediaFormat::Wav => "wav",
+        MediaFormat::Aiff => "aiff",
+        MediaFormat::Mp4 => "mp4",
+        MediaFormat::Avi => "avi",
+        MediaFormat::Mov => "mov",
     }
 }
 
-fn build_default_output_path(input: &Path, format: AudioFormat) -> Option<PathBuf> {
+fn build_default_output_path(input: &Path, format: MediaFormat) -> Option<PathBuf> {
     let parent = input.parent()?;
     let stem = input
         .file_stem()
@@ -924,11 +1103,11 @@ fn build_default_output_path(input: &Path, format: AudioFormat) -> Option<PathBu
 
 fn read_quality(
     state: &ConvertWindowState,
-    format: AudioFormat,
+    format: MediaFormat,
     labels: &ConvertLabels,
 ) -> Result<ConvertAudioQuality, String> {
     match format {
-        AudioFormat::Mp3 => {
+        MediaFormat::Mp3 => {
             let text = get_combo_text(state.quality_edit_combo);
             let value = text
                 .trim()
@@ -938,7 +1117,12 @@ fn read_quality(
                 .map(ConvertAudioQuality::BitrateKbps)
                 .map_err(|_| labels.error_invalid_bitrate.clone())
         }
-        AudioFormat::Aac | AudioFormat::M4b | AudioFormat::Opus => {
+        MediaFormat::Aac
+        | MediaFormat::M4b
+        | MediaFormat::Opus
+        | MediaFormat::Mp4
+        | MediaFormat::Avi
+        | MediaFormat::Mov => {
             let text = get_combo_text(state.quality_combo);
             let value = text
                 .trim()
@@ -946,7 +1130,7 @@ fn read_quality(
                 .map_err(|_| labels.error_invalid_bitrate.clone())?;
             Ok(ConvertAudioQuality::BitrateKbps(value))
         }
-        AudioFormat::Ogg => {
+        MediaFormat::Ogg => {
             let text = get_combo_text(state.quality_combo);
             let q = text.trim().trim_start_matches('q');
             let value = q
@@ -954,7 +1138,7 @@ fn read_quality(
                 .map_err(|_| labels.error_invalid_bitrate.clone())?;
             Ok(ConvertAudioQuality::OggQuality(value))
         }
-        AudioFormat::Flac => {
+        MediaFormat::Flac => {
             let text = get_combo_text(state.quality_combo);
             let value = text
                 .trim()
@@ -962,7 +1146,16 @@ fn read_quality(
                 .map_err(|_| labels.error_invalid_bitrate.clone())?;
             Ok(ConvertAudioQuality::FlacCompression(value))
         }
-        AudioFormat::Wav | AudioFormat::Aiff => Ok(ConvertAudioQuality::None),
+        MediaFormat::Wav => Ok(
+            match unsafe { SendMessageW(state.quality_combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0 }
+            {
+                1 => ConvertAudioQuality::WavPcm24,
+                2 => ConvertAudioQuality::WavPcm32,
+                3 => ConvertAudioQuality::WavFloat32,
+                _ => ConvertAudioQuality::None,
+            },
+        ),
+        MediaFormat::Aiff => Ok(ConvertAudioQuality::None),
     }
 }
 
@@ -976,6 +1169,8 @@ fn set_status(state: &ConvertWindowState, text: &str) {
 fn set_controls_enabled(state: &ConvertWindowState, enabled: bool) {
     unsafe {
         EnableWindow(state.input_edit, enabled);
+        EnableWindow(state.image_edit, enabled);
+        EnableWindow(state.image_browse, enabled);
         EnableWindow(state.output_edit, enabled);
         EnableWindow(state.format_combo, enabled);
         EnableWindow(state.quality_edit_combo, enabled);
@@ -985,21 +1180,83 @@ fn set_controls_enabled(state: &ConvertWindowState, enabled: bool) {
     }
 }
 
+// Inspect streams rather than extensions: MP4/WebM can contain audio only, and
+// an attached album cover does not make an audio file a video source.
+fn is_audio_only_input(path: &Path) -> bool {
+    path.is_file()
+        && crate::ffmpeg_source::has_real_video_stream(path).is_ok_and(|video| !video)
+        && crate::ffmpeg_source::list_audio_streams(path).is_ok_and(|streams| !streams.is_empty())
+}
+
+fn update_image_controls(state: &ConvertWindowState) {
+    let input = get_edit_text(state.input_edit);
+    let video_output = is_video(current_format(state.format_combo));
+    let mut visible = false;
+    if let Ok(mut probe) = state.input_probe.lock() {
+        if probe.0 != input {
+            *probe = (input.clone(), None);
+        }
+        if video_output && !input.trim().is_empty() {
+            if let Some(audio_only) = probe.1 {
+                visible = audio_only;
+            } else {
+                // Probe off the UI thread. A pending/invalid input keeps the controls hidden.
+                probe.1 = Some(false);
+                let result = Arc::clone(&state.input_probe);
+                let target = state.hwnd;
+                std::thread::spawn(move || {
+                    let audio_only = is_audio_only_input(Path::new(&input));
+                    if let Ok(mut probe) = result.lock() {
+                        if probe.0 != input {
+                            return;
+                        }
+                        probe.1 = Some(audio_only);
+                    }
+                    unsafe {
+                        if let Err(error) =
+                            PostMessageW(target, WM_CONVERT_INPUT_CHANGED, WPARAM(0), LPARAM(0))
+                        {
+                            log_debug(&format!("Convert media probe notification failed: {error}"));
+                        }
+                    }
+                });
+            }
+        }
+    }
+    unsafe {
+        for control in [state.image_label, state.image_edit, state.image_browse] {
+            ShowWindow(
+                control,
+                if visible {
+                    windows::Win32::UI::WindowsAndMessaging::SW_SHOW
+                } else {
+                    windows::Win32::UI::WindowsAndMessaging::SW_HIDE
+                },
+            );
+        }
+    }
+}
+
 fn update_quality_controls(
     state: &mut ConvertWindowState,
-    format: AudioFormat,
+    format: MediaFormat,
     labels: &ConvertLabels,
 ) {
     let (label_text, show_edit, show_combo) = match format {
-        AudioFormat::Mp3 => (&labels.quality_bitrate, true, false),
-        AudioFormat::Aac | AudioFormat::M4b | AudioFormat::Opus => {
-            (&labels.quality_bitrate, false, true)
-        }
-        AudioFormat::Ogg => (&labels.quality_ogg, false, true),
-        AudioFormat::Flac => (&labels.quality_flac, false, true),
-        AudioFormat::Wav | AudioFormat::Aiff => (&labels.quality_bitrate, false, false),
+        MediaFormat::Mp3 => (&labels.quality_bitrate, true, false),
+        MediaFormat::Aac
+        | MediaFormat::M4b
+        | MediaFormat::Opus
+        | MediaFormat::Mp4
+        | MediaFormat::Avi
+        | MediaFormat::Mov => (&labels.quality_bitrate, false, true),
+        MediaFormat::Ogg => (&labels.quality_ogg, false, true),
+        MediaFormat::Flac => (&labels.quality_flac, false, true),
+        MediaFormat::Wav => (&labels.quality_wav, false, true),
+        MediaFormat::Aiff => (&labels.quality_bitrate, false, false),
     };
 
+    update_image_controls(state);
     let label_wide = to_wide(label_text);
     if let Err(e) = crate::set_window_text_w_safe(state.quality_label, PCWSTR(label_wide.as_ptr()))
     {
@@ -1046,20 +1303,29 @@ fn update_quality_controls(
     }
     if show_combo {
         let items: Vec<&str> = match format {
-            AudioFormat::Aac | AudioFormat::M4b => vec![
+            MediaFormat::Aac
+            | MediaFormat::M4b
+            | MediaFormat::Mp4
+            | MediaFormat::Avi
+            | MediaFormat::Mov => vec![
                 "64", "80", "96", "112", "128", "160", "192", "224", "256", "320",
             ],
-            AudioFormat::Opus => vec!["64", "96", "128", "160"],
-            AudioFormat::Ogg => vec!["q3", "q4", "q5", "q6", "q7", "q8"],
-            AudioFormat::Flac => vec!["0", "1", "2", "3", "4", "5", "6", "7", "8"],
+            MediaFormat::Wav => vec!["16-bit", "24-bit", "32-bit", &labels.wav_float],
+            MediaFormat::Opus => vec!["64", "96", "128", "160"],
+            MediaFormat::Ogg => vec!["q3", "q4", "q5", "q6", "q7", "q8"],
+            MediaFormat::Flac => vec!["0", "1", "2", "3", "4", "5", "6", "7", "8"],
             _ => Vec::new(),
         };
         set_combo_items(state.quality_combo, &items);
         let default_index = match format {
-            AudioFormat::Aac | AudioFormat::M4b => 4,
-            AudioFormat::Opus => 2,
-            AudioFormat::Ogg => 2,
-            AudioFormat::Flac => 5,
+            MediaFormat::Aac
+            | MediaFormat::M4b
+            | MediaFormat::Mp4
+            | MediaFormat::Avi
+            | MediaFormat::Mov => 4,
+            MediaFormat::Opus => 2,
+            MediaFormat::Ogg => 2,
+            MediaFormat::Flac => 5,
             _ => 0,
         };
         crate::send_message_w_safe(
@@ -1121,11 +1387,27 @@ fn set_edit_text(hwnd: HWND, path: &Path) {
     }
 }
 
-fn open_input_dialog(parent: HWND, language: Language, labels: &ConvertLabels) -> Option<PathBuf> {
+fn open_input_dialog(
+    parent: HWND,
+    language: Language,
+    labels: &ConvertLabels,
+    image: bool,
+) -> Option<PathBuf> {
     unsafe {
-        let filter_raw = i18n::tr(language, "podcasts.download_filter");
+        let all = i18n::tr(language, "dialog.all_files");
+        let description = if image {
+            i18n::tr(language, "convert_audio.image")
+        } else {
+            labels.open_title.clone()
+        };
+        let extensions = if image {
+            "*.jpg;*.jpeg;*.png;*.webp;*.bmp"
+        } else {
+            "*.mp3;*.m4a;*.mp4;*.aac;*.mkv;*.avi;*.mov;*.m4v;*.webm;*.mpg;*.mpeg;*.ts;*.m2ts;*.mts;*.wmv;*.asf;*.flv;*.vob;*.3gp;*.flac;*.ogg;*.opus;*.wma;*.aiff;*.aif;*.m4b;*.wav"
+        };
+        let filter_raw = format!("{description}\0{extensions}\0{all}\0*.*\0\0");
         let filter = to_wide(&filter_raw.replace("\\0", "\0"));
-        let title = to_wide(&labels.open_title);
+        let title = to_wide(&description);
         let mut buffer = [0u16; 1024];
         let mut ofn = OPENFILENAMEW {
             lStructSize: std::mem::size_of::<OPENFILENAMEW>() as u32,
@@ -1151,7 +1433,7 @@ fn open_output_dialog(
     parent: HWND,
     language: Language,
     labels: &ConvertLabels,
-    format: AudioFormat,
+    format: MediaFormat,
     initial: Option<&PathBuf>,
 ) -> Option<PathBuf> {
     unsafe {

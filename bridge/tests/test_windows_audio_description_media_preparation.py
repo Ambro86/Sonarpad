@@ -26,7 +26,7 @@ class WindowsAudioDescriptionMediaPreparationTests(unittest.TestCase):
         self.assertIn("file_size >= GEMINI_MAX_CHUNK_BYTES", self.audio_source)
 
     def test_gemini_invalid_argument_uses_fallbacks_only_after_normal_attempt(self):
-        normal_call = "let mut analysis_result = run_bridge_once(&bridge_request);"
+        normal_call = "let mut analysis_result = run_bridge_once(&bridge_request, chunk_mode);"
         smaller_fallback = "activating smaller-MKV fallback only after failure"
         mp4_fallback = "activating MP4 Gemini compatibility fallback"
         self.assertIn(normal_call, self.audio_source)
@@ -38,7 +38,8 @@ class WindowsAudioDescriptionMediaPreparationTests(unittest.TestCase):
         self.assertLess(self.audio_source.index(smaller_fallback), self.audio_source.index(mp4_fallback))
         self.assertIn('"mkv",false,', "".join(self.audio_source.split()))
         self.assertIn('"mp4",true,', "".join(self.audio_source.split()))
-        self.assertIn("fallback_request.resume = None;", self.audio_source)
+        self.assertIn("progress.resume_on(&request.chunks)", self.audio_source)
+        self.assertNotIn("fallback_request.resume = None;", self.audio_source)
 
     def test_non_media_errors_do_not_activate_gemini_compatibility_fallback(self):
         self.assertIn("looks_like_credentials", self.audio_source)
@@ -119,9 +120,13 @@ class WindowsAudioDescriptionMediaPreparationTests(unittest.TestCase):
         )
         self.assertIn("ffmpeg_error_text(api, header_ret)", self.ffmpeg_source)
 
-    def test_changed_chunk_layout_does_not_make_resume_fatal(self):
-        self.assertIn("ignoring resume checkpoint after chunk layout change", self.audio_source)
-        self.assertIn("ignoring invalid resume checkpoint", self.audio_source)
+    def test_resume_recovers_compatibility_layout_and_preserves_unmatched_progress(self):
+        self.assertIn("recovering legacy compatibility checkpoint with MP4 segments", self.audio_source)
+        self.assertIn("checkpoint.resume_for_chunks(&chunks)?", self.audio_source)
+        self.assertIn("cannot reproduce the saved chunk layout; saved progress was preserved", self.audio_source)
+        self.assertNotIn("ignoring resume checkpoint after chunk layout change", self.audio_source)
+        self.assertIn("checkpoint_progress.lock()", self.audio_source)
+        self.assertIn('cache_dir.join("gemini_resume")', self.audio_source)
 
 
 if __name__ == "__main__":

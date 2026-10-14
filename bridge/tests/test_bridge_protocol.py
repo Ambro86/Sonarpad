@@ -11,6 +11,24 @@ import audio_description_bridge as bridge
 
 
 class BridgeProtocolTests(unittest.TestCase):
+    def test_checkpoint_keeps_visual_evidence_for_resumed_descriptions(self):
+        with mock.patch.object(
+            bridge.audio_describer, "get_visual_evidence_time", return_value=11.25
+        ):
+            rows = bridge._checkpoint_descriptions([(10.0, 12.0, "Azione")])
+        restored = json.loads(json.dumps(rows))
+        self.assertEqual(restored[0], {
+            "start_sec": 10.0, "end_sec": 12.0, "text": "Azione",
+            "visual_evidence_time_sec": 11.25,
+        })
+
+    def test_checkpoint_without_visual_evidence_remains_compatible(self):
+        with mock.patch.object(
+            bridge.audio_describer, "get_visual_evidence_time", return_value=None
+        ):
+            rows = bridge._checkpoint_descriptions([None, (1,), (10.0, 12.0, "Azione")])
+        self.assertEqual(rows, [{"start_sec": 10.0, "end_sec": 12.0, "text": "Azione"}])
+
     def test_quota_switch_returns_new_model_without_ending_worker(self):
         emitted = []
         reply = json.dumps({"action": "switch", "model": "gemini-3.5-flash"}) + "\n"

@@ -87,6 +87,19 @@ class YouTubeAudioDescriptionShortcutTests(unittest.TestCase):
         self.assertIn("audio_description_window::open_with_input(parent, target_path)", YOUTUBE)
         self.assertIn("downloading active yt-dlp video stream", MAIN)
 
+    def test_stream_audio_description_does_not_depend_on_showing_video(self):
+        availability = YOUTUBE.split(
+            "pub(crate) fn can_create_audio_description_from_active_stream(", 1
+        )[1].split("\n}", 1)[0]
+        download = YOUTUBE.split(
+            "pub(crate) fn download_active_streaming_video_for_audio_description(", 1
+        )[1].split("\n}", 1)[0]
+        for block in (availability, download):
+            self.assertIn("active_stream_save_context_for_url(active_url)", block)
+            self.assertNotIn("context.prefer_video", block)
+            self.assertNotIn("is_local_mpv_video_mode_active", block)
+        self.assertIn("download_stream_context_for_audio_description(", download)
+
     def test_raiplay_and_la7_vod_reuse_existing_mp4_exporter(self):
         self.assertIn("fn download_active_rai_la7_for_audio_description", MAIN)
         self.assertIn("RaiAudioOrigin::RaiPlay | RaiAudioOrigin::La7Play", MAIN)

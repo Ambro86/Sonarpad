@@ -1,5 +1,23 @@
 # Changelog
 
+Versão 0.9.16 – 2026-10-14
+
+1. Corrigida a janela de criação de audiodescrição com IA: durante o processamento, a percentagem identifica claramente o progresso, sem confusão com o volume do filme ou a taxa de bits. Etiquetas atualizadas nos 17 idiomas.
+
+2. Converter áudio passa a Converter multimédia e muda de Voz para Ferramentas → Multimédia, mantendo Ctrl+Shift+A. Suporta conversão de áudio, extração de áudio de vídeos, MP4/AVI/MOV, vídeos a partir de áudio com imagem e WAV de 16/24/32 bits ou 32 bits de vírgula flutuante, apenas com as bibliotecas FFmpeg incluídas, sem ffmpeg.exe.
+
+3. Corrigidas a conversão OGG e a temporização e intercalação das faixas AVI. Ficheiros temporários impedem que erros ou cancelamentos substituam um destino existente. Testadas 60 conversões com excertos reais de cerca de 30 segundos.
+
+4. A criação de audiodescrição com IA fica disponível para fluxos de vídeo compatíveis abertos pela reprodução de áudio em streaming, mesmo sem mostrar o vídeo.
+
+5. Corrigida a seleção de formatos para descarregar audiodescrições, incluindo fluxos sem informação de codec. Removida a preferência por 720p que podia escolher um fluxo muito mais lento do que Guardar multimédia. Registos com velocidade, tamanho, formato, tempo decorrido e progresso da transferência.
+
+6. Melhorada a retoma de audiodescrições interrompidas, incluindo pontos de gravação antigos e segmentos de compatibilidade. As mudanças de formato preservam os segmentos concluídos quando os limites temporais coincidem; caso contrário, o processo para sem perder o progresso guardado. Gravação mais segura e preservação dos tempos das cenas.
+
+7. Cache do bridge de audiodescrição atualizada de v10 para v11: novo descarregamento na primeira utilização após atualizar. O bridge deve ser recompilado e publicado com esta versão.
+
+---
+
 Versão 0.9.15 – 2026-10-14
 
 1. Audiodescrição: adicionada uma opção para permitir descrições durante vocalizações não verbais.

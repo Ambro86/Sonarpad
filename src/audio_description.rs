@@ -156,6 +156,83 @@ struct AudioDescriptionPartialCatalog {
     characters: Vec<BridgeCharacter>,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+enum AudioDescriptionChunkMode {
+    #[default]
+    Normal,
+    SmallMkv,
+    Mp4,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct AudioDescriptionChunkLayout {
+    mode: AudioDescriptionChunkMode,
+    timeline: Vec<[f64; 2]>,
+}
+
+impl AudioDescriptionChunkLayout {
+    fn from_chunks(
+        mode: AudioDescriptionChunkMode,
+        chunks: &[AudioDescriptionPreparedChunk],
+    ) -> Self {
+        Self {
+            mode,
+            timeline: chunks
+                .iter()
+                .map(|chunk| [chunk.start_sec, chunk.end_sec])
+                .collect(),
+        }
+    }
+
+    fn matches(&self, chunks: &[AudioDescriptionPreparedChunk]) -> bool {
+        self.timeline.len() == chunks.len()
+            && self.timeline.iter().zip(chunks).all(|(saved, chunk)| {
+                (saved[0] - chunk.start_sec).abs() <= 0.05
+                    && (saved[1] - chunk.end_sec).abs() <= 0.05
+            })
+    }
+}
+
+#[derive(Clone)]
+struct AudioDescriptionAnalysisProgress {
+    layout: AudioDescriptionChunkLayout,
+    resume: AudioDescriptionBridgeResume,
+}
+
+impl AudioDescriptionAnalysisProgress {
+    fn resume_on(
+        &self,
+        chunks: &[AudioDescriptionPreparedChunk],
+    ) -> Result<AudioDescriptionBridgeResume, String> {
+        let mut resume = self.resume.clone();
+        if resume.completed_chunks == 0 {
+            return Ok(resume);
+        }
+        let boundary = self
+            .layout
+            .timeline
+            .get(resume.completed_chunks - 1)
+            .ok_or("Audio description: invalid saved progress boundary")?[1];
+        // An index is only meaningful within its original layout. A container
+        // fallback may split the same covered interval into more chunks; reuse
+        // it only when the new layout has the exact same completed boundary.
+        let starts_match = self
+            .layout
+            .timeline
+            .first()
+            .zip(chunks.first())
+            .is_some_and(|(saved, chunk)| (saved[0] - chunk.start_sec).abs() <= 0.05);
+        let completed = chunks
+            .iter()
+            .position(|chunk| (chunk.end_sec - boundary).abs() <= 0.05);
+        let Some(completed) = completed.filter(|_| starts_match) else {
+            return Err("Audio description: compatibility chunks cannot preserve the completed boundary; saved progress was preserved".to_string());
+        };
+        resume.completed_chunks = completed + 1;
+        Ok(resume)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct AudioDescriptionPartialCheckpoint {
     format: String,
@@ -195,11 +272,46 @@ struct AudioDescriptionPartialCheckpoint {
     completed_chunks: usize,
     total_chunks: usize,
     #[serde(default)]
+    chunk_layout: Option<AudioDescriptionChunkLayout>,
+    #[serde(default)]
     descriptions: Vec<BridgeDescription>,
     #[serde(default)]
     character_glossary: Vec<BridgeCharacter>,
     #[serde(default)]
     verified_nonverbal_ids: Vec<String>,
+}
+
+impl AudioDescriptionPartialCheckpoint {
+    fn resume_for_chunks(
+        &self,
+        chunks: &[AudioDescriptionPreparedChunk],
+    ) -> Result<AudioDescriptionBridgeResume, String> {
+        if self.completed_chunks > self.total_chunks
+            || self
+                .chunk_layout
+                .as_ref()
+                .is_some_and(|layout| layout.timeline.len() != self.total_chunks)
+            || (self.chunk_layout.is_none() && self.total_chunks != chunks.len())
+        {
+            return Err("Audio description: cannot reproduce the saved chunk layout; saved progress was preserved".to_string());
+        }
+        let resume = AudioDescriptionBridgeResume {
+            completed_chunks: self.completed_chunks,
+            descriptions: self.descriptions.clone(),
+            character_glossary: self.character_glossary.clone(),
+            verified_nonverbal_ids: self.verified_nonverbal_ids.clone(),
+        };
+        if let Some(layout) = self.chunk_layout.as_ref()
+            && !layout.matches(chunks)
+        {
+            return AudioDescriptionAnalysisProgress {
+                layout: layout.clone(),
+                resume,
+            }
+            .resume_on(chunks);
+        }
+        Ok(resume)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -2362,6 +2474,39 @@ fn synthesize_description(
     cache_dir: &Path,
     cancel: Arc<AtomicBool>,
 ) -> Result<(Arc<[f32]>, u32, u16), String> {
+    synthesize_description_with_recovery(text, index, job, cache_dir, cancel, false)
+}
+
+// Internal batch recovery only: this signal never reaches the UI. Once the batch
+// is serial, empty outputs continue retrying indefinitely until success/cancel.
+const SAPI5_EMPTY_OUTPUT_RETRY: &str =
+    "SAPI5 isolated synthesis failed: repeated empty WAV; retry with lower concurrency";
+
+fn empty_tts_needs_batch_recovery(engine: TtsEngine, parallel_batch: bool, attempts: u64) -> bool {
+    engine == TtsEngine::Sapi5 && parallel_batch && attempts >= 3
+}
+
+fn wait_for_empty_description_retry(
+    engine: TtsEngine,
+    parallel_batch: bool,
+    attempts: u64,
+    cancel: &AtomicBool,
+) -> Result<(), String> {
+    wait_for_empty_tts_retry(cancel)?;
+    if empty_tts_needs_batch_recovery(engine, parallel_batch, attempts) {
+        return Err(SAPI5_EMPTY_OUTPUT_RETRY.to_string());
+    }
+    Ok(())
+}
+
+fn synthesize_description_with_recovery(
+    text: &str,
+    index: usize,
+    job: &AudioDescriptionJob,
+    cache_dir: &Path,
+    cancel: Arc<AtomicBool>,
+    parallel_batch: bool,
+) -> Result<(Arc<[f32]>, u32, u16), String> {
     let output = cache_dir.join(format!("description_{index:05}.wav"));
     let chunks = audio_description_tts_chunks(text, job);
     if chunks.is_empty() {
@@ -2418,7 +2563,12 @@ fn synthesize_description(
                     fs::remove_file(&output),
                     "Audio description empty TTS output cleanup failed"
                 );
-                wait_for_empty_tts_retry(cancel.as_ref())?;
+                wait_for_empty_description_retry(
+                    job.tts_engine,
+                    parallel_batch,
+                    empty_attempt,
+                    cancel.as_ref(),
+                )?;
                 continue;
             }
             return Err(error);
@@ -2431,7 +2581,12 @@ fn synthesize_description(
                 empty_attempt,
                 output.display()
             ));
-            wait_for_empty_tts_retry(cancel.as_ref())?;
+            wait_for_empty_description_retry(
+                job.tts_engine,
+                parallel_batch,
+                empty_attempt,
+                cancel.as_ref(),
+            )?;
             continue;
         }
 
@@ -2448,7 +2603,12 @@ fn synthesize_description(
                 fs::remove_file(&output),
                 "Audio description empty TTS output cleanup failed"
             );
-            wait_for_empty_tts_retry(cancel.as_ref())?;
+            wait_for_empty_description_retry(
+                job.tts_engine,
+                parallel_batch,
+                empty_attempt,
+                cancel.as_ref(),
+            )?;
             continue;
         }
 
@@ -2464,7 +2624,12 @@ fn synthesize_description(
                     fs::remove_file(&output),
                     "Audio description empty TTS output cleanup failed"
                 );
-                wait_for_empty_tts_retry(cancel.as_ref())?;
+                wait_for_empty_description_retry(
+                    job.tts_engine,
+                    parallel_batch,
+                    empty_attempt,
+                    cancel.as_ref(),
+                )?;
                 continue;
             }
             Err(error) => return Err(error),
@@ -2489,7 +2654,12 @@ fn synthesize_description(
                 "Audio description: TTS cue {} contains no audible PCM signal, retrying indefinitely; empty_attempt={}",
                 index, empty_attempt
             ));
-            wait_for_empty_tts_retry(cancel.as_ref())?;
+            wait_for_empty_description_retry(
+                job.tts_engine,
+                parallel_batch,
+                empty_attempt,
+                cancel.as_ref(),
+            )?;
             continue;
         }
         return Ok((Arc::from(samples), sample_rate, channels));
@@ -2525,18 +2695,20 @@ where
         parallelism,
         cancel.as_ref(),
         |batch_indices| {
+            let parallel_batch = batch_indices.len() > 1;
             std::thread::scope(|scope| {
                 let mut handles = Vec::with_capacity(batch_indices.len());
                 for &index in batch_indices {
                     let task = &tasks[index];
                     let cancel = cancel.clone();
                     handles.push(scope.spawn(move || {
-                        let synthesis = synthesize_description(
+                        let synthesis = synthesize_description_with_recovery(
                             &task.text,
                             task.synthesis_index,
                             job,
                             cache_dir,
                             cancel,
+                            parallel_batch,
                         );
                         let (samples, sample_rate, channels) = match synthesis {
                             Ok(values) => values,
@@ -2944,7 +3116,15 @@ fn save_audio_description_partial_checkpoint(
     job: &AudioDescriptionJob,
     source_duration_sec: f64,
     checkpoint: &AudioDescriptionBridgeCheckpoint,
+    chunk_layout: &AudioDescriptionChunkLayout,
 ) -> Result<(), String> {
+    if checkpoint.total_chunks != chunk_layout.timeline.len()
+        || checkpoint.completed_chunks > checkpoint.total_chunks
+    {
+        return Err(
+            "Audio description: checkpoint chunk layout does not match worker progress".to_string(),
+        );
+    }
     let source_file_size = fs::metadata(&job.input_path)
         .map_err(|error| format!("Audio description: source file metadata failed: {error}"))?
         .len();
@@ -2990,24 +3170,37 @@ fn save_audio_description_partial_checkpoint(
         character_catalog,
         completed_chunks: checkpoint.completed_chunks,
         total_chunks: checkpoint.total_chunks,
+        chunk_layout: Some(chunk_layout.clone()),
         descriptions: checkpoint.descriptions.clone(),
         character_glossary: checkpoint.character_glossary.clone(),
         verified_nonverbal_ids: checkpoint.verified_nonverbal_ids.clone(),
     };
     let raw = serde_json::to_vec_pretty(&value)
         .map_err(|error| format!("Audio description: checkpoint serialization failed: {error}"))?;
+    write_audio_description_checkpoint(path, &raw)
+}
+
+fn write_audio_description_checkpoint(path: &Path, raw: &[u8]) -> Result<(), String> {
+    use std::io::Write;
     let temporary = temporary_sibling_path(path, "partial");
-    fs::write(&temporary, raw)
-        .map_err(|error| format!("Audio description: checkpoint write failed: {error}"))?;
-    if path.exists() {
-        fs::remove_file(path).map_err(|error| {
+    let write_result = (|| -> std::io::Result<()> {
+        let mut file = fs::File::create(&temporary)?;
+        file.write_all(raw)?;
+        file.sync_all()
+    })();
+    if let Err(error) = write_result {
+        if temporary.exists() {
             crate::log_if_err!(
                 fs::remove_file(&temporary),
                 "Audio description checkpoint cleanup failed"
             );
-            format!("Audio description: checkpoint replacement failed: {error}")
-        })?;
+        }
+        return Err(format!(
+            "Audio description: checkpoint write failed: {error}"
+        ));
     }
+    // Rename replaces the destination without first deleting the last valid
+    // checkpoint. If replacement fails, the previous checkpoint stays intact.
     fs::rename(&temporary, path).map_err(|error| {
         crate::log_if_err!(
             fs::remove_file(&temporary),
@@ -6154,6 +6347,19 @@ pub fn create_audio_description(
         .clone()
         .unwrap_or_else(|| audio_description_partial_checkpoint_path(&job.output_path));
 
+    // Read before preparing media, so a resumed compatibility job does not
+    // retry the rejected normal layout or overwrite its saved progress.
+    let saved_checkpoint = if job.resume_checkpoint_path.is_some() {
+        Some(load_audio_description_partial_checkpoint(&checkpoint_path)?)
+    } else {
+        None
+    };
+    let mut chunk_mode = saved_checkpoint
+        .as_ref()
+        .and_then(|checkpoint| checkpoint.chunk_layout.as_ref())
+        .map(|layout| layout.mode)
+        .unwrap_or_default();
+
     notify_status(
         &mut callbacks,
         "analysis_prepare",
@@ -6245,13 +6451,28 @@ pub fn create_audio_description(
             "chunk_prepare",
             "Preparing Gemini video chunks with Sonarpad FFmpeg libraries...",
         );
-        let chunks = prepare_gemini_chunks(
-            source_path,
-            duration_sec,
-            cache_dir,
-            audio_stream_index,
-            &cancel,
-        )?;
+        let chunks = match chunk_mode {
+            AudioDescriptionChunkMode::Normal => prepare_gemini_chunks(
+                source_path,
+                duration_sec,
+                cache_dir,
+                audio_stream_index,
+                &cancel,
+            )?,
+            mode => prepare_gemini_compatibility_chunks(
+                source_path,
+                duration_sec,
+                &cache_dir.join("gemini_resume"),
+                audio_stream_index,
+                &cancel,
+                if mode == AudioDescriptionChunkMode::Mp4 {
+                    "mp4"
+                } else {
+                    "mkv"
+                },
+                mode == AudioDescriptionChunkMode::Mp4,
+            )?,
+        };
         notify_progress(callbacks, 10);
         Ok((duration_sec, audio_wav_path, chunks))
     };
@@ -6326,7 +6547,7 @@ pub fn create_audio_description(
         return create_audio_description(&restarted_job, cancel.clone(), callbacks);
     }
 
-    let (duration_sec, audio_wav_path, chunks) = match preparation_result {
+    let (duration_sec, audio_wav_path, mut chunks) = match preparation_result {
         Ok(value) => value,
         Err(error) => {
             crate::log_if_err!(
@@ -6336,37 +6557,50 @@ pub fn create_audio_description(
             return Err(error);
         }
     };
-    let resume = if job.resume_checkpoint_path.is_some() {
-        match load_audio_description_partial_checkpoint(&checkpoint_path) {
-            Ok(checkpoint)
-                if checkpoint.source_path == job.input_path
-                    && checkpoint.total_chunks == chunks.len()
-                    && (checkpoint.source_duration_sec - duration_sec).abs() <= 0.5 =>
+    let resume = if let Some(checkpoint) = saved_checkpoint.as_ref() {
+        let restore = (|| -> Result<AudioDescriptionBridgeResume, String> {
+            if checkpoint.source_path != job.input_path
+                || checkpoint.audio_stream_index != job.audio_stream_index
+                || (checkpoint.source_duration_sec - duration_sec).abs() > 0.5
             {
-                Some(AudioDescriptionBridgeResume {
-                    completed_chunks: checkpoint.completed_chunks,
-                    descriptions: checkpoint.descriptions,
-                    character_glossary: checkpoint.character_glossary,
-                    verified_nonverbal_ids: checkpoint.verified_nonverbal_ids,
-                })
+                return Err("Audio description: resume source does not match the checkpoint; saved progress was preserved".to_string());
             }
-            Ok(checkpoint) => {
-                crate::log_debug(&format!(
-                    "Audio description: ignoring resume checkpoint after chunk layout change saved_chunks={} prepared_chunks={} saved_duration={:.3} prepared_duration={:.3}",
-                    checkpoint.total_chunks,
-                    chunks.len(),
-                    checkpoint.source_duration_sec,
-                    duration_sec
-                ));
-                None
+            if checkpoint.chunk_layout.is_none() && checkpoint.total_chunks != chunks.len() {
+                // Older checkpoints did not record the preparation mode. Recover
+                // the small compatibility layout using the MP4 container that
+                // also works when Gemini rejects MKV. Never reuse the old index
+                // against the normal (usually much smaller) chunk count.
+                crate::log_debug(
+                    "Audio description: recovering legacy compatibility checkpoint with MP4 segments",
+                );
+                chunks = prepare_gemini_compatibility_chunks(
+                    &job.input_path,
+                    duration_sec,
+                    &analysis_cache_dir.join("gemini_resume_mp4"),
+                    job.audio_stream_index,
+                    &cancel,
+                    "mp4",
+                    true,
+                )?;
+                chunk_mode = AudioDescriptionChunkMode::Mp4;
             }
+            let resume = checkpoint.resume_for_chunks(&chunks)?;
+            crate::log_debug(&format!(
+                "Audio description: resuming chunk {}/{} with preparation {:?}",
+                resume.completed_chunks.saturating_add(1).min(chunks.len()),
+                chunks.len(),
+                chunk_mode
+            ));
+            Ok(resume)
+        })();
+        match restore {
+            Ok(resume) => Some(resume),
             Err(error) => {
-                crate::log_debug(&format!(
-                    "Audio description: ignoring invalid resume checkpoint {}: {}",
-                    checkpoint_path.display(),
-                    error
-                ));
-                None
+                crate::log_if_err!(
+                    fs::remove_dir_all(&analysis_cache_dir),
+                    "Audio description cleanup operation failed"
+                );
+                return Err(error);
             }
         }
     } else {
@@ -6421,8 +6655,24 @@ pub fn create_audio_description(
         resume,
     };
     let callback_state = Arc::new(std::sync::Mutex::new(callbacks));
+    let latest_progress = Arc::new(std::sync::Mutex::new(bridge_request.resume.clone().map(
+        |resume| AudioDescriptionAnalysisProgress {
+            layout: AudioDescriptionChunkLayout::from_chunks(chunk_mode, &bridge_request.chunks),
+            resume,
+        },
+    )));
     let analysis_result = {
-        let run_bridge_once = |request: &AudioDescriptionBridgeRequest| {
+        let run_bridge_once = |request: &AudioDescriptionBridgeRequest,
+                               mode: AudioDescriptionChunkMode| {
+            let mut request = request.clone();
+            request.resume = latest_progress
+                .lock()
+                .map_err(|_| "Audio description: progress state poisoned".to_string())?
+                .as_ref()
+                .map(|progress| progress.resume_on(&request.chunks))
+                .transpose()?;
+            let checkpoint_layout = AudioDescriptionChunkLayout::from_chunks(mode, &request.chunks);
+            let checkpoint_progress = latest_progress.clone();
             let download_state = callback_state.clone();
             let progress_state = callback_state.clone();
             let status_state = callback_state.clone();
@@ -6431,7 +6681,7 @@ pub fn create_audio_description(
             let checkpoint_job = job.clone();
             let checkpoint_target = checkpoint_path.clone();
             run_audio_description_bridge(
-                request,
+                &request,
                 cancel.clone(),
                 AudioDescriptionBridgeCallbacks {
                     download: Some(Box::new(move |pct| {
@@ -6481,11 +6731,33 @@ pub fn create_audio_description(
                             .unwrap_or(AudioDescriptionOverloadDecision::Wait)
                     })),
                     checkpoint: Some(Box::new(move |checkpoint| {
+                        if checkpoint.total_chunks != checkpoint_layout.timeline.len()
+                            || checkpoint.completed_chunks > checkpoint.total_chunks
+                        {
+                            crate::log_debug(
+                                "Audio description: rejected inconsistent worker checkpoint",
+                            );
+                            return;
+                        }
+                        if let Ok(mut progress) = checkpoint_progress.lock() {
+                            *progress = Some(AudioDescriptionAnalysisProgress {
+                                layout: checkpoint_layout.clone(),
+                                resume: AudioDescriptionBridgeResume {
+                                    completed_chunks: checkpoint.completed_chunks,
+                                    descriptions: checkpoint.descriptions.clone(),
+                                    character_glossary: checkpoint.character_glossary.clone(),
+                                    verified_nonverbal_ids: checkpoint
+                                        .verified_nonverbal_ids
+                                        .clone(),
+                                },
+                            });
+                        }
                         if let Err(error) = save_audio_description_partial_checkpoint(
                             &checkpoint_target,
                             &checkpoint_job,
                             duration_sec,
                             checkpoint,
+                            &checkpoint_layout,
                         ) {
                             crate::log_debug(&format!(
                                 "Audio description: partial checkpoint save failed: {error}"
@@ -6503,15 +6775,17 @@ pub fn create_audio_description(
             )
         };
 
-        // Keep the historical path byte-for-byte in behavior: the normal prepared
-        // chunks and worker request are attempted first. Compatibility media is
-        // prepared only after a media-specific Gemini rejection or terminal file
-        // processing failure, so already-working files never enter the fallback path.
-        let mut analysis_result = run_bridge_once(&bridge_request);
+        // Compatibility attempts receive the latest completed prefix, including
+        // progress made during this run. Never blindly reuse or reset an index
+        // when a fallback changes chunk boundaries.
+        let mut analysis_result = run_bridge_once(&bridge_request, chunk_mode);
         let mut try_mp4_fallback = false;
 
         if let Err(primary_error) = &analysis_result
-            && gemini_media_processing_failed(primary_error)
+            && chunk_mode != AudioDescriptionChunkMode::Mp4
+            && (gemini_media_processing_failed(primary_error)
+                || (chunk_mode == AudioDescriptionChunkMode::SmallMkv
+                    && gemini_media_invalid_argument(primary_error)))
             && !cancel.load(Ordering::Relaxed)
         {
             crate::log_debug(&format!(
@@ -6528,6 +6802,7 @@ pub fn create_audio_description(
         }
 
         if let Err(primary_error) = &analysis_result
+            && chunk_mode == AudioDescriptionChunkMode::Normal
             && gemini_media_invalid_argument(primary_error)
             && !cancel.load(Ordering::Relaxed)
         {
@@ -6555,10 +6830,8 @@ pub fn create_audio_description(
                 Ok(fallback_chunks) => {
                     let mut fallback_request = bridge_request.clone();
                     fallback_request.chunks = fallback_chunks;
-                    // Chunk layout changed; an old completed-chunk index cannot be
-                    // safely mapped onto the compatibility layout.
-                    fallback_request.resume = None;
-                    analysis_result = run_bridge_once(&fallback_request);
+                    analysis_result =
+                        run_bridge_once(&fallback_request, AudioDescriptionChunkMode::SmallMkv);
                     if let Err(fallback_error) = &analysis_result
                         && (gemini_media_invalid_argument(fallback_error)
                             || gemini_media_processing_failed(fallback_error))
@@ -6603,8 +6876,8 @@ pub fn create_audio_description(
                     );
                     let mut fallback_request = bridge_request.clone();
                     fallback_request.chunks = fallback_chunks;
-                    fallback_request.resume = None;
-                    analysis_result = run_bridge_once(&fallback_request);
+                    analysis_result =
+                        run_bridge_once(&fallback_request, AudioDescriptionChunkMode::Mp4);
                 }
                 Err(mp4_error) => {
                     crate::log_debug(&format!(
@@ -7197,6 +7470,197 @@ pub fn create_audio_description_dialogue_overlap_fallback(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn resume_fallback_maps_completed_time_not_chunk_index() {
+        let mut checkpoint = resume_checkpoint_fixture();
+        checkpoint.total_chunks = 2;
+        checkpoint.completed_chunks = 1;
+        let original = resume_chunks_fixture(2);
+        let progress = super::AudioDescriptionAnalysisProgress {
+            layout: super::AudioDescriptionChunkLayout::from_chunks(
+                super::AudioDescriptionChunkMode::Normal,
+                &original,
+            ),
+            resume: checkpoint
+                .resume_for_chunks(&original)
+                .expect("original progress"),
+        };
+        let smaller: Vec<_> = (0..4)
+            .map(|index| super::AudioDescriptionPreparedChunk {
+                path: format!("compat-{index}.mp4"),
+                start_sec: index as f64 * 10.0,
+                end_sec: (index + 1) as f64 * 10.0,
+            })
+            .collect();
+        let resumed = progress
+            .resume_on(&smaller)
+            .expect("same completed 20 seconds");
+        assert_eq!(resumed.completed_chunks, 2);
+        checkpoint.chunk_layout = Some(progress.layout.clone());
+        assert_eq!(
+            checkpoint
+                .resume_for_chunks(&smaller)
+                .expect("persisted layout can be remapped")
+                .completed_chunks,
+            2
+        );
+        assert_eq!(
+            resumed.descriptions[0].text,
+            progress.resume.descriptions[0].text
+        );
+        assert_eq!(resumed.character_glossary[0].name, "Anna");
+        assert_eq!(
+            progress
+                .resume_on(&original)
+                .expect("same layout")
+                .completed_chunks,
+            1
+        );
+
+        let mut finished = progress.clone();
+        finished.resume.completed_chunks = 2;
+        assert_eq!(
+            finished
+                .resume_on(&smaller)
+                .expect("fully analysed")
+                .completed_chunks,
+            4
+        );
+        let mut empty = progress.clone();
+        empty.resume.completed_chunks = 0;
+        assert_eq!(
+            empty
+                .resume_on(&smaller)
+                .expect("no completed prefix")
+                .completed_chunks,
+            0
+        );
+        let incompatible = vec![super::AudioDescriptionPreparedChunk {
+            path: "different.mp4".into(),
+            start_sec: 0.0,
+            end_sec: 40.0,
+        }];
+        assert!(progress.resume_on(&incompatible).is_err());
+        assert_eq!(progress.resume.completed_chunks, 1);
+    }
+
+    #[test]
+    fn resume_checkpoint_replacement_preserves_old_file_on_failure() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let path = super::temporary_sibling_path(
+            &std::env::temp_dir().join("sonarpad-resume-test.json"),
+            "test",
+        );
+        super::write_audio_description_checkpoint(&path, b"first complete checkpoint")
+            .expect("first save");
+        super::write_audio_description_checkpoint(&path, b"second complete checkpoint")
+            .expect("replace existing file");
+        assert_eq!(
+            std::fs::read(&path).expect("read"),
+            b"second complete checkpoint"
+        );
+        {
+            let _locked = std::fs::OpenOptions::new()
+                .read(true)
+                .share_mode(0)
+                .open(&path)
+                .expect("exclusive lock");
+            assert!(
+                super::write_audio_description_checkpoint(&path, b"replacement cannot commit")
+                    .is_err()
+            );
+        }
+        assert_eq!(
+            std::fs::read(&path).expect("old checkpoint remains"),
+            b"second complete checkpoint"
+        );
+        std::fs::remove_file(path).expect("cleanup");
+    }
+
+    fn resume_checkpoint_fixture() -> super::AudioDescriptionPartialCheckpoint {
+        let job = super::audio_description_preview_job(
+            std::path::PathBuf::from("film.mp4"),
+            crate::settings::Language::Italian,
+            &crate::settings::AppSettings::default(),
+        );
+        let project = super::build_audio_description_project(&job, 7960.0, 7960.0, &[], &[], &[]);
+        let mut json = serde_json::to_value(project).expect("project");
+        json["format"] = serde_json::json!(super::AUDIO_DESCRIPTION_PARTIAL_FORMAT);
+        json["source_file_size"] = serde_json::json!(123);
+        json["save_project"] = serde_json::json!(true);
+        json["completed_chunks"] = serde_json::json!(81);
+        json["total_chunks"] = serde_json::json!(398);
+        json["audiobook_bitrate_kbps"] = serde_json::json!(64);
+        json["verified_nonverbal_ids"] = serde_json::json!(["already-verified"]);
+        json["descriptions"] = serde_json::json!([{
+            "start_sec": 12.0, "end_sec": 15.0, "text": "Una porta si apre."
+        }]);
+        json["character_glossary"] = serde_json::json!([{
+            "id": "person-1", "name": "Anna", "description": "Cappotto rosso."
+        }]);
+        serde_json::from_value(json).expect("legacy checkpoint")
+    }
+
+    fn resume_chunks_fixture(count: usize) -> Vec<super::AudioDescriptionPreparedChunk> {
+        (0..count)
+            .map(|index| super::AudioDescriptionPreparedChunk {
+                path: format!("new-cache/chunk-{index}.mp4"),
+                start_sec: index as f64 * 20.0,
+                end_sec: (index + 1) as f64 * 20.0,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn resume_legacy_398_chunks_preserves_81_completed_after_layout_recovery() {
+        let checkpoint = resume_checkpoint_fixture();
+        assert!(checkpoint.chunk_layout.is_none());
+        assert!(
+            checkpoint
+                .resume_for_chunks(&resume_chunks_fixture(78))
+                .is_err()
+        );
+        let resume = checkpoint
+            .resume_for_chunks(&resume_chunks_fixture(398))
+            .expect("recovered compatibility layout");
+        assert_eq!(resume.completed_chunks, 81);
+        assert_eq!(resume.verified_nonverbal_ids, ["already-verified"]);
+        assert_eq!(resume.descriptions[0].text, "Una porta si apre.");
+        assert_eq!(resume.character_glossary[0].name, "Anna");
+        assert_eq!(checkpoint.completed_chunks, 81);
+    }
+
+    #[test]
+    fn resume_layout_roundtrip_keeps_mode_and_rejects_shifted_boundaries() {
+        for mode in [
+            super::AudioDescriptionChunkMode::Normal,
+            super::AudioDescriptionChunkMode::SmallMkv,
+            super::AudioDescriptionChunkMode::Mp4,
+        ] {
+            let mut checkpoint = resume_checkpoint_fixture();
+            let mut chunks = resume_chunks_fixture(398);
+            checkpoint.chunk_layout = Some(super::AudioDescriptionChunkLayout::from_chunks(
+                mode, &chunks,
+            ));
+            let restored: super::AudioDescriptionPartialCheckpoint =
+                serde_json::from_slice(&serde_json::to_vec(&checkpoint).expect("serialize"))
+                    .expect("deserialize");
+            assert_eq!(restored.chunk_layout.as_ref().expect("layout").mode, mode);
+            assert_eq!(
+                restored
+                    .resume_for_chunks(&chunks)
+                    .expect("same timeline")
+                    .completed_chunks,
+                81
+            );
+            chunks[80].end_sec += 1.0;
+            assert!(
+                restored.resume_for_chunks(&chunks).is_err(),
+                "same count is insufficient"
+            );
+        }
+    }
+
     #[test]
     fn audio_description_bitrate_matches_mobile_and_preserves_legacy_default() {
         assert_eq!(super::AUDIO_DESCRIPTION_BITRATES, [64, 96, 128, 192, 256]);
@@ -8452,6 +8916,110 @@ mod tests {
 mod isolated_sapi5_description_tests {
     use super::audio_description_sapi5_retry_limit;
     use crate::settings::TtsEngine;
+
+    #[test]
+    fn empty_wav_recovery_only_changes_repeated_parallel_sapi5_failures() {
+        for attempts in [0, 1, 2] {
+            assert!(!super::empty_tts_needs_batch_recovery(
+                TtsEngine::Sapi5,
+                true,
+                attempts
+            ));
+        }
+        for attempts in [3, 694, u64::MAX] {
+            assert!(super::empty_tts_needs_batch_recovery(
+                TtsEngine::Sapi5,
+                true,
+                attempts
+            ));
+            // No limit or error for empty WAVs when already serial, including previews.
+            assert!(!super::empty_tts_needs_batch_recovery(
+                TtsEngine::Sapi5,
+                false,
+                attempts
+            ));
+            for engine in [TtsEngine::Edge, TtsEngine::Sapi4, TtsEngine::Google] {
+                assert!(!super::empty_tts_needs_batch_recovery(
+                    engine, true, attempts
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn empty_wav_batches_recover_to_serial_without_losing_successes() -> Result<(), String> {
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        let mut attempts = [0; 8];
+        let mut sizes = Vec::new();
+        let mut progress = Vec::new();
+        let (results, limit) = super::run_description_batches(
+            8,
+            TtsEngine::Sapi5,
+            8,
+            &cancel,
+            |indices| {
+                sizes.push(indices.len());
+                indices
+                    .iter()
+                    .map(|&index| {
+                        attempts[index] += 1;
+                        if index != 0
+                            && super::empty_tts_needs_batch_recovery(
+                                TtsEngine::Sapi5,
+                                indices.len() > 1,
+                                3,
+                            )
+                        {
+                            Err(super::SAPI5_EMPTY_OUTPUT_RETRY.to_string())
+                        } else {
+                            Ok(index)
+                        }
+                    })
+                    .collect()
+            },
+            |done, total| progress.push((done, total)),
+        )?;
+        assert_eq!(&sizes[..3], &[8, 4, 2]);
+        assert!(sizes[3..].iter().all(|&size| size == 1));
+        assert_eq!(results, (0..8).collect::<Vec<_>>());
+        assert_eq!(attempts[0], 1);
+        assert_eq!(limit, 1);
+        assert_eq!(progress, (1..=8).map(|n| (n, 8)).collect::<Vec<_>>());
+        Ok(())
+    }
+
+    #[test]
+    fn normal_sapi5_batch_and_empty_retry_cancellation_are_unchanged() -> Result<(), String> {
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        let mut sizes = Vec::new();
+        let (results, limit) = super::run_description_batches(
+            16,
+            TtsEngine::Sapi5,
+            8,
+            &cancel,
+            |indices| {
+                sizes.push(indices.len());
+                indices.iter().copied().map(Ok).collect()
+            },
+            |_, _| {},
+        )?;
+        assert_eq!(sizes, vec![8, 8]);
+        assert_eq!(limit, 8);
+        assert_eq!(results, (0..16).collect::<Vec<_>>());
+        cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        for parallel in [true, false] {
+            assert_eq!(
+                super::wait_for_empty_description_retry(
+                    TtsEngine::Sapi5,
+                    parallel,
+                    u64::MAX,
+                    &cancel
+                ),
+                Err("cancelled".to_string())
+            );
+        }
+        Ok(())
+    }
 
     #[test]
     fn batch_recovery_keeps_successes_and_original_order() -> Result<(), String> {

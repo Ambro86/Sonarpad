@@ -165,7 +165,7 @@ pub(crate) fn create_controls(
     y: i32,
     ids: (usize, usize),
     volume: f32,
-) -> (HWND, HWND) {
+) -> (HWND, HWND, HWND) {
     unsafe {
         let label = CreateWindowExW(
             Default::default(),
@@ -234,7 +234,7 @@ pub(crate) fn create_controls(
             SendMessageW(control, WM_SETFONT, WPARAM(font.0 as usize), LPARAM(1));
         }
         SetTimer(hwnd, TIMER_ID, 100, None);
-        (combo, stop)
+        (label, combo, stop)
     }
 }
 

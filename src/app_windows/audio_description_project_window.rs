@@ -2962,14 +2962,15 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 );
                 EnableWindow(change_voice_button, false);
                 EnableWindow(test_voice_button, false);
-                let (source_volume_combo, stop_mix_preview_button) = mix_preview::create_controls(
-                    hwnd,
-                    language,
-                    hfont,
-                    668,
-                    (ID_SOURCE_VOLUME, ID_STOP_MIX_PREVIEW),
-                    project.source_volume,
-                );
+                let (_source_volume_label, source_volume_combo, stop_mix_preview_button) =
+                    mix_preview::create_controls(
+                        hwnd,
+                        language,
+                        hfont,
+                        668,
+                        (ID_SOURCE_VOLUME, ID_STOP_MIX_PREVIEW),
+                        project.source_volume,
+                    );
                 let progress = CreateWindowExW(
                     Default::default(),
                     PROGRESS_CLASSW,

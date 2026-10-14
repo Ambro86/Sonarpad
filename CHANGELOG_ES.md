@@ -1,5 +1,23 @@
 # Changelog
 
+Versión 0.9.16 – 2026-10-14
+
+1. Corregida la ventana de creación de audiodescripción con IA: durante el proceso, el porcentaje identifica claramente el progreso, sin confundirse con el volumen de la película o la tasa de bits. Etiquetas actualizadas en los 17 idiomas.
+
+2. Convertir audio pasa a llamarse Convertir medios y se mueve de Voz a Herramientas → Multimedia, manteniendo Ctrl+Shift+A. Admite conversión de audio, extracción de audio de vídeos, MP4/AVI/MOV, vídeos creados con audio e imagen y WAV de 16/24/32 bits o 32 bits flotantes, solo con las bibliotecas FFmpeg incluidas, sin ffmpeg.exe.
+
+3. Corregidas la conversión OGG y la temporización y el entrelazado de las pistas AVI. Los archivos temporales evitan que un error o una cancelación reemplacen un destino existente. Probadas 60 conversiones con fragmentos reales de unos 30 segundos.
+
+4. La creación de audiodescripción con IA está disponible para flujos de vídeo compatibles abiertos desde Reproducir audio en streaming, aunque no se muestre el vídeo.
+
+5. Corregida la selección de formatos para descargar audiodescripciones, aceptando flujos sin datos de códec. Eliminada la preferencia por 720p que podía seleccionar un flujo mucho más lento que Guardar medios. Añadidos a los registros velocidad, tamaño, formato, tiempo transcurrido y progreso de descarga.
+
+6. Mejorada la reanudación de audiodescripciones interrumpidas, incluidos puntos de guardado antiguos y segmentos de compatibilidad. Los cambios de formato conservan los segmentos completados cuando coinciden sus límites temporales; si no, se detiene sin perder el progreso guardado. Guardado más seguro y conservación de las referencias temporales de las escenas.
+
+7. Actualizada la caché del bridge de audiodescripción de v10 a v11: se descarga de nuevo en el primer uso tras actualizar. El bridge debe recompilarse y publicarse con esta versión.
+
+---
+
 Versión 0.9.15 – 2026-10-14
 
 1. Audiodescripciones: añadida una opción para permitir descripciones durante vocalizaciones no verbales.

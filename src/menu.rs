@@ -1640,12 +1640,6 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             &labels.file_podcast,
         );
         append_menu_string(
-            voice_audio_menu,
-            MF_STRING,
-            IDM_FILE_CONVERT_AUDIO,
-            &labels.file_convert_audio,
-        );
-        append_menu_string(
             hmenu,
             MF_POPUP,
             voice_audio_menu.0 as usize,
@@ -1730,6 +1724,13 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             );
 
             let multimedia_menu = CreateMenu().unwrap_or(HMENU(0));
+            append_menu_string(
+                multimedia_menu,
+                MF_STRING,
+                IDM_FILE_CONVERT_AUDIO,
+                &labels.file_convert_audio,
+            );
+
             append_menu_string(
                 multimedia_menu,
                 MF_STRING,
@@ -1850,6 +1851,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                 &labels.menu_options,
             );
         } else {
+            append_menu_string(
+                tools_menu,
+                MF_STRING,
+                IDM_FILE_CONVERT_AUDIO,
+                &labels.file_convert_audio,
+            );
             append_menu_string(tools_menu, MF_STRING, IDM_TOOLS_PROMPT, &labels.menu_prompt);
             append_menu_string(tools_menu, MF_STRING, IDM_TOOLS_RSS, &labels.menu_rss);
             append_menu_string(
@@ -2282,7 +2289,6 @@ mod tests {
             file_audiobook,
             file_batch_audiobooks,
             file_podcast,
-            file_convert_audio,
         );
 
         if grouped_tools {
@@ -2311,6 +2317,7 @@ mod tests {
                 labels,
                 language,
                 "tools/multimedia",
+                file_convert_audio,
                 menu_podcasts,
                 menu_import_youtube,
                 menu_stream_audio,
@@ -2337,6 +2344,7 @@ mod tests {
                 labels,
                 language,
                 "tools/flat",
+                file_convert_audio,
                 menu_prompt,
                 menu_rss,
                 menu_podcasts,

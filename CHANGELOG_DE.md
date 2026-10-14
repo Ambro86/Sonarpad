@@ -1,5 +1,23 @@
 # Änderungsprotokoll
 
+Version 0.9.16 – 2026-10-14
+
+1. Das Fenster zum Erstellen von KI-Audiodeskriptionen wurde korrigiert: Während der Verarbeitung bezeichnet die Prozentangabe eindeutig den Fortschritt, nicht die Filmlautstärke oder Bitrate. Beschriftungen in allen 17 Sprachen aktualisiert.
+
+2. Audio konvertieren heißt jetzt Medien konvertieren und befindet sich unter Werkzeuge → Multimedia statt unter Stimme. Ctrl+Shift+A bleibt erhalten. Unterstützt Audiokonvertierung, Audioextraktion aus Videos, MP4/AVI/MOV, Videos aus Audio mit einem Bild sowie WAV mit 16/24/32 Bit oder 32-Bit-Gleitkomma. Verwendet ausschließlich die mitgelieferten FFmpeg-Bibliotheken, ohne ffmpeg.exe.
+
+3. OGG-Konvertierung sowie AVI-Zeitsteuerung und Verzahnung der Spuren korrigiert. Temporäre Ausgabedateien verhindern, dass Fehler oder Abbrüche vorhandene Zieldateien ersetzen. 60 Konvertierungen mit echten Ausschnitten von etwa 30 Sekunden getestet.
+
+4. KI-Audiodeskriptionen können auch für kompatible Videostreams erstellt werden, die über Streaming-Audio wiedergeben geöffnet wurden, ohne dass das Video angezeigt werden muss.
+
+5. Formatauswahl beim Herunterladen für Audiodeskriptionen korrigiert, auch bei fehlenden Codec-Angaben. Die Bevorzugung von 720p entfällt, da sie deutlich langsamere Streams als Medien speichern auswählen konnte. Protokolle enthalten Geschwindigkeit, Größe, Format, Laufzeit und Downloadfortschritt.
+
+6. Fortsetzen unterbrochener Audiodeskriptionen verbessert, auch mit älteren Zwischenständen und Kompatibilitätssegmenten. Bei Formatwechseln bleiben abgeschlossene Segmente erhalten, wenn ihre Zeitgrenzen übereinstimmen. Bei inkompatiblen Grenzen wird angehalten, ohne den Zwischenstand zu verwerfen. Sichereres Speichern und Erhalt der Szenenzeitangaben.
+
+7. Bridge-Cache für Audiodeskriptionen von v10 auf v11 erhöht: Beim ersten Einsatz nach dem Update wird die Komponente neu heruntergeladen. Die Bridge muss für diese Version neu kompiliert und veröffentlicht werden.
+
+---
+
 Version 0.9.15 – 2026-10-14
 
 1. Audiodeskription: Eine Option erlaubt nun Beschreibungen während nichtsprachlicher Lautäußerungen.

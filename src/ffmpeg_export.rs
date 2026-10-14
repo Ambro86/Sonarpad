@@ -3391,12 +3391,13 @@ fn mux_video_with_audio(
         } else {
             let vts = relative_packet_timestamp(pkt_v, video_timestamp_origin);
             let ats = relative_packet_timestamp(pkt_a, audio_timestamp_origin);
-            let v_cmp = rescale_q(vts, unsafe { (*in_v_stream).time_base }, unsafe {
-                (*out_v_stream).time_base
-            });
-            let a_cmp = rescale_q(ats, unsafe { (*in_a_stream).time_base }, unsafe {
-                (*out_a_stream).time_base
-            });
+            // Audio and video time bases can differ; compare both in microseconds.
+            let common_time_base = AVRational {
+                num: 1,
+                den: 1_000_000,
+            };
+            let v_cmp = rescale_q(vts, unsafe { (*in_v_stream).time_base }, common_time_base);
+            let a_cmp = rescale_q(ats, unsafe { (*in_a_stream).time_base }, common_time_base);
             v_cmp <= a_cmp
         };
 
@@ -4160,6 +4161,9 @@ pub enum ConvertAudioQuality {
     BitrateKbps(u32),
     OggQuality(u8),
     FlacCompression(u8),
+    WavPcm24,
+    WavPcm32,
+    WavFloat32,
     None,
 }
 
@@ -4226,7 +4230,13 @@ pub fn build_ffmpeg_args(settings: &ConvertAudioSettings) -> Vec<String> {
             _ => vec!["-c:a".to_string(), "flac".to_string()],
         },
         ConvertAudioFormat::Wav | ConvertAudioFormat::Aiff => {
-            vec!["-c:a".to_string(), "pcm_s16le".to_string()]
+            let codec = match (settings.format, settings.quality) {
+                (ConvertAudioFormat::Wav, ConvertAudioQuality::WavPcm24) => "pcm_s24le",
+                (ConvertAudioFormat::Wav, ConvertAudioQuality::WavPcm32) => "pcm_s32le",
+                (ConvertAudioFormat::Wav, ConvertAudioQuality::WavFloat32) => "pcm_f32le",
+                _ => "pcm_s16le",
+            };
+            vec!["-c:a".to_string(), codec.to_string()]
         }
     }
 }
@@ -4535,7 +4545,7 @@ fn convert_audio_file_with_stream_index(
     // libmp3lame only supports mono/stereo. Keep every existing mono/stereo
     // conversion untouched, but automatically downmix multichannel sources
     // (for example 5.1 movie audio used by Audio Description) to stereo.
-    let out_channels = encoder_output_channels(settings.format, requested_out_channels);
+    let mut out_channels = encoder_output_channels(settings.format, requested_out_channels);
     if out_channels != requested_out_channels {
         log_debug(&format!(
             "FFmpeg MP3: downmixing {} input/output channels to stereo for libmp3lame",
@@ -4590,7 +4600,13 @@ fn convert_audio_file_with_stream_index(
         ConvertAudioFormat::Opus => AVCodecID_AV_CODEC_ID_OPUS,
         ConvertAudioFormat::Ogg => AVCodecID_AV_CODEC_ID_VORBIS,
         ConvertAudioFormat::Flac => AVCodecID_AV_CODEC_ID_FLAC,
-        ConvertAudioFormat::Wav | ConvertAudioFormat::Aiff => AVCodecID_AV_CODEC_ID_PCM_S16LE,
+        ConvertAudioFormat::Wav => match settings.quality {
+            ConvertAudioQuality::WavPcm24 => AVCodecID_AV_CODEC_ID_PCM_S24LE,
+            ConvertAudioQuality::WavPcm32 => AVCodecID_AV_CODEC_ID_PCM_S32LE,
+            ConvertAudioQuality::WavFloat32 => AVCodecID_AV_CODEC_ID_PCM_F32LE,
+            _ => AVCodecID_AV_CODEC_ID_PCM_S16LE,
+        },
+        ConvertAudioFormat::Aiff => AVCodecID_AV_CODEC_ID_PCM_S16LE,
     };
 
     let out_path_c = CString::new(output_path.to_string_lossy().as_bytes())
@@ -4607,9 +4623,17 @@ fn convert_audio_file_with_stream_index(
         return Err("FFmpeg: failed to allocate output context".to_string());
     }
 
-    let codec = if matches!(settings.format, ConvertAudioFormat::Mp3) {
+    let codec = if matches!(
+        settings.format,
+        ConvertAudioFormat::Mp3 | ConvertAudioFormat::Ogg
+    ) {
+        let encoder_name = if settings.format == ConvertAudioFormat::Ogg {
+            "libvorbis"
+        } else {
+            "libmp3lame"
+        };
         let name =
-            CString::new("libmp3lame").map_err(|_| "FFmpeg: invalid encoder name".to_string())?;
+            CString::new(encoder_name).map_err(|_| "FFmpeg: invalid encoder name".to_string())?;
         let by_name = crate::ffmpeg_source::avcodec_find_encoder_by_name_safe(api, name.as_ptr());
         if by_name.is_null() {
             crate::ffmpeg_source::avcodec_find_encoder_safe(api, codec_id)
@@ -4622,6 +4646,15 @@ fn convert_audio_file_with_stream_index(
     if codec.is_null() {
         crate::ffmpeg_source::avformat_free_context_safe(api, out_ctx);
         return Err("FFmpeg: encoder not found".to_string());
+    }
+    let native_vorbis = settings.format == ConvertAudioFormat::Ogg
+        && unsafe {
+            !(*codec).name.is_null()
+                && std::ffi::CStr::from_ptr((*codec).name).to_bytes() == b"vorbis"
+        };
+    // The bundled native Vorbis encoder supports stereo and is marked experimental by FFmpeg.
+    if native_vorbis {
+        out_channels = 2;
     }
     let stream = crate::ffmpeg_source::avformat_new_stream_safe(api, out_ctx, codec);
     if stream.is_null() {
@@ -4636,13 +4669,21 @@ fn convert_audio_file_with_stream_index(
     }
 
     let preferred_fmt = match settings.format {
-        ConvertAudioFormat::Wav | ConvertAudioFormat::Aiff => {
-            Some(AVSampleFormat_AV_SAMPLE_FMT_S16)
-        }
+        ConvertAudioFormat::Wav => Some(match settings.quality {
+            ConvertAudioQuality::WavPcm24 | ConvertAudioQuality::WavPcm32 => {
+                AVSampleFormat_AV_SAMPLE_FMT_S32
+            }
+            ConvertAudioQuality::WavFloat32 => AVSampleFormat_AV_SAMPLE_FMT_FLT,
+            _ => AVSampleFormat_AV_SAMPLE_FMT_S16,
+        }),
+        ConvertAudioFormat::Aiff => Some(AVSampleFormat_AV_SAMPLE_FMT_S16),
         _ => None,
     };
     let enc_fmt = pick_encoder_sample_fmt_with_preference(codec, preferred_fmt);
     unsafe {
+        if native_vorbis {
+            (*codec_ctx).strict_std_compliance = -2;
+        }
         (*codec_ctx).sample_rate = out_sample_rate as i32;
         (*codec_ctx).sample_fmt = enc_fmt;
         (*codec_ctx).time_base = AVRational {

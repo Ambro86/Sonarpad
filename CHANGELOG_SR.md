@@ -1,5 +1,23 @@
 # Dnevnik izmena
 
+Verzija 0.9.16 – 2026-10-14
+
+1. Ispravljen prozor za izradu audio-opisa pomoću AI: procenat tokom rada jasno označava napredak audio-opisa, a ne jačinu filma ili protok. Oznake ažurirane na svih 17 jezika.
+
+2. Konvertuj audio postaje Konvertuj medije i prelazi iz menija Glas u Alatke → Multimedija, uz isti Ctrl+Shift+A. Podržava konverziju zvuka, izdvajanje zvuka iz videa, MP4/AVI/MOV, video od zvuka i slike i WAV od 16/24/32 bita ili 32-bitni float. Koristi samo uključene FFmpeg biblioteke, bez ffmpeg.exe.
+
+3. Ispravljeni OGG konverzija, vremenske oznake i preplitanje AVI zapisa. Privremene izlazne datoteke štite postojeću odredišnu datoteku pri grešci ili otkazivanju. Provereno 60 konverzija stvarnih odlomaka od približno 30 sekundi.
+
+4. Izrada audio-opisa pomoću AI dostupna je za kompatibilne video-strimove otvorene kroz reprodukciju striming zvuka, čak i bez prikazivanja videa.
+
+5. Ispravljen izbor formata za preuzimanje audio-opisa, uključujući strimove bez podataka o kodeku. Uklonjena prednost za 720p koja je mogla da izabere znatno sporiji strim nego čuvanje medija. Dnevnici beleže brzinu, veličinu, format, vreme i napredak preuzimanja.
+
+6. Poboljšan nastavak prekinutih audio-opisa, uključujući stare sačuvane tačke i segmente kompatibilnosti. Promene formata čuvaju završene segmente kada se vremenske granice podudaraju; inače se rad zaustavlja bez gubitka sačuvanog napretka. Bezbednije čuvanje i očuvanje vremenskih referenci scena.
+
+7. Keš bridge komponente za audio-opis povećan sa v10 na v11: pri prvom korišćenju posle ažuriranja komponenta se ponovo preuzima. Bridge treba ponovo kompajlirati i objaviti uz ovu verziju.
+
+---
+
 Verzija 0.9.15 – 2026-10-14
 
 1. Аудио-дескрипција: додата је опција која дозвољава описе током невербалних вокализација.

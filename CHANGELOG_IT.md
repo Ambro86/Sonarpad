@@ -1,5 +1,23 @@
 # Changelog
 
+Versione 0.9.16 – 2026-10-14
+
+1. Corretta la finestra Crea audiodescrizione con IA: durante il lavoro la percentuale indica chiaramente l’avanzamento dell’audiodescrizione, senza confondersi con bitrate e volume del film. Etichette aggiornate in tutte le 17 lingue.
+
+2. Converti audio diventa Converti media e passa da Voce a Strumenti → Multimedia, mantenendo Ctrl+Shift+A. Supporta conversione audio, estrazione dell’audio dai video, MP4/AVI/MOV, video da audio con immagine e WAV a 16/24/32 bit o 32 bit float, usando soltanto le librerie FFmpeg incluse, senza ffmpeg.exe.
+
+3. Corrette la conversione OGG e la temporizzazione e l’intercalamento delle tracce AVI. I risultati vengono salvati prima in file temporanei: errori o annullamenti non sostituiscono una destinazione esistente. Eseguite 60 conversioni di prova su spezzoni reali di circa 30 secondi.
+
+4. Reso disponibile Crea audiodescrizione con IA per gli stream video compatibili anche quando riprodotti tramite Riproduci audio da streaming, senza richiedere la visualizzazione del video.
+
+5. Corretta la selezione dei formati nel download per l’audiodescrizione, accettando anche i flussi con informazioni codec mancanti. Rimossa la preferenza per 720p che poteva scegliere un flusso molto più lento rispetto a Salva media. Aggiunti ai log velocità, dimensioni, formato, durata e avanzamento del download.
+
+6. Migliorata la ripresa delle audiodescrizioni interrotte, anche con vecchi salvataggi e segmenti preparati in modalità di compatibilità. Il cambio di formato conserva i segmenti completati quando i confini temporali coincidono; nei casi incompatibili si ferma conservando il salvataggio. Reso più sicuro il salvataggio dei progressi e mantenuti i riferimenti temporali delle scene.
+
+7. Aggiornata la cache del bridge audiodescrizioni da v10 a v11: al primo utilizzo dopo l’aggiornamento viene scaricata la nuova copia del componente, che deve essere ricompilato e pubblicato insieme alla versione.
+
+---
+
 Versione 0.9.15 – 2026-10-14
 
 1. Audiodescrizioni: aggiunta un’opzione per consentire descrizioni durante vocalizzazioni non verbali.

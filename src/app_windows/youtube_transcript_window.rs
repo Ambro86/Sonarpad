@@ -554,10 +554,39 @@ mod ytdlp_command_tests {
     }
 
     #[test]
+    fn download_diagnostics_preserve_progress_and_report_transfer_metrics() {
+        let line = "SONARPAD_PROGRESS:500:1000:NA:250.5:2:1.5:http-720:mp4:720:https:avc1:mp4a:3:6:downloading";
+        assert_eq!(super::parse_ytdlp_progress_pct(line), Some(50));
+        let diagnostic = super::ytdlp_download_diagnostics(line).expect("transfer sample");
+        for field in [
+            "downloaded_bytes=500",
+            "total_bytes=1000",
+            "speed_bytes_per_sec=250.5",
+            "eta_sec=2",
+            "format_id=http-720",
+            "height=720",
+            "fragments=6",
+        ] {
+            assert!(diagnostic.contains(field), "missing {field}");
+        }
+        assert!(super::ytdlp_download_diagnostics("unrelated output").is_none());
+        assert!(super::ytdlp_download_diagnostics("SONARPAD_PROGRESS:500:1000:NA").is_none());
+    }
+
+    #[test]
+    fn download_diagnostics_handle_unknown_totals_and_finished_status() {
+        let line = "SONARPAD_PROGRESS:500:NA:1000:NA:NA:2:mp4:mp4:NA:https:NA:NA:NA:NA:finished";
+        assert_eq!(super::parse_ytdlp_progress_pct(line), Some(50));
+        let diagnostic = super::ytdlp_download_diagnostics(line).expect("final sample");
+        assert!(diagnostic.contains("speed_bytes_per_sec=NA"));
+        assert!(diagnostic.ends_with("status=finished"));
+    }
+
+    #[test]
     fn omni_port_automatic_video_save_requests_a_muxed_audio_video_stream() {
         assert_eq!(
             configured_selector(true).as_deref(),
-            Some("best[height<=720][vcodec!=none][acodec!=none]/best[vcodec!=none][acodec!=none]")
+            Some("best[vcodec!=?none][acodec!=?none]")
         );
     }
 
@@ -6943,9 +6972,9 @@ pub(crate) fn can_create_audio_description_from_active_youtube(active_url: &str)
 }
 
 pub(crate) fn can_create_audio_description_from_active_stream(active_url: &str) -> bool {
-    !is_youtube_stream_url(active_url)
-        && active_stream_save_context_for_url(active_url)
-            .is_some_and(|context| context.prefer_video)
+    // The save preference reflects whether the playback video window is shown,
+    // not whether the source can supply video for an audio description.
+    !is_youtube_stream_url(active_url) && active_stream_save_context_for_url(active_url).is_some()
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -9691,8 +9720,57 @@ fn parse_ytdlp_progress_bytes_pct(line: &str) -> Option<u32> {
 
 fn ytdlp_download_progress_template() -> String {
     format!(
-        "download:{prefix}:%(progress.downloaded_bytes)s:%(progress.total_bytes)s:%(progress.total_bytes_estimate)s",
+        "download:{prefix}:%(progress.downloaded_bytes)s:%(progress.total_bytes)s:%(progress.total_bytes_estimate)s:%(progress.speed)s:%(progress.eta)s:%(progress.elapsed)s:%(info.format_id)s:%(info.ext)s:%(info.height)s:%(info.protocol)s:%(info.vcodec)s:%(info.acodec)s:%(progress.fragment_index)s:%(progress.fragment_count)s:%(progress.status)s",
         prefix = YTDLP_PROGRESS_TEMPLATE_PREFIX
+    )
+}
+
+fn ytdlp_download_diagnostics(line: &str) -> Option<String> {
+    let values = line
+        .strip_prefix(YTDLP_PROGRESS_TEMPLATE_PREFIX)?
+        .strip_prefix(':')?;
+    let names = [
+        "downloaded_bytes",
+        "total_bytes",
+        "estimated_total_bytes",
+        "speed_bytes_per_sec",
+        "eta_sec",
+        "elapsed_sec",
+        "format_id",
+        "extension",
+        "height",
+        "protocol",
+        "video_codec",
+        "audio_codec",
+        "fragment",
+        "fragments",
+        "status",
+    ];
+    let parts: Vec<_> = values.split(':').collect();
+    if parts.len() != names.len() {
+        return None;
+    }
+    Some(
+        names
+            .iter()
+            .zip(parts)
+            .map(|(name, value)| {
+                // Log only bounded diagnostic fields, never media URLs or credentials.
+                let value: String = value
+                    .chars()
+                    .take(80)
+                    .map(|ch| {
+                        if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-' | '+') {
+                            ch
+                        } else {
+                            '?'
+                        }
+                    })
+                    .collect();
+                format!("{name}={value}")
+            })
+            .collect::<Vec<_>>()
+            .join(" "),
     )
 }
 
@@ -9764,12 +9842,13 @@ fn configure_ytdlp_stream_download_command(
             }
             StreamOutputFormat::Auto => {
                 if prefer_video {
-                    // Prefer a single already-muxed stream. This guarantees that
-                    // the saved WebM/MP4 contains both images and sound without
-                    // requiring an external ffmpeg.exe for yt-dlp merging.
-                    cmd.arg("-f").arg(
-                        "best[height<=720][vcodec!=none][acodec!=none]/best[vcodec!=none][acodec!=none]",
-                    );
+                    // Prefer a single already-muxed stream without requiring
+                    // an external ffmpeg.exe for merging. Some extractors omit
+                    // codec metadata: accept unknown codecs, but still reject
+                    // streams explicitly marked as audio-only or video-only.
+                    // Do not prefer 720p: a lower-resolution rendition can be
+                    // served much more slowly than the best available stream.
+                    cmd.arg("-f").arg("best[vcodec!=?none][acodec!=?none]");
                 } else {
                     cmd.arg("-f").arg("bestaudio/best");
                 }
@@ -9828,8 +9907,11 @@ fn spawn_ytdlp_output_reader<R: Read + Send + 'static>(
     stderr_capture: Arc<Mutex<String>>,
     progress: Arc<AtomicU32>,
     activity: Arc<AtomicU32>,
+    download_id: String,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
+        let mut last_diagnostic_at: Option<std::time::Instant> = None;
+        let mut pending_diagnostic = None;
         for line_result in BufReader::new(pipe).lines() {
             let line = match line_result {
                 Ok(line) => line,
@@ -9838,6 +9920,18 @@ fn spawn_ytdlp_output_reader<R: Read + Send + 'static>(
                     continue;
                 }
             };
+            if let Some(diagnostic) = ytdlp_download_diagnostics(&line) {
+                if last_diagnostic_at
+                    .is_none_or(|at| at.elapsed() >= std::time::Duration::from_secs(5))
+                    || diagnostic.ends_with("status=finished")
+                {
+                    crate::log_debug(&format!("Stream download [{download_id}]: {diagnostic}"));
+                    last_diagnostic_at = Some(std::time::Instant::now());
+                    pending_diagnostic = None;
+                } else {
+                    pending_diagnostic = Some(diagnostic);
+                }
+            }
             handle_ytdlp_progress_line(
                 line,
                 ytdlp_debug,
@@ -9847,6 +9941,11 @@ fn spawn_ytdlp_output_reader<R: Read + Send + 'static>(
                 &activity,
             );
         }
+        if let Some(diagnostic) = pending_diagnostic {
+            crate::log_debug(&format!(
+                "Stream download [{download_id}] last sample: {diagnostic}"
+            ));
+        }
     })
 }
 
@@ -9854,6 +9953,11 @@ fn run_ytdlp_stream_download_attempt(
     req: YtdlpDownloadRequest<'_>,
 ) -> Result<YtdlpDownloadAttempt, String> {
     let _power_awake = crate::power_awake::acquire("download");
+    let started_at = std::time::Instant::now();
+    crate::log_debug(&format!(
+        "Stream download [{}] start: output_format={:?} quality={:?} prefer_video={}",
+        req.prefix, req.dialog_data.format, req.dialog_data.quality, req.prefer_video
+    ));
     let mut cmd = ytdlp_command(req.ytdlp_path);
     configure_ytdlp_stream_download_command(
         &mut cmd,
@@ -9921,6 +10025,7 @@ fn run_ytdlp_stream_download_attempt(
         Arc::clone(&stderr_shared),
         Arc::clone(&progress_shared),
         Arc::clone(&activity_shared),
+        req.prefix.to_string(),
     );
     let stdout_thread = spawn_ytdlp_output_reader(
         stdout_pipe,
@@ -9929,6 +10034,7 @@ fn run_ytdlp_stream_download_attempt(
         Arc::clone(&stderr_shared),
         Arc::clone(&progress_shared),
         Arc::clone(&activity_shared),
+        req.prefix.to_string(),
     );
 
     let allow_early_finalize = !matches!(
@@ -9948,6 +10054,11 @@ fn run_ytdlp_stream_download_attempt(
             Ok(Some(status)) => break Some(status),
             Ok(None) => {
                 if pump_messages_detect_stream_cancel(req.parent, req.progress) {
+                    crate::log_debug(&format!(
+                        "Stream download [{}] cancelled: wall_elapsed_sec={:.2}",
+                        req.prefix,
+                        started_at.elapsed().as_secs_f64()
+                    ));
                     close_progress_dialog(req.progress);
                     if let Err(err) = child.kill() {
                         crate::log_debug(&format!(
@@ -10033,8 +10144,23 @@ fn run_ytdlp_stream_download_attempt(
         .map(|s| s.clone())
         .unwrap_or_else(|_| String::new());
 
+    let primary_path = find_latest_downloaded_stream_file(req.cache_dir, req.prefix);
+    let file_bytes = primary_path
+        .as_ref()
+        .and_then(|path| std::fs::metadata(path).ok())
+        .map(|metadata| metadata.len());
+    let elapsed = started_at.elapsed().as_secs_f64();
+    crate::log_debug(&format!(
+        "Stream download [{}] end: exit_code={:?} stalled={} wall_elapsed_sec={:.2} file_bytes={:?} average_bytes_per_sec={:?}",
+        req.prefix,
+        status.and_then(|status| status.code()),
+        stalled,
+        elapsed,
+        file_bytes,
+        file_bytes.map(|bytes| bytes as f64 / elapsed.max(0.001))
+    ));
     Ok(YtdlpDownloadAttempt {
-        primary_path: find_latest_downloaded_stream_file(req.cache_dir, req.prefix),
+        primary_path,
         stderr_capture,
         stalled,
     })
@@ -11820,9 +11946,7 @@ pub(crate) fn download_active_streaming_video_for_audio_description(
     active_url: &str,
     language: Language,
 ) -> bool {
-    let Some(context) =
-        active_stream_save_context_for_url(active_url).filter(|context| context.prefer_video)
-    else {
+    let Some(context) = active_stream_save_context_for_url(active_url) else {
         return false;
     };
     download_stream_context_for_audio_description(

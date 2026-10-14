@@ -160,7 +160,33 @@ type AvDictSet = unsafe extern "C" fn(
 type AvDictFree = unsafe extern "C" fn(*mut *mut AVDictionary);
 type AvMallocz = unsafe extern "C" fn(libc::size_t) -> *mut libc::c_void;
 
+type SwsGetContext = unsafe extern "C" fn(
+    i32,
+    i32,
+    AVPixelFormat,
+    i32,
+    i32,
+    AVPixelFormat,
+    i32,
+    *mut libc::c_void,
+    *mut libc::c_void,
+    *const f64,
+) -> *mut libc::c_void;
+type SwsScale = unsafe extern "C" fn(
+    *mut libc::c_void,
+    *const *const u8,
+    *const i32,
+    i32,
+    i32,
+    *const *mut u8,
+    *const i32,
+) -> i32;
+type SwsFreeContext = unsafe extern "C" fn(*mut libc::c_void);
+
 pub(crate) struct FfmpegApi {
+    pub(crate) sws_get_context: SwsGetContext,
+    pub(crate) sws_scale: SwsScale,
+    pub(crate) sws_free_context: SwsFreeContext,
     _libs: Vec<Library>,
     pub(crate) avformat_network_init: AvformatNetworkInit,
     pub(crate) avformat_open_input: AvformatOpenInput,
@@ -258,6 +284,7 @@ fn load_ffmpeg_api() -> Result<FfmpegApi, String> {
     ];
 
     let mut libs = Vec::new();
+    let mut swscale_lib: Option<Library> = None;
     let mut avutil_lib: Option<Library> = None;
     let mut swresample_lib: Option<Library> = None;
     let mut avcodec_lib: Option<Library> = None;
@@ -281,6 +308,7 @@ fn load_ffmpeg_api() -> Result<FfmpegApi, String> {
             .map_err(|e| format!("FFmpeg: failed to load {}: {}", path.display(), e))?;
 
         match dll {
+            "swscale-9.dll" => swscale_lib = Some(lib),
             "avutil-60.dll" => avutil_lib = Some(lib),
             "swresample-6.dll" => swresample_lib = Some(lib),
             "avcodec-62.dll" => avcodec_lib = Some(lib),
@@ -296,6 +324,11 @@ fn load_ffmpeg_api() -> Result<FfmpegApi, String> {
     let avformat_lib =
         avformat_lib.ok_or_else(|| "FFmpeg: avformat-62.dll not loaded".to_string())?;
 
+    let swscale_lib = swscale_lib.ok_or_else(|| "FFmpeg: swscale not loaded".to_string())?;
+    let sws_get_context = load_symbol(&swscale_lib, b"sws_getContext\0")?;
+    let sws_scale = load_symbol(&swscale_lib, b"sws_scale\0")?;
+    let sws_free_context = load_symbol(&swscale_lib, b"sws_freeContext\0")?;
+    libs.push(swscale_lib);
     libs.push(avutil_lib);
     libs.push(swresample_lib);
     libs.push(avcodec_lib);
@@ -371,6 +404,9 @@ fn load_ffmpeg_api() -> Result<FfmpegApi, String> {
     let av_mallocz = load_symbol(avutil, b"av_mallocz\0")?;
 
     Ok(FfmpegApi {
+        sws_get_context,
+        sws_scale,
+        sws_free_context,
         _libs: libs,
         avformat_network_init,
         avformat_open_input,
