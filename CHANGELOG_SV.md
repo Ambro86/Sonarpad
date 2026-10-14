@@ -15,6 +15,8 @@ Version 0.9.16 – 2026-10-14
 6. Förbättrat återupptagande av avbruten syntolkning, inklusive äldre sparade lägen och kompatibilitetssegment. Formatbyten bevarar färdiga segment när tidsgränserna stämmer; annars stoppas arbetet utan att sparade framsteg förloras. Säkrare sparande och bevarade tidsreferenser till scener.
 
 7. Syntolkningsbridgens cache höjd från v10 till v11: komponenten hämtas på nytt vid första användningen efter uppdateringen. Bridgen måste byggas om och publiceras tillsammans med denna version.
+8. Radiokatalogen har förbättrats och utökats med ett rikare och mer komplett utbud.
+
 
 ---
 

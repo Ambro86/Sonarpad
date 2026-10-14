@@ -15,6 +15,8 @@ Version 0.9.16 – 2026-10-14
 6. Amélioration de la reprise des audiodescriptions interrompues, y compris avec d’anciens points de sauvegarde et des segments de compatibilité. Les segments terminés sont conservés lors d’un changement de format si les limites temporelles correspondent. Sinon, le traitement s’arrête sans perdre la sauvegarde. Sauvegarde plus sûre et conservation des repères temporels des scènes.
 
 7. Cache du bridge d’audiodescription augmenté de v10 à v11 : nouveau téléchargement à la première utilisation après la mise à jour. Le bridge doit être recompilé et publié avec cette version.
+8. Le catalogue des radios a été amélioré et élargi pour offrir un choix plus riche et plus complet.
+
 
 ---
 

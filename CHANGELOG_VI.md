@@ -15,6 +15,8 @@ Phiên bản 0.9.16 – 2026-10-14
 6. Cải thiện tiếp tục mô tả âm thanh bị gián đoạn, kể cả điểm lưu cũ và các đoạn tương thích. Khi đổi định dạng, các đoạn đã hoàn tất được giữ nếu ranh giới thời gian khớp; nếu không, quá trình dừng mà không mất tiến độ đã lưu. Lưu tiến độ an toàn hơn và giữ các mốc thời gian của cảnh.
 
 7. Nâng bộ nhớ đệm bridge mô tả âm thanh từ v10 lên v11: tải lại thành phần ở lần dùng đầu tiên sau khi cập nhật. Cần biên dịch lại và phát hành bridge cùng phiên bản này.
+8. Cải thiện và mở rộng danh mục đài radio, giúp danh mục phong phú và đầy đủ hơn.
+
 
 ---
 

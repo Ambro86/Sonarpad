@@ -15,6 +15,8 @@ Wersja 0.9.16 – 2026-10-14
 6. Usprawniono wznawianie przerwanych audiodeskrypcji, również ze starszych zapisów i segmentów zgodności. Zmiana formatu zachowuje ukończone segmenty, gdy ich granice czasowe pasują; w przeciwnym razie zatrzymuje pracę bez utraty zapisanego postępu. Bezpieczniejsze zapisywanie i zachowanie czasów scen.
 
 7. Pamięć podręczna bridge audiodeskrypcji zmieniona z v10 na v11: przy pierwszym użyciu po aktualizacji składnik zostanie pobrany ponownie. Bridge należy ponownie skompilować i opublikować z tą wersją.
+8. Ulepszono i rozszerzono katalog stacji radiowych, dzięki czemu jest bogatszy i bardziej kompletny.
+
 
 ---
 

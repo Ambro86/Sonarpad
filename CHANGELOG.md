@@ -15,6 +15,8 @@ Version 0.9.16 – 2026-10-14
 6. Improved resuming interrupted audio descriptions, including older checkpoints and compatibility-mode segments. Format changes preserve completed segments when time boundaries match; incompatible layouts stop without discarding saved progress. Made checkpoint replacement safer and preserved scene timing references.
 
 7. Updated the audio-description bridge cache from v10 to v11, causing a fresh download on first use after updating. The bridge must be rebuilt and published with this release.
+8. Improved and expanded the radio catalog, making it richer and more comprehensive.
+
 
 ---
 

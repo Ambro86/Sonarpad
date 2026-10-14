@@ -15,6 +15,8 @@ Verzija 0.9.16 – 2026-10-14
 6. Poboljšan nastavak prekinutih audio-opisa, uključujući stare sačuvane tačke i segmente kompatibilnosti. Promene formata čuvaju završene segmente kada se vremenske granice podudaraju; inače se rad zaustavlja bez gubitka sačuvanog napretka. Bezbednije čuvanje i očuvanje vremenskih referenci scena.
 
 7. Keš bridge komponente za audio-opis povećan sa v10 na v11: pri prvom korišćenju posle ažuriranja komponenta se ponovo preuzima. Bridge treba ponovo kompajlirati i objaviti uz ovu verziju.
+8. Каталог радио-станица је побољшан и проширен, чиме је постао богатији и потпунији.
+
 
 ---
 

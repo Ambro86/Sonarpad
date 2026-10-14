@@ -15,6 +15,8 @@ Version 0.9.16 – 2026-10-14
 6. Fortsetzen unterbrochener Audiodeskriptionen verbessert, auch mit älteren Zwischenständen und Kompatibilitätssegmenten. Bei Formatwechseln bleiben abgeschlossene Segmente erhalten, wenn ihre Zeitgrenzen übereinstimmen. Bei inkompatiblen Grenzen wird angehalten, ohne den Zwischenstand zu verwerfen. Sichereres Speichern und Erhalt der Szenenzeitangaben.
 
 7. Bridge-Cache für Audiodeskriptionen von v10 auf v11 erhöht: Beim ersten Einsatz nach dem Update wird die Komponente neu heruntergeladen. Die Bridge muss für diese Version neu kompiliert und veröffentlicht werden.
+8. Der Radiokatalog wurde verbessert und erweitert und bietet nun eine größere und umfassendere Auswahl.
+
 
 ---
 

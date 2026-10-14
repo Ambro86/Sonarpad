@@ -1,3 +1,8 @@
+#[path = "radio_search.rs"]
+mod radio_search;
+use radio_search::{SearchSession, SourcePage};
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use crate::accessibility::{PlayerCommand, handle_player_keyboard, to_wide};
 use crate::app_windows::{locale_display_names, scheduled_recording_window};
 use crate::i18n;
@@ -156,6 +161,9 @@ struct RadioDialogState {
     favorite_results: Vec<RadioFavorite>,
     all_results: Vec<RadioFavorite>,
     page: usize,
+    search_session: Option<SearchSession>,
+    search_id: u64,
+    search_loading: bool,
     languages: Vec<(String, String)>,
     countries: Vec<(String, String)>,
     player_return_focus: Option<RadioReturnFocus>,
@@ -163,7 +171,10 @@ struct RadioDialogState {
 
 struct RadioSearchComplete {
     language: Language,
-    result: Result<Vec<RadioFavorite>, String>,
+    session: SearchSession,
+    page: usize,
+    search_id: u64,
+    error: Option<String>,
 }
 
 struct RadioDirectoryComplete {
@@ -1705,6 +1716,9 @@ fn create_controls(hwnd: HWND, parent: HWND) {
         favorite_results: Vec::new(),
         all_results: Vec::new(),
         page: 0,
+        search_session: None,
+        search_id: 0,
+        search_loading: false,
         languages,
         countries,
         player_return_focus: None,
@@ -2696,22 +2710,50 @@ fn start_radio_search(hwnd: HWND, name_query: Option<String>) {
             return;
         }
     };
-    if with_radio_state(hwnd, show_loading_in_results).is_none() {
-        crate::log_debug("Radio: unable to show loading state because dialog state is unavailable");
-    }
+    static NEXT_SEARCH_ID: AtomicU64 = AtomicU64::new(1);
+    let search_id = NEXT_SEARCH_ID.fetch_add(1, Ordering::Relaxed);
+    with_radio_state(hwnd, |state| {
+        state.search_id = search_id;
+        state.search_loading = true;
+        state.search_session = None;
+        show_loading_in_results(state);
+    });
+    load_radio_page(
+        hwnd,
+        language,
+        search_id,
+        SearchSession::new(code, name_query, genre),
+        0,
+    );
+}
+
+fn load_radio_page(
+    hwnd: HWND,
+    language: Language,
+    search_id: u64,
+    mut session: SearchSession,
+    page: usize,
+) {
     let hwnd_value = hwnd.0;
     std::thread::spawn(move || {
-        let result = run_radio_search(&code, name_query.as_deref(), genre.as_deref());
-        let complete = Box::new(RadioSearchComplete { language, result });
+        let error = session.load_page(page).err();
+        let complete = Box::new(RadioSearchComplete {
+            language,
+            session,
+            page,
+            search_id,
+            error,
+        });
         let ptr = Box::into_raw(complete);
-        let hwnd = HWND(hwnd_value);
         if let Err(err) = crate::post_message_w_safe(
-            hwnd,
+            HWND(hwnd_value),
             WM_RADIO_SEARCH_COMPLETE,
             WPARAM(0),
             LPARAM(ptr as isize),
         ) {
-            crate::log_debug(&format!("Radio: post search complete failed: {}", err));
+            // Posting failed: ownership was never transferred to the window.
+            let _complete = unsafe { Box::from_raw(ptr) };
+            crate::log_debug(&format!("Radio: post search complete failed: {err}"));
         }
     });
 }
@@ -2741,88 +2783,51 @@ fn show_status_in_results(state: &mut RadioDialogState, text: &str) {
     focus_results_list_from_state(state);
 }
 
-fn run_radio_search(
-    code: &str,
-    name_query: Option<&str>,
-    genre: Option<&str>,
-) -> Result<Vec<RadioFavorite>, String> {
-    let keyword = name_query.unwrap_or_default().to_string();
-    let mut stations = match fetch_radio_browser_stations(code, name_query, genre) {
-        Ok(stations) => stations,
-        Err(err) => {
-            crate::log_debug(&format!(
-                "Radio Browser search failed, trying community radios only: {}",
-                err
-            ));
-            Vec::new()
-        }
-    };
-    match fetch_community_radio_stations(code, name_query, genre) {
-        Ok(mut community_stations) => stations.append(&mut community_stations),
-        Err(err) => crate::log_debug(&format!("Community radio search failed: {}", err)),
+fn finish_radio_search(hwnd: HWND, complete: RadioSearchComplete) {
+    // Ignore late results from an earlier query (or an earlier window instance).
+    let current =
+        with_radio_state(hwnd, |state| state.search_id == complete.search_id).unwrap_or(false);
+    if !current {
+        return;
     }
-    let mut results: Vec<_> = stations
-        .iter()
-        .filter(|s| keyword.is_empty() || radio_name_matches_keyword(&s.name, &keyword))
-        .map(|s| favorite_from_station(code, s))
-        .collect();
-    results.sort_by(|a, b| {
-        radio_search_rank(&a.name, &keyword)
-            .cmp(&radio_search_rank(&b.name, &keyword))
-            .then_with(|| a.name.cmp(&b.name))
+    let empty = complete.session.results.is_empty();
+    with_radio_state(hwnd, |state| {
+        state.search_loading = false;
+        state.all_results = complete.session.results.clone();
+        state.search_session = Some(complete.session);
+        state.page = complete
+            .page
+            .min(state.all_results.len().saturating_sub(1) / RADIO_RESULTS_PAGE_SIZE);
     });
-    let normalized = normalize_favorites(results);
-    if normalized.is_empty() && genre.is_some() && name_query.is_some() {
-        let mut retry_stations =
-            fetch_radio_browser_stations(code, name_query, None).unwrap_or_default();
-        if let Ok(mut community_stations) = fetch_community_radio_stations(code, name_query, None) {
-            retry_stations.append(&mut community_stations);
+    if let Some(error) = complete.error {
+        crate::log_debug(&format!("Radio search finished with error: {error}"));
+        with_radio_state(hwnd, |state| {
+            let message = i18n::tr(complete.language, "radio.search_failed");
+            show_status_in_results(state, &message);
+        });
+    } else {
+        populate_results(hwnd);
+        focus_results_list(hwnd);
+        if empty {
+            message(
+                hwnd,
+                "Radio",
+                &tr(
+                    complete.language,
+                    "radio.none_found",
+                    "Nessuna radio trovata.",
+                ),
+            );
         }
-        let retry_results = retry_stations
-            .iter()
-            .filter(|station| {
-                keyword.is_empty() || radio_name_matches_keyword(&station.name, &keyword)
-            })
-            .map(|station| favorite_from_station(code, station))
-            .collect::<Vec<_>>();
-        return Ok(normalize_favorites(retry_results));
     }
-    Ok(normalized)
 }
 
-fn finish_radio_search(hwnd: HWND, complete: RadioSearchComplete) {
-    match complete.result {
-        Ok(results) => {
-            let empty = results.is_empty();
-            with_radio_state(hwnd, |state| {
-                state.all_results = results;
-                state.page = 0;
-            });
-            populate_results(hwnd);
-            focus_results_list(hwnd);
-            if empty {
-                message(
-                    hwnd,
-                    "Radio",
-                    &tr(
-                        complete.language,
-                        "radio.none_found",
-                        "Nessuna radio trovata.",
-                    ),
-                );
-            }
-        }
-        Err(error) => {
-            crate::log_debug(&format!(
-                "Radio Browser search finished with error: {}",
-                error
-            ));
-            with_radio_state(hwnd, |state| {
-                let message = i18n::tr(complete.language, "radio.search_failed");
-                show_status_in_results(state, &message);
-            });
-        }
-    }
+fn has_next_page(state: &RadioDialogState) -> bool {
+    (state.page + 1) * RADIO_RESULTS_PAGE_SIZE < state.all_results.len()
+        || state
+            .search_session
+            .as_ref()
+            .is_some_and(SearchSession::has_more)
 }
 
 fn focus_results_list_from_state(state: &RadioDialogState) {
@@ -2877,7 +2882,7 @@ fn populate_results(hwnd: HWND) {
                 LPARAM(w.as_ptr() as isize),
             );
         }
-        if state.page + 1 < total_pages {
+        if has_next_page(state) {
             let next = tr(state.language, "radio.next", "Successivi");
             let w = to_wide(&next);
             crate::send_message_w_safe(
@@ -2896,9 +2901,18 @@ fn populate_results(hwnd: HWND) {
                 LPARAM(0),
             );
         }
+        let page_key = if state
+            .search_session
+            .as_ref()
+            .is_some_and(SearchSession::has_more)
+        {
+            "radio.page_loading_total"
+        } else {
+            "radio.page"
+        };
         let page = i18n::tr_f(
             state.language,
-            "radio.page",
+            page_key,
             &[
                 ("current", &(state.page + 1).to_string()),
                 ("total", &total_pages.to_string()),
@@ -2918,18 +2932,35 @@ fn populate_results(hwnd: HWND) {
 }
 
 fn change_page(hwnd: HWND, delta: isize) {
-    let should_populate = with_radio_state(hwnd, |state| {
-        let total_pages = state
-            .all_results
-            .len()
-            .div_ceil(RADIO_RESULTS_PAGE_SIZE)
-            .max(1);
-        state.page =
-            (state.page as isize + delta).clamp(0, total_pages.saturating_sub(1) as isize) as usize;
-        true
+    let request = with_radio_state(hwnd, |state| {
+        if state.search_loading {
+            return None;
+        }
+        let page = state.page.saturating_add_signed(delta);
+        if delta > 0 && !has_next_page(state) {
+            return None;
+        }
+        let needs_more = (page + 1) * RADIO_RESULTS_PAGE_SIZE >= state.all_results.len()
+            && state
+                .search_session
+                .as_ref()
+                .is_some_and(SearchSession::has_more);
+        if needs_more && let Some(session) = state.search_session.take() {
+            state.search_loading = true;
+            let text = to_wide(&i18n::tr(state.language, "radio.loading"));
+            crate::log_if_err!(crate::set_window_text_w_safe(
+                state.label_page,
+                PCWSTR(text.as_ptr())
+            ));
+            return Some((state.language, state.search_id, session, page));
+        }
+        state.page = page.min(state.all_results.len().saturating_sub(1) / RADIO_RESULTS_PAGE_SIZE);
+        None
     })
-    .unwrap_or(false);
-    if should_populate {
+    .flatten();
+    if let Some((language, search_id, session, page)) = request {
+        load_radio_page(hwnd, language, search_id, session, page);
+    } else if with_radio_state(hwnd, |state| !state.search_loading).unwrap_or(false) {
         populate_results(hwnd);
     }
 }
@@ -3038,6 +3069,9 @@ enum RadioListAction {
 }
 
 fn selected_list_action_from_state(state: &mut RadioDialogState) -> Option<RadioListAction> {
+    if state.search_loading {
+        return None;
+    }
     let sel = crate::send_message_w_safe(state.list_results, LB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
     if sel < 0 {
         return None;
@@ -3060,12 +3094,7 @@ fn selected_list_action_from_state(state: &mut RadioDialogState) -> Option<Radio
             .cloned()
             .map(RadioListAction::Open);
     }
-    let total_pages = state
-        .all_results
-        .len()
-        .div_ceil(RADIO_RESULTS_PAGE_SIZE)
-        .max(1);
-    if radio_row == end.saturating_sub(start) && state.page + 1 < total_pages {
+    if radio_row == end.saturating_sub(start) && has_next_page(state) {
         Some(RadioListAction::NextPage)
     } else {
         None
@@ -3535,7 +3564,8 @@ fn fetch_radio_browser_stations(
     language_code: &str,
     name_query: Option<&str>,
     genre: Option<&str>,
-) -> Result<Vec<RadioStation>, String> {
+    page: usize,
+) -> Result<SourcePage, String> {
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(5))
         .user_agent("Sonarpad/1.0 (https://sonarpad.com)")
@@ -3551,6 +3581,7 @@ fn fetch_radio_browser_stations(
             query.append_pair("order", "votes");
             query.append_pair("reverse", "true");
             query.append_pair("limit", RADIO_BROWSER_LIMIT);
+            query.append_pair("offset", &(page * 100).to_string());
             let global_search = name_query
                 .map(str::trim)
                 .is_some_and(|name| !name.is_empty());
@@ -3581,6 +3612,7 @@ fn fetch_radio_browser_stations(
             .and_then(|r| r.json::<Vec<RadioBrowserStation>>())
         {
             Ok(v) => {
+                let has_more = v.len() >= 100;
                 let mut seen = HashSet::new();
                 let stations = v
                     .into_iter()
@@ -3607,7 +3639,15 @@ fn fetch_radio_browser_stations(
                         })
                     })
                     .collect();
-                return Ok(normalize_radio_stations(stations));
+                let stations = normalize_radio_stations(stations)
+                    .into_iter()
+                    .filter(|station| {
+                        name_query.is_none_or(|keyword| {
+                            keyword.is_empty() || radio_name_matches_keyword(&station.name, keyword)
+                        })
+                    })
+                    .collect();
+                return Ok(SourcePage { stations, has_more });
             }
             Err(e) => {
                 crate::log_debug(&format!(

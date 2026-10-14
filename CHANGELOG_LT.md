@@ -15,6 +15,8 @@ Versija 0.9.16 – 2026-10-14
 6. Pagerintas nutrūkusio garsinio vaizdavimo tęsimas iš senesnių įrašų ir suderinamumo segmentų. Keičiant formatą baigti segmentai išsaugomi, kai sutampa laiko ribos; kitu atveju darbas sustabdomas neprarandant išsaugotos eigos. Saugesnis įrašymas ir išlaikytos scenų laiko nuorodos.
 
 7. Garsinio vaizdavimo bridge talpykla pakeista iš v10 į v11: pirmą kartą naudojant po atnaujinimo komponentas atsisiunčiamas iš naujo. Bridge reikia iš naujo sukompiliuoti ir paskelbti kartu su šia versija.
+8. Patobulintas ir išplėstas radijo stočių katalogas, kad pasirinkimas būtų gausesnis ir išsamesnis.
+
 
 ---
 

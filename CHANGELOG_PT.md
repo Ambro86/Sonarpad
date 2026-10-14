@@ -15,6 +15,8 @@ Versão 0.9.16 – 2026-10-14
 6. Melhorada a retoma de audiodescrições interrompidas, incluindo pontos de gravação antigos e segmentos de compatibilidade. As mudanças de formato preservam os segmentos concluídos quando os limites temporais coincidem; caso contrário, o processo para sem perder o progresso guardado. Gravação mais segura e preservação dos tempos das cenas.
 
 7. Cache do bridge de audiodescrição atualizada de v10 para v11: novo descarregamento na primeira utilização após atualizar. O bridge deve ser recompilado e publicado com esta versão.
+8. Melhorado e alargado o catálogo de rádios, tornando-o mais rico e completo.
+
 
 ---
 

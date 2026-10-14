@@ -15,6 +15,8 @@ Verze 0.9.16 – 2026-10-14
 6. Vylepšeno pokračování přerušeného audiopopisu, včetně starších uložených stavů a kompatibilních segmentů. Změna formátu zachová dokončené segmenty, pokud souhlasí časové hranice; jinak se zpracování zastaví bez ztráty uloženého postupu. Bezpečnější ukládání a zachování časových údajů scén.
 
 7. Mezipaměť bridge pro audiopopis zvýšena z v10 na v11: při prvním použití po aktualizaci se komponenta znovu stáhne. Bridge je nutné znovu sestavit a zveřejnit s touto verzí.
+8. Vylepšen a rozšířen katalog rádií, který je nyní bohatší a úplnější.
+
 
 ---
 
