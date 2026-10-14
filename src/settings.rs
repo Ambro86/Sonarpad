@@ -739,7 +739,7 @@ pub struct AppSettings {
     pub word_wrap: bool,
     #[serde(default = "default_true")]
     pub group_tools_menu_by_category: bool,
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub show_video_during_playback: bool,
     #[serde(default)]
     pub dark_mode: bool,
@@ -1305,7 +1305,7 @@ impl Default for AppSettings {
             split_on_newline: false,
             word_wrap: true,
             group_tools_menu_by_category: true,
-            show_video_during_playback: true,
+            show_video_during_playback: false,
             dark_mode: false,
             wrap_width: 80,
             smart_quotes: false,
