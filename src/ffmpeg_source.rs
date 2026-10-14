@@ -6,7 +6,7 @@ use libloading::os::windows::{
 };
 use rodio::Source;
 use std::ffi::{CStr, CString};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -260,18 +260,29 @@ fn load_symbol<T: Copy>(lib: &Library, name: &[u8]) -> Result<T, String> {
     })
 }
 
-fn load_ffmpeg_api() -> Result<FfmpegApi, String> {
-    let deps_dir = settings_dir();
+fn ffmpeg_runtime_root(configured_root: Option<&Path>) -> Option<PathBuf> {
+    // FFMPEG_DIR is the installation prefix also used by build.rs. In CI its
+    // location depends on the checkout, so fixed developer paths are insufficient.
+    if let Some(bin) = configured_root.map(|root| root.join("bin"))
+        && bin.is_dir()
+    {
+        return Some(bin);
+    }
     let vcpkg_local = Path::new(r"C:\rustnotepad\rustnotepad\vcpkg_installed\x64-windows\bin");
     let vcpkg_ci = Path::new(r"C:\vcpkg\installed\x64-windows\bin");
-
-    let ffmpeg_root = if vcpkg_local.exists() {
-        Some(vcpkg_local)
+    if vcpkg_local.exists() {
+        Some(vcpkg_local.to_path_buf())
     } else if vcpkg_ci.exists() {
-        Some(vcpkg_ci)
+        Some(vcpkg_ci.to_path_buf())
     } else {
         None
-    };
+    }
+}
+
+fn load_ffmpeg_api() -> Result<FfmpegApi, String> {
+    let deps_dir = settings_dir();
+    let configured_root = std::env::var_os("FFMPEG_DIR").filter(|value| !value.is_empty());
+    let ffmpeg_root = ffmpeg_runtime_root(configured_root.as_deref().map(Path::new));
 
     let ffmpeg_dlls = [
         "avutil-60.dll",
@@ -293,7 +304,7 @@ fn load_ffmpeg_api() -> Result<FfmpegApi, String> {
 
     for dll in ffmpeg_dlls {
         let mut path = deps_dir.join(dll);
-        if let Some(root) = ffmpeg_root {
+        if let Some(root) = &ffmpeg_root {
             let p = root.join(dll);
             if p.exists() {
                 path = p;
@@ -1922,5 +1933,27 @@ mod corrupt_packet_guard_tests {
         // A successful packet does not reset either of the safety budgets.
         assert!(ffmpeg_corruption_budget_exceeded(96, 100));
         assert!(ffmpeg_corruption_budget_exceeded(2, 128));
+    }
+}
+
+#[cfg(test)]
+mod runtime_directory_tests {
+    use super::ffmpeg_runtime_root;
+
+    #[test]
+    fn configured_ffmpeg_prefix_takes_priority_and_missing_prefix_keeps_fallback()
+    -> std::io::Result<()> {
+        let root =
+            std::env::temp_dir().join(format!("sonarpad-ffmpeg-runtime-{}", std::process::id()));
+        let bin = root.join("bin");
+        std::fs::create_dir_all(&bin)?;
+        assert_eq!(ffmpeg_runtime_root(Some(&root)), Some(bin.clone()));
+        assert_eq!(
+            ffmpeg_runtime_root(Some(&root.join("missing"))),
+            ffmpeg_runtime_root(None)
+        );
+        std::fs::remove_dir(bin)?;
+        std::fs::remove_dir(root)?;
+        Ok(())
     }
 }
