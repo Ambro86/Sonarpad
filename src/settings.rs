@@ -870,11 +870,19 @@ pub struct AppSettings {
     #[serde(default)]
     pub audio_description_tts_rate: Option<i32>,
     #[serde(default)]
+    pub audio_description_tts_pitch: Option<i32>,
+    #[serde(default)]
     pub audio_description_tts_volume: Option<i32>,
+    #[serde(default = "crate::audio_description::default_source_volume")]
+    pub audio_description_source_volume: f32,
+    #[serde(default = "crate::audio_description::default_audio_description_bitrate")]
+    pub audio_description_bitrate_kbps: u32,
     #[serde(default = "default_audio_description_verbosity")]
     pub audio_description_verbosity: u8,
     #[serde(default)]
     pub audio_description_extended_pauses: bool,
+    #[serde(default)]
+    pub audio_description_allow_nonverbal_vocals: bool,
     #[serde(default = "default_true")]
     pub audio_description_recognize_characters: bool,
     #[serde(default = "default_true")]
@@ -1375,9 +1383,14 @@ impl Default for AppSettings {
             audio_description_tts_engine: TtsEngine::Edge,
             audio_description_tts_voice: String::new(),
             audio_description_tts_rate: None,
+            audio_description_tts_pitch: None,
             audio_description_tts_volume: None,
+            audio_description_source_volume: 1.0,
+            audio_description_bitrate_kbps:
+                crate::audio_description::default_audio_description_bitrate(),
             audio_description_verbosity: default_audio_description_verbosity(),
             audio_description_extended_pauses: false,
+            audio_description_allow_nonverbal_vocals: false,
             audio_description_recognize_characters: true,
             audio_description_recognize_screen_text: true,
             audio_description_keep_character_catalog: false,
@@ -2605,6 +2618,17 @@ fn normalize_settings(mut settings: AppSettings) -> AppSettings {
     settings.audio_description_tts_rate = settings
         .audio_description_tts_rate
         .map(|value| value.clamp(-100, 100));
+    settings.audio_description_tts_pitch = settings.audio_description_tts_pitch.map(|pitch| {
+        if settings.audio_description_tts_engine == TtsEngine::Google {
+            crate::google_tts::normalize_google_pitch_internal(pitch)
+        } else {
+            pitch.clamp(-12, 12)
+        }
+    });
+    settings.audio_description_bitrate_kbps =
+        crate::audio_description::normalize_audio_description_bitrate(
+            settings.audio_description_bitrate_kbps,
+        );
     settings.audio_description_tts_volume = settings
         .audio_description_tts_volume
         .map(|value| value.clamp(25, 200));

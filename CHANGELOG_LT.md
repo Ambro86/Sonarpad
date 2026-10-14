@@ -1,5 +1,17 @@
 # Pakeitimų žurnalas
 
+Versija 0.9.15 – 2026-10-14
+
+1. Garsinis vaizdavimas: pridėta parinktis leisti aprašymus neverbalinių vokalizacijų metu.
+
+2. Pataisytas valdymas klaviatūra lange Parinktys → Garsas: Tab perjungia valdiklius, o Esc tinkamai uždaro langą, taip pat naudojant išjungimo laikmatį.
+
+3. Kuriant garsinį vaizdavimą ir redaguojant jo projektą galima reguliuoti filmo garsumą. Automatinėje perklausoje filmas ir pasirinktas balsas atkuriami su tokiu pačiu automatiniu filmo garso pritildymu (ducking) kaip galutiniame eksporte.
+
+4. Garsinio vaizdavimo balso nustatymuose pridėtas balso aukščio pasirinkimas. Pasirinktas aukštis įsimenamas ir išsaugomas projektuose.
+
+---
+
 Versija 0.9.14 – 2026-10-12
 
 Edge balsai, garsinės knygos ir garsinis vaizdavimas

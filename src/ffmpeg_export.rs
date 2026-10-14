@@ -101,6 +101,7 @@ pub struct AudioDescriptionMixCue {
 
 #[derive(Clone)]
 pub struct AudioDescriptionExportOptions {
+    pub source_volume: f32,
     pub ducking_db: f32,
     pub fade_ms: u32,
     pub bitrate_kbps: u32,
@@ -2070,9 +2071,10 @@ fn audio_description_duck_gain(
 fn mix_audio_description_sample(
     original_sample: f32,
     film_gain: f32,
+    source_volume: f32,
     narration_sample: f32,
 ) -> f32 {
-    (original_sample * film_gain + narration_sample).clamp(-1.0, 1.0)
+    (original_sample * source_volume * film_gain + narration_sample).clamp(-1.0, 1.0)
 }
 
 fn audio_description_wav_padding_samples(samples_written: u64, channels: u16) -> u16 {
@@ -2390,7 +2392,7 @@ fn export_audio_description_mp3_silent_source(
                 }
             });
 
-            let mixed = mix_audio_description_sample(0.0, 1.0, narration_sample);
+            let mixed = mix_audio_description_sample(0.0, 1.0, 1.0, narration_sample);
             writer
                 .write_sample((mixed * i16::MAX as f32).round() as i16)
                 .map_err(|error| format!("Audio description: staging WAV write failed: {error}"))?;
@@ -2537,6 +2539,7 @@ fn export_audio_description_mp3_attempt(
         .filter(|cue| cue.extended_pause)
         .cloned()
         .collect();
+    let source_volume = crate::audio_description::normalize_source_volume(options.source_volume);
     let duck_gain = 10_f32.powf(options.ducking_db.min(0.0) / 20.0);
     let attack_frames = (sample_rate as u64)
         .saturating_mul(options.fade_ms as u64)
@@ -2670,8 +2673,12 @@ fn export_audio_description_mp3_attempt(
                     duck_gain,
                 );
             }
-            let mixed =
-                mix_audio_description_sample(original_sample, current_film_gain, narration_sample);
+            let mixed = mix_audio_description_sample(
+                original_sample,
+                current_film_gain,
+                source_volume,
+                narration_sample,
+            );
             writer
                 .write_sample((mixed * i16::MAX as f32).round() as i16)
                 .map_err(|error| format!("Audio description: staging WAV write failed: {error}"))?;
@@ -2764,6 +2771,38 @@ mod audio_description_export_tests {
     };
 
     #[test]
+    fn source_volume_changes_only_movie_and_preserves_ducking_envelope() {
+        let intervals = [(100, 200)];
+        for volume in [0.0_f32, 0.05, 0.5, 1.0, 2.0] {
+            let mut cursor = 0;
+            for frame in 0..300 {
+                let gain =
+                    audio_description_duck_gain(frame, &intervals, &mut cursor, 25, 10, 50, 0.25);
+                let voice = if (100..200).contains(&frame) {
+                    0.3
+                } else {
+                    0.0
+                };
+                let mixed = mix_audio_description_sample(0.2, gain, volume, voice);
+                assert!((mixed - (0.2 * volume * gain + voice)).abs() < 0.00001);
+                if volume == 0.0 {
+                    assert_eq!(mixed, voice);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn source_volume_boost_is_applied_once_before_final_clipping() {
+        // 200% movie with -12 dB ducking leaves the selected voice level intact.
+        let ducking = 10_f32.powf(-12.0 / 20.0);
+        let sample = mix_audio_description_sample(0.8, ducking, 2.0, 0.25);
+        assert!((sample - (1.6 * ducking + 0.25)).abs() < 0.00001);
+        assert_eq!(mix_audio_description_sample(0.8, 1.0, 2.0, 0.25), 1.0);
+        assert_eq!(mix_audio_description_sample(-0.8, 1.0, 2.0, -0.25), -1.0);
+    }
+
+    #[test]
     fn merges_touching_duck_intervals() {
         assert_eq!(
             merge_audio_description_intervals(vec![(20, 30), (5, 10), (10, 15)], 0),
@@ -2803,7 +2842,7 @@ mod audio_description_export_tests {
                 } else {
                     0.0
                 };
-                mix_audio_description_sample(*sample, gain, narration)
+                mix_audio_description_sample(*sample, gain, 1.0, narration)
             })
             .collect();
 

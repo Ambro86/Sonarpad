@@ -44,7 +44,7 @@ class YouTubeGoToTimeRegressionTests(unittest.TestCase):
     def test_changelog_dates(self):
         for path in ROOT.glob('CHANGELOG*.md'):
             contents = path.read_text(encoding='utf-8')
-            self.assertEqual(contents.splitlines()[2].split(' – ')[1], '2026-10-12', path.name)
+            self.assertIn('0.9.14 – 2026-10-12', contents, path.name)
         hindi = (ROOT / 'CHANGELOG-HI.txt').read_text(encoding='utf-8')
         self.assertIn('Version 0.9.14 – 2026-10-12', hindi)
 

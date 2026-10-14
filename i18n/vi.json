@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "Tệp nguồn và tệp đích không được trùng nhau.",
   "audio_description.error.voice": "Chọn một giọng tổng hợp.",
   "audio_description.extended": "Bật khoảng dừng mở rộng: tạm dừng phim trong trường hợp đặc biệt khi phần mô tả không vừa khoảng lặng",
+  "audio_description.allow_nonverbal_vocals": "Cho phép mô tả khi có âm thanh giọng nói phi ngôn ngữ",
   "audio_description.gemini_api_key": "Khóa API Gemini:",
   "audio_description.show_api_key": "Hiển thị khóa API",
   "audio_description.gemini_error_models": "Không thể tải các mô hình Gemini: {error}",
@@ -2175,5 +2176,12 @@
   "app.pdf_japanese_ocr_install_progress": "Đang cài đặt OCR tiếng Nhật. Vui lòng đợi.",
   "app.pdf_japanese_ocr_install_success": "Đã cài OCR tiếng Nhật. Mở lại PDF trong Sonarpad. Có thể cần khởi động lại Windows.",
   "app.pdf_japanese_ocr_install_restart": "Đã cài OCR tiếng Nhật, nhưng phải khởi động lại Windows. Khởi động lại rồi mở PDF.",
-  "app.pdf_japanese_ocr_install_error": "Windows không thể hoàn tất cài đặt OCR tiếng Nhật. Hãy kiểm tra các tính năng tùy chọn."
+  "app.pdf_japanese_ocr_install_error": "Windows không thể hoàn tất cài đặt OCR tiếng Nhật. Hãy kiểm tra các tính năng tùy chọn.",
+  "audio_description.source_volume": "Movie volume",
+  "audio_description.mix_preview.preparing": "Preparing audio sample",
+  "audio_description.mix_preview.stop": "Stop audio sample",
+  "audio_description.mix_preview.phrase": "Audio description test with ducking.",
+  "audio_description.mix_preview.playing": "Listen to a movie and voice sample",
+  "audio_description.mix_preview.error": "Không thể phát bản xem trước của mô tả",
+  "audio_description.bitrate": "MP3 bitrate"
 }

@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "Källfilen och målfilen får inte vara samma.",
   "audio_description.error.voice": "Välj en talsyntesröst.",
   "audio_description.extended": "Aktivera förlängda pauser: pausa filmen i undantagsfall när beskrivningen inte ryms i en tystnad",
+  "audio_description.allow_nonverbal_vocals": "Tillåt beskrivningar under icke-verbala röstljud",
   "audio_description.gemini_api_key": "Gemini API-nyckel:",
   "audio_description.show_api_key": "Visa API-nyckel",
   "audio_description.gemini_error_models": "Kunde inte läsa in Gemini-modeller: {error}",
@@ -2175,5 +2176,12 @@
   "app.pdf_japanese_ocr_install_progress": "Japansk OCR installeras. Vänta.",
   "app.pdf_japanese_ocr_install_success": "Japansk OCR är installerad. Öppna PDF-filen igen i Sonarpad. En omstart kan behövas.",
   "app.pdf_japanese_ocr_install_restart": "Japansk OCR är installerad men Windows behöver startas om. Starta om och öppna PDF-filen igen.",
-  "app.pdf_japanese_ocr_install_error": "Windows kunde inte slutföra installationen av japansk OCR. Kontrollera valfria funktioner."
+  "app.pdf_japanese_ocr_install_error": "Windows kunde inte slutföra installationen av japansk OCR. Kontrollera valfria funktioner.",
+  "audio_description.source_volume": "Movie volume",
+  "audio_description.mix_preview.preparing": "Preparing audio sample",
+  "audio_description.mix_preview.stop": "Stop audio sample",
+  "audio_description.mix_preview.phrase": "Audio description test with ducking.",
+  "audio_description.mix_preview.playing": "Listen to a movie and voice sample",
+  "audio_description.mix_preview.error": "Det gick inte att spela upp beskrivningen",
+  "audio_description.bitrate": "MP3 bitrate"
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+Versão 0.9.15 – 2026-10-14
+
+1. Audiodescrição: adicionada uma opção para permitir descrições durante vocalizações não verbais.
+
+2. Corrigida a navegação pelo teclado em Opções → Áudio: Tab percorre os controles e Esc fecha a janela corretamente, inclusive ao usar o temporizador de desligamento.
+
+3. Adicionado o ajuste do volume do filme em Criar audiodescrição e Editar projeto de audiodescrição, com uma prévia automática do filme e da voz escolhida que utiliza a mesma redução automática do áudio (ducking) da exportação final.
+
+4. Adicionado um seletor de tom nos ajustes de voz das audiodescrições. O tom escolhido é lembrado e salvo nos projetos.
+
+---
+
 Versão 0.9.14 – 2026-10-12
 
 Vozes do Edge, audiolivros e audiodescrição

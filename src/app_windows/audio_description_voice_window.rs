@@ -27,6 +27,7 @@ const ID_VOICE: i32 = 1202;
 const ID_RATE: i32 = 1203;
 const ID_VOLUME: i32 = 1204;
 const ID_TEST: i32 = 1205;
+const ID_PITCH: i32 = 1208;
 const ID_OK: i32 = 1;
 const ID_CANCEL: i32 = 2;
 
@@ -58,6 +59,7 @@ pub struct AudioDescriptionVoiceSettings {
     pub engine: TtsEngine,
     pub voice: String,
     pub rate: i32,
+    pub pitch: i32,
     pub volume: i32,
 }
 
@@ -66,7 +68,7 @@ struct DialogData {
     main_parent: HWND,
     sources: AudioDescriptionVoiceSources,
     default: AudioDescriptionVoiceSettings,
-    preview_pitch: i32,
+    pitch_engine: TtsEngine,
     voice_languages: Vec<String>,
     result: Option<AudioDescriptionVoiceSettings>,
 }
@@ -298,6 +300,72 @@ pub(crate) fn volume_items(language: Language) -> Vec<(String, i32)> {
     ]
 }
 
+fn convert_pitch_engine(value: i32, from: TtsEngine, to: TtsEngine) -> i32 {
+    if from == to {
+        return value;
+    }
+    if to == TtsEngine::Google {
+        return crate::google_tts::normalize_google_pitch_internal(value);
+    }
+    if from == TtsEngine::Google {
+        return ((crate::google_tts::google_pitch_percent_from_internal(value) as f32 * 24.0
+            / 100.0)
+            - 12.0)
+            .round() as i32;
+    }
+    value.clamp(-12, 12)
+}
+
+fn fill_pitch_combo(hwnd: HWND, language: Language, engine: TtsEngine, pitch: i32) {
+    let presets = [
+        ("very_low", -12),
+        ("low", -10),
+        ("a_bit_low", -7),
+        ("slightly_low", -5),
+        ("a_little_lower", -2),
+        ("normal", 0),
+        ("a_little_higher", 2),
+        ("slightly_high", 5),
+        ("a_bit_high", 7),
+        ("high", 9),
+        ("very_high", 12),
+    ];
+    let mut values: Vec<_> = presets
+        .into_iter()
+        .map(|(label, value)| {
+            (
+                i18n::tr(language, &format!("tts_tuning.pitch.{label}")),
+                if engine == TtsEngine::Google {
+                    crate::google_tts::google_pitch_preset_internal(value)
+                } else {
+                    value
+                },
+            )
+        })
+        .collect();
+    let selected = if engine == TtsEngine::Google {
+        crate::google_tts::normalize_google_pitch_internal(pitch)
+    } else {
+        pitch.clamp(-12, 12)
+    };
+    // Opening and confirming the dialog must preserve an existing custom pitch.
+    if !values.iter().any(|(_, value)| *value == selected) {
+        let display = if engine == TtsEngine::Google {
+            crate::google_tts::google_pitch_percent_from_internal(selected)
+        } else {
+            selected
+        };
+        values.push((
+            format!(
+                "{} ({display})",
+                i18n::tr(language, "tts_tuning.label_pitch")
+            ),
+            selected,
+        ));
+    }
+    fill_value_combo(unsafe { GetDlgItem(hwnd, ID_PITCH) }, &values, selected);
+}
+
 fn fill_value_combo(combo: HWND, values: &[(String, i32)], selected: i32) {
     unsafe { SendMessageW(combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0)) };
     let mut selected_index = 0usize;
@@ -322,9 +390,9 @@ fn selected_value(combo: HWND, fallback: i32) -> i32 {
     if selected < 0 {
         return fallback;
     }
-    let data =
-        unsafe { SendMessageW(combo, CB_GETITEMDATA, WPARAM(selected as usize), LPARAM(0)).0 };
-    if data == -1 { fallback } else { data as i32 }
+    // The selected item is valid; -1 is also a legitimate custom pitch, even
+    // though it shares the numeric value of CB_ERR.
+    unsafe { SendMessageW(combo, CB_GETITEMDATA, WPARAM(selected as usize), LPARAM(0)).0 as i32 }
 }
 
 pub(crate) fn preview_voice_settings(
@@ -465,7 +533,7 @@ fn preview_voice(hwnd: HWND) {
         engine,
         voice,
         rate,
-        data.preview_pitch,
+        selected_value(unsafe { GetDlgItem(hwnd, ID_PITCH) }, data.default.pitch),
         volume,
     );
 }
@@ -562,6 +630,9 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 create_label(i18n::tr(language, "tts_tuning.label_speed"), y);
                 create_combo(ID_RATE, y);
                 y += 38;
+                create_label(i18n::tr(language, "tts_tuning.label_pitch"), y);
+                create_combo(ID_PITCH, y);
+                y += 38;
                 create_label(i18n::tr(language, "tts_tuning.label_volume"), y);
                 create_combo(ID_VOLUME, y);
                 y += 42;
@@ -620,6 +691,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     &rate_items(language),
                     data.default.rate,
                 );
+                fill_pitch_combo(hwnd, language, data.default.engine, data.default.pitch);
                 fill_value_combo(
                     GetDlgItem(hwnd, ID_VOLUME),
                     &volume_items(language),
@@ -632,12 +704,30 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 let id = (wparam.0 & 0xffff) as i32;
                 let notification = ((wparam.0 >> 16) & 0xffff) as u16;
                 if id == ID_ENGINE && notification as u32 == CBN_SELCHANGE {
+                    let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut DialogData;
+                    if !pointer.is_null() {
+                        let data = &mut *pointer;
+                        let engine = selected_engine(hwnd);
+                        let current =
+                            selected_value(GetDlgItem(hwnd, ID_PITCH), data.default.pitch);
+                        let pitch = convert_pitch_engine(current, data.pitch_engine, engine);
+                        data.pitch_engine = engine;
+                        fill_pitch_combo(hwnd, data.language, engine, pitch);
+                        crate::tts_engine::stop_tts_playback(data.main_parent);
+                    }
                     fill_voice_combo(hwnd, "");
                     return LRESULT(0);
                 }
                 if id == ID_LANGUAGE && notification as u32 == CBN_SELCHANGE {
                     let preferred = selected_voice(hwnd);
                     fill_voice_combo(hwnd, &preferred);
+                    return LRESULT(0);
+                }
+                if id == ID_PITCH && notification as u32 == CBN_SELCHANGE {
+                    let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut DialogData;
+                    if !pointer.is_null() {
+                        crate::tts_engine::stop_tts_playback((*pointer).main_parent);
+                    }
                     return LRESULT(0);
                 }
                 if id == ID_TEST {
@@ -654,6 +744,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                                 engine: selected_engine(hwnd),
                                 voice,
                                 rate: selected_value(GetDlgItem(hwnd, ID_RATE), data.default.rate),
+                                pitch: selected_value(
+                                    GetDlgItem(hwnd, ID_PITCH),
+                                    data.default.pitch,
+                                ),
                                 volume: selected_value(
                                     GetDlgItem(hwnd, ID_VOLUME),
                                     data.default.volume,
@@ -702,7 +796,6 @@ pub fn open_dialog(
     language: Language,
     sources: AudioDescriptionVoiceSources,
     default: AudioDescriptionVoiceSettings,
-    preview_pitch: i32,
 ) -> Option<AudioDescriptionVoiceSettings> {
     unsafe {
         let hinstance = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
@@ -737,8 +830,8 @@ pub fn open_dialog(
             language,
             main_parent,
             sources,
+            pitch_engine: default.engine,
             default,
-            preview_pitch,
             voice_languages,
             result: None,
         };
@@ -750,7 +843,7 @@ pub fn open_dialog(
             CW_USEDEFAULT,
             CW_USEDEFAULT,
             550,
-            323,
+            361,
             parent,
             HMENU(0),
             hinstance,
@@ -777,5 +870,58 @@ pub fn open_dialog(
         EnableWindow(parent, true);
         SetForegroundWindow(parent);
         data.result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn audio_description_pitch_combo_preserves_negative_one_item_data() {
+        unsafe {
+            let combo = CreateWindowExW(
+                WINDOW_EX_STYLE(0),
+                WC_COMBOBOXW,
+                PCWSTR::null(),
+                windows::Win32::UI::WindowsAndMessaging::WS_POPUP
+                    | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                0,
+                0,
+                120,
+                120,
+                HWND(0),
+                HMENU(0),
+                HINSTANCE(0),
+                None,
+            );
+            assert_ne!(combo.0, 0);
+            fill_value_combo(combo, &[("Custom pitch".to_string(), -1)], -1);
+            let pitch = selected_value(combo, 1050);
+            DestroyWindow(combo).expect("destroy hidden test combo");
+            assert_eq!(pitch, -1);
+        }
+    }
+
+    #[test]
+    fn audio_description_pitch_conversion_preserves_neutral_and_extremes() {
+        for (legacy, google) in [(-12, 1000), (0, 1050), (12, 1100)] {
+            assert_eq!(
+                convert_pitch_engine(legacy, TtsEngine::Edge, TtsEngine::Google),
+                google
+            );
+            assert_eq!(
+                convert_pitch_engine(google, TtsEngine::Google, TtsEngine::Sapi5),
+                legacy
+            );
+        }
+        assert_eq!(
+            convert_pitch_engine(1053, TtsEngine::Google, TtsEngine::Google),
+            1053
+        );
+        assert_eq!(
+            convert_pitch_engine(-3, TtsEngine::Sapi5, TtsEngine::Edge),
+            -3
+        );
     }
 }

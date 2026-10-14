@@ -425,14 +425,23 @@ def run(request: dict) -> dict:
         for chunk in request["chunks"]
     ]
 
+    allow_nonverbal = request.get("allow_nonverbal_vocals") is True
+    nonverbal_candidates = []
     wav_path = str(request.get("audio_wav_path") or "").strip()
     if wav_path:
         _status("pyannote_analyzing", "", 10)
-        dialogue_intervals = speech_detector.detect_dialogue_intervals_from_wav(
-            wav_path,
-            duration,
-            status_callback=lambda _text: _status("pyannote_analyzing", ""),
-        )
+        if allow_nonverbal:
+            dialogue_intervals = speech_detector.detect_dialogue_intervals_from_wav(
+                wav_path, duration,
+                status_callback=lambda _text: _status("pyannote_analyzing", ""),
+                nonverbal_candidates_out=nonverbal_candidates,
+            )
+        else:
+            dialogue_intervals = speech_detector.detect_dialogue_intervals_from_wav(
+                wav_path,
+                duration,
+                status_callback=lambda _text: _status("pyannote_analyzing", ""),
+            )
     else:
         _status("pyannote_no_audio", "", 10)
         dialogue_intervals = []
@@ -452,7 +461,8 @@ def run(request: dict) -> dict:
     resume = request.get("resume") or {}
 
     def _checkpoint(
-        completed_chunks, total_chunks, descriptions_so_far, character_glossary, gemini_model
+        completed_chunks, total_chunks, descriptions_so_far, character_glossary, gemini_model,
+        verified_nonverbal_ids=None,
     ):
         rows = []
         for item in descriptions_so_far:
@@ -473,10 +483,18 @@ def run(request: dict) -> dict:
                 "descriptions": rows,
                 "character_glossary": character_glossary or [],
                 "gemini_model": str(gemini_model or ""),
+                **({"verified_nonverbal_ids": verified_nonverbal_ids or []}
+                   if allow_nonverbal else {}),
             },
         )
 
-    descriptions, glossary, token_usage = audio_describer.generate_descriptions_chunked(
+    generation_kwargs = {}
+    if allow_nonverbal and nonverbal_candidates:
+        generation_kwargs = {
+            "nonverbal_candidates": nonverbal_candidates,
+            "resume_verified_nonverbal_ids": resume.get("verified_nonverbal_ids") or [],
+        }
+    generated = audio_describer.generate_descriptions_chunked(
         input_path,
         CHUNK_DURATION_SECONDS,
         "",
@@ -490,7 +508,24 @@ def run(request: dict) -> dict:
         resume_descriptions=resume.get("descriptions") or [],
         resume_character_glossary=resume.get("character_glossary") or [],
         checkpoint_callback=_checkpoint,
+        **generation_kwargs,
     )
+    if len(generated) == 4 and allow_nonverbal:
+        descriptions, glossary, token_usage, verified_ids = generated
+    else:
+        descriptions, glossary, token_usage = generated
+        verified_ids = []
+    if allow_nonverbal:
+        allowed = {row["id"] for row in nonverbal_candidates}
+        verified_ids = [item for item in verified_ids if item in allowed]
+        app_logger.info(
+            "Optional nonverbal audit: Pyannote candidates=%d Gemini verified=%d.",
+            len(nonverbal_candidates), len(verified_ids),
+        )
+        if verified_ids:
+            dialogue_intervals = speech_detector.protected_intervals_after_verified_nonverbal(
+                dialogue_intervals, nonverbal_candidates, verified_ids, duration
+            )
     if descriptions is None:
         raise RuntimeError("Gemini did not return an audio-description result.")
 

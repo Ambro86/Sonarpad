@@ -1,3 +1,4 @@
+use super::audio_description_mix_preview::{self as mix_preview, MixPreview};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -28,7 +29,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     LoadCursorW, MB_ICONERROR, MB_ICONINFORMATION, MB_ICONQUESTION, MB_OK, MB_YESNO, MF_STRING,
     MessageBoxW, PostMessageW, SendMessageW, SetForegroundWindow, SetWindowLongPtrW, TPM_NONOTIFY,
     TPM_RETURNCMD, TrackPopupMenu, WINDOW_STYLE, WM_APP, WM_CLOSE, WM_COMMAND, WM_CONTEXTMENU,
-    WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_NCDESTROY, WM_SETFOCUS, WM_SETFONT, WNDCLASSW,
+    WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_NCDESTROY, WM_SETFOCUS, WM_SETFONT, WM_TIMER, WNDCLASSW,
     WS_CAPTION, WS_CHILD, WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_SYSMENU,
     WS_TABSTOP, WS_VISIBLE, WS_VSCROLL,
 };
@@ -87,6 +88,8 @@ const ID_REANALYZE_MODEL: usize = 9692;
 const ID_REANALYZE: usize = 9693;
 const ID_APPLY_REANALYZED: usize = 9694;
 const ID_REANALYZE_BALANCE: usize = 9695;
+const ID_SOURCE_VOLUME: usize = 9696;
+const ID_STOP_MIX_PREVIEW: usize = 9697;
 
 const WM_PROJECT_PROGRESS: u32 = WM_APP + 192;
 const WM_PROJECT_STATUS: u32 = WM_APP + 193;
@@ -203,6 +206,10 @@ struct WindowState {
     voice_combo: HWND,
     rate_combo: HWND,
     volume_combo: HWND,
+    source_volume_combo: HWND,
+    stop_mix_preview_button: HWND,
+    mix_preview: MixPreview,
+    source_volume_dirty: bool,
     test_voice_button: HWND,
     change_voice_button: HWND,
     voices: Vec<VoiceInfo>,
@@ -1187,7 +1194,29 @@ fn has_unapplied_edit(state: &WindowState) -> bool {
         .is_some_and(|description| get_text(state.edit).trim() != description.text.trim())
 }
 
+fn request_project_mix_preview(state: &mut WindowState) {
+    stop_preview(state);
+    let Some((engine, voice, rate, volume)) = selected_project_voice_settings(state) else {
+        return;
+    };
+    if !state.project.source_path.is_file() {
+        return;
+    }
+    let mut job = crate::audio_description::audio_description_job_from_project(&state.project);
+    job.tts_engine = engine;
+    job.tts_voice = voice;
+    job.tts_rate = rate;
+    job.tts_volume = volume;
+    crate::tts_engine::stop_tts_playback(state.parent);
+    state.mix_preview.schedule(
+        job,
+        state.language,
+        Some((state.project.ducking_db, state.project.fade_ms)),
+    );
+}
+
 fn stop_preview(state: &mut WindowState) {
+    state.mix_preview.stop();
     if let Some(cancel) = state.preview_cancel.take() {
         cancel.store(true, Ordering::Relaxed);
     }
@@ -1303,7 +1332,8 @@ fn play_modified_preview(
         None
     } else {
         let source_start = description.source_start_sec.max(0.0);
-        let duck_gain = 10_f32.powf(state.project.ducking_db.min(0.0) / 20.0);
+        let duck_gain = 10_f32.powf(state.project.ducking_db.min(0.0) / 20.0)
+            * crate::audio_description::normalize_source_volume(state.project.source_volume);
         match BassOutput::start_with_ffmpeg_at(
             &state.project.source_path,
             source_start,
@@ -1539,6 +1569,8 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
             state.engine_combo,
             state.rate_combo,
             state.volume_combo,
+            state.source_volume_combo,
+            state.stop_mix_preview_button,
             state.test_voice_button,
             state.export_button,
             state.export_srt_button,
@@ -1651,7 +1683,7 @@ pub fn open(parent: HWND, owner: HWND, project_path: &Path) {
             140,
             80,
             820,
-            830,
+            870,
             owner,
             HMENU(0),
             hinstance,
@@ -2930,13 +2962,21 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 );
                 EnableWindow(change_voice_button, false);
                 EnableWindow(test_voice_button, false);
+                let (source_volume_combo, stop_mix_preview_button) = mix_preview::create_controls(
+                    hwnd,
+                    language,
+                    hfont,
+                    668,
+                    (ID_SOURCE_VOLUME, ID_STOP_MIX_PREVIEW),
+                    project.source_volume,
+                );
                 let progress = CreateWindowExW(
                     Default::default(),
                     PROGRESS_CLASSW,
                     PCWSTR::null(),
                     WS_CHILD | WS_VISIBLE,
                     16,
-                    664,
+                    704,
                     760,
                     20,
                     hwnd,
@@ -2951,7 +2991,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.ready).as_ptr()),
                     WS_CHILD | WS_VISIBLE,
                     16,
-                    690,
+                    730,
                     760,
                     28,
                     hwnd,
@@ -2965,7 +3005,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.export).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_DEFPUSHBUTTON as u32),
                     126,
-                    726,
+                    766,
                     180,
                     30,
                     hwnd,
@@ -2979,7 +3019,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.export_srt).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     316,
-                    726,
+                    766,
                     110,
                     30,
                     hwnd,
@@ -2993,7 +3033,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.export_vtt).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     436,
-                    726,
+                    766,
                     110,
                     30,
                     hwnd,
@@ -3007,7 +3047,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.cancel).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     556,
-                    726,
+                    766,
                     90,
                     30,
                     hwnd,
@@ -3022,7 +3062,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.close).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     656,
-                    726,
+                    766,
                     100,
                     30,
                     hwnd,
@@ -3085,6 +3125,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     voice_combo,
                     rate_combo,
                     volume_combo,
+                    source_volume_combo,
+                    stop_mix_preview_button,
+                    mix_preview: MixPreview::default(),
+                    source_volume_dirty: false,
                     test_voice_button,
                     change_voice_button,
                     voices: Vec::new(),
@@ -3135,6 +3179,18 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 SetFocus(list);
                 LRESULT(0)
             }
+            WM_TIMER if wparam.0 == mix_preview::TIMER_ID => {
+                let pointer =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut WindowState;
+                if !pointer.is_null()
+                    && !(*pointer).running
+                    && let Some(status) = (*pointer).mix_preview.take_status()
+                {
+                    set_text((*pointer).status, &status);
+                }
+                LRESULT(0)
+            }
             WM_COMMAND => {
                 let id = wparam.0 & 0xffff;
                 let notification = (wparam.0 >> 16) as u32;
@@ -3146,6 +3202,25 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 }
                 let state = &mut *pointer;
                 match id {
+                    ID_SOURCE_VOLUME if notification == CBN_SELCHANGE && !state.running => {
+                        state.project.source_volume =
+                            mix_preview::selected_volume(state.source_volume_combo);
+                        state.source_volume_dirty = true;
+                        if let Some(base) = state.reanalysis_base_project.as_mut() {
+                            base.source_volume = state.project.source_volume;
+                        }
+                        request_project_mix_preview(state);
+                    }
+                    ID_STOP_MIX_PREVIEW if !state.running => {
+                        stop_preview(state);
+                        set_text(state.status, &labels(state.language).ready);
+                    }
+                    ID_RATE | ID_VOLUME | ID_VOICE
+                        if notification == CBN_SELCHANGE && !state.running =>
+                    {
+                        stop_preview(state);
+                    }
+
                     ID_LIST if notification == LBN_SELCHANGE => {
                         stop_preview(state);
                         capture_current_draft(state);
@@ -3182,6 +3257,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     }
                     ID_SEARCH_BUTTON if !state.running => apply_description_search(state),
                     ID_ENGINE if notification == CBN_SELCHANGE && !state.running => {
+                        stop_preview(state);
                         state.voices.clear();
                         SendMessageW(state.voice_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
                         EnableWindow(state.voice_combo, false);
@@ -3190,7 +3266,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         set_text(state.status, &labels(state.language).loading_voices);
                         load_project_voices(hwnd, engine_from_combo(state.engine_combo));
                     }
-                    ID_TEST_VOICE if !state.running => test_project_voice(state),
+                    ID_TEST_VOICE if !state.running => {
+                        stop_preview(state);
+                        test_project_voice(state);
+                    }
                     ID_CHANGE_VOICE if !state.running => start_voice_change(hwnd, state),
                     ID_APPLY if !state.running => start_apply(hwnd, state),
                     ID_EXPORT if !state.running => start_export(hwnd, state),
@@ -3741,6 +3820,11 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         match load_audio_description_project(&state.project_path) {
                             Ok(project) => {
                                 state.project = project;
+                                state.source_volume_dirty = false;
+                                mix_preview::set_volume(
+                                    state.source_volume_combo,
+                                    state.project.source_volume,
+                                );
                                 refill_list(state, state.selected_index.unwrap_or(0));
                             }
                             Err(error) => {
@@ -3789,7 +3873,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 if !pointer.is_null() {
                     let state = &mut *pointer;
                     capture_current_draft(state);
-                    if has_unapplied_edit(state) {
+                    if has_unapplied_edit(state) || state.source_volume_dirty {
                         let language_labels = labels(state.language);
                         let text = to_wide(&language_labels.unsaved_close);
                         let title = to_wide(&language_labels.title);

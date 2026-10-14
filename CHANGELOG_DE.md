@@ -1,5 +1,17 @@
 # Änderungsprotokoll
 
+Version 0.9.15 – 2026-10-14
+
+1. Audiodeskription: Eine Option erlaubt nun Beschreibungen während nichtsprachlicher Lautäußerungen.
+
+2. Die Tastaturnavigation unter Optionen → Audio wurde korrigiert: Tab wechselt zwischen den Bedienelementen und Esc schließt das Fenster korrekt, auch bei Verwendung des Einschlaftimers.
+
+3. Die Filmlautstärke lässt sich nun beim Erstellen von Audiodeskriptionen und beim Bearbeiten eines Projekts einstellen. Eine automatische Vorschau kombiniert Film und ausgewählte Stimme mit derselben automatischen Tonabsenkung (Ducking) wie beim endgültigen Export.
+
+4. Die Stimmeinstellung für Audiodeskriptionen enthält nun eine Auswahl der Tonhöhe. Die gewählte Tonhöhe wird beibehalten und in Projekten gespeichert.
+
+---
+
 Version 0.9.14 – 2026-10-12
 
 Edge-Stimmen, Hörbücher und Audiodeskriptionen

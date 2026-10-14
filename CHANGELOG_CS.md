@@ -1,5 +1,17 @@
 # Přehled změn
 
+Verze 0.9.15 – 2026-10-14
+
+1. Audiopopis: přidána možnost povolit popisy během neverbálních hlasových projevů.
+
+2. Opravena navigace klávesnicí v Možnosti → Zvuk: Tab přechází mezi ovládacími prvky a Esc správně zavírá okno, i při použití časovače vypnutí.
+
+3. Přidáno nastavení hlasitosti filmu při vytváření audiopopisu a úpravách projektu, s automatickou ukázkou filmu a vybraného hlasu se stejným automatickým ztlumením zvuku (ducking) jako při konečném exportu.
+
+4. V nastavení hlasu audiopopisu přibyl výběr výšky hlasu. Vybraná výška se pamatuje a ukládá do projektů.
+
+---
+
 Verze 0.9.14 – 2026-10-12
 
 Hlasy Edge, audioknihy a audiopopis

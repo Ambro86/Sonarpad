@@ -551,7 +551,9 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertIn('tts_tuning.label_volume', PROJECT)
         self.assertIn('audio_description.voice_settings.test', PROJECT)
         command = PROJECT[PROJECT.index('WM_COMMAND =>'):PROJECT.index('WM_CONTEXTMENU =>')]
-        self.assertIn('ID_TEST_VOICE if !state.running => test_project_voice(state)', command)
+        test_voice = command.split('ID_TEST_VOICE if !state.running => {', 1)[1].split('}', 1)[0]
+        self.assertIn('test_project_voice(state);', test_voice)
+        self.assertLess(test_voice.index('stop_preview(state);'), test_voice.index('test_project_voice(state);'))
 
     def test_project_voice_change_applies_and_persists_rate_and_volume_without_rerunning_ai(self):
         validation = AUDIO[

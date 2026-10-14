@@ -742,8 +742,15 @@ def _segmentation_chunk_starts(num_samples, sample_rate):
     return starts
 
 
-def _run_onnx_segmentation(session, samples, sample_rate):
-    """Return per-window instantaneous speaker counts from ONNX powerset scores."""
+def _run_onnx_segmentation(session, samples, sample_rate,
+                           confidence_outputs=None):
+    """Return per-window instantaneous speaker counts from ONNX powerset scores.
+
+    ``confidence_outputs`` is diagnostic-only.  When supplied, it receives the
+    per-window probability mass assigned to any non-empty powerset class.  The
+    production speaker-count path remains exactly the same: argmax -> powerset
+    mapping -> active-speaker count.
+    """
     import numpy as np
 
     if sample_rate != SEGMENTATION_SAMPLE_RATE:
@@ -769,6 +776,21 @@ def _run_onnx_segmentation(session, samples, sample_rate):
         scores = session.run(None, {input_name: batch})[0]
         if scores.ndim != 3 or scores.shape[-1] != len(POWERSET_MAPPING):
             raise RuntimeError(f"Unexpected segmentation output shape: {scores.shape!r}")
+
+        # Diagnostic probe only: convert the raw powerset scores to a stable
+        # softmax distribution and retain the probability mass of all classes
+        # containing at least one speaker.  This value is never used to decide
+        # whether a frame is protected, so it cannot alter the AD pipeline.
+        if confidence_outputs is not None:
+            shifted = scores - np.max(scores, axis=-1, keepdims=True)
+            exp_scores = np.exp(shifted)
+            probabilities = exp_scores / np.maximum(
+                np.sum(exp_scores, axis=-1, keepdims=True), 1e-12
+            )
+            confidence_outputs.append(
+                (1.0 - probabilities[..., 0]).astype(np.float32, copy=False)
+            )
+
         multilabel = mapping[np.argmax(scores, axis=-1)]
         outputs.append(np.sum(multilabel, axis=-1, dtype=np.float32))
     return np.concatenate(outputs, axis=0)
@@ -811,6 +833,113 @@ def _aggregate_segmentation_counts(chunk_counts):
     ).astype(np.uint8)
 
 
+def _aggregate_segmentation_confidence(chunk_confidence):
+    """Overlap-average diagnostic confidence without affecting speaker counts."""
+    import numpy as np
+
+    if len(chunk_confidence) == 0:
+        return np.empty(0, dtype=np.float32)
+    chunk_count, frames_per_chunk = chunk_confidence.shape
+    end_time = (
+        SEGMENTATION_WINDOW_SEC
+        + (chunk_count - 1) * SEGMENTATION_STEP_SEC
+        + 0.5 * SEGMENTATION_FRAME_DURATION_SEC
+    )
+    frame_count = _closest_segmentation_frame(end_time) + 1
+    summed = np.zeros(frame_count, dtype=np.float32)
+    contributors = np.zeros(frame_count, dtype=np.float32)
+    for chunk_index, values in enumerate(chunk_confidence):
+        start_frame = _closest_segmentation_frame(
+            chunk_index * SEGMENTATION_STEP_SEC
+            + 0.5 * SEGMENTATION_FRAME_DURATION_SEC
+        )
+        end_frame = start_frame + frames_per_chunk
+        summed[start_frame:end_frame] += values
+        contributors[start_frame:end_frame] += 1.0
+    return summed / np.maximum(contributors, 1e-12)
+
+
+def _log_pyannote_confidence_probe(frame_counts, voice_confidence):
+    """Log diagnostic confidence to study speech vs non-verbal vocalizations.
+
+    This deliberately does not feed back into dialogue protection.  The goal is
+    only to learn whether the existing segmentation model naturally assigns
+    different confidence to speech, cries, groans, laughter, and similar sounds.
+    """
+    import numpy as np
+
+    frame_counts = np.asarray(frame_counts)
+    voice_confidence = np.asarray(voice_confidence, dtype=np.float32)
+    usable = min(len(frame_counts), len(voice_confidence))
+    if usable <= 0:
+        app_logger.info("Pyannote confidence probe: no frames available.")
+        return
+
+    frame_counts = frame_counts[:usable]
+    voice_confidence = np.clip(voice_confidence[:usable], 0.0, 1.0)
+    active = frame_counts > 0
+    active_values = voice_confidence[active]
+    all_quantiles = np.quantile(
+        voice_confidence, [0.10, 0.25, 0.50, 0.75, 0.90]
+    )
+    app_logger.info(
+        "Pyannote confidence probe summary: frames=%d active_frames=%d "
+        "all[min=%.4f p10=%.4f p25=%.4f p50=%.4f p75=%.4f p90=%.4f max=%.4f].",
+        usable, int(np.sum(active)), float(np.min(voice_confidence)),
+        *[float(value) for value in all_quantiles],
+        float(np.max(voice_confidence)),
+    )
+
+    if len(active_values):
+        active_quantiles = np.quantile(
+            active_values, [0.10, 0.25, 0.50, 0.75, 0.90]
+        )
+        bins = (
+            int(np.sum(active_values < 0.50)),
+            int(np.sum((active_values >= 0.50) & (active_values < 0.70))),
+            int(np.sum((active_values >= 0.70) & (active_values < 0.85))),
+            int(np.sum((active_values >= 0.85) & (active_values < 0.95))),
+            int(np.sum(active_values >= 0.95)),
+        )
+        app_logger.info(
+            "Pyannote confidence probe active: min=%.4f p10=%.4f p25=%.4f "
+            "p50=%.4f p75=%.4f p90=%.4f max=%.4f "
+            "bins[<.50=%d .50-.70=%d .70-.85=%d .85-.95=%d >=.95=%d].",
+            float(np.min(active_values)),
+            *[float(value) for value in active_quantiles],
+            float(np.max(active_values)), *bins,
+        )
+
+    # Log each raw voice interval with confidence statistics.  This is compact
+    # enough for normal logs and lets a tester compare known timestamps of
+    # dialogue, crying, laughter, groans, etc. without logging every frame.
+    start = None
+    for index, is_active in enumerate(list(active) + [False]):
+        if is_active and start is None:
+            start = index
+        elif not is_active and start is not None:
+            stop = index
+            values = voice_confidence[start:stop]
+            if len(values):
+                quantiles = np.quantile(values, [0.10, 0.50, 0.90])
+                start_sec = start * SEGMENTATION_FRAME_STEP_SEC
+                end_sec = (
+                    (stop - 1) * SEGMENTATION_FRAME_STEP_SEC
+                    + SEGMENTATION_FRAME_DURATION_SEC
+                )
+                app_logger.info(
+                    "Pyannote confidence probe interval: %.3f-%.3fs duration=%.3fs "
+                    "voice_prob[min=%.4f p10=%.4f p50=%.4f p90=%.4f max=%.4f] "
+                    "speaker_count[max=%d mean=%.3f].",
+                    start_sec, end_sec, end_sec - start_sec,
+                    float(np.min(values)), float(quantiles[0]),
+                    float(quantiles[1]), float(quantiles[2]),
+                    float(np.max(values)), int(np.max(frame_counts[start:stop])),
+                    float(np.mean(frame_counts[start:stop])),
+                )
+            start = None
+
+
 def _counts_to_intervals(frame_counts):
     """Convert aggregated frame counts into unpadded voice intervals."""
     intervals = []
@@ -828,8 +957,48 @@ def _counts_to_intervals(frame_counts):
     return intervals
 
 
+def candidate_nonverbal_voice_intervals(frame_counts, voice_confidence, duration_sec):
+    """Identify LOW-CONFIDENCE voice intervals for optional Gemini review only.
+
+    These are *not* silence and are never made safe without video/audio
+    verification by Gemini.  In particular, understandable speech can have
+    the same confidence as a yawn, as established by our Daima field test.
+    """
+    import numpy as np
+
+    counts = np.asarray(frame_counts)
+    probs = np.asarray(voice_confidence, dtype=np.float32)
+    usable = min(len(counts), len(probs))
+    result = []
+    start = None
+    for index in range(usable + 1):
+        active = index < usable and counts[index] > 0
+        if active and start is None:
+            start = index
+        elif not active and start is not None:
+            stop = index
+            begin = start * SEGMENTATION_FRAME_STEP_SEC
+            end = min(float(duration_sec),
+                      (stop - 1) * SEGMENTATION_FRAME_STEP_SEC
+                      + SEGMENTATION_FRAME_DURATION_SEC)
+            values = probs[start:stop]
+            if len(values) and end - begin >= 0.25:
+                p50, p90 = np.quantile(values, [0.50, 0.90])
+                if p50 < 0.75 and p90 < 0.80:
+                    result.append({
+                        "id": "NV-%010d" % round(begin * 1000),
+                        "start": round(begin, 3),
+                        "end": round(end, 3),
+                        "p50": round(float(p50), 4),
+                        "p90": round(float(p90), 4),
+                    })
+            start = None
+    return result
+
+
 def detect_dialogue_intervals_from_wav(wav_path, duration_sec, status_callback=None,
-                                       padding_sec=DEFAULT_PADDING_SEC):
+                                       padding_sec=DEFAULT_PADDING_SEC,
+                                       nonverbal_candidates_out=None):
     """Run Pyannote ONNX on a mono 16 kHz PCM WAV prepared by Sonarpad.
 
     Media decoding belongs to the Rust host and its already bundled FFmpeg DLLs.
@@ -853,8 +1022,28 @@ def detect_dialogue_intervals_from_wav(wav_path, duration_sec, status_callback=N
         samples, sample_rate = _load_pcm16_waveform(wav_path)
         if not duration_sec:
             duration_sec = len(samples) / sample_rate
-        chunk_counts = _run_onnx_segmentation(session, samples, sample_rate)
+        confidence_chunks = []
+        chunk_counts = _run_onnx_segmentation(
+            session, samples, sample_rate, confidence_outputs=confidence_chunks
+        )
         frame_counts = _aggregate_segmentation_counts(chunk_counts)
+        if confidence_chunks:
+            import numpy as np
+            voice_confidence = _aggregate_segmentation_confidence(
+                np.concatenate(confidence_chunks, axis=0)
+            )
+            _log_pyannote_confidence_probe(frame_counts, voice_confidence)
+            if nonverbal_candidates_out is not None:
+                proposals = candidate_nonverbal_voice_intervals(
+                    frame_counts, voice_confidence, duration_sec
+                )
+                nonverbal_candidates_out.extend(proposals)
+                app_logger.info(
+                    "Pyannote optional nonverbal candidates: count=%d "
+                    "thresholds=p50<0.75,p90<0.80,min_duration=0.25s; "
+                    "all remain PROTECTED until individually verified by Gemini.",
+                    len(proposals),
+                )
         raw_intervals = _counts_to_intervals(frame_counts)
     except Exception as exc:
         app_logger.error(
@@ -892,3 +1081,40 @@ def detect_dialogue_intervals(*_args, **_kwargs):
     raise DialogueDetectionError(_(
         "Media decoding must be performed by Sonarpad before Pyannote analysis."
     ))
+
+
+def protected_intervals_after_verified_nonverbal(protected_intervals,
+                                                 nonverbal_candidates, approved_ids,
+                                                 duration_sec, edge_margin_sec=0.05):
+    """Open only originally protected pieces individually confirmed by Gemini.
+
+    Return a NEW interval list; normal mode never calls this function.
+    Leave a small boundary margin to preserve adjacency with true dialogue.
+    """
+    accepted = set(approved_ids or [])
+    approved = [
+        (max(0., float(row["start"]) + edge_margin_sec),
+         min(float(duration_sec), float(row["end"]) - edge_margin_sec))
+        for row in nonverbal_candidates or [] if row["id"] in accepted
+    ]
+    approved = [(start, end) for start, end in approved if end > start]
+    if not approved:
+        return list(protected_intervals)
+    remaining = list(protected_intervals)
+    for gap_start, gap_end in approved:
+        new_remaining = []
+        for start, end in remaining:
+            if gap_start >= end or gap_end <= start:
+                new_remaining.append((start, end))
+            else:
+                if start < gap_start:
+                    new_remaining.append((start, gap_start))
+                if gap_end < end:
+                    new_remaining.append((gap_end, end))
+        remaining = new_remaining
+    app_logger.info(
+        "Optional nonverbal authorization: approved=%d available=%.3fs; "
+        "untouched speech remains protected.", len(approved),
+        sum(end-start for start,end in approved),
+    )
+    return remaining

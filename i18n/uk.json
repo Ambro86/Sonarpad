@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "Исходный и конечный файлы не могут совпадать.",
   "audio_description.error.voice": "Виберіть голос синтеза мовлення.",
   "audio_description.extended": "Включить расширенные паузы: в исключительных случаях приостанавливать фильм, если опис не помещается в тишу",
+  "audio_description.allow_nonverbal_vocals": "Дозволити описи під час невербальних голосових звуків",
   "audio_description.gemini_api_key": "Ключ API Gemini:",
   "audio_description.show_api_key": "Показати ключ API",
   "audio_description.gemini_error_models": "Не вдалося загрузить модели Gemini: {error}",
@@ -2175,5 +2176,12 @@
   "app.pdf_japanese_ocr_install_progress": "Установлення японського OCR. Зачекайте.",
   "app.pdf_japanese_ocr_install_success": "Японський OCR установлено. Знову відкрийте PDF у Sonarpad. Можливо, потрібне перезавантаження.",
   "app.pdf_japanese_ocr_install_restart": "Японський OCR установлено, але Windows потребує перезавантаження. Перезавантажте систему й відкрийте PDF.",
-  "app.pdf_japanese_ocr_install_error": "Windows не вдалося завершити встановлення японського OCR. Перевірте додаткові компоненти."
+  "app.pdf_japanese_ocr_install_error": "Windows не вдалося завершити встановлення японського OCR. Перевірте додаткові компоненти.",
+  "audio_description.source_volume": "Гучність фільму",
+  "audio_description.mix_preview.preparing": "Підготовка звукової проби",
+  "audio_description.mix_preview.stop": "Зупинити звукову пробу",
+  "audio_description.mix_preview.phrase": "Проба аудіоопису з автоматичним приглушенням звуку.",
+  "audio_description.mix_preview.playing": "Прослухати пробу з фільмом і голосом",
+  "audio_description.mix_preview.error": "Не вдалося відтворити фрагмент опису",
+  "audio_description.bitrate": "Бітрейт MP3"
 }

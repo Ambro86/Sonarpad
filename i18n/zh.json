@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "源文件和目标文件不能相同。",
   "audio_description.error.voice": "请选择语音合成声音。",
   "audio_description.extended": "启用扩展停顿：当描述无法放入静音段时，在特殊情况下暂停影片",
+  "audio_description.allow_nonverbal_vocals": "允许在非语言人声期间播放描述",
   "audio_description.gemini_api_key": "Gemini API 密钥：",
   "audio_description.show_api_key": "显示 API 密钥",
   "audio_description.gemini_error_models": "无法加载 Gemini 模型：{error}",
@@ -2175,5 +2176,12 @@
   "app.pdf_japanese_ocr_install_progress": "正在安装日语 OCR，请稍候。",
   "app.pdf_japanese_ocr_install_success": "日语 OCR 已安装。请在 Sonarpad 中重新打开 PDF。Windows 可能需要重启。",
   "app.pdf_japanese_ocr_install_restart": "日语 OCR 已安装，但 Windows 需要重启。重启后请重新打开 PDF。",
-  "app.pdf_japanese_ocr_install_error": "Windows 未能完成日语 OCR 安装。请检查可选功能。"
+  "app.pdf_japanese_ocr_install_error": "Windows 未能完成日语 OCR 安装。请检查可选功能。",
+  "audio_description.source_volume": "影片音量",
+  "audio_description.mix_preview.preparing": "正在准备音频试听",
+  "audio_description.mix_preview.stop": "停止音频试听",
+  "audio_description.mix_preview.phrase": "这是自动降低原声音量的音频描述试听。",
+  "audio_description.mix_preview.playing": "试听影片与旁白",
+  "audio_description.mix_preview.error": "无法播放描述预览：",
+  "audio_description.bitrate": "MP3 比特率"
 }

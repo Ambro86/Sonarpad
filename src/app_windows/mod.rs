@@ -1,4 +1,5 @@
 pub mod about_window;
+pub(crate) mod audio_description_mix_preview;
 pub mod audio_description_project_window;
 pub mod audio_description_resume_window;
 pub mod audio_description_voice_window;

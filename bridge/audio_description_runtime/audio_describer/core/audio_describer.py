@@ -62,6 +62,7 @@ _AUDIO_CONTEXT_ONLY_RULE = (
 # description timestamp with the exact video instant Gemini claims as visual
 # evidence for the sentence.
 _LAST_PARSED_VISUAL_EVIDENCE_RAW = []
+_LAST_PARSED_VERIFIED_NONVERBAL_IDS = []
 _VISUAL_EVIDENCE_RECORDS = []
 
 
@@ -1143,7 +1144,9 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
                                   resume_completed_chunks=0,
                                   resume_descriptions=None,
                                   resume_character_glossary=None,
-                                  checkpoint_callback=None):
+                                  checkpoint_callback=None,
+                                  nonverbal_candidates=None,
+                                  resume_verified_nonverbal_ids=None):
     """Generate long-video descriptions in bounded analysis chunks.
 
     Multi-chunk videos use exact temporary clips for lower Gemini latency. A
@@ -1165,6 +1168,9 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
     video_file_obj = None
     client = None
     all_descriptions = []
+    # Used only by the opt-in path. Never touches production speech protection.
+    confirmed_nonverbal_ids = list(resume_verified_nonverbal_ids or [])
+    nonverbal_candidates = list(nonverbal_candidates or [])
     character_glossary = []
     detected_character_glossary = []
     character_continuity = {}
@@ -1263,6 +1269,8 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
                 continue
             chunk_start = prepared_chunk["start"]
             chunk_end = prepared_chunk["end"]
+            chunk_soft = [row for row in nonverbal_candidates
+                          if chunk_start <= row["start"] and row["end"] <= chunk_end]
             chunk_free_windows = dialogue_free_windows
             clipped = None
             if dialogue_intervals is not None and (
@@ -1367,6 +1375,21 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
                     all_descriptions, chunk_start
                 ),
             )
+            if chunk_soft:
+                system_instruction += (
+                    " OPTIONAL NONVERBAL VOICE MODE: some Pyannote-flagged regions may "
+                    "contain nonverbal human vocal sounds, but may ALSO contain actual speech. "
+                    "You must listen to the supplied clip at every candidate's exact times. "
+                    "Only if you are CERTAIN it contains no intelligible spoken words, "
+                    "no whispered words, no speech overlapping the sound, and no vital "
+                    "story dialogue, include that candidate ID in a top-level JSON array "
+                    "verified_nonverbal_ids. Otherwise omit its ID. Your other JSON keys "
+                    "remain unchanged. Never invent IDs. A description may use a "
+                    "candidate region ONLY when its ID is in verified_nonverbal_ids; "
+                    "this is an explicit exception to the normal dialogue-free-window "
+                    "rule for that precise candidate range only. Do not assume low "
+                    "confidence means silence. If in doubt, reject the candidate."
+                )
             gen_config = gemini.build_generation_config(
                 system_instruction_text=system_instruction,
                 is_json_response=True,
@@ -1422,6 +1445,27 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
                     f"{chunk_start:.3f}-{chunk_end:.3f} seconds in the full video. "
                     "Return timestamps on the full-video (absolute) timeline and never "
                     "return a timestamp outside this range."
+                )
+            if chunk_soft:
+                candidates_text = ", ".join(
+                    f'{row["id"]}={row["start"]-chunk_start:.3f}-'
+                    f'{row["end"]-chunk_start:.3f}s'
+                    for row in chunk_soft
+                )
+                chunk_prompt_text += (
+                    "\n*   OPTIONAL non-verbal vocal candidates (attached clip "
+                    "timeline): " + candidates_text + ". Listen to each candidate. "
+                    "Verify its ID ONLY if the entire interval is exclusively a "
+                    "non-verbal yawn, groan, sob, laugh, grunt, sigh or breathing "
+                    "sound, without ANY understandable words, whispering or simultaneous "
+                    "dialogue. A candidate with phrases such as 'hey, we are here' "
+                    "is NOT non-verbal, no matter how low the Pyannote score. "
+                    "Treat unverified candidates as PROTECTED and do not describe over "
+                    "them. For verified IDs ONLY, descriptions may be timed inside "
+                    "those exact candidate ranges as additional optional spaces; "
+                    "prefer ordinary silent windows whenever possible. "
+                    "Return top-level verified_nonverbal_ids array alongside your "
+                    "normal JSON keys. Return [] if none can be verified."
                 )
             api_contents = [chunk_prompt_text, video_part]
 
@@ -1496,6 +1540,16 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
                     status_update_callback=_update_status,
                 )
                 chunk_visual_evidence = list(_LAST_PARSED_VISUAL_EVIDENCE_RAW)
+                if chunk_soft:
+                    allowed = {row["id"] for row in chunk_soft}
+                    verified = [row_id for row_id in _LAST_PARSED_VERIFIED_NONVERBAL_IDS
+                                if row_id in allowed]
+                    confirmed_nonverbal_ids.extend(verified)
+                    app_logger.info(
+                        "Chunk %d optional nonverbal verification: candidates=%d "
+                        "Gemini-approved=%d ids=%s.", i + 1,
+                        len(chunk_soft), len(verified), ",".join(verified) or "none",
+                    )
 
                 # Validate this model response before mixing it with descriptions
                 # from other chunks. A few English entries can otherwise disappear
@@ -1658,13 +1712,15 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
 
             if checkpoint_callback is not None:
                 try:
-                    checkpoint_callback(
-                        i + 1,
-                        num_chunks,
-                        list(all_descriptions),
+                    checkpoint_args = (
+                        i + 1, num_chunks, list(all_descriptions),
                         list(character_continuity.values()) if enable_glossary else [],
                         str(config_model.get_setting("gemini_model_override") or model_name_to_use),
                     )
+                    if nonverbal_candidates:
+                        checkpoint_callback(*checkpoint_args, verified_nonverbal_ids=list(dict.fromkeys(confirmed_nonverbal_ids)))
+                    else:
+                        checkpoint_callback(*checkpoint_args)
                 except Exception as exc:
                     app_logger.warning(
                         "Chunk %d checkpoint callback failed; continuing job: %s",
@@ -1692,6 +1748,9 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
             "Chunked generation complete. Descriptions: %d, Glossary: %d",
             len(final_descriptions), len(merged_glossary),
         )
+        if nonverbal_candidates:
+            return (final_descriptions, merged_glossary, all_token_usage,
+                    list(dict.fromkeys(confirmed_nonverbal_ids)))
         return final_descriptions, merged_glossary, all_token_usage
 
     except gemini.GeminiRetryCancelledError as e:
@@ -3005,6 +3064,7 @@ def _parse_unified_response(json_string, status_update_callback):
     the full document was valid JSON (not merely salvaged fragments).
     """
     _LAST_PARSED_VISUAL_EVIDENCE_RAW.clear()
+    _LAST_PARSED_VERIFIED_NONVERBAL_IDS.clear()
     if not json_string:
         return [], [], False
 
@@ -3024,6 +3084,11 @@ def _parse_unified_response(json_string, status_update_callback):
                 root_type,
             )
             return [], [], False
+        ids = data.get("verified_nonverbal_ids", [])
+        if isinstance(ids, list):
+            _LAST_PARSED_VERIFIED_NONVERBAL_IDS.extend(
+                value for value in ids if isinstance(value, str)
+            )
         descs, gloss = _extract_descriptions_and_glossary_from_dict(data, status_update_callback)
         return descs, gloss, True
 
@@ -3046,6 +3111,11 @@ def _parse_unified_response(json_string, status_update_callback):
                 else:
                     if status_update_callback:
                         status_update_callback(_("Successfully parsed a fallback JSON object."))
+                    ids = data.get("verified_nonverbal_ids", [])
+                    if isinstance(ids, list):
+                        _LAST_PARSED_VERIFIED_NONVERBAL_IDS.extend(
+                            value for value in ids if isinstance(value, str)
+                        )
                     descs, gloss = _extract_descriptions_and_glossary_from_dict(
                         data, status_update_callback
                     )

@@ -26,7 +26,7 @@ class AudioDescriptionVoiceSettingsTests(unittest.TestCase):
 
     def test_creation_window_hides_duplicate_engine_and_voice_controls(self):
         creation = WINDOW[
-            WINDOW.index("let engine_label = create_label") : WINDOW.index("let progress = CreateWindowExW")
+            WINDOW.index("let engine_label = create_label") : WINDOW.index("let source_volume =")
         ]
         self.assertIn("ShowWindow(engine_label, SW_HIDE);", creation)
         self.assertIn("ShowWindow(voice_label, SW_HIDE);", creation)
@@ -34,21 +34,24 @@ class AudioDescriptionVoiceSettingsTests(unittest.TestCase):
         self.assertNotIn("WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32)", creation)
 
     def test_dialog_has_requested_controls_and_voice_preview(self):
-        for control in ("ID_ENGINE", "ID_VOICE", "ID_RATE", "ID_VOLUME", "ID_TEST"):
+        for control in ("ID_ENGINE", "ID_VOICE", "ID_RATE", "ID_PITCH", "ID_VOLUME", "ID_TEST"):
             self.assertIn(control, DIALOG)
         self.assertIn('"audio_description.voice_settings.test"', DIALOG)
         self.assertIn("preview_voice(hwnd);", DIALOG)
 
     def test_ok_applies_rate_and_volume_to_audio_description_job(self):
         self.assertIn("state.tts_rate = selected.rate;", WINDOW)
+        self.assertIn("state.tts_pitch = selected.pitch;", WINDOW)
         self.assertIn("state.tts_volume = selected.volume;", WINDOW)
         self.assertIn("tts_rate: state.tts_rate", WINDOW)
         self.assertIn("tts_volume: state.tts_volume", WINDOW)
 
     def test_voice_adjustments_are_persisted_as_audio_description_settings(self):
         self.assertIn("pub audio_description_tts_rate: Option<i32>", SETTINGS)
+        self.assertIn("pub audio_description_tts_pitch: Option<i32>", SETTINGS)
         self.assertIn("pub audio_description_tts_volume: Option<i32>", SETTINGS)
         self.assertIn("app.settings.audio_description_tts_rate = Some(state.tts_rate);", WINDOW)
+        self.assertIn("app.settings.audio_description_tts_pitch = Some(state.tts_pitch);", WINDOW)
         self.assertIn("app.settings.audio_description_tts_volume = Some(state.tts_volume);", WINDOW)
 
     def test_legacy_users_fall_back_to_existing_global_tts_values(self):
@@ -56,7 +59,17 @@ class AudioDescriptionVoiceSettingsTests(unittest.TestCase):
         self.assertIn(".unwrap_or(state.settings.tts_rate)", WINDOW)
         self.assertIn(".audio_description_tts_volume", WINDOW)
         self.assertIn(".unwrap_or(state.settings.tts_volume)", WINDOW)
-        self.assertIn("tts_pitch: settings.tts_pitch", WINDOW)
+        self.assertIn(".audio_description_tts_pitch", WINDOW)
+        self.assertIn(".unwrap_or(app.settings.tts_pitch)", WINDOW)
+        self.assertIn("tts_pitch: state.tts_pitch", WINDOW)
+
+    def test_pitch_adjustment_stops_preview_but_does_not_start_playback(self):
+        change = DIALOG.split('if id == ID_PITCH && notification as u32 == CBN_SELCHANGE {', 1)[1].split('if id == ID_TEST', 1)[0]
+        self.assertIn('stop_tts_playback', change)
+        self.assertNotIn('preview_voice(', change)
+        self.assertNotIn('request_mix_preview', change)
+        preview = DIALOG.split('fn preview_voice(hwnd:', 1)[1].split('unsafe extern', 1)[0]
+        self.assertIn('GetDlgItem(hwnd, ID_PITCH)', preview)
 
     def test_focus_returns_to_adjust_voice_button(self):
         self.assertIn("SetFocus(state.voice_settings_button);", WINDOW)

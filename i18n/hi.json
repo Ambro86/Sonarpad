@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "स्रोत और गंतव्य फ़ाइल एक नहीं हो सकतीं।",
   "audio_description.error.voice": "वाक् संश्लेषण की आवाज़ चुनें।",
   "audio_description.extended": "विस्तारित विराम सक्षम करें: जब वर्णन मौन में न समाए तो असाधारण स्थिति में फ़िल्म रोकें",
+  "audio_description.allow_nonverbal_vocals": "गैर-मौखिक मानवीय ध्वनियों के दौरान वर्णन की अनुमति दें",
   "audio_description.gemini_api_key": "Gemini API कुंजी:",
   "audio_description.show_api_key": "API कुंजी दिखाएँ",
   "audio_description.gemini_error_models": "Gemini मॉडल लोड नहीं हो सके: {error}",
@@ -2175,5 +2176,12 @@
   "app.pdf_japanese_ocr_install_progress": "जापानी OCR स्थापित किया जा रहा है। कृपया प्रतीक्षा करें।",
   "app.pdf_japanese_ocr_install_success": "जापानी OCR स्थापित हो गया है। Sonarpad में PDF फिर खोलें। Windows पुनरारंभ करना पड़ सकता है।",
   "app.pdf_japanese_ocr_install_restart": "जापानी OCR स्थापित हो गया है, लेकिन Windows पुनरारंभ करना आवश्यक है। पुनरारंभ के बाद PDF खोलें।",
-  "app.pdf_japanese_ocr_install_error": "Windows जापानी OCR स्थापना पूरी नहीं कर सका। वैकल्पिक सुविधाएँ जाँचें।"
+  "app.pdf_japanese_ocr_install_error": "Windows जापानी OCR स्थापना पूरी नहीं कर सका। वैकल्पिक सुविधाएँ जाँचें।",
+  "audio_description.source_volume": "Movie volume",
+  "audio_description.mix_preview.preparing": "Preparing audio sample",
+  "audio_description.mix_preview.stop": "Stop audio sample",
+  "audio_description.mix_preview.phrase": "Audio description test with ducking.",
+  "audio_description.mix_preview.playing": "Listen to a movie and voice sample",
+  "audio_description.mix_preview.error": "वर्णन का पूर्वावलोकन नहीं चलाया जा सका",
+  "audio_description.bitrate": "MP3 bitrate"
 }

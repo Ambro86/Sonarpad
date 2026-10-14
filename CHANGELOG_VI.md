@@ -1,5 +1,17 @@
 # Nhật ký thay đổi
 
+Phiên bản 0.9.15 – 2026-10-14
+
+1. Mô tả âm thanh: thêm tùy chọn cho phép mô tả trong các đoạn phát âm không thành lời.
+
+2. Sửa điều hướng bằng bàn phím trong Tùy chọn → Âm thanh: Tab chuyển giữa các điều khiển và Esc đóng cửa sổ đúng cách, kể cả khi sử dụng hẹn giờ tắt.
+
+3. Thêm điều chỉnh âm lượng phim khi tạo mô tả âm thanh và chỉnh sửa dự án, kèm bản nghe thử tự động kết hợp phim với giọng đã chọn và sử dụng cùng cách tự động giảm âm lượng phim (ducking) như bản xuất cuối cùng.
+
+4. Thêm lựa chọn cao độ trong phần điều chỉnh giọng của mô tả âm thanh. Cao độ đã chọn được ghi nhớ và lưu trong dự án.
+
+---
+
 Phiên bản 0.9.14 – 2026-10-12
 
 Giọng Edge, sách nói và mô tả âm thanh

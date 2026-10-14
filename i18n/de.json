@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "Quell- und Zieldatei dürfen nicht identisch sein.",
   "audio_description.error.voice": "Wählen Sie eine Sprachsynthese-Stimme aus.",
   "audio_description.extended": "Erweiterte Pausen aktivieren: Film in Ausnahmefällen anhalten, wenn die Beschreibung nicht in eine Sprechpause passt",
+  "audio_description.allow_nonverbal_vocals": "Beschreibungen über nichtsprachliche Lautäußerungen zulassen",
   "audio_description.gemini_api_key": "Gemini-API-Schlüssel:",
   "audio_description.show_api_key": "API-Schlüssel anzeigen",
   "audio_description.gemini_error_models": "Gemini-Modelle konnten nicht geladen werden: {error}",
@@ -2227,5 +2228,12 @@
   "app.pdf_japanese_ocr_install_progress": "Japanische OCR wird installiert. Bitte warten.",
   "app.pdf_japanese_ocr_install_success": "Japanische OCR wurde installiert. Öffnen Sie die PDF-Datei in Sonarpad erneut. Eventuell ist ein Neustart erforderlich.",
   "app.pdf_japanese_ocr_install_restart": "Japanische OCR wurde installiert, aber Windows muss neu gestartet werden. Starten Sie Windows neu und öffnen Sie die PDF-Datei erneut.",
-  "app.pdf_japanese_ocr_install_error": "Die Installation der japanischen OCR wurde nicht abgeschlossen. Prüfen Sie die optionalen Windows-Features."
+  "app.pdf_japanese_ocr_install_error": "Die Installation der japanischen OCR wurde nicht abgeschlossen. Prüfen Sie die optionalen Windows-Features.",
+  "audio_description.source_volume": "Filmlautstärke",
+  "audio_description.mix_preview.preparing": "Hörprobe wird vorbereitet",
+  "audio_description.mix_preview.stop": "Hörprobe stoppen",
+  "audio_description.mix_preview.phrase": "Audiodeskriptionstest mit automatischer Tonabsenkung.",
+  "audio_description.mix_preview.playing": "Hörprobe mit Film und Stimme abspielen",
+  "audio_description.mix_preview.error": "Die Vorschau der Beschreibung konnte nicht abgespielt werden",
+  "audio_description.bitrate": "MP3-Bitrate"
 }

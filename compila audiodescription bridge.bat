@@ -1,0 +1,1 @@
+powershell -ExecutionPolicy Bypass -File .\bridge\build_audio_description_bridge.ps1

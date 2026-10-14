@@ -28,6 +28,32 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use windows::Win32::Foundation::HWND;
 
+pub(crate) const AUDIO_DESCRIPTION_BITRATES: [u32; 5] = [64, 96, 128, 192, 256];
+
+pub(crate) fn default_audio_description_bitrate() -> u32 {
+    AUDIO_DESCRIPTION_BITRATE_KBPS
+}
+
+pub(crate) fn normalize_audio_description_bitrate(value: u32) -> u32 {
+    if AUDIO_DESCRIPTION_BITRATES.contains(&value) {
+        value
+    } else {
+        default_audio_description_bitrate()
+    }
+}
+
+pub(crate) fn default_source_volume() -> f32 {
+    1.0
+}
+
+pub(crate) fn normalize_source_volume(value: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(0.0, 2.0)
+    } else {
+        default_source_volume()
+    }
+}
+
 const MAX_SHIFT_SEC: f64 = 5.0;
 const MIN_EXTENDED_ANCHOR_SEC: f64 = 1.0;
 const EDGE_TRAILING_MIN_REMOVE_MS: u64 = 60;
@@ -86,6 +112,7 @@ pub struct AudioDescriptionJob {
     pub tts_language: Language,
     pub verbosity: AudioDescriptionVerbosity,
     pub allow_extended_pauses: bool,
+    pub allow_nonverbal_vocals: bool,
     pub recognize_characters: bool,
     pub recognize_screen_text: bool,
     pub character_catalog: Option<AudioDescriptionCharacterCatalogContext>,
@@ -96,6 +123,7 @@ pub struct AudioDescriptionJob {
     pub tts_rate: i32,
     pub tts_pitch: i32,
     pub tts_volume: i32,
+    pub source_volume: f32,
     pub dictionary: Vec<DictionaryEntry>,
     pub gemini_api_key: String,
     pub sonarpad_ai_service_url: String,
@@ -103,6 +131,7 @@ pub struct AudioDescriptionJob {
     pub sonarpad_ai_device_id: String,
     pub gemini_model: String,
     pub audiobook_bitrate_kbps: u32,
+    pub output_bitrate_kbps: u32,
     pub resume_checkpoint_path: Option<PathBuf>,
 }
 
@@ -141,6 +170,8 @@ struct AudioDescriptionPartialCheckpoint {
     language_code: String,
     verbosity: String,
     allow_extended_pauses: bool,
+    #[serde(default)]
+    allow_nonverbal_vocals: bool,
     recognize_characters: bool,
     #[serde(default)]
     recognize_screen_text: bool,
@@ -152,10 +183,14 @@ struct AudioDescriptionPartialCheckpoint {
     tts_rate: i32,
     tts_pitch: i32,
     tts_volume: i32,
+    #[serde(default = "default_source_volume")]
+    source_volume: f32,
     #[serde(default)]
     dictionary: Vec<DictionaryEntry>,
     gemini_model: String,
     audiobook_bitrate_kbps: u32,
+    #[serde(default = "default_audio_description_bitrate")]
+    output_bitrate_kbps: u32,
     character_catalog: Option<AudioDescriptionPartialCatalog>,
     completed_chunks: usize,
     total_chunks: usize,
@@ -163,16 +198,22 @@ struct AudioDescriptionPartialCheckpoint {
     descriptions: Vec<BridgeDescription>,
     #[serde(default)]
     character_glossary: Vec<BridgeCharacter>,
+    #[serde(default)]
+    verified_nonverbal_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
 pub struct AudioDescriptionResumeSettings {
     pub checkpoint_path: PathBuf,
+    pub tts_pitch: i32,
+    pub output_bitrate_kbps: u32,
+    pub source_volume: f32,
     pub input_path: PathBuf,
     pub output_path: PathBuf,
     pub description_language: Language,
     pub verbosity: AudioDescriptionVerbosity,
     pub allow_extended_pauses: bool,
+    pub allow_nonverbal_vocals: bool,
     pub recognize_characters: bool,
     pub recognize_screen_text: bool,
     pub save_project: bool,
@@ -682,6 +723,8 @@ pub struct AudioDescriptionProject {
     pub language_code: String,
     pub verbosity: String,
     pub allow_extended_pauses: bool,
+    #[serde(default)]
+    pub allow_nonverbal_vocals: bool,
     #[serde(default = "default_true")]
     pub recognize_characters: bool,
     #[serde(default = "default_true")]
@@ -692,6 +735,8 @@ pub struct AudioDescriptionProject {
     pub tts_rate: i32,
     pub tts_pitch: i32,
     pub tts_volume: i32,
+    #[serde(default = "default_source_volume")]
+    pub source_volume: f32,
     #[serde(default)]
     pub dictionary: Vec<DictionaryEntry>,
     pub bitrate_kbps: u32,
@@ -2923,6 +2968,7 @@ fn save_audio_description_partial_checkpoint(
         language_code: job.language_code.clone(),
         verbosity: job.verbosity.as_bridge_value().to_string(),
         allow_extended_pauses: job.allow_extended_pauses,
+        allow_nonverbal_vocals: job.allow_nonverbal_vocals,
         recognize_characters: job.recognize_characters,
         recognize_screen_text: job.recognize_screen_text,
         save_project: job.save_project,
@@ -2932,6 +2978,7 @@ fn save_audio_description_partial_checkpoint(
         tts_rate: job.tts_rate,
         tts_pitch: job.tts_pitch,
         tts_volume: job.tts_volume,
+        source_volume: job.source_volume,
         dictionary: job.dictionary.clone(),
         gemini_model: if checkpoint.gemini_model.trim().is_empty() {
             job.gemini_model.clone()
@@ -2939,11 +2986,13 @@ fn save_audio_description_partial_checkpoint(
             checkpoint.gemini_model.trim().to_string()
         },
         audiobook_bitrate_kbps: job.audiobook_bitrate_kbps,
+        output_bitrate_kbps: normalize_audio_description_bitrate(job.output_bitrate_kbps),
         character_catalog,
         completed_chunks: checkpoint.completed_chunks,
         total_chunks: checkpoint.total_chunks,
         descriptions: checkpoint.descriptions.clone(),
         character_glossary: checkpoint.character_glossary.clone(),
+        verified_nonverbal_ids: checkpoint.verified_nonverbal_ids.clone(),
     };
     let raw = serde_json::to_vec_pretty(&value)
         .map_err(|error| format!("Audio description: checkpoint serialization failed: {error}"))?;
@@ -2973,12 +3022,16 @@ pub fn load_audio_description_resume_settings(
 ) -> Result<AudioDescriptionResumeSettings, String> {
     let checkpoint = load_audio_description_partial_checkpoint(checkpoint_path)?;
     Ok(AudioDescriptionResumeSettings {
+        tts_pitch: checkpoint.tts_pitch,
+        output_bitrate_kbps: checkpoint.output_bitrate_kbps,
+        source_volume: checkpoint.source_volume,
         checkpoint_path: checkpoint_path.to_path_buf(),
         input_path: checkpoint.source_path,
         output_path: checkpoint.output_mp3_path,
         description_language: checkpoint.language,
         verbosity: AudioDescriptionVerbosity::from_bridge_value(&checkpoint.verbosity),
         allow_extended_pauses: checkpoint.allow_extended_pauses,
+        allow_nonverbal_vocals: checkpoint.allow_nonverbal_vocals,
         recognize_characters: checkpoint.recognize_characters,
         recognize_screen_text: checkpoint.recognize_screen_text,
         save_project: checkpoint.save_project,
@@ -3015,6 +3068,7 @@ pub fn audio_description_job_from_checkpoint(
         tts_language: checkpoint.language,
         verbosity: AudioDescriptionVerbosity::from_bridge_value(&checkpoint.verbosity),
         allow_extended_pauses: checkpoint.allow_extended_pauses,
+        allow_nonverbal_vocals: checkpoint.allow_nonverbal_vocals,
         recognize_characters: checkpoint.recognize_characters,
         recognize_screen_text: checkpoint.recognize_screen_text,
         character_catalog,
@@ -3025,6 +3079,7 @@ pub fn audio_description_job_from_checkpoint(
         tts_rate: checkpoint.tts_rate,
         tts_pitch: checkpoint.tts_pitch,
         tts_volume: checkpoint.tts_volume,
+        source_volume: checkpoint.source_volume,
         dictionary: checkpoint.dictionary,
         gemini_api_key,
         sonarpad_ai_service_url,
@@ -3032,6 +3087,7 @@ pub fn audio_description_job_from_checkpoint(
         sonarpad_ai_device_id,
         gemini_model: checkpoint.gemini_model,
         audiobook_bitrate_kbps: checkpoint.audiobook_bitrate_kbps,
+        output_bitrate_kbps: normalize_audio_description_bitrate(checkpoint.output_bitrate_kbps),
         resume_checkpoint_path: Some(checkpoint_path.to_path_buf()),
     })
 }
@@ -3115,6 +3171,7 @@ fn build_audio_description_project(
         language_code: job.language_code.clone(),
         verbosity: job.verbosity.as_bridge_value().to_string(),
         allow_extended_pauses: job.allow_extended_pauses,
+        allow_nonverbal_vocals: job.allow_nonverbal_vocals,
         recognize_characters: job.recognize_characters,
         recognize_screen_text: job.recognize_screen_text,
         gemini_model: job.gemini_model.clone(),
@@ -3123,8 +3180,9 @@ fn build_audio_description_project(
         tts_rate: job.tts_rate,
         tts_pitch: job.tts_pitch,
         tts_volume: job.tts_volume,
+        source_volume: job.source_volume,
         dictionary: job.dictionary.clone(),
-        bitrate_kbps: AUDIO_DESCRIPTION_BITRATE_KBPS,
+        bitrate_kbps: normalize_audio_description_bitrate(job.output_bitrate_kbps),
         ducking_db: AUDIO_DESCRIPTION_DUCKING_DB,
         fade_ms: AUDIO_DESCRIPTION_FADE_MS,
         protected_intervals: protected_intervals
@@ -3451,6 +3509,7 @@ pub fn load_audio_description_project(path: &Path) -> Result<AudioDescriptionPro
     if project.descriptions.is_empty() {
         return Err("Audio description: project contains no inserted descriptions".to_string());
     }
+    project.source_volume = normalize_source_volume(project.source_volume);
     for description in &mut project.descriptions {
         if description.rendered_text.is_empty() {
             description.rendered_text = description.text.clone();
@@ -3483,7 +3542,9 @@ pub fn save_audio_description_project(
     Ok(())
 }
 
-fn audio_description_job_from_project(project: &AudioDescriptionProject) -> AudioDescriptionJob {
+pub(crate) fn audio_description_job_from_project(
+    project: &AudioDescriptionProject,
+) -> AudioDescriptionJob {
     AudioDescriptionJob {
         input_path: project.source_path.clone(),
         output_path: project.output_mp3_path.clone(),
@@ -3492,6 +3553,7 @@ fn audio_description_job_from_project(project: &AudioDescriptionProject) -> Audi
         tts_language: project.language,
         verbosity: verbosity_from_project(&project.verbosity),
         allow_extended_pauses: project.allow_extended_pauses,
+        allow_nonverbal_vocals: project.allow_nonverbal_vocals,
         recognize_characters: project.recognize_characters,
         recognize_screen_text: project.recognize_screen_text,
         character_catalog: None,
@@ -3502,6 +3564,7 @@ fn audio_description_job_from_project(project: &AudioDescriptionProject) -> Audi
         tts_rate: project.tts_rate,
         tts_pitch: project.tts_pitch,
         tts_volume: project.tts_volume,
+        source_volume: project.source_volume,
         dictionary: project.dictionary.clone(),
         gemini_api_key: String::new(),
         sonarpad_ai_service_url: String::new(),
@@ -3509,6 +3572,7 @@ fn audio_description_job_from_project(project: &AudioDescriptionProject) -> Audi
         sonarpad_ai_device_id: String::new(),
         gemini_model: project.gemini_model.clone(),
         audiobook_bitrate_kbps: project.bitrate_kbps,
+        output_bitrate_kbps: normalize_audio_description_bitrate(project.bitrate_kbps),
         resume_checkpoint_path: None,
     }
 }
@@ -3569,6 +3633,190 @@ fn validate_audio_description_project_edit_duration(
         });
     }
     Ok(())
+}
+
+pub(crate) fn audio_description_preview_job(
+    input_path: PathBuf,
+    language: Language,
+    settings: &crate::settings::AppSettings,
+) -> AudioDescriptionJob {
+    AudioDescriptionJob {
+        input_path,
+        output_path: PathBuf::new(),
+        audio_stream_index: None,
+        language_code: language_code(language).to_string(),
+        tts_language: language,
+        verbosity: AudioDescriptionVerbosity::Standard,
+        allow_extended_pauses: false,
+        allow_nonverbal_vocals: false,
+        recognize_characters: false,
+        recognize_screen_text: false,
+        character_catalog: None,
+        save_project: false,
+        create_video_output: false,
+        tts_engine: settings.audio_description_tts_engine,
+        tts_voice: settings.audio_description_tts_voice.clone(),
+        tts_rate: settings
+            .audio_description_tts_rate
+            .unwrap_or(settings.tts_rate),
+        tts_pitch: settings
+            .audio_description_tts_pitch
+            .unwrap_or(settings.tts_pitch),
+        tts_volume: settings
+            .audio_description_tts_volume
+            .unwrap_or(settings.tts_volume),
+        source_volume: normalize_source_volume(settings.audio_description_source_volume),
+        dictionary: settings.dictionary.clone(),
+        gemini_api_key: String::new(),
+        sonarpad_ai_service_url: String::new(),
+        sonarpad_ai_access_code: String::new(),
+        sonarpad_ai_device_id: String::new(),
+        gemini_model: String::new(),
+        audiobook_bitrate_kbps: settings.audiobook_m4b_bitrate,
+        output_bitrate_kbps: normalize_audio_description_bitrate(
+            settings.audio_description_bitrate_kbps,
+        ),
+        resume_checkpoint_path: None,
+    }
+}
+
+pub(crate) struct AudioDescriptionMixPreviewCache {
+    key: String,
+    directory: Arc<AudioDescriptionProjectPreviewCacheDir>,
+    source: PathBuf,
+    cue: AudioDescriptionMixCue,
+    duration_sec: f64,
+}
+
+/// Uses the export synthesizer and export mixer, including voice gain and ducking.
+/// Cache the unattenuated source and synthesized voice across film-volume changes.
+pub(crate) fn render_audio_description_mix_preview(
+    job: &AudioDescriptionJob,
+    text: &str,
+    ducking: Option<(f32, u32)>,
+    cache: &mut Option<AudioDescriptionMixPreviewCache>,
+    cancel: Arc<AtomicBool>,
+) -> Result<AudioDescriptionProjectPreviewAudio, String> {
+    let metadata = fs::metadata(&job.input_path).map_err(|error| error.to_string())?;
+    let key = format!(
+        "{:?}|{}|{:?}|{:?}|{}|{:?}|{}|{}|{}|{}|{}|{}",
+        job.input_path,
+        metadata.len(),
+        metadata.modified(),
+        job.audio_stream_index,
+        text,
+        job.tts_engine,
+        job.tts_voice,
+        job.tts_rate,
+        job.tts_pitch,
+        job.tts_volume,
+        job.language_code,
+        serde_json::to_string(&job.dictionary).map_err(|error| error.to_string())?
+    );
+    if cache.as_ref().is_none_or(|cached| cached.key != key) {
+        let directory = Arc::new(AudioDescriptionProjectPreviewCacheDir {
+            path: temporary_job_dir()?,
+        });
+        let (samples, sample_rate, channels) =
+            synthesize_description(text, 0, job, &directory.path, cancel.clone())?;
+        let narration_duration =
+            samples.len() as f64 / channels.max(1) as f64 / sample_rate.max(1) as f64;
+        let duration_sec = (narration_duration + 4.0).max(10.0);
+        let streams = crate::ffmpeg_source::list_audio_streams(&job.input_path)?;
+        let mut source = if streams.is_empty() {
+            None
+        } else {
+            let initial = crate::ffmpeg_source::FfmpegSource::try_new(
+                &job.input_path,
+                0,
+                None,
+                job.audio_stream_index,
+            )?;
+            let duration = initial
+                .total_duration()
+                .map(|value| value.as_secs_f64())
+                .unwrap_or(0.0);
+            let start = (duration / 3.0).min((duration - duration_sec).max(0.0));
+            Some(crate::ffmpeg_source::FfmpegSource::try_new_at(
+                &job.input_path,
+                start,
+                None,
+                job.audio_stream_index,
+            )?)
+        };
+        let source_rate = source
+            .as_ref()
+            .map(|value| value.sample_rate())
+            .unwrap_or(48000)
+            .max(1);
+        let source_channels = source
+            .as_ref()
+            .map(|value| value.channels())
+            .unwrap_or(2)
+            .max(1);
+        let source_path = directory.path.join("source.wav");
+        let mut writer = hound::WavWriter::create(
+            &source_path,
+            hound::WavSpec {
+                channels: source_channels,
+                sample_rate: source_rate,
+                bits_per_sample: 32,
+                sample_format: hound::SampleFormat::Float,
+            },
+        )
+        .map_err(|error| error.to_string())?;
+        let frame_count = (duration_sec * source_rate as f64).ceil() as usize;
+        for frame in 0..frame_count {
+            if frame.is_multiple_of(4096) && cancel.load(Ordering::Relaxed) {
+                return Err("cancelled".to_string());
+            }
+            for _channel in 0..source_channels {
+                let sample = source.as_mut().and_then(Iterator::next).unwrap_or(0.0);
+                writer
+                    .write_sample(sample)
+                    .map_err(|error| error.to_string())?;
+            }
+        }
+        writer.finalize().map_err(|error| error.to_string())?;
+        *cache = Some(AudioDescriptionMixPreviewCache {
+            key,
+            directory,
+            source: source_path,
+            duration_sec,
+            cue: AudioDescriptionMixCue {
+                start_sec: 2.0,
+                samples,
+                sample_rate,
+                channels,
+                extended_pause: false,
+            },
+        });
+    }
+    let cached = cache
+        .as_ref()
+        .ok_or("Audio description: preview cache unavailable")?;
+    let output = cached.directory.path.join("mix_preview.mp3");
+    let (ducking_db, fade_ms) =
+        ducking.unwrap_or((AUDIO_DESCRIPTION_DUCKING_DB, AUDIO_DESCRIPTION_FADE_MS));
+    export_audio_description_mp3(
+        &cached.source,
+        &output,
+        None,
+        std::slice::from_ref(&cached.cue),
+        &AudioDescriptionExportOptions {
+            source_volume: normalize_source_volume(job.source_volume),
+            ducking_db,
+            fade_ms,
+            bitrate_kbps: normalize_audio_description_bitrate(job.output_bitrate_kbps),
+            cancel,
+        },
+        None,
+    )?;
+    Ok(AudioDescriptionProjectPreviewAudio {
+        path: output,
+        _cache_dir: cached.directory.clone(),
+        duration_sec: cached.duration_sec,
+    })
 }
 
 fn write_audio_description_preview_wav(
@@ -4059,6 +4307,7 @@ pub fn apply_reanalyzed_audio_description_project_segment_and_reexport(
         fade_ms: prepared_project.fade_ms,
         bitrate_kbps: prepared_project.bitrate_kbps,
         cancel: cancel.clone(),
+        source_volume: prepared_project.source_volume,
     };
     notify_status(
         &mut callbacks,
@@ -4394,6 +4643,7 @@ pub fn change_audio_description_project_voice(
         fade_ms: project.fade_ms,
         bitrate_kbps: project.bitrate_kbps,
         cancel: cancel.clone(),
+        source_volume: project.source_volume,
     };
     let mut export_progress = |pct: u32| {
         notify_progress(&mut callbacks, 90 + pct.saturating_mul(10) / 100);
@@ -5719,6 +5969,7 @@ pub fn reexport_audio_description_project(
         fade_ms: project.fade_ms,
         bitrate_kbps: project.bitrate_kbps,
         cancel: cancel.clone(),
+        source_volume: project.source_volume,
     };
     notify_status(
         &mut callbacks,
@@ -6096,6 +6347,7 @@ pub fn create_audio_description(
                     completed_chunks: checkpoint.completed_chunks,
                     descriptions: checkpoint.descriptions,
                     character_glossary: checkpoint.character_glossary,
+                    verified_nonverbal_ids: checkpoint.verified_nonverbal_ids,
                 })
             }
             Ok(checkpoint) => {
@@ -6148,6 +6400,7 @@ pub fn create_audio_description(
         language: job.language_code.clone(),
         verbosity: job.verbosity.as_bridge_value().to_string(),
         allow_extended_pauses: job.allow_extended_pauses,
+        allow_nonverbal_vocals: job.allow_nonverbal_vocals,
         recognize_characters: job.recognize_characters,
         recognize_screen_text: job.recognize_screen_text,
         initial_character_glossary: job
@@ -6479,8 +6732,9 @@ pub fn create_audio_description(
         // Ducking is a Sonarpad export policy, not a worker setting.
         ducking_db: AUDIO_DESCRIPTION_DUCKING_DB,
         fade_ms: AUDIO_DESCRIPTION_FADE_MS,
-        bitrate_kbps: AUDIO_DESCRIPTION_BITRATE_KBPS,
+        bitrate_kbps: normalize_audio_description_bitrate(job.output_bitrate_kbps),
         cancel: cancel.clone(),
+        source_volume: job.source_volume,
     };
     let export_target = if job.save_project {
         temporary_sibling_path(&job.output_path, "new")
@@ -6800,8 +7054,9 @@ pub fn create_audio_description_dialogue_overlap_fallback(
     let export_options = AudioDescriptionExportOptions {
         ducking_db: AUDIO_DESCRIPTION_DUCKING_DB,
         fade_ms: AUDIO_DESCRIPTION_FADE_MS,
-        bitrate_kbps: AUDIO_DESCRIPTION_BITRATE_KBPS,
+        bitrate_kbps: normalize_audio_description_bitrate(job.output_bitrate_kbps),
         cancel: cancel.clone(),
+        source_volume: job.source_volume,
     };
     let export_target = if job.save_project {
         temporary_sibling_path(&job.output_path, "new")
@@ -6942,6 +7197,100 @@ pub fn create_audio_description_dialogue_overlap_fallback(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn audio_description_bitrate_matches_mobile_and_preserves_legacy_default() {
+        assert_eq!(super::AUDIO_DESCRIPTION_BITRATES, [64, 96, 128, 192, 256]);
+        for value in super::AUDIO_DESCRIPTION_BITRATES {
+            assert_eq!(super::normalize_audio_description_bitrate(value), value);
+        }
+        for value in [0, 1, 65, 320, u32::MAX] {
+            assert_eq!(super::normalize_audio_description_bitrate(value), 192);
+        }
+    }
+
+    #[test]
+    fn audio_description_pitch_and_bitrate_survive_project_and_checkpoint_round_trips() {
+        let settings = crate::settings::AppSettings {
+            audio_description_tts_pitch: Some(7),
+            audio_description_bitrate_kbps: 96,
+            ..Default::default()
+        };
+        let job = super::audio_description_preview_job(
+            std::path::PathBuf::from("film.mp4"),
+            crate::settings::Language::Italian,
+            &settings,
+        );
+        assert_eq!(job.tts_pitch, 7);
+        assert_eq!(job.output_bitrate_kbps, 96);
+        let project = super::build_audio_description_project(&job, 10.0, 10.0, &[], &[], &[]);
+        let mut json = serde_json::to_value(&project).expect("serialize project");
+        let restored: super::AudioDescriptionProject =
+            serde_json::from_value(json.clone()).expect("restore project");
+        let restored_job = super::audio_description_job_from_project(&restored);
+        assert_eq!(restored_job.tts_pitch, 7);
+        assert_eq!(restored_job.output_bitrate_kbps, 96);
+        json["format"] = serde_json::json!(super::AUDIO_DESCRIPTION_PARTIAL_FORMAT);
+        json["source_file_size"] = serde_json::json!(123);
+        json["save_project"] = serde_json::json!(true);
+        json["completed_chunks"] = serde_json::json!(0);
+        json["total_chunks"] = serde_json::json!(1);
+        json["audiobook_bitrate_kbps"] = serde_json::json!(64);
+        let legacy: super::AudioDescriptionPartialCheckpoint =
+            serde_json::from_value(json.clone()).expect("legacy checkpoint");
+        assert_eq!(legacy.output_bitrate_kbps, 192);
+        json["output_bitrate_kbps"] = serde_json::json!(96);
+        let checkpoint: super::AudioDescriptionPartialCheckpoint =
+            serde_json::from_value(json).expect("checkpoint");
+        assert_eq!(checkpoint.tts_pitch, 7);
+        assert_eq!(checkpoint.output_bitrate_kbps, 96);
+        let roundtrip: super::AudioDescriptionPartialCheckpoint =
+            serde_json::from_slice(&serde_json::to_vec(&checkpoint).expect("serialize checkpoint"))
+                .expect("restore checkpoint");
+        assert_eq!(roundtrip.tts_pitch, 7);
+        assert_eq!(roundtrip.output_bitrate_kbps, 96);
+    }
+
+    #[test]
+    fn source_volume_survives_project_round_trip_and_legacy_defaults_to_unity() {
+        let settings = crate::settings::AppSettings::default();
+        let mut job = super::audio_description_preview_job(
+            std::path::PathBuf::from("film.mp4"),
+            crate::settings::Language::Italian,
+            &settings,
+        );
+        job.source_volume = 0.35;
+        let project = super::build_audio_description_project(&job, 10.0, 10.0, &[], &[], &[]);
+        let mut json = serde_json::to_value(&project).expect("serialize project");
+        let restored: super::AudioDescriptionProject =
+            serde_json::from_value(json.clone()).expect("restore project");
+        assert_eq!(restored.source_volume, 0.35);
+        assert_eq!(
+            super::audio_description_job_from_project(&restored).source_volume,
+            0.35
+        );
+        json.as_object_mut()
+            .expect("object")
+            .remove("source_volume");
+        let legacy: super::AudioDescriptionProject =
+            serde_json::from_value(json).expect("legacy project");
+        assert_eq!(legacy.source_volume, 1.0);
+    }
+
+    #[test]
+    fn source_volume_normalization_preserves_mute_and_handles_invalid_values() {
+        for (value, expected) in [
+            (0.0, 0.0),
+            (0.35, 0.35),
+            (2.0, 2.0),
+            (-1.0, 0.0),
+            (3.0, 2.0),
+            (f32::NAN, 1.0),
+            (f32::INFINITY, 1.0),
+        ] {
+            assert_eq!(super::normalize_source_volume(value), expected);
+        }
+    }
+
     use super::{
         AudioDescriptionCharacterCatalogContext, AudioDescriptionJob,
         AudioDescriptionProjectEditError, AudioDescriptionVerbosity, ScheduledDescription,
@@ -7265,6 +7614,7 @@ mod tests {
             tts_language: Language::Italian,
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: false,
+            allow_nonverbal_vocals: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -7275,6 +7625,7 @@ mod tests {
             tts_rate: 0,
             tts_pitch: 0,
             tts_volume: 100,
+            source_volume: 1.0,
             dictionary: vec![DictionaryEntry {
                 original: "Sonarpad".to_string(),
                 replacement: "Sonar pad".to_string(),
@@ -7289,6 +7640,7 @@ mod tests {
             sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini".to_string(),
             audiobook_bitrate_kbps: 192,
+            output_bitrate_kbps: 192,
             resume_checkpoint_path: None,
         };
         let chunks = audio_description_tts_chunks("Sonarpad_descrive_la_scena.", &job);
@@ -7322,6 +7674,7 @@ mod tests {
             tts_language: Language::Italian,
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
+            allow_nonverbal_vocals: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -7332,6 +7685,7 @@ mod tests {
             tts_rate: 0,
             tts_pitch: 0,
             tts_volume: 100,
+            source_volume: 1.0,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
             sonarpad_ai_service_url: String::new(),
@@ -7339,6 +7693,7 @@ mod tests {
             sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini".to_string(),
             audiobook_bitrate_kbps: 192,
+            output_bitrate_kbps: 192,
             resume_checkpoint_path: None,
         };
         let scheduled = vec![
@@ -7540,6 +7895,7 @@ mod tests {
             tts_language: Language::Italian,
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
+            allow_nonverbal_vocals: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -7550,6 +7906,7 @@ mod tests {
             tts_rate: 0,
             tts_pitch: 0,
             tts_volume: 100,
+            source_volume: 1.0,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
             sonarpad_ai_service_url: String::new(),
@@ -7557,6 +7914,7 @@ mod tests {
             sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini-3.5-flash-lite".to_string(),
             audiobook_bitrate_kbps: 192,
+            output_bitrate_kbps: 192,
             resume_checkpoint_path: None,
         };
         let scheduled = vec![ScheduledDescription {
@@ -7610,6 +7968,7 @@ mod tests {
             tts_language: Language::Italian,
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
+            allow_nonverbal_vocals: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -7620,6 +7979,7 @@ mod tests {
             tts_rate: 0,
             tts_pitch: 0,
             tts_volume: 100,
+            source_volume: 1.0,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
             sonarpad_ai_service_url: String::new(),
@@ -7627,6 +7987,7 @@ mod tests {
             sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini".to_string(),
             audiobook_bitrate_kbps: 192,
+            output_bitrate_kbps: 192,
             resume_checkpoint_path: None,
         };
         let project = build_audio_description_project(&job, 1.0, 1.0, &[], &[], &[]);
@@ -7887,6 +8248,7 @@ mod tests {
             tts_language: Language::Italian,
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
+            allow_nonverbal_vocals: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -7897,6 +8259,7 @@ mod tests {
             tts_rate: 0,
             tts_pitch: 0,
             tts_volume: 100,
+            source_volume: 1.0,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
             sonarpad_ai_service_url: String::new(),
@@ -7904,6 +8267,7 @@ mod tests {
             sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini-3.5-flash-lite".to_string(),
             audiobook_bitrate_kbps: 192,
+            output_bitrate_kbps: 192,
             resume_checkpoint_path: None,
         };
         let scheduled = vec![
@@ -7967,6 +8331,7 @@ mod tests {
             tts_language: Language::Italian,
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
+            allow_nonverbal_vocals: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -7977,6 +8342,7 @@ mod tests {
             tts_rate: 0,
             tts_pitch: 0,
             tts_volume: 100,
+            source_volume: 1.0,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
             sonarpad_ai_service_url: String::new(),
@@ -7984,6 +8350,7 @@ mod tests {
             sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini-3.5-flash-lite".to_string(),
             audiobook_bitrate_kbps: 192,
+            output_bitrate_kbps: 192,
             resume_checkpoint_path: None,
         };
         let scheduled = vec![ScheduledDescription {
@@ -8014,6 +8381,7 @@ mod tests {
             tts_language: Language::Italian,
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
+            allow_nonverbal_vocals: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -8024,6 +8392,7 @@ mod tests {
             tts_rate: 0,
             tts_pitch: 0,
             tts_volume: 100,
+            source_volume: 1.0,
             dictionary: Vec::new(),
             gemini_api_key: String::new(),
             sonarpad_ai_service_url: String::new(),
@@ -8031,6 +8400,7 @@ mod tests {
             sonarpad_ai_device_id: String::new(),
             gemini_model: "gemini-3.5-flash-lite".to_string(),
             audiobook_bitrate_kbps: 192,
+            output_bitrate_kbps: 192,
             resume_checkpoint_path: None,
         };
         let scheduled = vec![

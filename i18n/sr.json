@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "Исходный и конечный файлы не могут совпадать.",
   "audio_description.error.voice": "Изаберите голос синтеза говора.",
   "audio_description.extended": "Включить расширенные паузы: в исключительных случаях приостанавливать фильм, если опис не помещается в тишину",
+  "audio_description.allow_nonverbal_vocals": "Дозволи описе током невербалних гласовних звукова",
   "audio_description.gemini_api_key": "Кључ API Gemini:",
   "audio_description.show_api_key": "Прикажи API кључ",
   "audio_description.gemini_error_models": "Није могуће загрузить модели Gemini: {error}",
@@ -2175,5 +2176,12 @@
   "app.pdf_japanese_ocr_install_progress": "Instalira se japanski OCR. Sačekajte.",
   "app.pdf_japanese_ocr_install_success": "Japanski OCR je instaliran. Ponovo otvorite PDF u Sonarpadu. Možda je potrebno restartovanje.",
   "app.pdf_japanese_ocr_install_restart": "Japanski OCR je instaliran, ali Windows zahteva restartovanje. Restartujte i ponovo otvorite PDF.",
-  "app.pdf_japanese_ocr_install_error": "Windows nije završio instalaciju japanskog OCR-a. Proverite opcione funkcije."
+  "app.pdf_japanese_ocr_install_error": "Windows nije završio instalaciju japanskog OCR-a. Proverite opcione funkcije.",
+  "audio_description.source_volume": "Movie volume",
+  "audio_description.mix_preview.preparing": "Preparing audio sample",
+  "audio_description.mix_preview.stop": "Stop audio sample",
+  "audio_description.mix_preview.phrase": "Audio description test with ducking.",
+  "audio_description.mix_preview.playing": "Listen to a movie and voice sample",
+  "audio_description.mix_preview.error": "Није могуће пустити преглед описа",
+  "audio_description.bitrate": "MP3 bitrate"
 }

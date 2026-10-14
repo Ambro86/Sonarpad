@@ -1,5 +1,17 @@
 # Ändringslogg
 
+Version 0.9.15 – 2026-10-14
+
+1. Ljudbeskrivningar: ett alternativ har lagts till för att tillåta beskrivningar under icke-verbala röstljud.
+
+2. Tangentbordsnavigeringen i Alternativ → Ljud har rättats: Tab flyttar mellan kontrollerna och Esc stänger fönstret korrekt, även när insomningstimern används.
+
+3. Filmens volym kan nu justeras när en ljudbeskrivning skapas eller ett projekt redigeras. Ett automatiskt ljudprov spelar filmen och den valda rösten med samma automatiska sänkning av filmljudet (ducking) som vid den slutliga exporten.
+
+4. Ett val för tonhöjd har lagts till i röstinställningarna för ljudbeskrivningar. Den valda tonhöjden koms ihåg och sparas i projekten.
+
+---
+
 Version 0.9.14 – 2026-10-12
 
 Edge-röster, ljudböcker och syntolkning

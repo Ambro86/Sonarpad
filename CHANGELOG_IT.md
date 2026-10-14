@@ -1,5 +1,17 @@
 # Changelog
 
+Versione 0.9.15 – 2026-10-14
+
+1. Audiodescrizioni: aggiunta un’opzione per consentire descrizioni durante vocalizzazioni non verbali.
+
+2. Corretta la navigazione da tastiera in Opzioni → Audio: Tab permette di passare tra i controlli ed Esc chiude correttamente la finestra, anche con il timer di spegnimento.
+
+3. Aggiunta la regolazione del volume del film in Crea audiodescrizione e Modifica progetto audiodescrizione, con anteprima automatica del film e della voce scelta e lo stesso abbassamento automatico dell’audio (ducking) usato nell’esportazione finale.
+
+4. Aggiunta la combo del tono in Regola voce delle audiodescrizioni. Il tono scelto viene ricordato e salvato nei progetti.
+
+---
+
 Versione 0.9.14 – 2026-10-12
 
 Voci Edge, audiolibri e audiodescrizioni

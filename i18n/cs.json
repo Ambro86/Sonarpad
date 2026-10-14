@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "Zdrojový a cílový soubor nesmí být stejné.",
   "audio_description.error.voice": "Vyberte hlas syntézy řeči.",
   "audio_description.extended": "Povolit rozšířené pauzy: ve výjimečných případech pozastavit film, když se popis nevejde do ticha",
+  "audio_description.allow_nonverbal_vocals": "Povolit popisy během neřečových hlasových projevů",
   "audio_description.gemini_api_key": "Klíč API Gemini:",
   "audio_description.show_api_key": "Zobrazit klíč API",
   "audio_description.gemini_error_models": "Modely Gemini se nepodařilo načíst: {error}",
@@ -2175,5 +2176,12 @@
   "app.pdf_japanese_ocr_install_progress": "Instaluje se japonské OCR. Čekejte prosím.",
   "app.pdf_japanese_ocr_install_success": "Japonské OCR bylo nainstalováno. Otevřete PDF v Sonarpadu znovu. Může být nutný restart.",
   "app.pdf_japanese_ocr_install_restart": "Japonské OCR bylo nainstalováno, ale Windows vyžaduje restart. Restartujte a otevřete PDF znovu.",
-  "app.pdf_japanese_ocr_install_error": "Windows nedokončil instalaci japonského OCR. Zkontrolujte volitelné funkce."
+  "app.pdf_japanese_ocr_install_error": "Windows nedokončil instalaci japonského OCR. Zkontrolujte volitelné funkce.",
+  "audio_description.source_volume": "Hlasitost filmu",
+  "audio_description.mix_preview.preparing": "Příprava zvukové ukázky",
+  "audio_description.mix_preview.stop": "Zastavit zvukovou ukázku",
+  "audio_description.mix_preview.phrase": "Zkouška audiopopisu s automatickým ztlumením zvuku.",
+  "audio_description.mix_preview.playing": "Poslechnout ukázku filmu a hlasu",
+  "audio_description.mix_preview.error": "Náhled popisu nelze přehrát",
+  "audio_description.bitrate": "Datový tok MP3"
 }

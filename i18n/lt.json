@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "Šaltinio ir paskirties failai negali sutapti.",
   "audio_description.error.voice": "Pasirinkite kalbos sintezės balsą.",
   "audio_description.extended": "Įjungti išplėstines pauzes: išimtiniais atvejais pristabdyti filmą, kai aprašas netelpa tyloje",
+  "audio_description.allow_nonverbal_vocals": "Leisti aprašymus per neverbalinius balso garsus",
   "audio_description.gemini_api_key": "Gemini API raktas:",
   "audio_description.show_api_key": "Rodyti API raktą",
   "audio_description.gemini_error_models": "Nepavyko įkelti Gemini modelių: {error}",
@@ -2175,5 +2176,12 @@
   "app.pdf_japanese_ocr_install_progress": "Diegiamas japonų OCR. Palaukite.",
   "app.pdf_japanese_ocr_install_success": "Japonų OCR įdiegtas. Iš naujo atidarykite PDF „Sonarpad“. Gali reikėti paleisti Windows iš naujo.",
   "app.pdf_japanese_ocr_install_restart": "Japonų OCR įdiegtas, tačiau reikia paleisti Windows iš naujo. Po to vėl atidarykite PDF.",
-  "app.pdf_japanese_ocr_install_error": "Windows nepavyko užbaigti japonų OCR diegimo. Patikrinkite pasirinktines funkcijas."
+  "app.pdf_japanese_ocr_install_error": "Windows nepavyko užbaigti japonų OCR diegimo. Patikrinkite pasirinktines funkcijas.",
+  "audio_description.source_volume": "Movie volume",
+  "audio_description.mix_preview.preparing": "Preparing audio sample",
+  "audio_description.mix_preview.stop": "Stop audio sample",
+  "audio_description.mix_preview.phrase": "Audio description test with ducking.",
+  "audio_description.mix_preview.playing": "Listen to a movie and voice sample",
+  "audio_description.mix_preview.error": "Nepavyko paleisti aprašo peržiūros",
+  "audio_description.bitrate": "MP3 bitrate"
 }

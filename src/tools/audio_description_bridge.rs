@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(debug_assertions)]
 const BRIDGE_DEBUG_FILE_NAME: &str = "audio_description_bridge.exe";
-const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v9.exe";
+const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v10.exe";
 const BRIDGE_MIN_VALID_SIZE_BYTES: u64 = 5_000_000;
 const BRIDGE_DOWNLOAD_URLS: [&str; 2] = [
     "https://github.com/Ambro86/Sonarpad-Tools/releases/download/0.7/audio_description_bridge.exe",
@@ -48,6 +48,7 @@ pub struct AudioDescriptionBridgeRequest {
     pub language: String,
     pub verbosity: String,
     pub allow_extended_pauses: bool,
+    pub allow_nonverbal_vocals: bool,
     pub recognize_characters: bool,
     pub recognize_screen_text: bool,
     pub initial_character_glossary: Vec<BridgeCharacter>,
@@ -70,6 +71,7 @@ pub struct AudioDescriptionBridgeResume {
     pub completed_chunks: usize,
     pub descriptions: Vec<BridgeDescription>,
     pub character_glossary: Vec<BridgeCharacter>,
+    pub verified_nonverbal_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -156,6 +158,8 @@ pub struct AudioDescriptionBridgeCheckpoint {
     pub descriptions: Vec<BridgeDescription>,
     #[serde(default)]
     pub character_glossary: Vec<BridgeCharacter>,
+    #[serde(default)]
+    pub verified_nonverbal_ids: Vec<String>,
     #[serde(default)]
     pub gemini_model: String,
 }

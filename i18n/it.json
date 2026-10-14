@@ -33,6 +33,7 @@
   "audio_description.error.same_path": "Il file sorgente e quello di destinazione non possono coincidere.",
   "audio_description.error.voice": "Seleziona una voce di sintesi vocale.",
   "audio_description.extended": "Attiva pause estese: interrompi il film in casi eccezionali quando la descrizione non entra in un silenzio",
+  "audio_description.allow_nonverbal_vocals": "Consenti descrizioni su suoni vocali non verbali",
   "audio_description.gemini_api_key": "Chiave API Gemini:",
   "audio_description.show_api_key": "Mostra chiave API",
   "audio_description.gemini_error_models": "Impossibile caricare i modelli Gemini: {error}",
@@ -2227,5 +2228,12 @@
   "app.pdf_japanese_ocr_install_progress": "Installazione OCR giapponese in corso. Attendere.",
   "app.pdf_japanese_ocr_install_success": "OCR giapponese installato. Riapri il PDF in Sonarpad. Potrebbe essere necessario riavviare Windows.",
   "app.pdf_japanese_ocr_install_restart": "OCR giapponese installato, ma Windows richiede un riavvio. Riavvia Windows, poi riapri il PDF in Sonarpad.",
-  "app.pdf_japanese_ocr_install_error": "Windows non ha completato l’installazione dell’OCR giapponese. Riprova o controlla le funzionalità facoltative di Windows."
+  "app.pdf_japanese_ocr_install_error": "Windows non ha completato l’installazione dell’OCR giapponese. Riprova o controlla le funzionalità facoltative di Windows.",
+  "audio_description.source_volume": "Volume del film",
+  "audio_description.mix_preview.preparing": "Preparazione della prova audio",
+  "audio_description.mix_preview.stop": "Interrompi prova audio",
+  "audio_description.mix_preview.phrase": "Prova audiodescrizione con ducking.",
+  "audio_description.mix_preview.playing": "Ascolta prova con film e voce",
+  "audio_description.mix_preview.error": "Non è stato possibile riprodurre l’anteprima della descrizione",
+  "audio_description.bitrate": "Bitrate MP3"
 }

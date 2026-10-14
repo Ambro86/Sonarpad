@@ -1,5 +1,17 @@
 # Changelog
 
+Version 0.9.15 – 2026-10-14
+
+1. Audio descriptions: added an option to allow descriptions during non-verbal vocalizations.
+
+2. Fixed keyboard navigation in Options → Audio: Tab moves between controls and Esc closes the window correctly, including when using the sleep timer.
+
+3. Added movie-volume adjustment in Create audio description and Edit audio-description project, with an automatic preview of the movie and selected voice using the same ducking as the final export.
+
+4. Added a pitch selector in Adjust voice for audio descriptions. The selected pitch is remembered and saved in projects.
+
+---
+
 Version 0.9.14 – 2026-10-12
 
 Edge voices, audiobooks and audio descriptions

@@ -1,5 +1,17 @@
 # Dziennik zmian
 
+Wersja 0.9.15 – 2026-10-14
+
+1. Audiodeskrypcja: dodano opcję zezwalającą na opisy podczas niewerbalnych wokalizacji.
+
+2. Poprawiono nawigację klawiaturą w Opcje → Audio: Tab przechodzi między kontrolkami, a Esc prawidłowo zamyka okno, również podczas korzystania z wyłącznika czasowego.
+
+3. Dodano regulację głośności filmu podczas tworzenia audiodeskrypcji i edycji jej projektu, z automatycznym odsłuchem filmu i wybranego głosu przy takim samym automatycznym ściszaniu dźwięku filmu (ducking) jak w końcowym eksporcie.
+
+4. Dodano wybór wysokości głosu w ustawieniach głosu audiodeskrypcji. Wybrana wysokość jest zapamiętywana i zapisywana w projektach.
+
+---
+
 Wersja 0.9.14 – 2026-10-12
 
 Głosy Edge, audiobooki i audiodeskrypcja

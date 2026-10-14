@@ -1,5 +1,17 @@
 # Journal des modifications
 
+Version 0.9.15 – 2026-10-14
+
+1. Audiodescription : ajout d’une option autorisant les descriptions pendant les vocalisations non verbales.
+
+2. Correction de la navigation au clavier dans Options → Audio : Tab permet de passer entre les commandes et Échap ferme correctement la fenêtre, y compris avec la minuterie d’arrêt.
+
+3. Ajout du réglage du volume du film dans Créer une audiodescription et Modifier un projet d’audiodescription, avec un aperçu automatique du film et de la voix choisie utilisant la même atténuation automatique du son (ducking) que l’exportation finale.
+
+4. Ajout d’une liste de sélection de la hauteur de voix dans les réglages vocaux des audiodescriptions. La hauteur choisie est mémorisée et enregistrée dans les projets.
+
+---
+
 Version 0.9.14 – 2026-10-12
 
 Voix Edge, livres audio et audiodescription
