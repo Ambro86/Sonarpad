@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Componente Microsoft necessário",
+  "runtime.required_message": "O Sonarpad precisa do Microsoft Visual C++ Redistributable x64, que está ausente ou não pode ser usado neste sistema. Deseja abrir o link da Microsoft para baixá-lo?\n\nApós a instalação, inicie o Sonarpad novamente.",
+  "runtime.open_failed": "Não foi possível abrir o link. Você pode copiá-lo e abri-lo no navegador.",
   "about.message": "Sonarpad é um editor de texto para Windows com suporte a vários formatos. Abre TXT, PDF, DOCX, EPUB e planilhas; lê texto com TTS, cria audiolivros MP3 e reproduz audiolivros. Versão: {version}. Autor: Ambrogio Riili.",
   "about.title": "Sobre o Sonarpad",
   "app.action_completed": "{action} concluída.",
@@ -636,7 +639,7 @@
   "help.changelog": "&Histórico de alterações",
   "help.check_updates": "Verificar &atualizações\tF2",
   "help.donations": "&Doações",
-  "help.export_diagnostics": "&Enviar diagnóstico",
+  "help.export_diagnostics": "Salvar diagnóstico…",
   "help.feedback": "Enviar &feedback...",
   "help.guide": "&Guia\tF1",
   "help.pending_update": "Atualização &pendente",
@@ -2243,5 +2246,18 @@
   "radio.page_loading_total": "Página {current}",
   "convert_audio.choose_input": "Escolher arquivo…",
   "convert_audio.choose_output": "Escolher destino…",
-  "convert_audio.choose_image": "Escolher imagem…"
+  "convert_audio.choose_image": "Escolher imagem…",
+  "audio_description.voice_settings.refresh": "Recarregar vozes",
+  "audio_description.voice_settings.unavailable": "Não foi possível carregar as vozes. Tente novamente.",
+  "diagnostics.name": "Nome (opcional)",
+  "diagnostics.report": "Descrição do relato",
+  "diagnostics.send": "Enviar",
+  "diagnostics.sending": "Enviando relato...",
+  "diagnostics.sent": "Relato enviado ao desenvolvedor.",
+  "diagnostics.failed": "Não foi possível enviar o relato. Tente novamente mais tarde.",
+  "diagnostics.send_title": "Enviar diagnóstico",
+  "diagnostics.save": "Salvar diagnóstico…",
+  "diagnostics.notice": "O relato e um ZIP com registros, configurações e versão serão enviados ao autor por email. Os documentos abertos não são anexados.",
+  "diagnostics.email": "Email (opcional, para receber resposta)",
+  "diagnostics.email_invalid": "Digite um email válido ou deixe o campo vazio."
 }

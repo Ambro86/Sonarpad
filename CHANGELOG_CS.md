@@ -1,5 +1,12 @@
 # Přehled změn
 
+Version 0.9.17 – 2026-10-15
+
+1. Přidána kontrola Microsoft Visual C++ Redistributable x64 při spuštění s přístupným dialogem a oficiálním odkazem, pokud součást chybí nebo nefunguje. Spuštění již nezávisí na těchto DLL, takže lze upozornění zobrazit i bez součásti.
+2. Opraveno možné zamrznutí přehrávání při posunu vpřed nebo vzad: Sonarpad nyní správně zpracovává více zpráv přijatých současně od mpv a ukončí čekání, pokud se komunikační kanál uzavře.
+3. Opraveno načítání jazyků a hlasů v nastavení hlasu audiopopisu, také při obnovení: přepnutí na Microsoft načte chybějící hlasy a výsledky jiných modulů již nepřepisují aktuální výběr. Při chybě se zobrazí zpráva a tlačítko Znovu načíst hlasy.
+4. Přidáno odesílání diagnostiky autorovi e-mailem s nepovinným jménem, popisem problému a přílohou ZIP. Zůstává ruční uložení a opakování po chybě; přihlašovací údaje jsou odstraněny. Vyžaduje aktualizovanou službu na webu. Nepovinná e-mailová adresa umožňuje vývojáři odpovědět přímo na hlášení.
+
 Verze 0.9.16 – 2026-10-14
 
 1. Opraveno okno pro vytváření audiopopisu pomocí AI: procenta během zpracování jasně označují průběh audiopopisu, nikoli hlasitost filmu nebo datový tok. Popisky aktualizovány ve všech 17 jazycích.

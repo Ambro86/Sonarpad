@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Microsoft-Komponente erforderlich",
+  "runtime.required_message": "Sonarpad benötigt Microsoft Visual C++ Redistributable x64. Diese Komponente fehlt oder ist auf diesem System nicht verwendbar. Möchten Sie den Microsoft-Downloadlink öffnen?\n\nStarten Sie Sonarpad nach der Installation erneut.",
+  "runtime.open_failed": "Der Link konnte nicht geöffnet werden. Sie können ihn kopieren und im Browser öffnen.",
   "about.message": "Sonarpad ist ein Windows-Texteditor mit Unterstützung für zahlreiche Formate. Er öffnet TXT-, PDF-, DOCX-, EPUB- und Tabellenkalkulationsdateien, liest Text mit Sprachausgabe vor, erstellt MP3-Hörbücher und spielt Hörbücher ab. Version: {version}. Autor: Ambrogio Riili.",
   "about.title": "Über Sonarpad",
   "app.action_completed": "{action} abgeschlossen.",
@@ -636,7 +639,7 @@
   "help.changelog": "&Änderungsprotokoll",
   "help.check_updates": "Nach &Updates suchen\tF2",
   "help.donations": "S&penden",
-  "help.export_diagnostics": "&Diagnosedaten senden",
+  "help.export_diagnostics": "Diagnose speichern…",
   "help.feedback": "&Feedback senden...",
   "help.guide": "&Handbuch\tF1",
   "help.pending_update": "Ausstehendes &Update",
@@ -2243,5 +2246,18 @@
   "radio.page_loading_total": "Seite {current}",
   "convert_audio.choose_input": "Datei wählen…",
   "convert_audio.choose_output": "Zieldatei wählen…",
-  "convert_audio.choose_image": "Bild wählen…"
+  "convert_audio.choose_image": "Bild wählen…",
+  "audio_description.voice_settings.refresh": "Stimmen neu laden",
+  "audio_description.voice_settings.unavailable": "Stimmen konnten nicht geladen werden. Versuchen Sie es erneut.",
+  "diagnostics.name": "Name (optional)",
+  "diagnostics.report": "Beschreibung",
+  "diagnostics.send": "Senden",
+  "diagnostics.sending": "Meldung wird gesendet...",
+  "diagnostics.sent": "Meldung wurde an den Entwickler gesendet.",
+  "diagnostics.failed": "Meldung konnte nicht gesendet werden. Versuche es später erneut.",
+  "diagnostics.send_title": "Diagnose senden",
+  "diagnostics.save": "Diagnose speichern…",
+  "diagnostics.notice": "Ihr Bericht und eine ZIP-Datei mit Protokollen, Einstellungen und Versionsangaben werden dem Autor per E-Mail gesendet. Geöffnete Dokumente werden nicht angehängt.",
+  "diagnostics.email": "E-Mail (optional, für eine Rückmeldung)",
+  "diagnostics.email_invalid": "Geben Sie eine gültige E-Mail-Adresse ein oder lassen Sie das Feld leer."
 }

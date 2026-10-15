@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+Version 0.9.17 – 2026-10-15
+
+1. Neue Startprüfung für Microsoft Visual C++ Redistributable x64 mit barrierefreiem Dialog und offiziellem Downloadlink bei fehlender oder unbrauchbarer Installation. Sonarpad kann diesen Hinweis auch ohne die Runtime-DLLs anzeigen.
+2. Ein mögliches Einfrieren der Wiedergabe beim Vor- oder Zurückspringen wurde behoben: Sonarpad verarbeitet jetzt mehrere gleichzeitig empfangene mpv-Nachrichten korrekt und beendet das Warten, wenn der Kommunikationskanal geschlossen wird.
+3. Das Laden von Sprachen und Stimmen in den Stimmeinstellungen der Audiodeskription wurde korrigiert, auch beim Fortsetzen: Beim Wechsel zu Microsoft werden fehlende Stimmen geladen, und Ergebnisse anderer Sprachmodule überschreiben nicht mehr die aktuelle Auswahl. Bei Ladefehlern erscheinen eine Meldung und die Schaltfläche Stimmen neu laden.
+4. Diagnoseberichte können mit optionalem Namen, Problembeschreibung und ZIP-Anhang per E-Mail an den Autor gesendet werden. Manuelles Speichern und erneutes Senden nach Fehlern bleiben verfügbar; Zugangsdaten werden entfernt. Erfordert den aktualisierten Meldedienst auf der Website. Eine optionale E-Mail-Adresse ermöglicht dem Entwickler, direkt auf die Meldung zu antworten.
+
 Version 0.9.16 – 2026-10-14
 
 1. Das Fenster zum Erstellen von KI-Audiodeskriptionen wurde korrigiert: Während der Verarbeitung bezeichnet die Prozentangabe eindeutig den Fortschritt, nicht die Filmlautstärke oder Bitrate. Beschriftungen in allen 17 Sprachen aktualisiert.

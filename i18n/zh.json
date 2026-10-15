@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "需要 Microsoft 组件",
+  "runtime.required_message": "Sonarpad 需要 Microsoft Visual C++ Redistributable x64，但该组件在此系统上缺失或不可用。是否打开 Microsoft 下载链接？\n\n安装后，请重新启动 Sonarpad。",
+  "runtime.open_failed": "无法打开链接。您可以复制链接并在浏览器中打开。",
   "about.message": "Sonarpad是一款支持多格式的Windows文本编辑器。它可打开TXT、PDF、DOCX、EPUB及电子表格文件；通过语音合成技术朗读文本，创建MP3有声书并播放有声内容。版本号：{version}。作者：Ambrogio Riili。",
   "about.title": "关于该项目",
   "app.action_completed": "{action} 已完成。",
@@ -584,7 +587,7 @@
   "help.changelog": "&变更日志",
   "help.check_updates": "&检查更新 F2",
   "help.donations": "&捐赠",
-  "help.export_diagnostics": "&发送诊断信息",
+  "help.export_diagnostics": "保存诊断…",
   "help.feedback": "发送&反馈...",
   "help.guide": "&指南 F1",
   "help.pending_update": "待定更新",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "第 {current} 页",
   "convert_audio.choose_input": "选择文件…",
   "convert_audio.choose_output": "选择保存位置…",
-  "convert_audio.choose_image": "选择图片…"
+  "convert_audio.choose_image": "选择图片…",
+  "audio_description.voice_settings.refresh": "重新加载语音",
+  "audio_description.voice_settings.unavailable": "无法加载语音。请尝试重新加载。",
+  "diagnostics.name": "姓名（可选）",
+  "diagnostics.report": "问题描述",
+  "diagnostics.send": "发送",
+  "diagnostics.sending": "正在发送报告...",
+  "diagnostics.sent": "报告已发送给开发者。",
+  "diagnostics.failed": "无法发送报告，请稍后重试。",
+  "diagnostics.send_title": "发送诊断",
+  "diagnostics.save": "保存诊断…",
+  "diagnostics.notice": "报告及包含日志、设置和版本信息的 ZIP 将通过电子邮件发送给作者。不会附加打开的文档。",
+  "diagnostics.email": "电子邮件（可选，用于回复）",
+  "diagnostics.email_invalid": "请输入有效的电子邮件地址，或将此字段留空。"
 }

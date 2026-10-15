@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Composant Microsoft requis",
+  "runtime.required_message": "Sonarpad nécessite Microsoft Visual C++ Redistributable x64, absent ou inutilisable sur ce système. Voulez-vous ouvrir le lien Microsoft pour le télécharger ?\n\nAprès son installation, relancez Sonarpad.",
+  "runtime.open_failed": "Impossible d’ouvrir le lien. Vous pouvez le copier et l’ouvrir dans votre navigateur.",
   "about.message": "Sonarpad est un éditeur de texte pour Windows avec prise en charge de plusieurs formats. Il ouvre les fichiers TXT, PDF, DOCX, EPUB et les feuilles de calcul ; lit le texte avec TTS, crée des audiolivres MP3 et lit les audiolivres. Version : {version}. Auteur : Ambrogio Riili.",
   "about.title": "À propos du programme",
   "app.action_completed": "Action {action} terminée.",
@@ -584,7 +587,7 @@
   "help.changelog": "&Journal des modifications",
   "help.check_updates": "Vérifier les &mises à jour\tF2",
   "help.donations": "&Dons",
-  "help.export_diagnostics": "&Envoyer le diagnostic",
+  "help.export_diagnostics": "Enregistrer le diagnostic…",
   "help.feedback": "Envoyer des &commentaires...",
   "help.guide": "&Guide\tF1",
   "help.pending_update": "Mise à jour en atten&te",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Page {current}",
   "convert_audio.choose_input": "Choisir un fichier…",
   "convert_audio.choose_output": "Choisir la destination…",
-  "convert_audio.choose_image": "Choisir une image…"
+  "convert_audio.choose_image": "Choisir une image…",
+  "audio_description.voice_settings.refresh": "Recharger les voix",
+  "audio_description.voice_settings.unavailable": "Impossible de charger les voix. Réessayez.",
+  "diagnostics.name": "Nom (facultatif)",
+  "diagnostics.report": "Description du signalement",
+  "diagnostics.send": "Envoyer",
+  "diagnostics.sending": "Envoi du signalement...",
+  "diagnostics.sent": "Signalement envoyé au développeur.",
+  "diagnostics.failed": "Impossible d’envoyer le signalement. Réessayez plus tard.",
+  "diagnostics.send_title": "Envoyer le diagnostic",
+  "diagnostics.save": "Enregistrer le diagnostic…",
+  "diagnostics.notice": "Le signalement et un ZIP contenant les journaux, paramètres et informations de version seront envoyés à l’auteur par e-mail. Les documents ouverts ne sont pas joints.",
+  "diagnostics.email": "E-mail (facultatif, pour être recontacté)",
+  "diagnostics.email_invalid": "Saisissez une adresse e-mail valide ou laissez le champ vide."
 }

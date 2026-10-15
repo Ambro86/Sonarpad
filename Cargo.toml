@@ -1,6 +1,6 @@
 [package]
 name = "sonarpad"
-version = "0.9.16"
+version = "0.9.17"
 edition = "2024"
 authors = ["Ambrogio Riili"]
 description = "A modern Notepad with PDF, DOCX, XLS, EPUB, Kindle and DAISY support and TTS capabilities."
@@ -233,6 +233,7 @@ scraper = "0.25"
 httpdate = "1.0"
 mp3-duration = "0.1"
 fancy-regex = "0.17"
+regex = "1"
 sevenz-rust = "0.6"
 once_cell = "1.21"
 libloading = "0.8"

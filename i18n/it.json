@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Componente Microsoft necessario",
+  "runtime.required_message": "Per eseguire Sonarpad è necessario Microsoft Visual C++ Redistributable x64, mancante o non utilizzabile nel sistema. Vuoi aprire il collegamento Microsoft per scaricarlo?\n\nDopo averlo installato, avvia nuovamente Sonarpad.",
+  "runtime.open_failed": "Impossibile aprire il collegamento. Puoi copiarlo e aprirlo nel browser.",
   "about.message": "Sonarpad è un editor di testo per Windows con supporto multi-formato. Apre file TXT, PDF, DOCX, EPUB e fogli di calcolo; legge il testo con sintesi vocale, crea audiolibri MP3 e riproduce audiolibri. Versione: {version}. Autore: Ambrogio Riili.",
   "about.title": "Informazioni sul programma",
   "app.action_completed": "{action} completata.",
@@ -636,7 +639,7 @@
   "help.changelog": "Registro &modifiche",
   "help.check_updates": "Controlla &aggiornamenti\tF2",
   "help.donations": "&Donazioni",
-  "help.export_diagnostics": "&Invia diagnostica",
+  "help.export_diagnostics": "Salva diagnostica…",
   "help.feedback": "Invia &feedback...",
   "help.guide": "&Guida\tF1",
   "help.pending_update": "Aggiornamento in sospes&o",
@@ -2243,5 +2246,18 @@
   "radio.page_loading_total": "Pagina {current}",
   "convert_audio.choose_input": "Scegli file…",
   "convert_audio.choose_output": "Scegli destinazione…",
-  "convert_audio.choose_image": "Scegli immagine…"
+  "convert_audio.choose_image": "Scegli immagine…",
+  "audio_description.voice_settings.refresh": "Ricarica voci",
+  "audio_description.voice_settings.unavailable": "Impossibile caricare le voci. Prova a ricaricarle.",
+  "diagnostics.name": "Nome (facoltativo)",
+  "diagnostics.report": "Testo della segnalazione",
+  "diagnostics.send": "Invia",
+  "diagnostics.sending": "Invio della segnalazione...",
+  "diagnostics.sent": "Segnalazione inviata allo sviluppatore.",
+  "diagnostics.failed": "Impossibile inviare la segnalazione. Riprova più tardi.",
+  "diagnostics.send_title": "Invia diagnostica",
+  "diagnostics.save": "Salva diagnostica…",
+  "diagnostics.notice": "La segnalazione e lo ZIP con log, impostazioni e versione saranno inviati via email all’autore. Non vengono allegati i documenti aperti.",
+  "diagnostics.email": "Email (facoltativa, per essere ricontattati)",
+  "diagnostics.email_invalid": "Inserisci un indirizzo email valido oppure lascia il campo vuoto."
 }

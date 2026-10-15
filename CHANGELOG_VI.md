@@ -1,5 +1,12 @@
 # Nhật ký thay đổi
 
+Version 0.9.17 – 2026-10-15
+
+1. Thêm kiểm tra Microsoft Visual C++ Redistributable x64 khi khởi động, với hộp thoại dễ tiếp cận và liên kết chính thức nếu thành phần bị thiếu hoặc không dùng được. Khởi động không còn phụ thuộc vào các DLL này nên vẫn hiển thị được thông báo.
+2. Khắc phục tình trạng phát có thể bị treo khi tua tới hoặc tua lui: Sonarpad hiện xử lý đúng nhiều thông điệp mpv nhận được cùng lúc và ngừng chờ nếu kênh liên lạc bị đóng.
+3. Đã sửa việc tải ngôn ngữ và giọng nói trong cài đặt giọng nói của mô tả âm thanh, kể cả khi tiếp tục: chuyển sang Microsoft sẽ tải các giọng còn thiếu và kết quả từ các bộ máy khác không còn ghi đè lựa chọn hiện tại. Khi tải thất bại, hiển thị thông báo và nút Tải lại giọng nói.
+4. Đã thêm gửi chẩn đoán qua email cho tác giả, với tên tùy chọn, mô tả sự cố và tệp ZIP đính kèm. Vẫn có thể lưu thủ công và thử lại khi lỗi; thông tin xác thực được loại bỏ. Cần cập nhật dịch vụ báo cáo trên trang web. Địa chỉ email tùy chọn cho phép nhà phát triển trả lời trực tiếp báo cáo.
+
 Phiên bản 0.9.16 – 2026-10-14
 
 1. Sửa cửa sổ tạo mô tả âm thanh bằng AI: trong khi xử lý, phần trăm thể hiện rõ tiến độ mô tả âm thanh, không nhầm với âm lượng phim hoặc tốc độ bit. Cập nhật nhãn trong cả 17 ngôn ngữ.

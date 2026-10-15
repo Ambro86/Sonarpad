@@ -11,6 +11,7 @@ mod curl_client;
 mod embedded_deps;
 mod google_tts;
 mod macros;
+mod runtime_prerequisite;
 use accessibility::*;
 mod conpty;
 mod diagnostics;
@@ -3871,19 +3872,24 @@ fn build_mpv_ipc_message(command_json: &str, request_id: u64) -> Result<String, 
     serde_json::to_string(&value).map_err(|err| format!("Comando IPC di mpv non valido: {err}"))
 }
 
-fn read_mpv_ipc_response_with_pipe(
+fn read_mpv_ipc_response_with_pipe<R: std::io::Read>(
     ipc_path: &Path,
-    pipe: &mut std::fs::File,
+    pipe: &mut R,
     request_id: u64,
 ) -> Result<serde_json::Value, String> {
     use std::io::{BufRead as _, BufReader};
 
+    // A read can contain several events followed by the command response. Keep
+    // the same buffer while skipping events, or that response would be lost.
+    let mut reader = BufReader::new(pipe);
     loop {
-        let mut reader = BufReader::new(&mut *pipe);
         let mut response = String::new();
-        reader
+        let bytes_read = reader
             .read_line(&mut response)
             .map_err(|err| format!("Impossibile leggere la risposta da mpv: {err}"))?;
+        if bytes_read == 0 {
+            return Err("Canale IPC di mpv chiuso prima della risposta.".to_string());
+        }
         let trimmed = response.trim();
         if trimmed.is_empty() {
             continue;
@@ -10207,6 +10213,20 @@ struct DictationResult {
 
 fn main() -> windows::core::Result<()> {
     let args: Vec<String> = std::env::args().collect();
+    let missing_runtime = runtime_prerequisite::missing_libraries();
+    if args.iter().any(|arg| arg == "--check-runtime") {
+        // Read-only diagnostic entry point: no dialogs, extraction or settings changes.
+        std::process::exit(if missing_runtime.is_empty() { 0 } else { 2 });
+    }
+    if !missing_runtime.is_empty() {
+        let language = settings::load_settings().language;
+        runtime_prerequisite::offer_download(
+            &i18n::tr(language, "runtime.required_title"),
+            &i18n::tr(language, "runtime.required_message"),
+            &i18n::tr(language, "runtime.open_failed"),
+        );
+        return Ok(());
+    }
     if let Some(code) = tts_engine::run_sapi5_audiobook_worker_from_args(&args) {
         std::process::exit(code);
     }
@@ -15144,6 +15164,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     IDM_HELP_ABOUT => {
                         log_debug("Menu: About");
                         app_windows::about_window::show(hwnd);
+                        LRESULT(0)
+                    }
+                    IDM_HELP_SEND_DIAGNOSTICS => {
+                        app_windows::diagnostics_window::open(hwnd);
                         LRESULT(0)
                     }
                     IDM_HELP_EXPORT_DIAGNOSTICS => {
@@ -22954,6 +22978,58 @@ fn spawn_new_window_with_path(path: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn mpv_ipc_keeps_response_buffered_after_events() {
+        let messages = concat!(
+            "{\"event\":\"seek\"}\n",
+            "{\"event\":\"playback-restart\"}\n",
+            "{\"request_id\":41,\"error\":\"success\"}\n",
+            "\n",
+            "{\"request_id\":42,\"error\":\"success\",\"data\":null}\n"
+        );
+        let result = super::read_mpv_ipc_response_with_pipe(
+            std::path::Path::new("test-mpv"),
+            &mut std::io::Cursor::new(messages.as_bytes()),
+            42,
+        )
+        .expect("must retain the response after skipped events and other request IDs");
+        assert_eq!(result["request_id"], 42);
+        assert_eq!(result["error"], "success");
+    }
+
+    #[test]
+    fn mpv_ipc_closed_before_response_returns_error() {
+        for messages in ["", "\n", "{\"event\":\"shutdown\"}\n"] {
+            let result = super::read_mpv_ipc_response_with_pipe(
+                std::path::Path::new("test-mpv"),
+                &mut std::io::Cursor::new(messages.as_bytes()),
+                42,
+            );
+            assert!(result.unwrap_err().contains("chiuso prima della risposta"));
+        }
+    }
+
+    #[test]
+    fn mpv_ipc_reads_fragmented_response() {
+        struct Fragmented(std::io::Cursor<&'static [u8]>);
+        impl std::io::Read for Fragmented {
+            fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+                let length = buffer.len().min(3);
+                std::io::Read::read(&mut self.0, &mut buffer[..length])
+            }
+        }
+        let mut stream = Fragmented(std::io::Cursor::new(
+            b"{\"event\":\"seek\"}\n{\"request_id\":42,\"data\":12.5,\"error\":\"success\"}\n",
+        ));
+        let result = super::read_mpv_ipc_response_with_pipe(
+            std::path::Path::new("test-mpv"),
+            &mut stream,
+            42,
+        )
+        .expect("must assemble fragmented lines");
+        assert_eq!(result["data"], 12.5);
+    }
+
     use super::{
         COPYDATA_RESULT_DEFERRED_MODAL, COPYDATA_RESULT_HANDLED, SentenceNavigationDirection,
         append_debug_log, apply_selected_save_filter_extension,
@@ -24721,9 +24797,12 @@ impl IFileDialogControlEvents_Impl for AudiobookBitrateDialogHandler {
 }
 /// Mostra dialog per salvare file diagnostici zip.
 fn export_diagnostics_dialog(hwnd: HWND) {
-    unsafe {
-        let language = with_state(hwnd, |state| state.settings.language).unwrap_or_default();
+    let language = with_state(hwnd, |state| state.settings.language).unwrap_or_default();
+    export_diagnostics_dialog_for_language(hwnd, language);
+}
 
+fn export_diagnostics_dialog_for_language(hwnd: HWND, language: Language) {
+    unsafe {
         // Genera nome file con timestamp
         let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
         let default_name = format!("sonarpad_diagnostics_{}.zip", timestamp);
@@ -24766,7 +24845,12 @@ fn export_diagnostics_dialog(hwnd: HWND) {
             Ok(()) => {
                 let message = i18n::tr(language, "dialog.export_diagnostics_success")
                     .replace("{path}", &path.to_string_lossy());
-                show_info(hwnd, language, &message);
+                message_box_modal(
+                    hwnd,
+                    PCWSTR(to_wide(&message).as_ptr()),
+                    PCWSTR(to_wide(&info_title(language)).as_ptr()),
+                    MB_OK | MB_ICONINFORMATION,
+                );
             }
             Err(e) => {
                 let message = format!(
@@ -24774,7 +24858,12 @@ fn export_diagnostics_dialog(hwnd: HWND) {
                     i18n::tr(language, "dialog.export_diagnostics_error"),
                     e
                 );
-                show_error(hwnd, language, &message);
+                message_box_modal(
+                    hwnd,
+                    PCWSTR(to_wide(&message).as_ptr()),
+                    PCWSTR(to_wide(&error_title(language)).as_ptr()),
+                    MB_OK | MB_ICONERROR,
+                );
             }
         }
     }

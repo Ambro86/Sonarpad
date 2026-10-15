@@ -1,5 +1,12 @@
 # Changelog
 
+Version 0.9.17 – 2026-10-15
+
+1. Added a startup check for Microsoft Visual C++ Redistributable x64: if missing or unusable, an accessible dialog offers the official Microsoft download link. Sonarpad startup no longer depends on these runtime DLLs, allowing the message to appear even when the component is missing.
+2. Fixed a possible playback freeze when seeking forward or backward: Sonarpad now handles multiple mpv messages received together correctly and stops waiting if the communication channel closes.
+3. Fixed language and voice loading in audio-description voice settings, including when resuming: switching to Microsoft loads missing voices, and results from other engines no longer overwrite the current selection. Loading failures now show a message and a Reload voices button.
+4. Added diagnostic reports emailed to the author, with an optional name, problem description and ZIP attachment. Manual saving and retrying after errors remain available; credentials are removed from diagnostics. Requires the updated reporting service on the website. An optional email address lets the developer reply directly to the report.
+
 Version 0.9.16 – 2026-10-14
 
 1. Fixed the Create AI audio description window: while processing, the percentage clearly identifies audio-description progress rather than movie volume or bitrate. Labels updated in all 17 languages.

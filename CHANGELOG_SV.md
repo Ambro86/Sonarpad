@@ -1,5 +1,12 @@
 # Ändringslogg
 
+Version 0.9.17 – 2026-10-15
+
+1. Lagt till startkontroll av Microsoft Visual C++ Redistributable x64 med tillgänglig dialog och officiell länk om komponenten saknas eller inte fungerar. Starten är inte längre beroende av dessa DLL-filer, så meddelandet kan visas utan komponenten.
+2. Åtgärdat en möjlig låsning av uppspelningen vid hopp framåt eller bakåt: Sonarpad hanterar nu flera mpv-meddelanden som tas emot samtidigt korrekt och slutar vänta om kommunikationskanalen stängs.
+3. Åtgärdat inläsningen av språk och röster i syntolkningens röstinställningar, även vid återupptagning: byte till Microsoft laddar saknade röster, och resultat från andra motorer skriver inte längre över det aktuella valet. Vid inläsningsfel visas ett meddelande och knappen Ladda om röster.
+4. Diagnostik kan skickas till utvecklaren via e-post med valfritt namn, problembeskrivning och ZIP-bilaga. Manuell lagring och nya försök efter fel finns kvar; inloggningsuppgifter tas bort. Kräver den uppdaterade rapporttjänsten på webbplatsen. En valfri e-postadress gör det möjligt för utvecklaren att svara direkt på rapporten.
+
 Version 0.9.16 – 2026-10-14
 
 1. Rättat fönstret för att skapa syntolkning med AI: procenttalet under arbetet visar tydligt syntolkningens förlopp, inte filmvolym eller bithastighet. Etiketter uppdaterade på alla 17 språk.

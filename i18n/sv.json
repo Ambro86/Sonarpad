@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Microsoft-komponent krävs",
+  "runtime.required_message": "Sonarpad kräver Microsoft Visual C++ Redistributable x64, som saknas eller inte kan användas på systemet. Vill du öppna Microsofts nedladdningslänk?\n\nStarta Sonarpad igen efter installationen.",
+  "runtime.open_failed": "Länken kunde inte öppnas. Du kan kopiera den och öppna den i webbläsaren.",
   "about.message": "Sonarpad är en textredigerare för Windows med stöd för flera format. Den öppnar TXT, PDF, DOCX, EPUB och kalkylbladsfiler; läser text med talsyntes, skapar MP3-ljudböcker och spelar upp ljudböcker. Version: {version}. Författare: Ambrogio Riili.",
   "about.title": "Om programmet",
   "app.action_completed": "{action} slutförd.",
@@ -584,7 +587,7 @@
   "help.changelog": "&Ändringslogg",
   "help.check_updates": "Sök efter &uppdateringar\tF2",
   "help.donations": "&Donationer",
-  "help.export_diagnostics": "&Skicka diagnostik",
+  "help.export_diagnostics": "Spara diagnostik…",
   "help.feedback": "Skicka &feedback...",
   "help.guide": "&Guide\tF1",
   "help.pending_update": "V&äntande uppdatering",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Sida {current}",
   "convert_audio.choose_input": "Välj fil…",
   "convert_audio.choose_output": "Välj målfil…",
-  "convert_audio.choose_image": "Välj bild…"
+  "convert_audio.choose_image": "Välj bild…",
+  "audio_description.voice_settings.refresh": "Ladda om röster",
+  "audio_description.voice_settings.unavailable": "Det gick inte att ladda rösterna. Försök igen.",
+  "diagnostics.name": "Namn (valfritt)",
+  "diagnostics.report": "Beskrivning av problemet",
+  "diagnostics.send": "Skicka",
+  "diagnostics.sending": "Skickar rapporten…",
+  "diagnostics.sent": "Rapporten har skickats till utvecklaren.",
+  "diagnostics.failed": "Rapporten kunde inte skickas. Försök igen eller spara diagnostiken.",
+  "diagnostics.send_title": "Skicka diagnostik",
+  "diagnostics.save": "Spara diagnostik…",
+  "diagnostics.notice": "Rapporten och en ZIP-fil med loggar, inställningar och versionsinformation skickas till utvecklaren via e-post. Öppna dokument bifogas inte.",
+  "diagnostics.email": "E-post (valfritt, för återkoppling)",
+  "diagnostics.email_invalid": "Ange en giltig e-postadress eller lämna fältet tomt."
 }

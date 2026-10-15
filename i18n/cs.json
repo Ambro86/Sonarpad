@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Je vyžadována součást Microsoft",
+  "runtime.required_message": "Sonarpad vyžaduje Microsoft Visual C++ Redistributable x64, který v tomto systému chybí nebo jej nelze použít. Chcete otevřít odkaz Microsoftu ke stažení?\n\nPo instalaci znovu spusťte Sonarpad.",
+  "runtime.open_failed": "Odkaz nelze otevřít. Můžete jej zkopírovat a otevřít v prohlížeči.",
   "about.message": "Sonarpad je textový editor pro Windows s podporou více formátů. Otevírá soubory TXT, PDF, DOCX, EPUB a tabulky; čte text pomocí TTS, vytváří audioknihy MP3 a přehrává audioknihy. Verze: {version}. Autor: Ambrogio Riili.",
   "about.title": "O programu",
   "app.action_completed": "{action} dokončeno.",
@@ -584,7 +587,7 @@
   "help.changelog": "&Seznam změn",
   "help.check_updates": "Zkontrolovat &aktualizace\tF2",
   "help.donations": "Přispět na &vývoj programu",
-  "help.export_diagnostics": "O&deslat diagnostiku",
+  "help.export_diagnostics": "Uložit diagnostiku…",
   "help.feedback": "Odeslat &zpětnou vazbu...",
   "help.guide": "&Příručka\tF1",
   "help.pending_update": "Č&ekající aktualizace",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Stránka {current}",
   "convert_audio.choose_input": "Vybrat soubor…",
   "convert_audio.choose_output": "Vybrat cíl…",
-  "convert_audio.choose_image": "Vybrat obrázek…"
+  "convert_audio.choose_image": "Vybrat obrázek…",
+  "audio_description.voice_settings.refresh": "Znovu načíst hlasy",
+  "audio_description.voice_settings.unavailable": "Hlasy se nepodařilo načíst. Zkuste je načíst znovu.",
+  "diagnostics.name": "Jméno (volitelné)",
+  "diagnostics.report": "Text hlášení",
+  "diagnostics.send": "Odeslat",
+  "diagnostics.sending": "Odesílání hlášení...",
+  "diagnostics.sent": "Hlášení bylo odesláno vývojáři.",
+  "diagnostics.failed": "Hlášení se nepodařilo odeslat. Zkuste to později.",
+  "diagnostics.send_title": "Odeslat diagnostiku",
+  "diagnostics.save": "Uložit diagnostiku…",
+  "diagnostics.notice": "Hlášení a ZIP s protokoly, nastavením a verzí budou odeslány autorovi e-mailem. Otevřené dokumenty se nepřikládají.",
+  "diagnostics.email": "E-mail (nepovinný, pro odpověď)",
+  "diagnostics.email_invalid": "Zadejte platnou e-mailovou adresu nebo ponechte pole prázdné."
 }

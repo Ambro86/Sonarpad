@@ -1,5 +1,12 @@
 # Pakeitimų žurnalas
 
+Version 0.9.17 – 2026-10-15
+
+1. Pridėta Microsoft Visual C++ Redistributable x64 patikra paleidžiant su prieinamu dialogu ir oficialia nuoroda, jei komponento nėra arba jis neveikia. Paleidimas nebepriklauso nuo šių DLL, todėl pranešimas rodomas ir be komponento.
+2. Ištaisytas galimas atkūrimo užstrigimas peršokant pirmyn arba atgal: Sonarpad dabar tinkamai apdoroja kelis kartu gautus mpv pranešimus ir nutraukia laukimą, jei ryšio kanalas uždaromas.
+3. Pataisytas kalbų ir balsų įkėlimas garsinio vaizdavimo balso nustatymuose, taip pat tęsiant darbą: perjungus į Microsoft įkeliami trūkstami balsai, o kitų variklių rezultatai nebeperrašo dabartinio pasirinkimo. Nepavykus įkelti, rodomas pranešimas ir mygtukas Iš naujo įkelti balsus.
+4. Pridėtas diagnostikos siuntimas autoriui el. paštu su neprivalomu vardu, problemos aprašymu ir ZIP priedu. Galima išsaugoti rankiniu būdu ir bandyti dar kartą; prisijungimo duomenys pašalinami. Reikia atnaujintos pranešimų tarnybos svetainėje. Neprivalomas el. pašto adresas leidžia kūrėjui tiesiogiai atsakyti į pranešimą.
+
 Versija 0.9.16 – 2026-10-14
 
 1. Pataisytas DI garsinio vaizdavimo kūrimo langas: vykdant užduotį procentai aiškiai rodo eigą, o ne filmo garsumą ar bitų spartą. Atnaujintos visų 17 kalbų etiketės.

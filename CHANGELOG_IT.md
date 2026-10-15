@@ -1,5 +1,12 @@
 # Changelog
 
+Version 0.9.17 – 2026-10-15
+
+1. Aggiunto un controllo all’avvio per Microsoft Visual C++ Redistributable x64: se manca o non è utilizzabile, un messaggio accessibile propone il collegamento ufficiale Microsoft. L’avvio di Sonarpad non dipende più dalle DLL di questo runtime, così il messaggio può essere mostrato anche quando il componente manca.
+2. Corretto un possibile blocco durante la riproduzione quando si avanzava o si tornava indietro: Sonarpad ora gestisce correttamente più messaggi ricevuti insieme da mpv e interrompe l’attesa se il canale di comunicazione viene chiuso.
+3. Corretto il caricamento di lingue e voci nelle impostazioni voce delle audiodescrizioni, anche durante la ripresa: passando a Microsoft vengono caricate le voci mancanti e i risultati di altri motori non sovrascrivono la selezione corrente. In caso di errore viene mostrato un messaggio con il pulsante Ricarica voci.
+4. Aggiunto l’invio della diagnostica all’autore via email, con nome facoltativo, descrizione del problema e ZIP allegato. Restano disponibili il salvataggio manuale e un nuovo tentativo in caso di errore; le credenziali vengono rimosse dalla diagnostica. Richiede il servizio di invio aggiornato sul sito. È possibile indicare un’email facoltativa per essere ricontattati: lo sviluppatore può rispondere direttamente alla segnalazione.
+
 Versione 0.9.16 – 2026-10-14
 
 1. Corretta la finestra Crea audiodescrizione con IA: durante il lavoro la percentuale indica chiaramente l’avanzamento dell’audiodescrizione, senza confondersi con bitrate e volume del film. Etichette aggiornate in tutte le 17 lingue.

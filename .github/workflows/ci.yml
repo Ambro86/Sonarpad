@@ -150,6 +150,11 @@ jobs:
     - name: Build (Release)
       run: cargo build --verbose --release
 
+    - name: Verify startup without the Visual C++ runtime
+      run: |
+        python -m pip install pefile==2024.8.26
+        python scripts/check_runtime_startup.py target/release/sonarpad.exe target/release/sonarpad-standalone.exe
+
     - name: Download Sentry CLI
       shell: powershell
       run: |

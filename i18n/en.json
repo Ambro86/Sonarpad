@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Microsoft component required",
+  "runtime.required_message": "Sonarpad requires Microsoft Visual C++ Redistributable x64, which is missing or unusable on this system. Would you like to open the Microsoft download link?\n\nAfter installing it, start Sonarpad again.",
+  "runtime.open_failed": "The link could not be opened. You can copy it and open it in your browser.",
   "about.message": "Sonarpad is a Windows text editor with multi-format support. It opens TXT, PDF, DOCX, EPUB, and spreadsheet files; reads text with TTS, creates MP3 audiobooks, and plays audiobooks. Version: {version}. Author: Ambrogio Riili.",
   "about.title": "About the Program",
   "app.action_completed": "{action} completed.",
@@ -584,7 +587,7 @@
   "help.changelog": "&Changelog",
   "help.check_updates": "Check for &Updates\tF2",
   "help.donations": "&Donations",
-  "help.export_diagnostics": "&Send diagnostics",
+  "help.export_diagnostics": "Save diagnostics…",
   "help.feedback": "Send &Feedback...",
   "help.guide": "&Guide\tF1",
   "help.pending_update": "P&ending Update",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Page {current}",
   "convert_audio.choose_input": "Choose file…",
   "convert_audio.choose_output": "Choose destination…",
-  "convert_audio.choose_image": "Choose image…"
+  "convert_audio.choose_image": "Choose image…",
+  "audio_description.voice_settings.refresh": "Reload voices",
+  "audio_description.voice_settings.unavailable": "Voices could not be loaded. Try reloading voices.",
+  "diagnostics.name": "Name (optional)",
+  "diagnostics.report": "Report details",
+  "diagnostics.send": "Send",
+  "diagnostics.sending": "Sending report...",
+  "diagnostics.sent": "Report sent to the developer.",
+  "diagnostics.failed": "Could not send the report. Please try again later.",
+  "diagnostics.send_title": "Send diagnostics",
+  "diagnostics.save": "Save diagnostics…",
+  "diagnostics.notice": "Your report and a ZIP containing logs, settings and version information will be emailed to the author. Open documents are not attached.",
+  "diagnostics.email": "Email (optional, for a reply)",
+  "diagnostics.email_invalid": "Enter a valid email address or leave the field empty."
 }

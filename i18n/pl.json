@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Wymagany składnik Microsoft",
+  "runtime.required_message": "Sonarpad wymaga Microsoft Visual C++ Redistributable x64, którego brakuje lub nie można użyć w tym systemie. Czy otworzyć łącze Microsoft do pobrania?\n\nPo instalacji uruchom ponownie Sonarpad.",
+  "runtime.open_failed": "Nie można otworzyć łącza. Możesz je skopiować i otworzyć w przeglądarce.",
   "about.message": "Sonarpad to edytor tekstu dla Windows z obsługą wielu formatów. Otwiera pliki TXT, PDF, DOCX, EPUB oraz arkusze kalkulacyjne; czyta tekst za pomocą TTS, tworzy audiobooki MP3 i odtwarza audiobooki. Wersja: {version}. Autor: Ambrogio Riili.",
   "about.title": "O programie",
   "app.action_completed": "Akcja {action} zakończona.",
@@ -584,7 +587,7 @@
   "help.changelog": "D&ziennik zmian",
   "help.check_updates": "Sprawdź &aktualizacje\tF2",
   "help.donations": "&Darowizny",
-  "help.export_diagnostics": "&Wyślij diagnostykę",
+  "help.export_diagnostics": "Zapisz diagnostykę…",
   "help.feedback": "W&yślij opinię...",
   "help.guide": "&Przewodnik\tF1",
   "help.pending_update": "Oczekująca a&ktualizacja",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Strona {current}",
   "convert_audio.choose_input": "Wybierz plik…",
   "convert_audio.choose_output": "Wybierz plik docelowy…",
-  "convert_audio.choose_image": "Wybierz obraz…"
+  "convert_audio.choose_image": "Wybierz obraz…",
+  "audio_description.voice_settings.refresh": "Wczytaj głosy ponownie",
+  "audio_description.voice_settings.unavailable": "Nie udało się wczytać głosów. Spróbuj ponownie.",
+  "diagnostics.name": "Imię (opcjonalnie)",
+  "diagnostics.report": "Treść zgłoszenia",
+  "diagnostics.send": "Wyślij",
+  "diagnostics.sending": "Wysyłanie zgłoszenia...",
+  "diagnostics.sent": "Zgłoszenie zostało wysłane do dewelopera.",
+  "diagnostics.failed": "Nie udało się wysłać zgłoszenia. Spróbuj ponownie później.",
+  "diagnostics.send_title": "Wyślij diagnostykę",
+  "diagnostics.save": "Zapisz diagnostykę…",
+  "diagnostics.notice": "Zgłoszenie oraz ZIP z dziennikami, ustawieniami i wersją zostaną wysłane autorowi e-mailem. Otwarte dokumenty nie są dołączane.",
+  "diagnostics.email": "E-mail (opcjonalnie, do odpowiedzi)",
+  "diagnostics.email_invalid": "Wpisz prawidłowy adres e-mail lub pozostaw pole puste."
 }

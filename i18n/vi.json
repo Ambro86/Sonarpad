@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Cần thành phần Microsoft",
+  "runtime.required_message": "Sonarpad cần Microsoft Visual C++ Redistributable x64 nhưng thành phần này bị thiếu hoặc không sử dụng được trên hệ thống. Bạn có muốn mở liên kết tải xuống của Microsoft không?\n\nSau khi cài đặt, hãy khởi động lại Sonarpad.",
+  "runtime.open_failed": "Không thể mở liên kết. Bạn có thể sao chép và mở liên kết trong trình duyệt.",
   "about.message": "Sonarpad là trình soạn thảo văn bản cho Windows hỗ trợ nhiều định dạng. Phần mềm có thể mở TXT, PDF, DOCX, EPUB và các tệp bảng tính; đọc văn bản bằng TTS, tạo và phát sách nói MP3.",
   "about.title": "Giới thiệu phần mềm",
   "app.action_completed": "Đã hoàn tất: {action}.",
@@ -584,7 +587,7 @@
   "help.changelog": "&Nhật ký thay đổi",
   "help.check_updates": "Kiểm tra bản &cập nhật\tF2",
   "help.donations": "&Quyên góp",
-  "help.export_diagnostics": "Gửi chẩn &đoán",
+  "help.export_diagnostics": "Lưu chẩn đoán…",
   "help.feedback": "Gửi &phản hồi...",
   "help.guide": "&Hướng dẫn\tF1",
   "help.pending_update": "Bản cập nhật đang &chờ",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Trang {current}",
   "convert_audio.choose_input": "Chọn tệp…",
   "convert_audio.choose_output": "Chọn nơi lưu…",
-  "convert_audio.choose_image": "Chọn hình ảnh…"
+  "convert_audio.choose_image": "Chọn hình ảnh…",
+  "audio_description.voice_settings.refresh": "Tải lại giọng nói",
+  "audio_description.voice_settings.unavailable": "Không thể tải giọng nói. Hãy thử tải lại.",
+  "diagnostics.name": "Tên (không bắt buộc)",
+  "diagnostics.report": "Mô tả sự cố",
+  "diagnostics.send": "Gửi",
+  "diagnostics.sending": "Đang gửi báo cáo…",
+  "diagnostics.sent": "Đã gửi báo cáo cho tác giả.",
+  "diagnostics.failed": "Không thể gửi báo cáo. Hãy thử lại hoặc lưu chẩn đoán.",
+  "diagnostics.send_title": "Gửi chẩn đoán",
+  "diagnostics.save": "Lưu chẩn đoán…",
+  "diagnostics.notice": "Báo cáo và tệp ZIP chứa nhật ký, cài đặt và thông tin phiên bản sẽ được gửi qua email cho tác giả. Không đính kèm tài liệu đang mở.",
+  "diagnostics.email": "Email (không bắt buộc, để nhận phản hồi)",
+  "diagnostics.email_invalid": "Nhập địa chỉ email hợp lệ hoặc để trống."
 }

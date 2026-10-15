@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex};
 
 use tokio::sync::mpsc;
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
@@ -10,10 +10,11 @@ use windows::Win32::UI::WindowsAndMessaging::{
     CB_ADDSTRING, CB_GETCURSEL, CB_GETITEMDATA, CB_RESETCONTENT, CB_SETCURSEL, CB_SETITEMDATA,
     CBN_SELCHANGE, CBS_DROPDOWNLIST, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow,
     DispatchMessageW, GWLP_USERDATA, GetDlgItem, GetMessageW, GetWindowLongPtrW, HMENU, IDC_ARROW,
-    IsDialogMessageW, IsWindow, MSG, RegisterClassW, SW_SHOW, SendMessageW, SetForegroundWindow,
-    SetWindowLongPtrW, ShowWindow, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLOSE,
-    WM_COMMAND, WM_CREATE, WM_KEYDOWN, WNDCLASSW, WS_CAPTION, WS_CHILD, WS_EX_CLIENTEDGE,
-    WS_EX_DLGMODALFRAME, WS_SYSMENU, WS_TABSTOP, WS_VISIBLE,
+    IsDialogMessageW, IsWindow, KillTimer, MSG, RegisterClassW, SW_SHOW, SendMessageW,
+    SetForegroundWindow, SetTimer, SetWindowLongPtrW, ShowWindow, TranslateMessage,
+    WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLOSE, WM_COMMAND, WM_CREATE, WM_KEYDOWN, WM_NCDESTROY,
+    WM_TIMER, WNDCLASSW, WS_CAPTION, WS_CHILD, WS_EX_CLIENTEDGE, WS_EX_DLGMODALFRAME, WS_SYSMENU,
+    WS_TABSTOP, WS_VISIBLE,
 };
 use windows::core::PCWSTR;
 
@@ -28,6 +29,9 @@ const ID_RATE: i32 = 1203;
 const ID_VOLUME: i32 = 1204;
 const ID_TEST: i32 = 1205;
 const ID_PITCH: i32 = 1208;
+const ID_REFRESH: i32 = 1209;
+const ID_STATUS: i32 = 1210;
+const VOICE_TIMER: usize = 1;
 const ID_OK: i32 = 1;
 const ID_CANCEL: i32 = 2;
 
@@ -49,6 +53,15 @@ impl AudioDescriptionVoiceSources {
         }
     }
 
+    fn replace(&mut self, engine: TtsEngine, voices: Vec<VoiceInfo>) {
+        *match engine {
+            TtsEngine::Edge => &mut self.edge,
+            TtsEngine::Sapi5 => &mut self.sapi5,
+            TtsEngine::Sapi4 => &mut self.sapi4,
+            TtsEngine::Google => &mut self.google,
+        } = voices;
+    }
+
     pub fn voices_for(&self, engine: TtsEngine) -> Vec<VoiceInfo> {
         self.voices(engine).to_vec()
     }
@@ -63,6 +76,8 @@ pub struct AudioDescriptionVoiceSettings {
     pub volume: i32,
 }
 
+type VoiceLoadResult = (TtsEngine, Result<Vec<VoiceInfo>, String>);
+
 struct DialogData {
     language: Language,
     main_parent: HWND,
@@ -71,6 +86,8 @@ struct DialogData {
     pitch_engine: TtsEngine,
     voice_languages: Vec<String>,
     result: Option<AudioDescriptionVoiceSettings>,
+    pending: [bool; 4],
+    completed: Arc<Mutex<Vec<VoiceLoadResult>>>,
 }
 
 fn engine_index(engine: TtsEngine) -> usize {
@@ -151,6 +168,9 @@ fn voice_language_code(voice: &VoiceInfo) -> String {
 
 fn fill_language_combo(hwnd: HWND, data: &DialogData) {
     let combo = unsafe { GetDlgItem(hwnd, ID_LANGUAGE) };
+    unsafe {
+        SendMessageW(combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
+    }
     add_combo_item(
         combo,
         &i18n::tr(data.language, "google_tts.voices.all_languages"),
@@ -239,6 +259,137 @@ fn fill_voice_combo(hwnd: HWND, preferred: &str) {
     if visible_count > 0 {
         unsafe {
             SendMessageW(combo, CB_SETCURSEL, WPARAM(selected_index), LPARAM(0));
+        }
+    }
+}
+
+fn update_voice_languages(data: &mut DialogData) {
+    data.voice_languages = data
+        .sources
+        .edge
+        .iter()
+        .map(voice_language_code)
+        .filter(|code| !code.is_empty())
+        .collect();
+    data.voice_languages.sort();
+    data.voice_languages.dedup();
+}
+
+fn set_voice_status(hwnd: HWND, text: &str) {
+    unsafe {
+        crate::log_if_err!(crate::set_window_text_w_safe(
+            GetDlgItem(hwnd, ID_STATUS),
+            PCWSTR(to_wide(text).as_ptr())
+        ));
+    }
+}
+
+fn update_voice_controls(hwnd: HWND, data: &DialogData) {
+    let loading = data.pending[engine_index(selected_engine(hwnd))];
+    let ready = !loading && !selected_voice(hwnd).is_empty();
+    unsafe {
+        EnableWindow(GetDlgItem(hwnd, ID_REFRESH), !loading);
+        EnableWindow(GetDlgItem(hwnd, ID_VOICE), !loading);
+        EnableWindow(
+            GetDlgItem(hwnd, ID_LANGUAGE),
+            !loading && selected_engine(hwnd) == TtsEngine::Edge,
+        );
+        EnableWindow(GetDlgItem(hwnd, ID_OK), ready);
+        EnableWindow(GetDlgItem(hwnd, ID_TEST), ready);
+    }
+}
+
+fn request_voices(hwnd: HWND, force: bool) {
+    let pointer = unsafe { GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut DialogData };
+    if pointer.is_null() {
+        return;
+    }
+    let data = unsafe { &mut *pointer };
+    let engine = selected_engine(hwnd);
+    let index = engine_index(engine);
+    if data.pending[index] {
+        set_voice_status(
+            hwnd,
+            &i18n::tr(data.language, "audio_description.status.loading_voices"),
+        );
+    } else if force || data.sources.voices(engine).is_empty() {
+        data.pending[index] = true;
+        set_voice_status(
+            hwnd,
+            &i18n::tr(data.language, "audio_description.status.loading_voices"),
+        );
+        let completed = data.completed.clone();
+        // No HWND or dialog pointer escapes to the worker: closing the dialog
+        // while a network request is pending cannot update a reused window.
+        std::thread::spawn(move || {
+            let result = match engine {
+                TtsEngine::Edge => super::options_window::fetch_voice_list(),
+                TtsEngine::Sapi5 => crate::sapi5_engine::list_sapi_voices(),
+                TtsEngine::Sapi4 => Ok(crate::sapi4_engine::get_voices()),
+                TtsEngine::Google => Ok(crate::google_tts::installed_voices()),
+            };
+            completed
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .push((engine, result));
+        });
+    } else {
+        set_voice_status(hwnd, "");
+    }
+    update_voice_controls(hwnd, data);
+}
+
+fn complete_voice_loads(hwnd: HWND, data: &mut DialogData) {
+    let results = std::mem::take(&mut *data.completed.lock().unwrap_or_else(|e| e.into_inner()));
+    for (engine, result) in results {
+        let preferred = selected_voice(hwnd);
+        data.pending[engine_index(engine)] = false;
+        let error = match result {
+            Ok(voices) if !voices.is_empty() => {
+                crate::log_debug(&format!(
+                    "Audio description voice dialog: loaded engine={engine:?} count={}",
+                    voices.len()
+                ));
+                with_state(data.main_parent, |app| match engine {
+                    TtsEngine::Edge => app.edge_voices = voices.clone(),
+                    TtsEngine::Sapi5 => app.sapi_voices = voices.clone(),
+                    _ => {}
+                });
+                data.sources.replace(engine, voices);
+                None
+            }
+            Ok(_) => Some(i18n::tr(
+                data.language,
+                "audio_description.voice_settings.unavailable",
+            )),
+            Err(error) => {
+                crate::log_debug(&format!(
+                    "Audio description voice dialog: load failed engine={engine:?} error={error}"
+                ));
+                Some(format!(
+                    "{} {error}",
+                    i18n::tr(
+                        data.language,
+                        "audio_description.voice_settings.unavailable"
+                    )
+                ))
+            }
+        };
+        if engine == selected_engine(hwnd) {
+            if engine == TtsEngine::Edge {
+                update_voice_languages(data);
+                fill_language_combo(hwnd, data);
+            }
+            fill_voice_combo(
+                hwnd,
+                if preferred.is_empty() {
+                    &data.default.voice
+                } else {
+                    &preferred
+                },
+            );
+            set_voice_status(hwnd, error.as_deref().unwrap_or(""));
+            update_voice_controls(hwnd, data);
         }
     }
 }
@@ -683,6 +834,40 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     None,
                 );
 
+                CreateWindowExW(
+                    WINDOW_EX_STYLE(0),
+                    WC_BUTTON,
+                    PCWSTR(
+                        to_wide(&i18n::tr(
+                            language,
+                            "audio_description.voice_settings.refresh",
+                        ))
+                        .as_ptr(),
+                    ),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                    label_x,
+                    y + 38,
+                    180,
+                    28,
+                    hwnd,
+                    HMENU(ID_REFRESH as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                CreateWindowExW(
+                    WINDOW_EX_STYLE(0),
+                    WC_STATIC,
+                    PCWSTR::null(),
+                    WS_CHILD | WS_VISIBLE,
+                    label_x,
+                    y + 74,
+                    490,
+                    45,
+                    hwnd,
+                    HMENU(ID_STATUS as isize),
+                    HINSTANCE(0),
+                    None,
+                );
                 fill_engine_combo(hwnd, language, data.default.engine);
                 fill_language_combo(hwnd, data);
                 fill_voice_combo(hwnd, &data.default.voice);
@@ -697,6 +882,8 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     &volume_items(language),
                     data.default.volume,
                 );
+                SetTimer(hwnd, VOICE_TIMER, 100, None);
+                request_voices(hwnd, false);
                 SetFocus(engine_combo);
                 LRESULT(0)
             }
@@ -712,15 +899,22 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                             selected_value(GetDlgItem(hwnd, ID_PITCH), data.default.pitch);
                         let pitch = convert_pitch_engine(current, data.pitch_engine, engine);
                         data.pitch_engine = engine;
+                        update_voice_languages(data);
+                        fill_language_combo(hwnd, data);
                         fill_pitch_combo(hwnd, data.language, engine, pitch);
                         crate::tts_engine::stop_tts_playback(data.main_parent);
                     }
                     fill_voice_combo(hwnd, "");
+                    request_voices(hwnd, false);
                     return LRESULT(0);
                 }
                 if id == ID_LANGUAGE && notification as u32 == CBN_SELCHANGE {
                     let preferred = selected_voice(hwnd);
                     fill_voice_combo(hwnd, &preferred);
+                    let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut DialogData;
+                    if !pointer.is_null() {
+                        update_voice_controls(hwnd, &*pointer);
+                    }
                     return LRESULT(0);
                 }
                 if id == ID_PITCH && notification as u32 == CBN_SELCHANGE {
@@ -728,6 +922,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     if !pointer.is_null() {
                         crate::tts_engine::stop_tts_playback((*pointer).main_parent);
                     }
+                    return LRESULT(0);
+                }
+                if id == ID_REFRESH {
+                    request_voices(hwnd, true);
                     return LRESULT(0);
                 }
                 if id == ID_TEST {
@@ -769,6 +967,18 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 }
                 LRESULT(0)
             }
+            WM_TIMER if wparam.0 == VOICE_TIMER => {
+                let pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut DialogData;
+                if !pointer.is_null() {
+                    complete_voice_loads(hwnd, &mut *pointer);
+                }
+                LRESULT(0)
+            }
+            WM_NCDESTROY => {
+                crate::log_if_err!(KillTimer(hwnd, VOICE_TIMER));
+                SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+                DefWindowProcW(hwnd, msg, wparam, lparam)
+            }
             WM_KEYDOWN => {
                 let key = wparam.0 as u32;
                 if key == windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE.0 as u32 {
@@ -794,7 +1004,7 @@ pub fn open_dialog(
     parent: HWND,
     main_parent: HWND,
     language: Language,
-    sources: AudioDescriptionVoiceSources,
+    sources: &mut AudioDescriptionVoiceSources,
     default: AudioDescriptionVoiceSettings,
 ) -> Option<AudioDescriptionVoiceSettings> {
     unsafe {
@@ -829,7 +1039,9 @@ pub fn open_dialog(
         let mut data = DialogData {
             language,
             main_parent,
-            sources,
+            sources: sources.clone(),
+            pending: [false; 4],
+            completed: Arc::new(Mutex::new(Vec::new())),
             pitch_engine: default.engine,
             default,
             voice_languages,
@@ -843,7 +1055,7 @@ pub fn open_dialog(
             CW_USEDEFAULT,
             CW_USEDEFAULT,
             550,
-            361,
+            475,
             parent,
             HMENU(0),
             hinstance,
@@ -869,6 +1081,7 @@ pub fn open_dialog(
         }
         EnableWindow(parent, true);
         SetForegroundWindow(parent);
+        *sources = data.sources;
         data.result
     }
 }
@@ -876,6 +1089,152 @@ pub fn open_dialog(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn audio_description_voice_loading_recovers_and_keeps_engines_separate() {
+        unsafe {
+            let voice = |name: &str, locale: &str| VoiceInfo {
+                short_name: name.to_string(),
+                locale: locale.to_string(),
+                is_multilingual: false,
+            };
+            let mut data = DialogData {
+                language: Language::Italian,
+                main_parent: HWND(0),
+                sources: AudioDescriptionVoiceSources {
+                    edge: vec![],
+                    sapi5: vec![voice("Local voice", "it-IT")],
+                    sapi4: vec![],
+                    google: vec![],
+                },
+                default: AudioDescriptionVoiceSettings {
+                    engine: TtsEngine::Sapi5,
+                    voice: "Local voice".into(),
+                    rate: 0,
+                    pitch: 0,
+                    volume: 100,
+                },
+                pitch_engine: TtsEngine::Sapi5,
+                voice_languages: vec![],
+                result: None,
+                pending: [false; 4],
+                completed: Arc::new(Mutex::new(vec![])),
+            };
+            let hwnd = CreateWindowExW(
+                WINDOW_EX_STYLE(0),
+                WC_STATIC,
+                PCWSTR::null(),
+                windows::Win32::UI::WindowsAndMessaging::WS_POPUP,
+                0,
+                0,
+                500,
+                500,
+                HWND(0),
+                HMENU(0),
+                HINSTANCE(0),
+                None,
+            );
+            assert_ne!(hwnd.0, 0);
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, &mut data as *mut _ as isize);
+            for id in [ID_ENGINE, ID_LANGUAGE, ID_VOICE] {
+                CreateWindowExW(
+                    WINDOW_EX_STYLE(0),
+                    WC_COMBOBOXW,
+                    PCWSTR::null(),
+                    WS_CHILD | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                    0,
+                    0,
+                    200,
+                    200,
+                    hwnd,
+                    HMENU(id as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+            }
+            for id in [ID_OK, ID_TEST, ID_REFRESH, ID_STATUS, ID_LANGUAGE_LABEL] {
+                CreateWindowExW(
+                    WINDOW_EX_STYLE(0),
+                    WC_STATIC,
+                    PCWSTR::null(),
+                    WS_CHILD,
+                    0,
+                    0,
+                    200,
+                    30,
+                    hwnd,
+                    HMENU(id as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+            }
+            let engine_combo = GetDlgItem(hwnd, ID_ENGINE);
+            add_combo_item(engine_combo, "Microsoft", 0);
+            add_combo_item(engine_combo, "SAPI5", 1);
+            SendMessageW(engine_combo, CB_SETCURSEL, WPARAM(1), LPARAM(0));
+            fill_language_combo(hwnd, &data);
+            fill_voice_combo(hwnd, "Local voice");
+            data.pending[0] = true;
+            data.completed.lock().unwrap().push((
+                TtsEngine::Edge,
+                Ok(vec![voice("it-IT-IsabellaNeural", "it-IT")]),
+            ));
+            complete_voice_loads(hwnd, &mut data);
+            assert_eq!(selected_voice(hwnd), "Local voice");
+            assert_eq!(data.sources.edge.len(), 1);
+
+            SendMessageW(engine_combo, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+            update_voice_languages(&mut data);
+            fill_language_combo(hwnd, &data);
+            fill_voice_combo(hwnd, "");
+            request_voices(hwnd, false); // Cached catalog: no network request.
+            assert_eq!(selected_voice(hwnd), "it-IT-IsabellaNeural");
+            assert!(!data.pending[0]);
+
+            data.sources.edge.clear();
+            fill_voice_combo(hwnd, "");
+            data.pending[0] = true;
+            data.completed
+                .lock()
+                .unwrap()
+                .push((TtsEngine::Edge, Err("offline".into())));
+            complete_voice_loads(hwnd, &mut data);
+            assert!(selected_voice(hwnd).is_empty());
+            assert!(
+                !windows::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled(GetDlgItem(
+                    hwnd, ID_OK
+                ))
+                .as_bool()
+            );
+            assert!(
+                windows::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled(GetDlgItem(
+                    hwnd, ID_REFRESH
+                ))
+                .as_bool()
+            );
+            assert!(
+                windows::Win32::UI::WindowsAndMessaging::GetWindowTextLengthW(GetDlgItem(
+                    hwnd, ID_STATUS
+                )) > 0
+            );
+
+            data.pending[0] = true;
+            data.completed.lock().unwrap().push((
+                TtsEngine::Edge,
+                Ok(vec![voice("it-IT-DiegoNeural", "it-IT")]),
+            ));
+            complete_voice_loads(hwnd, &mut data);
+            assert_eq!(selected_voice(hwnd), "it-IT-DiegoNeural");
+            assert_eq!(data.voice_languages, vec!["it"]);
+            assert!(
+                windows::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled(GetDlgItem(
+                    hwnd, ID_OK
+                ))
+                .as_bool()
+            );
+            DestroyWindow(hwnd).expect("destroy hidden voice dialog");
+        }
+    }
 
     #[test]
     fn audio_description_pitch_combo_preserves_negative_one_item_data() {

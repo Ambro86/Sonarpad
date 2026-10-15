@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Reikalingas Microsoft komponentas",
+  "runtime.required_message": "Sonarpad reikalingas Microsoft Visual C++ Redistributable x64, kurio šioje sistemoje nėra arba jis neveikia. Ar norite atverti Microsoft atsisiuntimo nuorodą?\n\nĮdiegę iš naujo paleiskite Sonarpad.",
+  "runtime.open_failed": "Nepavyko atverti nuorodos. Galite ją nukopijuoti ir atverti naršyklėje.",
   "about.message": "Sonarpad yra Windows tekstų redaktorius, palaikantis įvairius formatus. Jis atidaro TXT, PDF, DOCX, EPUB ir skaičiuoklės failus; skaito tekstą naudodamas TTS, kuria MP3 garso knygas ir atkuria garso knygas. Versija: {version}. Autorius: Ambrogio Riili.",
   "about.title": "Apie programą",
   "app.action_completed": "{action} užbaigtas.",
@@ -584,7 +587,7 @@
   "help.changelog": "&Keitimų žurnalas",
   "help.check_updates": "Patikrinti atnaujinimus &F2",
   "help.donations": "&Aušos",
-  "help.export_diagnostics": "&Siųsti diagnostiką",
+  "help.export_diagnostics": "Išsaugoti diagnostiką…",
   "help.feedback": "S&iųsti atsiliepimą...",
   "help.guide": "&Gidas F1",
   "help.pending_update": "P&ending atnaujinimas",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Puslapis {current}",
   "convert_audio.choose_input": "Pasirinkti failą…",
   "convert_audio.choose_output": "Pasirinkti paskirtį…",
-  "convert_audio.choose_image": "Pasirinkti paveikslėlį…"
+  "convert_audio.choose_image": "Pasirinkti paveikslėlį…",
+  "audio_description.voice_settings.refresh": "Iš naujo įkelti balsus",
+  "audio_description.voice_settings.unavailable": "Nepavyko įkelti balsų. Bandykite dar kartą.",
+  "diagnostics.name": "Vardas (neprivaloma)",
+  "diagnostics.report": "Problemos aprašymas",
+  "diagnostics.send": "Siųsti",
+  "diagnostics.sending": "Siunčiamas pranešimas…",
+  "diagnostics.sent": "Pranešimas išsiųstas autoriui.",
+  "diagnostics.failed": "Nepavyko išsiųsti. Bandykite dar kartą arba išsaugokite diagnostiką.",
+  "diagnostics.send_title": "Siųsti diagnostiką",
+  "diagnostics.save": "Išsaugoti diagnostiką…",
+  "diagnostics.notice": "Pranešimas ir ZIP su žurnalais, nustatymais bei versijos informacija bus išsiųsti autoriui el. paštu. Atverti dokumentai nepridedami.",
+  "diagnostics.email": "El. paštas (neprivaloma, atsakymui)",
+  "diagnostics.email_invalid": "Įveskite galiojantį el. pašto adresą arba palikite lauką tuščią."
 }

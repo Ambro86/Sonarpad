@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Potrebna je Microsoft komponenta",
+  "runtime.required_message": "Sonarpad zahteva Microsoft Visual C++ Redistributable x64, koji nedostaje ili nije upotrebljiv na ovom sistemu. Želite li da otvorite Microsoft vezu za preuzimanje?\n\nNakon instalacije ponovo pokrenite Sonarpad.",
+  "runtime.open_failed": "Nije moguće otvoriti vezu. Možete je kopirati i otvoriti u pregledaču.",
   "about.message": "Sonarpad je Windows uređivač teksta sa podrškom za više formata. Otvara TXT, PDF, DOCX, EPUB i proračunske tabele; čita tekst pomoću TTS‑a, pravi MP3 audio-knjige i reprodukuje audio-knjige. Verzija: {version}. Autor: Ambrogio Riili.",
   "about.title": "O programu",
   "app.action_completed": "Akcija je završena.",
@@ -584,7 +587,7 @@
   "help.changelog": "&Lista izmena",
   "help.check_updates": "Proveri &ažuriranja\tF2",
   "help.donations": "&Donacije",
-  "help.export_diagnostics": "&Pošalji dijagnostiku",
+  "help.export_diagnostics": "Сачувај дијагностику…",
   "help.feedback": "Pošalj&i povratnu informaciju...",
   "help.guide": "&Vodič\tF1",
   "help.pending_update": "&U toku je ažuriranje.",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Stranica {current}",
   "convert_audio.choose_input": "Izaberi datoteku…",
   "convert_audio.choose_output": "Izaberi odredište…",
-  "convert_audio.choose_image": "Izaberi sliku…"
+  "convert_audio.choose_image": "Izaberi sliku…",
+  "audio_description.voice_settings.refresh": "Поново учитај гласове",
+  "audio_description.voice_settings.unavailable": "Није могуће учитати гласове. Покушајте поново.",
+  "diagnostics.name": "Име (необавезно)",
+  "diagnostics.report": "Опис проблема",
+  "diagnostics.send": "Пошаљи",
+  "diagnostics.sending": "Слање пријаве…",
+  "diagnostics.sent": "Пријава је послата аутору.",
+  "diagnostics.failed": "Слање није успело. Покушајте поново или сачувајте дијагностику.",
+  "diagnostics.send_title": "Пошаљи дијагностику",
+  "diagnostics.save": "Сачувај дијагностику…",
+  "diagnostics.notice": "Пријава и ZIP са евиденцијама, подешавањима и верзијом биће послати аутору е-поштом. Отворени документи се не прилажу.",
+  "diagnostics.email": "Е-пошта (необавезно, за одговор)",
+  "diagnostics.email_invalid": "Унесите исправну адресу е-поште или оставите поље празно."
 }

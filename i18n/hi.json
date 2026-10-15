@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Microsoft घटक आवश्यक है",
+  "runtime.required_message": "Sonarpad के लिए Microsoft Visual C++ Redistributable x64 आवश्यक है, जो इस सिस्टम में नहीं है या उपयोग योग्य नहीं है। क्या आप इसे डाउनलोड करने के लिए Microsoft का लिंक खोलना चाहते हैं?\n\nइंस्टॉल करने के बाद Sonarpad फिर से शुरू करें।",
+  "runtime.open_failed": "लिंक नहीं खुल सका। आप इसे कॉपी करके ब्राउज़र में खोल सकते हैं।",
   "about.message": "Sonarpad एक Windows टेक्स्ट एडिटर है, जो कई फ़ॉर्मैट का समर्थन करता है। यह TXT, PDF, DOCX, EPUB और स्प्रेडशीट फ़ाइलें खोलता है; TTS के साथ टेक्स्ट पढ़ता है, MP3 ऑडियोबुक बनाता है और ऑडियोबुक चलाता है। संस्करण: {version}. लेखक: Ambrogio Riili.",
   "about.title": "प्रोग्राम के बारे में",
   "app.action_completed": "{action} पूरा हुआ।",
@@ -584,7 +587,7 @@
   "help.changelog": "&परिवर्तन सूची",
   "help.check_updates": "&अपडेट जाँचें\tF2",
   "help.donations": "&दान",
-  "help.export_diagnostics": "&डायग्नोस्टिक्स भेजें",
+  "help.export_diagnostics": "निदान सहेजें…",
   "help.feedback": "&फीडबैक भेजें...",
   "help.guide": "&मार्गदर्शिका\tF1",
   "help.pending_update": "लंबित अपडेट",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "पृष्ठ {current}",
   "convert_audio.choose_input": "फ़ाइल चुनें…",
   "convert_audio.choose_output": "गंतव्य चुनें…",
-  "convert_audio.choose_image": "चित्र चुनें…"
+  "convert_audio.choose_image": "चित्र चुनें…",
+  "audio_description.voice_settings.refresh": "आवाज़ें फिर से लोड करें",
+  "audio_description.voice_settings.unavailable": "आवाज़ें लोड नहीं हो सकीं। फिर से लोड करने का प्रयास करें।",
+  "diagnostics.name": "नाम (वैकल्पिक)",
+  "diagnostics.report": "समस्या का विवरण",
+  "diagnostics.send": "भेजें",
+  "diagnostics.sending": "रिपोर्ट भेजी जा रही है…",
+  "diagnostics.sent": "रिपोर्ट लेखक को भेज दी गई।",
+  "diagnostics.failed": "रिपोर्ट नहीं भेजी जा सकी। फिर से प्रयास करें या निदान सहेजें।",
+  "diagnostics.send_title": "निदान भेजें",
+  "diagnostics.save": "निदान सहेजें…",
+  "diagnostics.notice": "आपकी रिपोर्ट और लॉग, सेटिंग तथा संस्करण वाला ZIP लेखक को ईमेल से भेजा जाएगा। खुले दस्तावेज़ संलग्न नहीं किए जाते।",
+  "diagnostics.email": "ईमेल (वैकल्पिक, जवाब पाने के लिए)",
+  "diagnostics.email_invalid": "मान्य ईमेल पता दर्ज करें या फ़ील्ड खाली छोड़ें।"
 }

@@ -1,5 +1,12 @@
 # Journal des modifications
 
+Version 0.9.17 – 2026-10-15
+
+1. Ajout d’une vérification de Microsoft Visual C++ Redistributable x64 au démarrage, avec une boîte de dialogue accessible et le lien officiel si le composant manque ou ne fonctionne pas. Le démarrage ne dépend plus de ces DLL afin de pouvoir afficher cet avertissement.
+2. Correction d’un blocage possible de la lecture lors d’un saut en avant ou en arrière : Sonarpad traite désormais correctement plusieurs messages mpv reçus ensemble et cesse d’attendre si le canal de communication se ferme.
+3. Correction du chargement des langues et des voix dans les paramètres vocaux des audiodescriptions, y compris lors de la reprise : le passage à Microsoft charge les voix manquantes et les résultats des autres moteurs ne remplacent plus la sélection actuelle. En cas d’échec, un message et le bouton Recharger les voix sont affichés.
+4. Ajout de l’envoi du diagnostic à l’auteur par e-mail, avec nom facultatif, description du problème et pièce jointe ZIP. L’enregistrement manuel et une nouvelle tentative restent possibles ; les identifiants secrets sont supprimés. Nécessite le service de signalement mis à jour sur le site. Une adresse e-mail facultative permet au développeur de répondre directement au signalement.
+
 Version 0.9.16 – 2026-10-14
 
 1. Correction de la fenêtre de création d’audiodescription par IA : pendant le traitement, le pourcentage indique clairement la progression, sans confusion avec le volume du film ou le débit. Libellés actualisés dans les 17 langues.

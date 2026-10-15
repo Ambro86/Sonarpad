@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Требуется компонент Microsoft",
+  "runtime.required_message": "Для Sonarpad необходим Microsoft Visual C++ Redistributable x64, который отсутствует или непригоден для использования в этой системе. Открыть ссылку Microsoft для загрузки?\n\nПосле установки снова запустите Sonarpad.",
+  "runtime.open_failed": "Не удалось открыть ссылку. Её можно скопировать и открыть в браузере.",
   "about.message": "Sonarpad - это текстовый редактор для Windows с поддержкой нескольких форматов. Он открывает файлы TXT, PDF, DOCX, EPUB и электронные таблицы; читает текст с помощью TTS, создает аудиокниги в формате MP3 и воспроизводит аудиокниги. Версия: {version}. Автор: Ambrogio Riili.",
   "about.title": "О программе",
   "app.action_completed": "{action} завершено.",
@@ -584,7 +587,7 @@
   "help.changelog": "Список &изменений",
   "help.check_updates": "Про&верить обновления\tF2",
   "help.donations": "&Пожертвования",
-  "help.export_diagnostics": "Отправить &диагностику",
+  "help.export_diagnostics": "Сохранить диагностику…",
   "help.feedback": "О&тправить отзыв...",
   "help.guide": "&Руководство\tF1",
   "help.pending_update": "&Ожидающее обновление",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Страница {current}",
   "convert_audio.choose_input": "Выбрать файл…",
   "convert_audio.choose_output": "Выбрать место сохранения…",
-  "convert_audio.choose_image": "Выбрать изображение…"
+  "convert_audio.choose_image": "Выбрать изображение…",
+  "audio_description.voice_settings.refresh": "Перезагрузить голоса",
+  "audio_description.voice_settings.unavailable": "Не удалось загрузить голоса. Попробуйте ещё раз.",
+  "diagnostics.name": "Имя (необязательно)",
+  "diagnostics.report": "Описание проблемы",
+  "diagnostics.send": "Отправить",
+  "diagnostics.sending": "Отправка сообщения…",
+  "diagnostics.sent": "Сообщение отправлено автору.",
+  "diagnostics.failed": "Не удалось отправить сообщение. Повторите попытку или сохраните диагностику.",
+  "diagnostics.send_title": "Отправить диагностику",
+  "diagnostics.save": "Сохранить диагностику…",
+  "diagnostics.notice": "Сообщение и ZIP с журналами, настройками и версией будут отправлены автору по электронной почте. Открытые документы не прикладываются.",
+  "diagnostics.email": "Email (необязательно, для ответа)",
+  "diagnostics.email_invalid": "Введите корректный адрес электронной почты или оставьте поле пустым."
 }

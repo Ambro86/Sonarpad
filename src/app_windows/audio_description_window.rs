@@ -245,6 +245,7 @@ struct WindowState {
     close_button: HWND,
     setup_controls: Vec<HWND>,
     voices: Vec<VoiceInfo>,
+    voices_engine: Option<TtsEngine>,
     preferred_voice: String,
     running: bool,
     cancel: Option<Arc<AtomicBool>>,
@@ -1619,7 +1620,12 @@ fn load_voices(hwnd: HWND, engine: TtsEngine) {
             TtsEngine::Google => Ok(crate::google_tts::installed_voices()),
         };
         let payload = Box::new(result);
-        post_boxed_message(hwnd, WM_AD_VOICES_LOADED, WPARAM(0), payload);
+        post_boxed_message(
+            hwnd,
+            WM_AD_VOICES_LOADED,
+            WPARAM(engine_combo_index(engine)),
+            payload,
+        );
     });
 }
 
@@ -1631,10 +1637,16 @@ fn audio_description_voice_sources(
     })
     .unwrap_or_default();
     let current_engine = engine_from_combo(state.engine_combo);
-    if current_engine == TtsEngine::Edge && edge.is_empty() {
+    if current_engine == TtsEngine::Edge
+        && state.voices_engine == Some(current_engine)
+        && edge.is_empty()
+    {
         edge = state.voices.clone();
     }
-    if current_engine == TtsEngine::Sapi5 && sapi5.is_empty() {
+    if current_engine == TtsEngine::Sapi5
+        && state.voices_engine == Some(current_engine)
+        && sapi5.is_empty()
+    {
         sapi5 = state.voices.clone();
     }
     crate::app_windows::audio_description_voice_window::AudioDescriptionVoiceSources {
@@ -1646,7 +1658,7 @@ fn audio_description_voice_sources(
 }
 
 fn open_audio_description_voice_settings(hwnd: HWND, state: &mut WindowState) {
-    let sources = audio_description_voice_sources(state);
+    let mut sources = audio_description_voice_sources(state);
     let current_voice = selected_voice_name(state)
         .filter(|voice| !voice.trim().is_empty())
         .unwrap_or_else(|| state.preferred_voice.clone());
@@ -1662,7 +1674,7 @@ fn open_audio_description_voice_settings(hwnd: HWND, state: &mut WindowState) {
         hwnd,
         state.parent,
         state.language,
-        sources.clone(),
+        &mut sources,
         default,
     );
     if let Some(selected) = result {
@@ -1692,6 +1704,7 @@ fn open_audio_description_voice_settings(hwnd: HWND, state: &mut WindowState) {
 
 fn refill_voice_combo(state: &mut WindowState, voices: Vec<VoiceInfo>) {
     state.voices = voices;
+    state.voices_engine = Some(engine_from_combo(state.engine_combo));
     unsafe { SendMessageW(state.voice_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0)) };
     for voice in &state.voices {
         let display = if voice.locale.trim().is_empty() {
@@ -3649,6 +3662,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         close_button,
                     ],
                     voices: Vec::new(),
+                    voices_engine: None,
                     preferred_voice: tts_voice,
                     running: false,
                     cancel: None,
@@ -3959,6 +3973,12 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     return LRESULT(0);
                 }
                 let state = &mut *pointer;
+                if wparam.0 != engine_combo_index(engine_from_combo(state.engine_combo)) {
+                    crate::log_debug(
+                        "Audio description: ignoring voices for an obsolete engine selection",
+                    );
+                    return LRESULT(0);
+                }
                 match result {
                     Ok(voices) => {
                         refill_voice_combo(state, voices);
@@ -4664,6 +4684,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         LPARAM(0),
                     );
                     state.preferred_voice = resume.tts_voice;
+                    state.voices.clear();
+                    state.voices_engine = None;
+                    SendMessageW(state.voice_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
+                    load_voices(hwnd, resume.tts_engine);
                     refill_gemini_model_combo(
                         state.gemini_model_combo,
                         combo_items(state.gemini_model_combo),

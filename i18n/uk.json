@@ -1,4 +1,7 @@
 {
+  "runtime.required_title": "Потрібен компонент Microsoft",
+  "runtime.required_message": "Sonarpad потребує Microsoft Visual C++ Redistributable x64, який відсутній або непридатний для використання в цій системі. Відкрити посилання Microsoft для завантаження?\n\nПісля встановлення знову запустіть Sonarpad.",
+  "runtime.open_failed": "Не вдалося відкрити посилання. Його можна скопіювати та відкрити у браузері.",
   "about.message": "Sonarpad — це текстовий редактор для Windows з підтримкою багатьох форматів. Відкриває TXT, PDF, DOCX, EPUB та таблиці; читає текст за допомогою синтезу мовлення, створює MP3-аудіокниги та відтворює їх. Версія: {version}. Автор: Ambrogio Riili.",
   "about.title": "Про програму",
   "app.action_completed": "{action} завершено.",
@@ -584,7 +587,7 @@
   "help.changelog": "Список &змін",
   "help.check_updates": "Перевірити наявність &оновлень\tF2",
   "help.donations": "П&ідтримати проєкт",
-  "help.export_diagnostics": "&Надіслати діагностику",
+  "help.export_diagnostics": "Зберегти діагностику…",
   "help.feedback": "Надіслати &відгук...",
   "help.guide": "&Посібник\tF1",
   "help.pending_update": "Очікує &оновлення",
@@ -2191,5 +2194,18 @@
   "radio.page_loading_total": "Сторінка {current}",
   "convert_audio.choose_input": "Вибрати файл…",
   "convert_audio.choose_output": "Вибрати місце збереження…",
-  "convert_audio.choose_image": "Вибрати зображення…"
+  "convert_audio.choose_image": "Вибрати зображення…",
+  "audio_description.voice_settings.refresh": "Перезавантажити голоси",
+  "audio_description.voice_settings.unavailable": "Не вдалося завантажити голоси. Спробуйте ще раз.",
+  "diagnostics.name": "Ім’я (необов’язково)",
+  "diagnostics.report": "Опис проблеми",
+  "diagnostics.send": "Надіслати",
+  "diagnostics.sending": "Надсилання повідомлення...",
+  "diagnostics.sent": "Повідомлення надіслано розробнику.",
+  "diagnostics.failed": "Не вдалося надіслати повідомлення. Спробуйте пізніше.",
+  "diagnostics.send_title": "Надіслати діагностику",
+  "diagnostics.save": "Зберегти діагностику…",
+  "diagnostics.notice": "Повідомлення та ZIP із журналами, налаштуваннями й версією буде надіслано автору електронною поштою. Відкриті документи не додаються.",
+  "diagnostics.email": "Email (необов’язково, для відповіді)",
+  "diagnostics.email_invalid": "Введіть коректну адресу електронної пошти або залиште поле порожнім."
 }

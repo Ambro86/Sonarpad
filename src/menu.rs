@@ -181,6 +181,7 @@ pub const IDM_HELP_FEEDBACK: usize = 7005;
 pub const IDM_HELP_DONATIONS: usize = 7006;
 pub const IDM_HELP_EXPORT_DIAGNOSTICS: usize = 7007;
 pub const IDM_HELP_VISIT_SONARPAD: usize = 7008;
+pub const IDM_HELP_SEND_DIAGNOSTICS: usize = 7009;
 pub const MAX_RECENT: usize = 5;
 
 const FONT_ARIAL_LABEL: &str = "&Arial";
@@ -2046,6 +2047,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             MF_STRING,
             IDM_HELP_EXPORT_DIAGNOSTICS,
             &labels.help_export_diagnostics,
+        );
+        append_menu_string(
+            help_menu,
+            MF_STRING,
+            IDM_HELP_SEND_DIAGNOSTICS,
+            &i18n::tr(language, "diagnostics.send_title"),
         );
         append_menu_string(help_menu, MF_STRING, IDM_HELP_ABOUT, &labels.help_about);
         append_menu_string(hmenu, MF_POPUP, help_menu.0 as usize, &labels.menu_help);
