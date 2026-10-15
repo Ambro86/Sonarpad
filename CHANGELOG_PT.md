@@ -5,7 +5,7 @@ Version 0.9.17 – 2026-10-15
 1. Adicionada uma verificação inicial do Microsoft Visual C++ Redistributable x64, com diálogo acessível e ligação oficial se estiver em falta ou inutilizável. O arranque já não depende destas DLL, permitindo apresentar o aviso sem o componente.
 2. Corrigido um possível bloqueio da reprodução ao avançar ou recuar: o Sonarpad processa agora corretamente várias mensagens do mpv recebidas em conjunto e deixa de esperar se o canal de comunicação for fechado.
 3. Corrigido o carregamento de idiomas e vozes nas definições de voz das audiodescrições, também ao retomar: mudar para Microsoft carrega as vozes em falta e os resultados de outros motores deixam de substituir a seleção atual. Em caso de falha, é apresentada uma mensagem e o botão Recarregar vozes.
-4. Adicionado o envio de diagnóstico ao autor por email, com nome opcional, descrição do problema e ZIP em anexo. Mantêm-se a gravação manual e a repetição após erros; as credenciais são removidas. Requer o serviço de relatórios atualizado no site. Um email opcional permite ao programador responder diretamente ao relatório.
+4. Adicionado o envio de diagnóstico ao autor por email, com nome opcional, descrição do problema e ZIP em anexo. Mantêm-se a gravação manual e a repetição após erros; as credenciais são removidas. Um email opcional permite ao programador responder diretamente ao relatório.
 
 Versão 0.9.16 – 2026-10-14
 

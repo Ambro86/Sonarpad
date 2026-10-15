@@ -587,7 +587,7 @@
   "help.changelog": "&Changelog",
   "help.check_updates": "Check for &Updates\tF2",
   "help.donations": "&Donations",
-  "help.export_diagnostics": "Save diagnostics…",
+  "help.export_diagnostics": "&Save diagnostics…",
   "help.feedback": "Send &Feedback...",
   "help.guide": "&Guide\tF1",
   "help.pending_update": "P&ending Update",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "Save diagnostics…",
   "diagnostics.notice": "Your report and a ZIP containing logs, settings and version information will be emailed to the author. Open documents are not attached.",
   "diagnostics.email": "Email (optional, for a reply)",
-  "diagnostics.email_invalid": "Enter a valid email address or leave the field empty."
+  "diagnostics.email_invalid": "Enter a valid email address or leave the field empty.",
+  "help.send_diagnostics": "S&end diagnostics"
 }

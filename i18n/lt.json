@@ -587,7 +587,7 @@
   "help.changelog": "&Keitimų žurnalas",
   "help.check_updates": "Patikrinti atnaujinimus &F2",
   "help.donations": "&Aušos",
-  "help.export_diagnostics": "Išsaugoti diagnostiką…",
+  "help.export_diagnostics": "I&šsaugoti diagnostiką…",
   "help.feedback": "S&iųsti atsiliepimą...",
   "help.guide": "&Gidas F1",
   "help.pending_update": "P&ending atnaujinimas",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "Išsaugoti diagnostiką…",
   "diagnostics.notice": "Pranešimas ir ZIP su žurnalais, nustatymais bei versijos informacija bus išsiųsti autoriui el. paštu. Atverti dokumentai nepridedami.",
   "diagnostics.email": "El. paštas (neprivaloma, atsakymui)",
-  "diagnostics.email_invalid": "Įveskite galiojantį el. pašto adresą arba palikite lauką tuščią."
+  "diagnostics.email_invalid": "Įveskite galiojantį el. pašto adresą arba palikite lauką tuščią.",
+  "help.send_diagnostics": "&Siųsti diagnostiką"
 }

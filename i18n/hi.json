@@ -587,7 +587,7 @@
   "help.changelog": "&परिवर्तन सूची",
   "help.check_updates": "&अपडेट जाँचें\tF2",
   "help.donations": "&दान",
-  "help.export_diagnostics": "निदान सहेजें…",
+  "help.export_diagnostics": "&निदान सहेजें…",
   "help.feedback": "&फीडबैक भेजें...",
   "help.guide": "&मार्गदर्शिका\tF1",
   "help.pending_update": "लंबित अपडेट",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "निदान सहेजें…",
   "diagnostics.notice": "आपकी रिपोर्ट और लॉग, सेटिंग तथा संस्करण वाला ZIP लेखक को ईमेल से भेजा जाएगा। खुले दस्तावेज़ संलग्न नहीं किए जाते।",
   "diagnostics.email": "ईमेल (वैकल्पिक, जवाब पाने के लिए)",
-  "diagnostics.email_invalid": "मान्य ईमेल पता दर्ज करें या फ़ील्ड खाली छोड़ें।"
+  "diagnostics.email_invalid": "मान्य ईमेल पता दर्ज करें या फ़ील्ड खाली छोड़ें।",
+  "help.send_diagnostics": "निदान &भेजें"
 }

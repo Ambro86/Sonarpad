@@ -639,7 +639,7 @@
   "help.changelog": "&Änderungsprotokoll",
   "help.check_updates": "Nach &Updates suchen\tF2",
   "help.donations": "S&penden",
-  "help.export_diagnostics": "Diagnose speichern…",
+  "help.export_diagnostics": "&Diagnose speichern…",
   "help.feedback": "&Feedback senden...",
   "help.guide": "&Handbuch\tF1",
   "help.pending_update": "Ausstehendes &Update",
@@ -2259,5 +2259,6 @@
   "diagnostics.save": "Diagnose speichern…",
   "diagnostics.notice": "Ihr Bericht und eine ZIP-Datei mit Protokollen, Einstellungen und Versionsangaben werden dem Autor per E-Mail gesendet. Geöffnete Dokumente werden nicht angehängt.",
   "diagnostics.email": "E-Mail (optional, für eine Rückmeldung)",
-  "diagnostics.email_invalid": "Geben Sie eine gültige E-Mail-Adresse ein oder lassen Sie das Feld leer."
+  "diagnostics.email_invalid": "Geben Sie eine gültige E-Mail-Adresse ein oder lassen Sie das Feld leer.",
+  "help.send_diagnostics": "D&iagnose senden"
 }

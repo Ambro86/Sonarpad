@@ -587,7 +587,7 @@
   "help.changelog": "&Nhật ký thay đổi",
   "help.check_updates": "Kiểm tra bản &cập nhật\tF2",
   "help.donations": "&Quyên góp",
-  "help.export_diagnostics": "Lưu chẩn đoán…",
+  "help.export_diagnostics": "&Lưu chẩn đoán…",
   "help.feedback": "Gửi &phản hồi...",
   "help.guide": "&Hướng dẫn\tF1",
   "help.pending_update": "Bản cập nhật đang &chờ",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "Lưu chẩn đoán…",
   "diagnostics.notice": "Báo cáo và tệp ZIP chứa nhật ký, cài đặt và thông tin phiên bản sẽ được gửi qua email cho tác giả. Không đính kèm tài liệu đang mở.",
   "diagnostics.email": "Email (không bắt buộc, để nhận phản hồi)",
-  "diagnostics.email_invalid": "Nhập địa chỉ email hợp lệ hoặc để trống."
+  "diagnostics.email_invalid": "Nhập địa chỉ email hợp lệ hoặc để trống.",
+  "help.send_diagnostics": "G&ửi chẩn đoán"
 }

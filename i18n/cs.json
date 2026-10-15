@@ -587,7 +587,7 @@
   "help.changelog": "&Seznam změn",
   "help.check_updates": "Zkontrolovat &aktualizace\tF2",
   "help.donations": "Přispět na &vývoj programu",
-  "help.export_diagnostics": "Uložit diagnostiku…",
+  "help.export_diagnostics": "&Uložit diagnostiku…",
   "help.feedback": "Odeslat &zpětnou vazbu...",
   "help.guide": "&Příručka\tF1",
   "help.pending_update": "Č&ekající aktualizace",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "Uložit diagnostiku…",
   "diagnostics.notice": "Hlášení a ZIP s protokoly, nastavením a verzí budou odeslány autorovi e-mailem. Otevřené dokumenty se nepřikládají.",
   "diagnostics.email": "E-mail (nepovinný, pro odpověď)",
-  "diagnostics.email_invalid": "Zadejte platnou e-mailovou adresu nebo ponechte pole prázdné."
+  "diagnostics.email_invalid": "Zadejte platnou e-mailovou adresu nebo ponechte pole prázdné.",
+  "help.send_diagnostics": "O&deslat diagnostiku"
 }

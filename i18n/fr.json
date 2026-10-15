@@ -587,7 +587,7 @@
   "help.changelog": "&Journal des modifications",
   "help.check_updates": "Vérifier les &mises à jour\tF2",
   "help.donations": "&Dons",
-  "help.export_diagnostics": "Enregistrer le diagnostic…",
+  "help.export_diagnostics": "&Enregistrer le diagnostic…",
   "help.feedback": "Envoyer des &commentaires...",
   "help.guide": "&Guide\tF1",
   "help.pending_update": "Mise à jour en atten&te",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "Enregistrer le diagnostic…",
   "diagnostics.notice": "Le signalement et un ZIP contenant les journaux, paramètres et informations de version seront envoyés à l’auteur par e-mail. Les documents ouverts ne sont pas joints.",
   "diagnostics.email": "E-mail (facultatif, pour être recontacté)",
-  "diagnostics.email_invalid": "Saisissez une adresse e-mail valide ou laissez le champ vide."
+  "diagnostics.email_invalid": "Saisissez une adresse e-mail valide ou laissez le champ vide.",
+  "help.send_diagnostics": "E&nvoyer le diagnostic"
 }

@@ -587,7 +587,7 @@
   "help.changelog": "&Registro de cambios",
   "help.check_updates": "&Buscar actualizaciones\tF2",
   "help.donations": "&Donaciones",
-  "help.export_diagnostics": "Guardar diagnóstico…",
+  "help.export_diagnostics": "G&uardar diagnóstico…",
   "help.feedback": "Enviar &comentarios...",
   "help.guide": "&Guía\tF1",
   "help.pending_update": "Actualización pendien&te",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "Guardar diagnóstico…",
   "diagnostics.notice": "El informe y un ZIP con registros, ajustes y versión se enviarán por correo al autor. No se adjuntan los documentos abiertos.",
   "diagnostics.email": "Email (opcional, para recibir respuesta)",
-  "diagnostics.email_invalid": "Introduce un email válido o deja el campo vacío."
+  "diagnostics.email_invalid": "Introduce un email válido o deja el campo vacío.",
+  "help.send_diagnostics": "&Enviar diagnóstico"
 }

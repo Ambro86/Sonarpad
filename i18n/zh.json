@@ -587,7 +587,7 @@
   "help.changelog": "&变更日志",
   "help.check_updates": "&检查更新 F2",
   "help.donations": "&捐赠",
-  "help.export_diagnostics": "保存诊断…",
+  "help.export_diagnostics": "&保存诊断…",
   "help.feedback": "发送&反馈...",
   "help.guide": "&指南 F1",
   "help.pending_update": "待定更新",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "保存诊断…",
   "diagnostics.notice": "报告及包含日志、设置和版本信息的 ZIP 将通过电子邮件发送给作者。不会附加打开的文档。",
   "diagnostics.email": "电子邮件（可选，用于回复）",
-  "diagnostics.email_invalid": "请输入有效的电子邮件地址，或将此字段留空。"
+  "diagnostics.email_invalid": "请输入有效的电子邮件地址，或将此字段留空。",
+  "help.send_diagnostics": "&发送诊断"
 }

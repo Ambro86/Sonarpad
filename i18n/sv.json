@@ -587,7 +587,7 @@
   "help.changelog": "&Ändringslogg",
   "help.check_updates": "Sök efter &uppdateringar\tF2",
   "help.donations": "&Donationer",
-  "help.export_diagnostics": "Spara diagnostik…",
+  "help.export_diagnostics": "&Spara diagnostik…",
   "help.feedback": "Skicka &feedback...",
   "help.guide": "&Guide\tF1",
   "help.pending_update": "V&äntande uppdatering",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "Spara diagnostik…",
   "diagnostics.notice": "Rapporten och en ZIP-fil med loggar, inställningar och versionsinformation skickas till utvecklaren via e-post. Öppna dokument bifogas inte.",
   "diagnostics.email": "E-post (valfritt, för återkoppling)",
-  "diagnostics.email_invalid": "Ange en giltig e-postadress eller lämna fältet tomt."
+  "diagnostics.email_invalid": "Ange en giltig e-postadress eller lämna fältet tomt.",
+  "help.send_diagnostics": "S&kicka diagnostik"
 }

@@ -587,7 +587,7 @@
   "help.changelog": "&Lista izmena",
   "help.check_updates": "Proveri &ažuriranja\tF2",
   "help.donations": "&Donacije",
-  "help.export_diagnostics": "Сачувај дијагностику…",
+  "help.export_diagnostics": "&Сачувај дијагностику…",
   "help.feedback": "Pošalj&i povratnu informaciju...",
   "help.guide": "&Vodič\tF1",
   "help.pending_update": "&U toku je ažuriranje.",
@@ -2207,5 +2207,6 @@
   "diagnostics.save": "Сачувај дијагностику…",
   "diagnostics.notice": "Пријава и ZIP са евиденцијама, подешавањима и верзијом биће послати аутору е-поштом. Отворени документи се не прилажу.",
   "diagnostics.email": "Е-пошта (необавезно, за одговор)",
-  "diagnostics.email_invalid": "Унесите исправну адресу е-поште или оставите поље празно."
+  "diagnostics.email_invalid": "Унесите исправну адресу е-поште или оставите поље празно.",
+  "help.send_diagnostics": "&Пошаљи дијагностику"
 }

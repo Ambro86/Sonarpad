@@ -639,7 +639,7 @@
   "help.changelog": "Registro &modifiche",
   "help.check_updates": "Controlla &aggiornamenti\tF2",
   "help.donations": "&Donazioni",
-  "help.export_diagnostics": "Salva diagnostica…",
+  "help.export_diagnostics": "Sa&lva diagnostica…",
   "help.feedback": "Invia &feedback...",
   "help.guide": "&Guida\tF1",
   "help.pending_update": "Aggiornamento in sospes&o",
@@ -2259,5 +2259,6 @@
   "diagnostics.save": "Salva diagnostica…",
   "diagnostics.notice": "La segnalazione e lo ZIP con log, impostazioni e versione saranno inviati via email all’autore. Non vengono allegati i documenti aperti.",
   "diagnostics.email": "Email (facoltativa, per essere ricontattati)",
-  "diagnostics.email_invalid": "Inserisci un indirizzo email valido oppure lascia il campo vuoto."
+  "diagnostics.email_invalid": "Inserisci un indirizzo email valido oppure lascia il campo vuoto.",
+  "help.send_diagnostics": "&Invia diagnostica"
 }

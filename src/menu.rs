@@ -318,6 +318,7 @@ pub struct MenuLabels {
     pub help_visit_sonarpad: String,
     pub help_feedback: String,
     pub help_export_diagnostics: String,
+    pub help_send_diagnostics: String,
     pub help_donations: String,
     pub help_check_updates: String,
     pub help_about: String,
@@ -489,6 +490,7 @@ pub fn menu_labels(language: Language) -> MenuLabels {
         help_visit_sonarpad: i18n::tr(language, "help.visit_sonarpad"),
         help_feedback: i18n::tr(language, "help.feedback"),
         help_export_diagnostics: i18n::tr(language, "help.export_diagnostics"),
+        help_send_diagnostics: i18n::tr(language, "help.send_diagnostics"),
         help_donations: i18n::tr(language, "help.donations"),
         help_check_updates: i18n::tr(language, "help.check_updates"),
         help_about: i18n::tr(language, "help.about"),
@@ -2052,7 +2054,7 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             help_menu,
             MF_STRING,
             IDM_HELP_SEND_DIAGNOSTICS,
-            &i18n::tr(language, "diagnostics.send_title"),
+            &labels.help_send_diagnostics,
         );
         append_menu_string(help_menu, MF_STRING, IDM_HELP_ABOUT, &labels.help_about);
         append_menu_string(hmenu, MF_POPUP, help_menu.0 as usize, &labels.menu_help);
@@ -2389,6 +2391,7 @@ mod tests {
             help_donations,
             help_check_updates,
             help_export_diagnostics,
+            help_send_diagnostics,
             help_about,
         );
         assert_menu_group!(labels, language, "recent", recent_empty, recent_clear);

@@ -5,7 +5,7 @@ Version 0.9.17 – 2026-10-15
 1. Dodata je provera Microsoft Visual C++ Redistributable x64 pri pokretanju, sa pristupačnim dijalogom i zvaničnom vezom ako komponenta nedostaje ili ne radi. Pokretanje više ne zavisi od ovih DLL datoteka, pa se poruka može prikazati i bez komponente.
 2. Ispravljeno je moguće zamrzavanje reprodukcije pri pomeranju unapred ili unazad: Sonarpad sada pravilno obrađuje više mpv poruka primljenih zajedno i prestaje da čeka ako se komunikacioni kanal zatvori.
 3. Исправљено је учитавање језика и гласова у подешавањима гласа аудио-описа, укључујући настављање рада: прелазак на Microsoft учитава недостајуће гласове, а резултати других механизама више не замењују тренутни избор. При грешци се приказују порука и дугме Поново учитај гласове.
-4. Додато је слање дијагностике аутору е-поштом, са необавезним именом, описом проблема и ZIP прилогом. Доступни су ручно чување и поновни покушај; подаци за пријаву се уклањају. Потребна је ажурирана услуга за пријаве на сајту. Необавезна адреса е-поште омогућава програмеру да директно одговори на пријаву.
+4. Додато је слање дијагностике аутору е-поштом, са необавезним именом, описом проблема и ZIP прилогом. Доступни су ручно чување и поновни покушај; подаци за пријаву се уклањају. Необавезна адреса е-поште омогућава програмеру да директно одговори на пријаву.
 
 Verzija 0.9.16 – 2026-10-14
 
