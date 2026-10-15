@@ -179,7 +179,11 @@ jobs:
           Write-Host "No PDBs found; skipping PDB upload."
           exit 0
         }
-        & $env:SENTRY_CLI upload-dif --org $env:SENTRY_ORG --project $env:SENTRY_PROJECT --wait $pdbs.FullName
+        # Let Sentry scan recursively: expanding every PDB path can exceed Windows' command-line limit.
+        & $env:SENTRY_CLI upload-dif --org $env:SENTRY_ORG --project $env:SENTRY_PROJECT --wait --type pdb "target/release"
+        if ($LASTEXITCODE -ne 0) {
+          throw "Sentry PDB upload failed with exit code $LASTEXITCODE."
+        }
 
     - name: Package Application (NSIS) with Retry
       shell: powershell
