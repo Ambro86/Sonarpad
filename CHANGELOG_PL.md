@@ -3,6 +3,7 @@
 Version 0.9.18 – 2026-10-16
 
 1. Dodano Przytnij plik multimedialny w Narzędzia → Multimedia: prowadzone i zaawansowane cięcie dźwięku i wideo, odsłuch cięcia, dokładna regulacja granic i przywracanie usuniętych części. Odtwarzanie pomija zastosowane cięcia. Dostępny jest obrót wideo i dodatkowa ścieżka dźwiękowa z regulacją głośności i zapętlaniem. Zapis z rzeczywistym postępem i anulowaniem korzysta z dołączonych bibliotek FFmpeg bez zewnętrznych programów; wskazówki głosowe i dostępne elementy sterujące.
+2. Dodano obszar poleceń w przycinaniu plików multimedialnych, umożliwiający używanie poleceń klawiaturowych bez Alt i Ctrl. F1 odczytuje listę dostępnych klawiszy.
 
 Version 0.9.17 – 2026-10-15
 

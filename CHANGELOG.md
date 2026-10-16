@@ -3,6 +3,7 @@
 Version 0.9.18 – 2026-10-16
 
 1. Added Cut media file under Tools → Multimedia: guided and advanced audio/video editing, cut preview, precise boundary adjustment and restoration of deleted parts. Play skips applied cuts. Includes video rotation and an additional audio track with adjustable volumes and looping. Saving uses bundled FFmpeg libraries, with real progress and cancellation, without external executables; spoken guidance and accessible controls.
+2. Added a command area in Cut media file to use keyboard editing commands without Alt or Ctrl. F1 reads the list of available keys.
 
 Version 0.9.17 – 2026-10-15
 

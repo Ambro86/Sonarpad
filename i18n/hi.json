@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "कमांड क्षेत्र: Alt या Ctrl के बिना कट कमांड दें। F1: कुंजियों की सूची। Tab: क्षेत्र से बाहर जाएँ।",
   "media_cutter.duration_hour_one": "घंटा",
   "media_cutter.duration_hour_few": "घंटे",
   "media_cutter.duration_hour_many": "घंटे",

@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "Област команди: команде сечења без Alt или Ctrl. F1: списак тастера. Tab: напусти област.",
   "media_cutter.duration_hour_one": "сат",
   "media_cutter.duration_hour_few": "сата",
   "media_cutter.duration_hour_many": "сати",

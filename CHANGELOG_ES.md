@@ -3,6 +3,7 @@
 Version 0.9.18 – 2026-10-16
 
 1. Añadido Cortar archivo multimedia en Herramientas → Multimedia: corte guiado y avanzado de audio y vídeo, escucha del corte, ajuste preciso y restauración de partes eliminadas. La reproducción omite los cortes aplicados. Incluye rotación de vídeo y pista de audio adicional con volúmenes ajustables y repetición. Guardado con progreso real y cancelación mediante las bibliotecas FFmpeg incluidas, sin ejecutables externos; instrucciones habladas y controles accesibles.
+2. Añadida un área de comandos en Cortar archivo multimedia para usar órdenes de corte con el teclado sin Alt ni Ctrl. F1 lee la lista de teclas disponibles.
 
 Version 0.9.17 – 2026-10-15
 

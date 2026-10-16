@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "Область команд: команды обрезки без Alt и Ctrl. F1: список клавиш. Tab: выйти из области.",
   "media_cutter.duration_hour_one": "час",
   "media_cutter.duration_hour_few": "часа",
   "media_cutter.duration_hour_many": "часов",

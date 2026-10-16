@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "Oblast příkazů: příkazy střihu bez Alt nebo Ctrl. F1: seznam kláves. Tab: opustit oblast.",
   "media_cutter.duration_hour_one": "hodina",
   "media_cutter.duration_hour_few": "hodiny",
   "media_cutter.duration_hour_many": "hodin",

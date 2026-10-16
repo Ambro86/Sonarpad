@@ -3,6 +3,7 @@
 Version 0.9.18 – 2026-10-16
 
 1. Adicionado Cortar arquivo de mídia em Ferramentas → Multimídia: corte guiado e avançado de áudio e vídeo, prévia, ajuste preciso e restauração das partes excluídas. A reprodução pula os cortes aplicados. Inclui rotação de vídeo e faixa de áudio adicional com volumes ajustáveis e repetição. Salvamento com progresso real e cancelamento usando as bibliotecas FFmpeg incluídas, sem executáveis externos; instruções faladas e controles acessíveis.
+2. Adicionada uma área de comandos em Cortar arquivo de mídia para usar comandos de corte pelo teclado sem Alt ou Ctrl. F1 lê a lista de teclas disponíveis.
 
 Version 0.9.17 – 2026-10-15
 

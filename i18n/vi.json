@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "Vùng lệnh: dùng lệnh cắt không cần Alt hay Ctrl. F1: danh sách phím. Tab: rời vùng này.",
   "media_cutter.duration_hour_one": "giờ",
   "media_cutter.duration_hour_few": "giờ",
   "media_cutter.duration_hour_many": "giờ",

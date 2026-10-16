@@ -65,6 +65,12 @@ const SHORTCUT_END: usize = 9834;
 const SHORTCUT_APPLY: usize = 9835;
 const PART_PREVIOUS: usize = 9836;
 const PART_NEXT: usize = 9837;
+const COMMAND_AREA: usize = 9838;
+const COMMAND_HELP: usize = 9839;
+const BACK_FIVE: usize = 9840;
+const NEXT_FIVE: usize = 9841;
+const BACK_TEN: usize = 9842;
+const NEXT_TEN: usize = 9843;
 const TICK: usize = 1;
 #[derive(Default)]
 struct Job {
@@ -487,14 +493,22 @@ impl State {
                     self.play(false)?;
                 }
             }
-            BACK | NEXT => {
+            BACK | NEXT | BACK_FIVE | NEXT_FIVE | BACK_TEN | NEXT_TEN => {
                 let running = self.player.is_some();
                 self.stop();
-                let step = [1.0, 5.0, 10.0, 30.0, 60.0][self.selected(MOVE).min(4)];
+                let step = match id {
+                    BACK_FIVE | NEXT_FIVE => 5.0,
+                    BACK_TEN | NEXT_TEN => 10.0,
+                    _ => [1.0, 5.0, 10.0, 30.0, 60.0][self.selected(MOVE).min(4)],
+                };
                 self.position = kept_seek_position(
                     &self.parts,
                     self.position,
-                    if id == BACK { -step } else { step },
+                    if matches!(id, BACK | BACK_FIVE | BACK_TEN) {
+                        -step
+                    } else {
+                        step
+                    },
                 );
                 self.set(POSITION, &format!("{:.3}", self.position));
                 if running {
@@ -553,6 +567,49 @@ impl State {
                 }
                 self.visibility();
             }
+            COMMAND_HELP => {
+                let mut commands =
+                    vec![("←", "back"), ("→", "forward"), ("3 / Enter", "listen_cut")];
+                if self.selected(MODE) == 1 {
+                    commands.extend([
+                        ("↑ / ↓", "part_singular"),
+                        ("S", "split_here"),
+                        ("D", "delete"),
+                    ]);
+                } else {
+                    commands.extend([("1", "set_start"), ("2", "set_end"), ("4", "apply_cut")]);
+                }
+                let play = self.tr("play");
+                let space = play
+                    .rsplit_once("(Ctrl+")
+                    .map(|(_, key)| key.trim_end_matches(')'))
+                    .unwrap_or("Space");
+                let mut lines = vec![format!(
+                    "{space}: {} / {}",
+                    play.split(" (").next().unwrap_or(&play),
+                    self.tr("pause").split(" (").next().unwrap_or("")
+                )];
+                for (key, label) in commands {
+                    let label = self.tr(label);
+                    lines.push(format!(
+                        "{key}: {}",
+                        label.split(" (").next().unwrap_or(&label)
+                    ));
+                }
+                for (modifier, seconds) in [(self.tr("shift_key"), 5.0), ("Ctrl".into(), 10.0)] {
+                    for (arrow, action) in [("←", "back"), ("→", "forward")] {
+                        let action = self.tr(action);
+                        lines.push(format!(
+                            "{modifier}+{arrow}: {} {}",
+                            action.split(" (").next().unwrap_or(&action),
+                            spoken_time(seconds, self.language)
+                        ));
+                    }
+                }
+                lines.push(self.tr("save"));
+                self.say(&lines.join(". "));
+            }
+            COMMAND_AREA => self.command(LISTEN, BN_CLICKED)?,
             LISTEN => {
                 if self.selected(MODE) == 1
                     && self
@@ -1092,6 +1149,15 @@ fn create(hwnd: HWND, parent: HWND) -> State {
     button(&mut s, "back", BACK, 12, 105, 120);
     button(&mut s, "play", PLAY, 140, 105, 120);
     button(&mut s, "forward", NEXT, 268, 105, 120);
+    let command_label = s.tr("command_area");
+    control(
+        &mut s,
+        "BUTTON",
+        &command_label,
+        COMMAND_AREA,
+        [430, 105, 345, 76],
+        WS_TABSTOP | WINDOW_STYLE(BS_MULTILINE as u32),
+    );
     edit(&mut s, "position", POSITION, "0.000", 430, 48, 180);
     button(&mut s, "go", GO, 620, 70, 100);
     button(&mut s, "set_start", PRIMARY, 12, 145, 200);
@@ -1324,6 +1390,46 @@ fn shortcut_command(
     None
 }
 
+fn modified_area_command(
+    key: u32,
+    advanced: bool,
+    ctrl: bool,
+    alt: bool,
+    shift: bool,
+) -> Option<usize> {
+    if alt || (ctrl && shift) {
+        return None;
+    }
+    if ctrl || shift {
+        return match (key, ctrl) {
+            (0x25, false) => Some(BACK_FIVE),
+            (0x27, false) => Some(NEXT_FIVE),
+            (0x25, true) => Some(BACK_TEN),
+            (0x27, true) => Some(NEXT_TEN),
+            _ => None,
+        };
+    }
+    area_command(key, advanced)
+}
+
+fn area_command(key: u32, advanced: bool) -> Option<usize> {
+    match key {
+        0x20 => Some(PLAY),
+        0x25 => Some(BACK),
+        0x27 => Some(NEXT),
+        0x0d | 0x33 => Some(LISTEN),
+        0x70 => Some(COMMAND_HELP),
+        0x26 if advanced => Some(PART_PREVIOUS),
+        0x28 if advanced => Some(PART_NEXT),
+        0x53 if advanced => Some(SPLIT),
+        0x44 if advanced => Some(DELETE),
+        0x31 if !advanced => Some(SHORTCUT_START),
+        0x32 if !advanced => Some(SHORTCUT_END),
+        0x34 if !advanced => Some(SHORTCUT_APPLY),
+        _ => None,
+    }
+}
+
 fn reserves_letters(target: HWND) -> bool {
     let mut name = [0_u16; 128];
     let count = unsafe { GetClassNameW(target, &mut name) };
@@ -1337,22 +1443,43 @@ pub fn handle_navigation(hwnd: HWND, msg: &MSG) -> bool {
     }
     if msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN {
         let down = |key: u16| crate::get_key_state_safe(key as i32) & (0x8000_u16 as i16) != 0;
-        if let Some(command) = shortcut_command(
-            msg.wParam.0 as u32,
-            down(VK_CONTROL.0),
-            down(VK_MENU.0),
-            down(VK_SHIFT.0),
-            reserves_letters(msg.hwnd)
-                || unsafe {
+        let area = if msg.hwnd == unsafe { GetDlgItem(hwnd, COMMAND_AREA as i32) } {
+            modified_area_command(
+                msg.wParam.0 as u32,
+                unsafe {
                     SendMessageW(
                         GetDlgItem(hwnd, MODE as i32),
                         CB_GETCURSEL,
                         WPARAM(0),
                         LPARAM(0),
                     )
-                    .0 != 1
+                    .0 == 1
                 },
-        ) {
+                down(VK_CONTROL.0),
+                down(VK_MENU.0),
+                down(VK_SHIFT.0),
+            )
+        } else {
+            None
+        };
+        if let Some(command) = area.or_else(|| {
+            shortcut_command(
+                msg.wParam.0 as u32,
+                down(VK_CONTROL.0),
+                down(VK_MENU.0),
+                down(VK_SHIFT.0),
+                reserves_letters(msg.hwnd)
+                    || unsafe {
+                        SendMessageW(
+                            GetDlgItem(hwnd, MODE as i32),
+                            CB_GETCURSEL,
+                            WPARAM(0),
+                            LPARAM(0),
+                        )
+                        .0 != 1
+                    },
+            )
+        }) {
             if matches!(command, DELETE | PART_PREVIOUS | PART_NEXT)
                 && unsafe {
                     SendMessageW(
@@ -1368,7 +1495,18 @@ pub fn handle_navigation(hwnd: HWND, msg: &MSG) -> bool {
             }
             // Allow held arrows for navigation, but never repeat a cut or toggle playback repeatedly.
             let repeated = msg.lParam.0 & (1_isize << 30) != 0;
-            if !repeated || matches!(command, BACK | NEXT | PART_PREVIOUS | PART_NEXT) {
+            if !repeated
+                || matches!(
+                    command,
+                    BACK | NEXT
+                        | BACK_FIVE
+                        | NEXT_FIVE
+                        | BACK_TEN
+                        | NEXT_TEN
+                        | PART_PREVIOUS
+                        | PART_NEXT
+                )
+            {
                 unsafe {
                     crate::log_if_err!(PostMessageW(hwnd, WM_COMMAND, WPARAM(command), LPARAM(0)));
                 }
@@ -1566,6 +1704,51 @@ fn inner(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
 mod tests {
     use super::*;
     #[test]
+    fn command_area_keys_keep_navigation_and_modes_separate() {
+        for advanced in [false, true] {
+            assert_eq!(
+                modified_area_command(0x25, advanced, false, false, true),
+                Some(BACK_FIVE)
+            );
+            assert_eq!(
+                modified_area_command(0x27, advanced, false, false, true),
+                Some(NEXT_FIVE)
+            );
+            assert_eq!(
+                modified_area_command(0x25, advanced, true, false, false),
+                Some(BACK_TEN)
+            );
+            assert_eq!(
+                modified_area_command(0x27, advanced, true, false, false),
+                Some(NEXT_TEN)
+            );
+            assert_eq!(
+                modified_area_command(0x27, advanced, true, true, false),
+                None
+            );
+            assert_eq!(
+                modified_area_command(0x27, advanced, true, false, true),
+                None
+            );
+            assert_eq!(
+                modified_area_command(0x09, advanced, false, false, true),
+                None
+            );
+            assert_eq!(area_command(0x20, advanced), Some(PLAY));
+            assert_eq!(area_command(0x33, advanced), Some(LISTEN));
+            assert_eq!(area_command(0x0d, advanced), Some(LISTEN));
+            assert_eq!(area_command(0x09, advanced), None); // Tab must leave the area.
+            assert_eq!(area_command(0x70, advanced), Some(COMMAND_HELP));
+        }
+        assert_eq!(area_command(0x44, true), Some(DELETE));
+        assert_eq!(area_command(0x44, false), None);
+        assert_eq!(area_command(0x53, true), Some(SPLIT));
+        assert_eq!(area_command(0x31, false), Some(SHORTCUT_START));
+        assert_eq!(area_command(0x31, true), None);
+        assert_eq!(area_command(0x26, true), Some(PART_PREVIOUS));
+        assert_eq!(area_command(0x28, true), Some(PART_NEXT));
+    }
+    #[test]
     fn spoken_positions_match_mobile() {
         assert_eq!(spoken_time(0.0, Language::Italian), "0 secondi");
         assert_eq!(
@@ -1682,6 +1865,11 @@ mod tests {
                 assert!(!seen.contains(&tab), "tab navigation loop");
                 seen.push(tab);
             }
+            let area = (*ptr).ctrl(COMMAND_AREA);
+            assert!(seen.contains(&area));
+            let after_area = GetNextDlgTabItem(hwnd, area, false);
+            assert_ne!(after_area, area);
+            assert_eq!(GetNextDlgTabItem(hwnd, after_area, true), area);
             assert!(seen.contains(&(*ptr).ctrl(SAVE)));
             assert!(seen.contains(&(*ptr).ctrl(CLOSE)));
             assert!((*ptr).track_controls.iter().all(|h| !visible(*h)));

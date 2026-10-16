@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Maiusc",
+  "media_cutter.command_area": "Area comandi: usa i comandi di taglio senza Alt o Ctrl. F1: elenco tasti. Tab: esci dall’area.",
   "media_cutter.duration_hour_one": "ora",
   "media_cutter.duration_hour_few": "ore",
   "media_cutter.duration_hour_many": "ore",

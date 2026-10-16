@@ -11021,6 +11021,12 @@ fn run_app(
                 continue;
             }
             if msg.message == WM_KEYDOWN && msg.wParam.0 as u32 == u32::from(VK_F1.0) {
+                let cutter = with_state(hwnd, |s| s.media_cutter_window).unwrap_or(HWND(0));
+                if cutter.0 != 0
+                    && app_windows::media_cutter_window::handle_navigation(cutter, &msg)
+                {
+                    continue;
+                }
                 app_windows::help_window::open(hwnd);
                 continue;
             }

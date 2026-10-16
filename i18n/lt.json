@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "Komandų sritis: kirpimo komandos be Alt ar Ctrl. F1: klavišų sąrašas. Tab: išeiti iš srities.",
   "media_cutter.duration_hour_one": "valanda",
   "media_cutter.duration_hour_few": "valandos",
   "media_cutter.duration_hour_many": "valandų",

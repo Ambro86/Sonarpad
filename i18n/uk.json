@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "Область команд: команди обрізання без Alt і Ctrl. F1: список клавіш. Tab: вийти з області.",
   "media_cutter.duration_hour_one": "година",
   "media_cutter.duration_hour_few": "години",
   "media_cutter.duration_hour_many": "годин",

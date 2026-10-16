@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Maj",
+  "media_cutter.command_area": "Zone de commandes : commandes de découpe sans Alt ni Ctrl. F1 : liste des touches. Tab : quitter la zone.",
   "media_cutter.duration_hour_one": "heure",
   "media_cutter.duration_hour_few": "heures",
   "media_cutter.duration_hour_many": "heures",

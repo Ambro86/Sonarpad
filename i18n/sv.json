@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Skift",
+  "media_cutter.command_area": "Kommandoområde: klippkommandon utan Alt eller Ctrl. F1: tangentlista. Tab: lämna området.",
   "media_cutter.duration_hour_one": "timme",
   "media_cutter.duration_hour_few": "timmar",
   "media_cutter.duration_hour_many": "timmar",

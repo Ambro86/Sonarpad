@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "Área de comandos: comandos de corte sem Alt ou Ctrl. F1: lista de teclas. Tab: sair da área.",
   "media_cutter.duration_hour_one": "hora",
   "media_cutter.duration_hour_few": "horas",
   "media_cutter.duration_hour_many": "horas",

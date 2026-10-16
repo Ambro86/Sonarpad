@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "命令区：无需 Alt 或 Ctrl 即可使用剪切命令。F1：按键列表。Tab：离开此区域。",
   "media_cutter.duration_hour_one": "小时",
   "media_cutter.duration_hour_few": "小时",
   "media_cutter.duration_hour_many": "小时",

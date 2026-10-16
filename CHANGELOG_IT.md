@@ -3,6 +3,7 @@
 Version 0.9.18 – 2026-10-16
 
 1. Aggiunta Taglia file media in Strumenti → Multimedia: taglio guidato e avanzato di audio e video, anteprima delle parti da eliminare, regolazione precisa dei confini e ripristino delle parti eliminate. Riproduci salta i tagli già applicati. Sono disponibili rotazione video e aggiunta di una traccia audio con volumi regolabili e ripetizione. Salvataggio con avanzamento reale e annullamento tramite le librerie FFmpeg incluse, senza eseguibili esterni; istruzioni vocali e comandi accessibili.
+2. Aggiunta un’area comandi in Taglia file media per usare i comandi di taglio da tastiera senza Alt o Ctrl. F1 legge l’elenco dei tasti disponibili.
 
 Version 0.9.17 – 2026-10-15
 

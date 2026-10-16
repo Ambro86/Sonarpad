@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Umschalt",
+  "media_cutter.command_area": "Befehlsbereich: Schnittbefehle ohne Alt oder Strg. F1: Tastenliste. Tab: Bereich verlassen.",
   "media_cutter.duration_hour_one": "Stunde",
   "media_cutter.duration_hour_few": "Stunden",
   "media_cutter.duration_hour_many": "Stunden",

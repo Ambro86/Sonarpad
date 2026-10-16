@@ -1,4 +1,6 @@
 {
+  "media_cutter.shift_key": "Shift",
+  "media_cutter.command_area": "Obszar poleceń: polecenia cięcia bez Alt i Ctrl. F1: lista klawiszy. Tab: opuść obszar.",
   "media_cutter.duration_hour_one": "godzina",
   "media_cutter.duration_hour_few": "godziny",
   "media_cutter.duration_hour_many": "godzin",

@@ -3,6 +3,7 @@
 Version 0.9.18 – 2026-10-16
 
 1. Klipp mediefil har lagts till under Verktyg → Multimedia: guidad och avancerad ljud- och videoredigering, förhandslyssning, exakt justering och återställning av borttagna delar. Uppspelningen hoppar över tillämpade klipp. Videorotation och extra ljudspår med justerbara volymer och upprepning stöds. Sparande med verkligt förlopp och möjlighet att avbryta använder medföljande FFmpeg-bibliotek utan externa program; talade instruktioner och tillgängliga kontroller.
+2. Ett kommandoområde har lagts till för klippning av mediefiler, där tangentbordskommandon kan användas utan Alt eller Ctrl. F1 läser upp listan över tillgängliga tangenter.
 
 Version 0.9.17 – 2026-10-15
 

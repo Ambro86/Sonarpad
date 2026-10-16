@@ -3,6 +3,7 @@
 Version 0.9.18 – 2026-10-16
 
 1. Į Įrankiai → Multimedija įtraukta medijos failų kirpimo funkcija: vedamas ir išplėstinis garso bei vaizdo redagavimas, iškerpamos dalies perklausa, tikslus ribų keitimas ir pašalintų dalių atkūrimas. Atkūrimas praleidžia pritaikytus kirpimus. Galima pasukti vaizdą ir pridėti garso takelį su garsumo reguliavimu bei kartojimu. Įrašymas su tikra eiga ir atšaukimu naudoja pridėtas FFmpeg bibliotekas be išorinių programų; balso nurodymai ir prieinami valdikliai.
+2. Pridėta komandų sritis medijos failų kirpimo lange, leidžianti naudoti klaviatūros komandas be Alt ar Ctrl. F1 perskaito galimų klavišų sąrašą.
 
 Version 0.9.17 – 2026-10-15
 
