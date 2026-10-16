@@ -1,3 +1,4 @@
+pub const IDM_TOOLS_MEDIA_CUTTER: usize = 1988;
 use crate::accessibility::to_wide;
 use crate::i18n;
 use crate::settings::{Language, ShortcutBinding, ShortcutSettings, format_shortcut};
@@ -1730,6 +1731,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             append_menu_string(
                 multimedia_menu,
                 MF_STRING,
+                IDM_TOOLS_MEDIA_CUTTER,
+                &crate::i18n::tr(language, "media_cutter.menu"),
+            );
+            append_menu_string(
+                multimedia_menu,
+                MF_STRING,
                 IDM_FILE_CONVERT_AUDIO,
                 &labels.file_convert_audio,
             );
@@ -1854,6 +1861,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                 &labels.menu_options,
             );
         } else {
+            append_menu_string(
+                tools_menu,
+                MF_STRING,
+                IDM_TOOLS_MEDIA_CUTTER,
+                &crate::i18n::tr(language, "media_cutter.menu"),
+            );
             append_menu_string(
                 tools_menu,
                 MF_STRING,

@@ -1,5 +1,9 @@
 # Ändringslogg
 
+Version 0.9.18 – 2026-10-16
+
+1. Klipp mediefil har lagts till under Verktyg → Multimedia: guidad och avancerad ljud- och videoredigering, förhandslyssning, exakt justering och återställning av borttagna delar. Uppspelningen hoppar över tillämpade klipp. Videorotation och extra ljudspår med justerbara volymer och upprepning stöds. Sparande med verkligt förlopp och möjlighet att avbryta använder medföljande FFmpeg-bibliotek utan externa program; talade instruktioner och tillgängliga kontroller.
+
 Version 0.9.17 – 2026-10-15
 
 1. Lagt till startkontroll av Microsoft Visual C++ Redistributable x64 med tillgänglig dialog och officiell länk om komponenten saknas eller inte fungerar. Starten är inte längre beroende av dessa DLL-filer, så meddelandet kan visas utan komponenten.

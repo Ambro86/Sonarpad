@@ -1,5 +1,9 @@
 # Přehled změn
 
+Version 0.9.18 – 2026-10-16
+
+1. Do Nástroje → Multimédia přidáno Oříznout multimediální soubor: řízený a pokročilý střih zvuku i videa, poslech střihu, přesná úprava hranic a obnovení odstraněných částí. Přehrávání přeskakuje použité střihy. Podporuje otočení videa a přidání zvukové stopy s nastavením hlasitosti a opakováním. Ukládání se skutečným průběhem a zrušením používá přiložené knihovny FFmpeg bez externích programů; hlasové pokyny a přístupné ovládání.
+
 Version 0.9.17 – 2026-10-15
 
 1. Přidána kontrola Microsoft Visual C++ Redistributable x64 při spuštění s přístupným dialogem a oficiálním odkazem, pokud součást chybí nebo nefunguje. Spuštění již nezávisí na těchto DLL, takže lze upozornění zobrazit i bez součásti.

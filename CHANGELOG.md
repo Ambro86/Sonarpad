@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.18 – 2026-10-16
+
+1. Added Cut media file under Tools → Multimedia: guided and advanced audio/video editing, cut preview, precise boundary adjustment and restoration of deleted parts. Play skips applied cuts. Includes video rotation and an additional audio track with adjustable volumes and looping. Saving uses bundled FFmpeg libraries, with real progress and cancellation, without external executables; spoken guidance and accessible controls.
+
 Version 0.9.17 – 2026-10-15
 
 1. Added a startup check for Microsoft Visual C++ Redistributable x64: if missing or unusable, an accessible dialog offers the official Microsoft download link. Sonarpad startup no longer depends on these runtime DLLs, allowing the message to appear even when the component is missing.

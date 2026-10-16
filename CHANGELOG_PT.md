@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.18 – 2026-10-16
+
+1. Adicionado Cortar ficheiro multimédia em Ferramentas → Multimédia: corte guiado e avançado de áudio e vídeo, pré-visualização, ajuste preciso e restauro das partes eliminadas. A reprodução salta os cortes aplicados. Inclui rotação de vídeo e faixa de áudio adicional com volumes ajustáveis e repetição. Gravação com progresso real e cancelamento através das bibliotecas FFmpeg incluídas, sem executáveis externos; instruções faladas e controlos acessíveis.
+
 Version 0.9.17 – 2026-10-15
 
 1. Adicionada uma verificação inicial do Microsoft Visual C++ Redistributable x64, com diálogo acessível e ligação oficial se estiver em falta ou inutilizável. O arranque já não depende destas DLL, permitindo apresentar o aviso sem o componente.

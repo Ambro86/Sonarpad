@@ -1,5 +1,9 @@
 # Dnevnik izmena
 
+Version 0.9.18 – 2026-10-16
+
+1. Додато је исецање медијских датотека у Алатке → Мултимедија: вођено и напредно уређивање звука и видеа, преслушавање исечка, прецизно подешавање граница и враћање уклоњених делова. Репродукција прескаче примењене исечке. Подржани су ротација видеа и додатна звучна нумера са подешавањем јачине и понављањем. Чување са стварним напретком и отказивањем користи приложене FFmpeg библиотеке без спољних програма; гласовна упутства и приступачне контроле.
+
 Version 0.9.17 – 2026-10-15
 
 1. Dodata je provera Microsoft Visual C++ Redistributable x64 pri pokretanju, sa pristupačnim dijalogom i zvaničnom vezom ako komponenta nedostaje ili ne radi. Pokretanje više ne zavisi od ovih DLL datoteka, pa se poruka može prikazati i bez komponente.

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+Version 0.9.18 – 2026-10-16
+
+1. Dodano Przytnij plik multimedialny w Narzędzia → Multimedia: prowadzone i zaawansowane cięcie dźwięku i wideo, odsłuch cięcia, dokładna regulacja granic i przywracanie usuniętych części. Odtwarzanie pomija zastosowane cięcia. Dostępny jest obrót wideo i dodatkowa ścieżka dźwiękowa z regulacją głośności i zapętlaniem. Zapis z rzeczywistym postępem i anulowaniem korzysta z dołączonych bibliotek FFmpeg bez zewnętrznych programów; wskazówki głosowe i dostępne elementy sterujące.
+
 Version 0.9.17 – 2026-10-15
 
 1. Dodano kontrolę Microsoft Visual C++ Redistributable x64 przy uruchamianiu, z dostępnym oknem i oficjalnym łączem, gdy składnika brakuje lub jest niesprawny. Uruchomienie nie zależy już od tych bibliotek DLL, więc komunikat działa również bez składnika.

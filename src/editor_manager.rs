@@ -5427,6 +5427,23 @@ pub fn close_document_at(hwnd: HWND, index: usize) -> bool {
 }
 
 pub fn try_close_app(hwnd: HWND) -> bool {
+    // Let the cutter protect its unsaved edits and active export before app shutdown.
+    let cutter = with_state(hwnd, |state| state.media_cutter_window).unwrap_or(HWND(0));
+    if cutter.0 != 0
+        && unsafe { windows::Win32::UI::WindowsAndMessaging::IsWindow(cutter).as_bool() }
+    {
+        crate::log_debug("Application shutdown blocked: media cutter is open");
+        unsafe {
+            windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow(cutter);
+            crate::log_if_err!(windows::Win32::UI::WindowsAndMessaging::PostMessageW(
+                cutter,
+                windows::Win32::UI::WindowsAndMessaging::WM_CLOSE,
+                windows::Win32::Foundation::WPARAM(0),
+                windows::Win32::Foundation::LPARAM(0),
+            ));
+        }
+        return false;
+    }
     crate::log_debug(&format!(
         "Application shutdown: try_close_app start hwnd={:?}",
         hwnd

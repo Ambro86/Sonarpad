@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+Version 0.9.18 – 2026-10-16
+
+1. Unter Werkzeuge → Multimedia wurde Mediendatei schneiden hinzugefügt: geführter und erweiterter Audio-/Videoschnitt, Schnittvorschau, genaue Anpassung und Wiederherstellung gelöschter Teile. Die Wiedergabe überspringt angewendete Schnitte. Videodrehung und zusätzliche Audiospur mit Lautstärkeregelung und Wiederholung. Speichern mit echtem Fortschritt und Abbruch über die mitgelieferten FFmpeg-Bibliotheken, ohne externe Programme; gesprochene Anleitung und zugängliche Bedienelemente.
+
 Version 0.9.17 – 2026-10-15
 
 1. Neue Startprüfung für Microsoft Visual C++ Redistributable x64 mit barrierefreiem Dialog und offiziellem Downloadlink bei fehlender oder unbrauchbarer Installation. Sonarpad kann diesen Hinweis auch ohne die Runtime-DLLs anzeigen.

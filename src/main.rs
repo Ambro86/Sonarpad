@@ -52,6 +52,8 @@ mod ffmpeg_dyn;
 mod ffmpeg_export;
 mod ffmpeg_source;
 mod media_conversion;
+mod media_cutter_export;
+mod media_cutter_model;
 mod stream_recording;
 mod subtitle_wasapi;
 mod subtitles;
@@ -9777,6 +9779,7 @@ fn has_secondary_window_open(hwnd: HWND) -> bool {
                 || state.transcription_progress_window.0 != 0
                 || state.batch_audiobooks_window.0 != 0
                 || state.convert_audio_window.0 != 0
+                || state.media_cutter_window.0 != 0
                 || app_windows::audio_description_window::blocks_parent_focus(
                     hwnd,
                     state.audio_description_window,
@@ -10007,6 +10010,7 @@ pub(crate) struct AppState {
     transcription_progress_window: HWND,
     batch_audiobooks_window: HWND,
     convert_audio_window: HWND,
+    media_cutter_window: HWND,
     audio_description_window: HWND,
     audio_description_project_window: HWND,
     media_split_window: HWND,
@@ -11481,6 +11485,15 @@ fn run_app(
                     handled = true;
                     return;
                 }
+                if state.media_cutter_window.0 != 0
+                    && app_windows::media_cutter_window::handle_navigation(
+                        state.media_cutter_window,
+                        &msg,
+                    )
+                {
+                    handled = true;
+                    return;
+                }
                 if state.convert_audio_window.0 != 0
                     && app_windows::convert_audio_window::handle_navigation(
                         state.convert_audio_window,
@@ -12115,6 +12128,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     transcription_progress_window: HWND(0),
                     batch_audiobooks_window: HWND(0),
                     convert_audio_window: HWND(0),
+                    media_cutter_window: HWND(0),
                     audio_description_window: HWND(0),
                     audio_description_project_window: HWND(0),
                     media_split_window: HWND(0),
@@ -12549,6 +12563,9 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 if restore_transcription_progress_focus_for_current_document(hwnd) {
                     return LRESULT(0);
                 }
+                if app_windows::media_cutter_window::restore_on_parent_activation(hwnd) {
+                    return LRESULT(0);
+                }
                 if app_windows::audio_description_window::restore_on_parent_activation(hwnd) {
                     return LRESULT(0);
                 }
@@ -12580,6 +12597,9 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                         return LRESULT(0);
                     }
                     if restore_transcription_progress_focus_for_current_document(hwnd) {
+                        return LRESULT(0);
+                    }
+                    if app_windows::media_cutter_window::restore_on_parent_activation(hwnd) {
                         return LRESULT(0);
                     }
                     if app_windows::audio_description_window::restore_on_parent_activation(hwnd) {
@@ -12799,6 +12819,9 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                             "focus_timer.after_modal_popup.{}",
                             wparam.0
                         ));
+                        return LRESULT(0);
+                    }
+                    if app_windows::media_cutter_window::restore_on_parent_activation(hwnd) {
                         return LRESULT(0);
                     }
                     if app_windows::audio_description_window::restore_on_parent_activation(hwnd) {
@@ -14327,6 +14350,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     IDM_TOOLS_TOGGLE_DICTATION => {
                         log_debug("Tools: Toggle dictation");
                         toggle_voice_dictation(hwnd);
+                        LRESULT(0)
+                    }
+                    IDM_TOOLS_MEDIA_CUTTER => {
+                        app_windows::media_cutter_window::open(hwnd);
                         LRESULT(0)
                     }
                     IDM_FILE_CONVERT_AUDIO => {

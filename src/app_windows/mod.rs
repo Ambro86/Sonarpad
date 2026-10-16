@@ -28,6 +28,7 @@ pub mod la7_play_window;
 pub mod librivox_window;
 pub mod locale_display_names;
 pub mod marker_select_window;
+pub mod media_cutter_window;
 pub mod media_split_window;
 pub mod options_window;
 pub mod podcast_chapters_window;
