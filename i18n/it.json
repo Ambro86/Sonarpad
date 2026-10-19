@@ -2256,7 +2256,7 @@
   "daisy_index.hint": "Seleziona un capitolo o una sezione e premi Invio per riprodurlo.",
   "daisy_index.no_audio": "Questo libro DAISY non contiene audio sincronizzato riproducibile. Il testo resta aperto nell’editor.",
   "daisy_index.chapter_no_audio": "La sezione DAISY selezionata non contiene audio riproducibile.",
-  "daisy_index.finished": "Fine del capitolo DAISY.",
+  "daisy_index.finished": "Fine del libro DAISY.",
   "audio_description.project.search": "Cerca descrizioni:",
   "audio_description.project.search_button": "Cerca",
   "audio_description.overload.title": "Gemini temporaneamente sovraccarico",

@@ -4,6 +4,7 @@ Version 0.9.18 – 2026-10-16
 
 1. Thêm Cắt tệp đa phương tiện trong Công cụ → Đa phương tiện: chỉnh sửa âm thanh và video theo hướng dẫn hoặc nâng cao, nghe thử đoạn cắt, điều chỉnh chính xác và khôi phục các phần đã xóa. Phát bỏ qua các đoạn đã cắt. Hỗ trợ xoay video và thêm bản âm thanh với âm lượng tùy chỉnh, lặp lại. Lưu với tiến trình thực và khả năng hủy bằng thư viện FFmpeg đi kèm, không dùng chương trình ngoài; hướng dẫn bằng giọng nói và điều khiển trợ năng.
 2. Thêm vùng lệnh trong chức năng cắt tệp đa phương tiện để dùng lệnh bàn phím không cần Alt hay Ctrl. F1 đọc danh sách các phím khả dụng.
+3. Cải thiện phát sách DAISY: chương tiếp theo tự động bắt đầu và thao tác tua tiến hoặc lùi bằng phím mũi tên có thể vượt qua ranh giới giữa các chương. Các mục con không bị phát lặp lại và thông báo kết thúc đọc chỉ được phát khi hết sách.
 
 Version 0.9.17 – 2026-10-15
 

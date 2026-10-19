@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "Виберіть розділ або секцію та натисніть Enter для відтворення.",
   "daisy_index.no_audio": "Ця книга DAISY не містить відтворюваного синхронізованого аудіо. Текст залишається відкритим у редакторі.",
   "daisy_index.chapter_no_audio": "Вибраний розділ DAISY не містить відтворюваного аудіо.",
-  "daisy_index.finished": "Кінець розділу DAISY.",
+  "daisy_index.finished": "Кінець книги DAISY.",
   "audio_description.project.search": "Пошук описів:",
   "audio_description.project.search_button": "Пошук",
   "audio_description.overload.title": "Gemini тимчасово перевантажений",

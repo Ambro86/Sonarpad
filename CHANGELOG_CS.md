@@ -4,6 +4,7 @@ Version 0.9.18 – 2026-10-16
 
 1. Do Nástroje → Multimédia přidáno Oříznout multimediální soubor: řízený a pokročilý střih zvuku i videa, poslech střihu, přesná úprava hranic a obnovení odstraněných částí. Přehrávání přeskakuje použité střihy. Podporuje otočení videa a přidání zvukové stopy s nastavením hlasitosti a opakováním. Ukládání se skutečným průběhem a zrušením používá přiložené knihovny FFmpeg bez externích programů; hlasové pokyny a přístupné ovládání.
 2. Přidána oblast příkazů pro střih mediálních souborů, kde lze používat klávesové příkazy bez Alt nebo Ctrl. F1 přečte seznam dostupných kláves.
+3. Vylepšeno přehrávání knih DAISY: další kapitola se spustí automaticky a posun vpřed či vzad šipkami překračuje hranice kapitol. Pododdíly se neopakují a oznámení o konci čtení zazní až na konci knihy.
 
 Version 0.9.17 – 2026-10-15
 

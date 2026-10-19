@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "Pasirinkite skyrių arba dalį ir paspauskite Enter, kad paleistumėte.",
   "daisy_index.no_audio": "Šioje DAISY knygoje nėra atkuriamo sinchronizuoto garso. Tekstas lieka atvertas redaktoriuje.",
   "daisy_index.chapter_no_audio": "Pasirinktoje DAISY dalyje nėra atkuriamo garso.",
-  "daisy_index.finished": "DAISY skyriaus pabaiga.",
+  "daisy_index.finished": "DAISY knygos pabaiga.",
   "audio_description.project.search": "Ieškoti aprašų:",
   "audio_description.project.search_button": "Ieškoti",
   "audio_description.overload.title": "Gemini laikinai perkrautas",

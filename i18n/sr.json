@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "Izaberite poglavlje ili odeljak i pritisnite Enter za reprodukciju.",
   "daisy_index.no_audio": "Ova DAISY knjiga nema sinhronizovani zvuk koji se može reprodukovati. Tekst ostaje otvoren u uređivaču.",
   "daisy_index.chapter_no_audio": "Izabrani DAISY odeljak nema zvuk koji se može reprodukovati.",
-  "daisy_index.finished": "Kraj DAISY poglavlja.",
+  "daisy_index.finished": "Kraj DAISY knjige.",
   "audio_description.project.search": "Претражи описе:",
   "audio_description.project.search_button": "Претражи",
   "audio_description.overload.title": "Gemini је привремено преоптерећен",

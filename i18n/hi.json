@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "किसी अध्याय या अनुभाग को चुनें और चलाने के लिए Enter दबाएँ।",
   "daisy_index.no_audio": "इस DAISY पुस्तक में चलाने योग्य समकालिक ऑडियो नहीं है। इसका पाठ संपादक में खुला रहेगा।",
   "daisy_index.chapter_no_audio": "चुने गए DAISY अनुभाग में चलाने योग्य ऑडियो नहीं है।",
-  "daisy_index.finished": "DAISY अध्याय समाप्त।",
+  "daisy_index.finished": "DAISY पुस्तक समाप्त।",
   "audio_description.project.search": "विवरण खोजें:",
   "audio_description.project.search_button": "खोजें",
   "audio_description.overload.title": "Gemini अस्थायी रूप से अधिक व्यस्त है",

@@ -1658,6 +1658,10 @@ pub(crate) struct DaisyAudioSegment {
 pub(crate) struct DaisyPlaybackChapter {
     pub(crate) title: String,
     pub(crate) segments: Vec<DaisyAudioSegment>,
+    // Disjoint intervals for continuous playback. A parent navigation entry's
+    // full segments include its children; playing those again would repeat audio.
+    pub(crate) playback_start: Option<usize>,
+    pub(crate) playback_segments: Vec<DaisyAudioSegment>,
 }
 
 #[derive(Clone, Debug)]
@@ -2009,6 +2013,8 @@ pub(crate) fn read_daisy_playback_catalog(
             chapters.push(DaisyPlaybackChapter {
                 title: title.clone(),
                 segments: Vec::new(),
+                playback_start: None,
+                playback_segments: Vec::new(),
             });
             continue;
         };
@@ -2026,9 +2032,22 @@ pub(crate) fn read_daisy_playback_catalog(
             .iter()
             .flat_map(|par| par.segments.iter().cloned())
             .collect();
+        let playback_end = starts
+            .iter()
+            .flatten()
+            .copied()
+            .filter(|candidate| *candidate > start)
+            .min()
+            .unwrap_or(pars.len());
+        let playback_segments = pars[start..playback_end]
+            .iter()
+            .flat_map(|par| par.segments.iter().cloned())
+            .collect();
         chapters.push(DaisyPlaybackChapter {
             title: title.clone(),
             segments,
+            playback_start: Some(start),
+            playback_segments,
         });
     }
 
@@ -3093,5 +3112,25 @@ mod tests {
         assert_eq!(catalog.chapters[0].segments.len(), 2);
         assert_eq!(catalog.chapters[1].segments.len(), 1);
         assert_eq!(catalog.chapters[2].segments.len(), 1);
+        assert_eq!(catalog.chapters[0].playback_segments.len(), 1);
+        assert_eq!(catalog.chapters[1].playback_segments.len(), 1);
+        assert_eq!(catalog.chapters[2].playback_segments.len(), 1);
+        assert_eq!(
+            catalog
+                .chapters
+                .iter()
+                .map(|c| c.playback_start)
+                .collect::<Vec<_>>(),
+            vec![Some(0), Some(1), Some(2)]
+        );
+        assert_eq!(
+            catalog
+                .chapters
+                .iter()
+                .flat_map(|c| c.playback_segments.iter())
+                .map(|s| s.clip_end_secs.unwrap() - s.clip_begin_secs)
+                .sum::<f64>(),
+            15.0
+        );
     }
 }

@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "Chọn một chương hoặc phần rồi nhấn Enter để phát.",
   "daisy_index.no_audio": "Sách DAISY này không có âm thanh đồng bộ có thể phát. Văn bản vẫn mở trong trình soạn thảo.",
   "daisy_index.chapter_no_audio": "Phần DAISY đã chọn không có âm thanh có thể phát.",
-  "daisy_index.finished": "Hết chương DAISY.",
+  "daisy_index.finished": "Hết sách DAISY.",
   "audio_description.project.search": "Tìm mô tả:",
   "audio_description.project.search_button": "Tìm",
   "audio_description.overload.title": "Gemini tạm thời quá tải",

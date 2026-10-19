@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "Выберите главу или раздел и нажмите Enter для воспроизведения.",
   "daisy_index.no_audio": "Эта книга DAISY не содержит воспроизводимого синхронизированного аудио. Текст останется открытым в редакторе.",
   "daisy_index.chapter_no_audio": "Выбранный раздел DAISY не содержит воспроизводимого аудио.",
-  "daisy_index.finished": "Конец главы DAISY.",
+  "daisy_index.finished": "Конец книги DAISY.",
   "audio_description.project.search": "Искать описания:",
   "audio_description.project.search_button": "Искать",
   "audio_description.overload.title": "Gemini временно перегружен",

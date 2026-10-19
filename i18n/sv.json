@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "Välj ett kapitel eller avsnitt och tryck Enter för att spela upp det.",
   "daisy_index.no_audio": "Den här DAISY-boken har inget spelbart synkroniserat ljud. Texten förblir öppen i redigeraren.",
   "daisy_index.chapter_no_audio": "Det valda DAISY-avsnittet har inget spelbart ljud.",
-  "daisy_index.finished": "Slut på DAISY-kapitlet.",
+  "daisy_index.finished": "Slut på DAISY-boken.",
   "audio_description.project.search": "Sök beskrivningar:",
   "audio_description.project.search_button": "Sök",
   "audio_description.overload.title": "Gemini är tillfälligt överbelastat",

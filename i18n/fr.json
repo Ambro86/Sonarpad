@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "Sélectionnez un chapitre ou une section et appuyez sur Entrée pour le lire.",
   "daisy_index.no_audio": "Ce livre DAISY ne contient aucun audio synchronisé lisible. Le texte reste ouvert dans l’éditeur.",
   "daisy_index.chapter_no_audio": "La section DAISY sélectionnée ne contient aucun audio lisible.",
-  "daisy_index.finished": "Fin du chapitre DAISY.",
+  "daisy_index.finished": "Fin du livre DAISY.",
   "audio_description.project.search": "Rechercher des descriptions :",
   "audio_description.project.search_button": "Rechercher",
   "audio_description.overload.title": "Gemini temporairement surchargé",

@@ -2256,7 +2256,7 @@
   "daisy_index.hint": "Wählen Sie ein Kapitel oder einen Abschnitt und drücken Sie die Eingabetaste, um ihn abzuspielen.",
   "daisy_index.no_audio": "Dieses DAISY-Buch enthält kein abspielbares synchronisiertes Audio. Der Text bleibt im Editor geöffnet.",
   "daisy_index.chapter_no_audio": "Der ausgewählte DAISY-Abschnitt enthält kein abspielbares Audio.",
-  "daisy_index.finished": "Ende des DAISY-Kapitels.",
+  "daisy_index.finished": "Ende des DAISY-Buchs.",
   "audio_description.project.search": "Beschreibungen suchen:",
   "audio_description.project.search_button": "Suchen",
   "audio_description.overload.title": "Gemini vorübergehend überlastet",

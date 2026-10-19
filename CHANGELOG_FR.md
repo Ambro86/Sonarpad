@@ -4,6 +4,7 @@ Version 0.9.18 – 2026-10-16
 
 1. Ajout de Découper un fichier multimédia dans Outils → Multimédia : découpe guidée et avancée des fichiers audio et vidéo, écoute des passages à supprimer, réglage précis et restauration des parties supprimées. La lecture saute les coupes appliquées. Rotation vidéo et ajout d’une piste audio avec volumes réglables et répétition. Enregistrement avec progression réelle et annulation via les bibliothèques FFmpeg intégrées, sans exécutable externe ; instructions vocales et commandes accessibles.
 2. Ajout d’une zone de commandes dans Découper un fichier multimédia pour utiliser les commandes de découpe au clavier sans Alt ni Ctrl. F1 lit la liste des touches disponibles.
+3. Lecture des livres DAISY améliorée : le chapitre suivant démarre automatiquement et les déplacements avant et arrière avec les flèches franchissent les limites des chapitres. Les sous-sections ne sont pas répétées et l’annonce de fin de lecture intervient uniquement à la fin du livre.
 
 Version 0.9.17 – 2026-10-15
 

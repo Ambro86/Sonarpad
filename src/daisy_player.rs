@@ -112,8 +112,8 @@ fn prepare_chapter(
         .chapters
         .get(chapter_index)
         .ok_or_else(|| "Invalid DAISY chapter index.".to_string())?;
-    let mut prepared = Vec::with_capacity(chapter.segments.len());
-    for segment in &chapter.segments {
+    let mut prepared = Vec::with_capacity(chapter.playback_segments.len());
+    for segment in &chapter.playback_segments {
         let path = materialize_daisy_audio(source_path, &segment.source, language)?;
         let end_secs = segment.clip_end_secs.or_else(|| {
             audio_player::audiobook_duration_secs(&path).map(|duration| duration as f64)
@@ -137,9 +137,20 @@ fn start_chapter(
     hwnd: HWND,
     source_path: &Path,
     catalog: DaisyPlaybackCatalog,
-    chapter_index: usize,
+    mut chapter_index: usize,
 ) -> bool {
     let language = language(hwnd);
+    if catalog
+        .chapters
+        .get(chapter_index)
+        .is_some_and(|chapter| chapter.playback_segments.is_empty())
+    {
+        let Some(next) = adjacent_chapter(&catalog, chapter_index, true) else {
+            show_info(hwnd, "daisy_index.chapter_no_audio");
+            return false;
+        };
+        chapter_index = next;
+    }
     let prepared = match prepare_chapter(source_path, &catalog, chapter_index, language) {
         Ok(prepared) => prepared,
         Err(message) => {
@@ -147,37 +158,61 @@ fn start_chapter(
             return false;
         }
     };
-    let title = catalog
-        .chapters
-        .get(chapter_index)
-        .map(|chapter| chapter.title.clone())
-        .unwrap_or_else(|| "DAISY".to_string());
-    let first_path = prepared[0].path.clone();
-    if !editor_manager::retarget_current_audiobook_document(hwnd, &first_path, &title) {
-        let Some(tab_index) = editor_manager::ensure_audio_document_tab(hwnd, &first_path) else {
+    activate_chapter(
+        hwnd,
+        source_path,
+        catalog,
+        chapter_index,
+        prepared,
+        0.0,
+        false,
+    )
+}
+
+fn activate_chapter(
+    hwnd: HWND,
+    source_path: &Path,
+    catalog: DaisyPlaybackCatalog,
+    chapter_index: usize,
+    prepared: Vec<PreparedSegment>,
+    target: f64,
+    continue_playing: bool,
+) -> bool {
+    let Some((segment_index, position)) =
+        locate_chapter_position(&prepared, target).or_else(|| {
+            (target == 0.0)
+                .then(|| prepared.first().map(|s| (0, s.begin_secs)))
+                .flatten()
+        })
+    else {
+        return false;
+    };
+    let path = prepared[segment_index].path.clone();
+    let title = catalog.chapters[chapter_index].title.clone();
+    if !editor_manager::retarget_current_audiobook_document(hwnd, &path, &title) {
+        let Some(tab_index) = editor_manager::ensure_audio_document_tab(hwnd, &path) else {
             return false;
         };
         editor_manager::select_tab(hwnd, tab_index);
-        editor_manager::retarget_current_audiobook_document(hwnd, &first_path, &title);
+        editor_manager::retarget_current_audiobook_document(hwnd, &path, &title);
     }
-
     if let Ok(mut guard) = context().lock() {
         *guard = Some(DaisyPlayerContext {
             source_path: source_path.to_path_buf(),
             catalog,
             selected_chapter: Some(chapter_index),
             prepared,
-            current_segment: 0,
-            active_audio_path: Some(first_path.clone()),
+            current_segment: segment_index,
+            active_audio_path: Some(path.clone()),
             finished: false,
         });
     }
-    let begin = context()
-        .lock()
-        .ok()
-        .and_then(|guard| guard.as_ref().map(|ctx| ctx.prepared[0].begin_secs))
-        .unwrap_or(0.0);
-    audio_player::start_audiobook_at_precise(hwnd, &first_path, begin);
+    crate::log_debug(&format!(
+        "DAISY: activate chapter={chapter_index} segment={segment_index} position={position:.3}s seamless={continue_playing}"
+    ));
+    if !continue_playing {
+        audio_player::start_audiobook_at_precise(hwnd, &path, position);
+    }
     true
 }
 
@@ -337,6 +372,39 @@ fn seek_chapter_to(hwnd: HWND, target: f64) -> bool {
     start_segment(hwnd, segment_index, Some(media_position))
 }
 
+fn adjacent_chapter(
+    catalog: &DaisyPlaybackCatalog,
+    current: usize,
+    forward: bool,
+) -> Option<usize> {
+    let start = catalog.chapters.get(current)?.playback_start?;
+    let candidates = catalog
+        .chapters
+        .iter()
+        .enumerate()
+        .filter_map(|(index, chapter)| {
+            let candidate = chapter.playback_start?;
+            if chapter.playback_segments.is_empty()
+                || (if forward {
+                    candidate <= start
+                } else {
+                    candidate >= start
+                })
+            {
+                return None;
+            }
+            Some((candidate, index))
+        });
+    if forward {
+        candidates.min().map(|(_, index)| index)
+    } else {
+        // Prefer the first navigation entry when parent and child share a start.
+        candidates
+            .max_by_key(|(start, index)| (*start, std::cmp::Reverse(*index)))
+            .map(|(_, index)| index)
+    }
+}
+
 fn switch_chapter(hwnd: HWND, delta: isize) -> bool {
     let Some((source_path, catalog, current)) = context().lock().ok().and_then(|guard| {
         let ctx = guard.as_ref()?;
@@ -348,15 +416,96 @@ fn switch_chapter(hwnd: HWND, delta: isize) -> bool {
     }) else {
         return false;
     };
-    let mut candidate = current as isize + delta;
-    while candidate >= 0 && (candidate as usize) < catalog.chapters.len() {
-        let index = candidate as usize;
-        if !catalog.chapters[index].segments.is_empty() {
-            return start_chapter(hwnd, &source_path, catalog, index);
+    let Some(index) = adjacent_chapter(&catalog, current, delta > 0) else {
+        return false;
+    };
+    start_chapter(hwnd, &source_path, catalog, index)
+}
+
+fn resolve_book_seek(
+    catalog: &DaisyPlaybackCatalog,
+    mut chapter: usize,
+    mut prepared: Vec<PreparedSegment>,
+    mut target: f64,
+    mut prepare: impl FnMut(usize) -> Result<Vec<PreparedSegment>, String>,
+) -> Result<Option<(usize, Vec<PreparedSegment>, f64)>, String> {
+    loop {
+        let Some(total) = chapter_total_duration(&prepared) else {
+            return Ok(None);
+        };
+        let forward = target >= total;
+        if target >= 0.0 && !forward {
+            break;
         }
-        candidate += delta;
+        let Some(next) = adjacent_chapter(catalog, chapter, forward) else {
+            target = target.clamp(0.0, (total - 0.05).max(0.0));
+            break;
+        };
+        let next_prepared = prepare(next)?;
+        if forward {
+            target -= total;
+        } else {
+            let Some(previous_total) = chapter_total_duration(&next_prepared) else {
+                return Ok(None);
+            };
+            target += previous_total;
+        }
+        chapter = next;
+        prepared = next_prepared;
     }
-    false
+    Ok(Some((chapter, prepared, target)))
+}
+
+fn seek_across_chapters(hwnd: HWND, target: f64) -> bool {
+    let Some((source, catalog, chapter, prepared)) = context().lock().ok().and_then(|guard| {
+        let ctx = guard.as_ref()?;
+        Some((
+            ctx.source_path.clone(),
+            ctx.catalog.clone(),
+            ctx.selected_chapter?,
+            ctx.prepared.clone(),
+        ))
+    }) else {
+        return false;
+    };
+    let language = language(hwnd);
+    match resolve_book_seek(&catalog, chapter, prepared, target, |index| {
+        prepare_chapter(&source, &catalog, index, language)
+    }) {
+        Ok(Some((chapter, prepared, target))) => {
+            activate_chapter(hwnd, &source, catalog, chapter, prepared, target, false)
+        }
+        result => {
+            crate::log_debug(&format!("DAISY: seek unavailable: {result:?}"));
+            // Consume the command: never fall back to seeking outside SMIL clips.
+            true
+        }
+    }
+}
+
+fn continue_next_chapter(hwnd: HWND, segment: &PreparedSegment, output_stopped: bool) -> bool {
+    let Some((source, catalog, current)) = context().lock().ok().and_then(|guard| {
+        let ctx = guard.as_ref()?;
+        Some((
+            ctx.source_path.clone(),
+            ctx.catalog.clone(),
+            ctx.selected_chapter?,
+        ))
+    }) else {
+        return false;
+    };
+    let Some(next) = adjacent_chapter(&catalog, current, true) else {
+        return false;
+    };
+    let prepared = match prepare_chapter(&source, &catalog, next, language(hwnd)) {
+        Ok(prepared) => prepared,
+        Err(error) => {
+            crate::log_debug(&format!("DAISY: next chapter {next} unavailable: {error}"));
+            return false;
+        }
+    };
+    let seamless = !output_stopped && segments_can_continue_without_restart(segment, &prepared[0]);
+    activate_chapter(hwnd, &source, catalog, next, prepared, 0.0, seamless)
 }
 
 pub(crate) fn handle_player_command(hwnd: HWND, command: &PlayerCommand) -> bool {
@@ -385,7 +534,7 @@ pub(crate) fn handle_player_command(hwnd: HWND, command: &PlayerCommand) -> bool
             let Some(current) = current_chapter_position(hwnd) else {
                 return false;
             };
-            seek_chapter_to(hwnd, current + *delta as f64)
+            seek_across_chapters(hwnd, current + *delta as f64)
         }
         PlayerCommand::SeekToStart => seek_chapter_to(hwnd, 0.0),
         PlayerCommand::SeekToEnd => {
@@ -513,6 +662,9 @@ pub(crate) fn handle_playback_timer(hwnd: HWND) -> bool {
         start_segment(hwnd, next_index, None);
         return true;
     }
+    if continue_next_chapter(hwnd, &segment, output_stopped) {
+        return true;
+    }
     audio_player::pause_audiobook_if_playing(hwnd);
     if let Ok(mut guard) = context().lock()
         && let Some(ctx) = guard.as_mut()
@@ -530,7 +682,158 @@ mod tests {
         PreparedSegment, chapter_total_duration, locate_chapter_position,
         segments_can_continue_without_restart,
     };
+    use super::{adjacent_chapter, prepare_chapter, resolve_book_seek};
+    use crate::ebook_formats::{DaisyAudioSegment, DaisyPlaybackCatalog, DaisyPlaybackChapter};
+    use crate::settings::Language;
     use std::path::PathBuf;
+
+    fn catalog(starts: &[Option<usize>]) -> DaisyPlaybackCatalog {
+        DaisyPlaybackCatalog {
+            index: Vec::new(),
+            chapters: starts
+                .iter()
+                .enumerate()
+                .map(|(index, start)| {
+                    let segments = if start.is_some() {
+                        vec![DaisyAudioSegment {
+                            source: format!("{index}.wav"),
+                            clip_begin_secs: 0.0,
+                            clip_end_secs: Some(10.0),
+                        }]
+                    } else {
+                        Vec::new()
+                    };
+                    DaisyPlaybackChapter {
+                        title: format!("Chapter {index}"),
+                        segments: segments.clone(),
+                        playback_start: *start,
+                        playback_segments: segments,
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn continuous_order_skips_empty_entries_and_duplicate_parent_targets() {
+        let book = catalog(&[Some(0), Some(0), None, Some(4), Some(8)]);
+        assert_eq!(adjacent_chapter(&book, 0, true), Some(3));
+        assert_eq!(adjacent_chapter(&book, 1, true), Some(3));
+        assert_eq!(adjacent_chapter(&book, 3, false), Some(0));
+        assert_eq!(adjacent_chapter(&book, 4, true), None);
+        assert_eq!(adjacent_chapter(&book, 0, false), None);
+    }
+
+    #[test]
+    fn timed_seeks_cross_multiple_chapters_both_ways_and_clamp_at_book_edges() {
+        let book = catalog(&[Some(0), Some(1), Some(2)]);
+        let prepare = |index: usize| Ok(vec![segment(&format!("{index}.wav"), 2.0, 12.0)]);
+        for (chapter, target, expected_chapter, expected_position) in [
+            (0, 13.0, 1, 3.0),
+            (0, 25.0, 2, 5.0),
+            (2, -15.0, 0, 5.0),
+            (1, -3.0, 0, 7.0),
+            (0, 10.0, 1, 0.0),
+            (0, -100.0, 0, 0.0),
+            (2, 100.0, 2, 9.95),
+        ] {
+            let (resolved, clips, position) = resolve_book_seek(
+                &book,
+                chapter,
+                prepare(chapter).expect("prepare"),
+                target,
+                prepare,
+            )
+            .expect("seek")
+            .expect("position");
+            assert_eq!(resolved, expected_chapter);
+            assert!((position - expected_position).abs() < 0.0001);
+            assert_eq!(
+                locate_chapter_position(&clips, position),
+                Some((0, position + 2.0))
+            );
+        }
+    }
+
+    #[test]
+    fn unavailable_or_unknown_chapter_does_not_fall_back_to_raw_file_seek() {
+        let book = catalog(&[Some(0), Some(1)]);
+        let clips = vec![segment("a.wav", 0.0, 10.0)];
+        assert!(
+            resolve_book_seek(&book, 0, clips.clone(), 15.0, |_| Err(
+                "missing audio".into()
+            ))
+            .is_err()
+        );
+        let unknown = vec![PreparedSegment {
+            path: "unknown.wav".into(),
+            begin_secs: 0.0,
+            end_secs: None,
+        }];
+        assert!(
+            resolve_book_seek(&book, 0, clips, 15.0, |_| Ok(unknown.clone()))
+                .expect("no error")
+                .is_none()
+        );
+    }
+
+    #[test]
+    #[ignore = "Requires SONARPAD_DAISY_TEST_PATH and a real audio output device"]
+    fn real_daisy_audio_playback_smoke() {
+        use rodio::Source;
+        use std::time::Duration;
+        let path = PathBuf::from(std::env::var("SONARPAD_DAISY_TEST_PATH").expect("sample path"));
+        let book = crate::ebook_formats::read_daisy_playback_catalog(&path, Language::English)
+            .expect("real catalog");
+        let first = book
+            .chapters
+            .iter()
+            .position(|c| !c.playback_segments.is_empty())
+            .expect("audio chapter");
+        let prepare = |index| prepare_chapter(&path, &book, index, Language::English);
+        let clips = prepare(first).expect("first chapter");
+        let duration = chapter_total_duration(&clips).expect("known duration");
+        let next = adjacent_chapter(&book, first, true).expect("next chapter");
+        let (resolved, next_clips, target) =
+            resolve_book_seek(&book, first, clips.clone(), duration + 0.25, prepare)
+                .expect("forward seek")
+                .expect("position");
+        assert_eq!(resolved, next);
+        assert!((target - 0.25).abs() < 0.001);
+        let (back, _, position) =
+            resolve_book_seek(&book, next, next_clips.clone(), -0.25, prepare)
+                .expect("backward seek")
+                .expect("position");
+        assert_eq!(back, first);
+        assert!((position - (duration - 0.25)).abs() < 0.001);
+        let stream = rodio::OutputStreamBuilder::open_default_stream().expect("audio output");
+        let sink = rodio::Sink::connect_new(stream.mixer());
+        // Decode and audibly play real clips around the chapter boundary.
+        for (segments, target) in [(&clips, (duration - 1.0).max(0.0)), (&next_clips, 0.0)] {
+            let (index, media_position) =
+                locate_chapter_position(segments, target).expect("media position");
+            let clip = &segments[index];
+            let decoder =
+                rodio::Decoder::try_from(std::fs::File::open(&clip.path).expect("audio file"))
+                    .expect("decode audio");
+            sink.append(
+                decoder
+                    .skip_duration(Duration::from_secs_f64(media_position))
+                    .take_duration(Duration::from_secs_f64(
+                        (clip.end_secs.expect("end") - media_position).min(1.0),
+                    )),
+            );
+        }
+        sink.sleep_until_end();
+        println!(
+            "Real DAISY: {} chapters, forward {} -> {}, backward {} -> {}, audio decoded and played",
+            book.chapters.len(),
+            first,
+            next,
+            next,
+            first
+        );
+    }
 
     fn segment(name: &str, begin: f64, end: f64) -> PreparedSegment {
         PreparedSegment {

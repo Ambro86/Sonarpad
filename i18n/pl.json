@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "Wybierz rozdział lub sekcję i naciśnij Enter, aby ją odtworzyć.",
   "daisy_index.no_audio": "Ta książka DAISY nie zawiera odtwarzalnego zsynchronizowanego dźwięku. Tekst pozostaje otwarty w edytorze.",
   "daisy_index.chapter_no_audio": "Wybrana sekcja DAISY nie zawiera odtwarzalnego dźwięku.",
-  "daisy_index.finished": "Koniec rozdziału DAISY.",
+  "daisy_index.finished": "Koniec książki DAISY.",
   "audio_description.project.search": "Szukaj opisów:",
   "audio_description.project.search_button": "Szukaj",
   "audio_description.overload.title": "Gemini jest tymczasowo przeciążony",

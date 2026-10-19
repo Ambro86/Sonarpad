@@ -2204,7 +2204,7 @@
   "daisy_index.hint": "选择章节或部分，然后按 Enter 播放。",
   "daisy_index.no_audio": "此 DAISY 图书没有可播放的同步音频。文本仍会在编辑器中保持打开。",
   "daisy_index.chapter_no_audio": "所选 DAISY 部分没有可播放的音频。",
-  "daisy_index.finished": "DAISY 章节结束。",
+  "daisy_index.finished": "DAISY 图书结束。",
   "audio_description.project.search": "搜索描述：",
   "audio_description.project.search_button": "搜索",
   "audio_description.overload.title": "Gemini 暂时过载",

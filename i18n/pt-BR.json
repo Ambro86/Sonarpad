@@ -2256,7 +2256,7 @@
   "daisy_index.hint": "Selecione um capítulo ou seção e pressione Enter para reproduzi-lo.",
   "daisy_index.no_audio": "Este livro DAISY não contém áudio sincronizado reproduzível. O texto permanece aberto no editor.",
   "daisy_index.chapter_no_audio": "A seção DAISY selecionada não contém áudio reproduzível.",
-  "daisy_index.finished": "Fim do capítulo DAISY.",
+  "daisy_index.finished": "Fim do livro DAISY.",
   "audio_description.project.search": "Pesquisar descrições:",
   "audio_description.project.search_button": "Pesquisar",
   "audio_description.overload.title": "Gemini temporariamente sobrecarregado",
