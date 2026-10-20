@@ -10,8 +10,11 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
 };
+#[path = "media_cutter_timeline_video.rs"]
+mod timeline_video;
 #[path = "media_cutter_video.rs"]
 mod video;
+use crate::media_cutter_timeline::{self, MediaSpan, SourceClip};
 #[derive(Clone, Debug)]
 pub struct AddedTrack {
     pub path: PathBuf,
@@ -24,6 +27,7 @@ pub struct ExportPlan {
     pub input: PathBuf,
     pub output: PathBuf,
     pub parts: Vec<MediaPart>,
+    pub sources: Vec<MediaSpan>,
     pub rotation: u16,
     pub track: Option<AddedTrack>,
 }
@@ -66,14 +70,32 @@ pub fn export(
     check_cancel(&cancel)?;
     if crate::media_conversion::same_file(&plan.input, &plan.output)
         || plan
+            .sources
+            .iter()
+            .any(|s| crate::media_conversion::same_file(&s.path, &plan.output))
+        || plan
             .track
             .as_ref()
             .is_some_and(|t| crate::media_conversion::same_file(&t.path, &plan.output))
     {
         return Err("Input and output must be different files".into());
     }
-    let duration = crate::ffmpeg_export::media_duration_seconds(&plan.input)
-        .ok_or("Cannot determine media duration")?;
+    let duration = if let Some(last) = plan.sources.last() {
+        media_cutter_timeline::validate(&plan.sources, last.end)?;
+        for span in &plan.sources {
+            let source_duration = crate::ffmpeg_export::media_duration_seconds(&span.path)
+                .ok_or("Cannot determine inserted media duration")?;
+            if span.source_start + span.end - span.start > source_duration + 0.1 {
+                return Err(
+                    "Inserted media has changed or is shorter than the selected range".into(),
+                );
+            }
+        }
+        last.end
+    } else {
+        crate::ffmpeg_export::media_duration_seconds(&plan.input)
+            .ok_or("Cannot determine media duration")?
+    };
     let mut previous = 0.0;
     for p in &plan.parts {
         if !p.start.is_finite()
@@ -94,8 +116,31 @@ pub fn export(
     if ![0, 90, 180, 270].contains(&plan.rotation) {
         return Err("Invalid video rotation".into());
     }
-    let has_video = crate::ffmpeg_source::has_real_video_stream(&plan.input)?;
-    let has_audio = !crate::ffmpeg_source::list_audio_streams(&plan.input)?.is_empty();
+    let clips = if plan.sources.is_empty() {
+        kept.iter()
+            .map(|p| SourceClip {
+                path: plan.input.clone(),
+                start: p.start,
+                end: p.end,
+            })
+            .collect()
+    } else {
+        media_cutter_timeline::resolve(&plan.sources, &kept)?
+    };
+    let mut media = std::collections::HashMap::new();
+    for clip in &clips {
+        if !media.contains_key(&clip.path) {
+            media.insert(
+                clip.path.clone(),
+                (
+                    crate::ffmpeg_source::has_real_video_stream(&clip.path)?,
+                    !crate::ffmpeg_source::list_audio_streams(&clip.path)?.is_empty(),
+                ),
+            );
+        }
+    }
+    let has_video = media.values().any(|v| v.0);
+    let has_audio = media.values().any(|v| v.1);
     let extension = plan
         .output
         .extension()
@@ -104,7 +149,7 @@ pub fn export(
         .to_ascii_lowercase();
     let settings = output_settings(&extension)?;
     let output_video = VIDEO_EXTENSIONS.contains(&extension.as_str());
-    if output_video && !has_video {
+    if output_video && !has_video && plan.sources.is_empty() {
         return Err("Input has no video stream".into());
     }
     if !output_video && !has_audio && plan.track.is_none() {
@@ -129,9 +174,13 @@ pub fn export(
             &extension
         };
         let encoded_audio = work.join(format!("audio.{audio_extension}"));
-        let encoded_video = work.join(format!("video.{extension}"));
+        let encoded_video = if plan.sources.is_empty() {
+            work.join(format!("video.{extension}"))
+        } else {
+            work.join("video.ffconcat")
+        };
         let staged = work.join(format!("final.{extension}"));
-        let output_audio = has_audio || plan.track.is_some();
+        let output_audio = has_audio || plan.track.is_some() || !plan.sources.is_empty();
         if output_audio {
             let mut writer = hound::WavWriter::create(
                 &wav,
@@ -157,14 +206,14 @@ pub fn export(
                 .as_ref()
                 .map_or(0.0, |t| t.new_volume.clamp(0.0, 2.0));
             let mut done = 0_u64;
-            for part in &kept {
+            for part in &clips {
                 check_cancel(&cancel)?;
-                let mut original = if has_audio {
-                    Some(audio(&plan.input, part.start)?)
+                let mut original = if media.get(&part.path).is_some_and(|v| v.1) {
+                    Some(audio(&part.path, part.start)?)
                 } else {
                     None
                 };
-                let count = (part.duration() * 48000.0).round() as u64 * 2;
+                let count = ((part.end - part.start) * 48000.0).round() as u64 * 2;
                 let mut missing = 0_u64;
                 for i in 0..count {
                     if i % 8192 == 0 {
@@ -217,14 +266,24 @@ pub fn export(
             )?;
         }
         if output_video {
-            video::encode_video(
-                &plan.input,
-                &encoded_video,
-                &kept,
-                plan.rotation,
-                &cancel,
-                &mut |p| report(45 + p.min(100) * 45 / 100),
-            )?;
+            if plan.sources.is_empty() {
+                video::encode_video(
+                    &plan.input,
+                    &encoded_video,
+                    &kept,
+                    plan.rotation,
+                    &cancel,
+                    &mut |p| report(45 + p.min(100) * 45 / 100),
+                )?;
+            } else {
+                timeline_video::prepare(
+                    &encoded_video,
+                    &clips,
+                    plan.rotation,
+                    &cancel,
+                    &mut |p| report(45 + p.min(100) * 45 / 100),
+                )?;
+            }
             if output_audio {
                 crate::ffmpeg_export::remux_media_file_to_mp4_with_external_audio_stream(
                     &encoded_video,
@@ -260,3 +319,8 @@ pub fn export(
 #[cfg(test)]
 #[path = "media_cutter_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+pub(crate) fn test_video_frames(path: &Path) -> Result<Vec<(i32, i32, f64)>, String> {
+    video::test_frames(path)
+}

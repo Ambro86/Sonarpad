@@ -4,8 +4,11 @@ Version 0.9.18 – 2026-10-16
 
 1. Ditambahkan Potong berkas media di Alat → Multimedia: pemotongan audio dan video terpandu atau lanjutan, pratinjau, pengaturan batas potongan, pemulihan bagian yang dihapus, putaran video, dan trek audio tambahan. Pemutaran melewati bagian yang dihapus. Penyimpanan menampilkan kemajuan dan dapat dibatalkan; menggunakan pustaka FFmpeg bawaan.
 2. Ditambahkan area perintah untuk menjalankan perintah pemotongan tanpa Alt atau Ctrl. F1 membacakan daftar tombol.
-3. Pemutaran buku DAISY otomatis berlanjut ke bab berikutnya. Tombol panah dapat melintasi batas bab. Subbagian tidak diulang dan pengumuman akhir hanya dibacakan saat buku selesai.
-4. Ditambahkan Bahasa Indonesia, termasuk antarmuka, panduan, dan terjemahan alat media terbaru. Terima kasih kepada Muhammad atas kontribusi terjemahannya.
+3. Ditambahkan Konversi Folder di Alat → Multimedia (Alt+Shift+Q), untuk mengonversi banyak berkas audio dan video dengan pilihan kualitas, gambar untuk video dari audio, kemajuan, pembatalan, dan ringkasan kesalahan.
+4. Ditambahkan Gabungkan berkas media (Alt+Shift+Y), dengan urutan berkas yang dapat diubah, pilihan format, kemajuan, dan pembatalan. Video juga dapat digabungkan menjadi satu berkas audio.
+5. Potong berkas media kini dapat menyisipkan audio atau video sebelum bagian yang dipilih, tanpa menghilangkan potongan yang sudah dibuat. Bagian audio saja menggunakan latar hitam dalam video.
+6. Pemutaran buku DAISY otomatis berlanjut ke bab berikutnya. Tombol panah dapat melintasi batas bab. Subbagian tidak diulang dan pengumuman akhir hanya dibacakan saat buku selesai.
+7. Ditambahkan Bahasa Indonesia, termasuk antarmuka, panduan, dan terjemahan alat media terbaru. Terima kasih kepada Muhammad atas kontribusi terjemahannya.
 
 ## Riwayat versi sebelumnya (dalam bahasa Inggris)
 

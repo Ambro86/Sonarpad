@@ -1,3 +1,5 @@
+pub const IDM_TOOLS_MEDIA_JOIN: usize = 1990;
+pub const IDM_TOOLS_CONVERT_FOLDER: usize = 1989;
 pub const IDM_TOOLS_MEDIA_CUTTER: usize = 1988;
 use crate::accessibility::to_wide;
 use crate::i18n;
@@ -273,6 +275,9 @@ pub struct MenuLabels {
     pub file_podcast: String,
     pub file_batch_audiobooks: String,
     pub file_convert_audio: String,
+    pub convert_folder_menu: String,
+    pub media_join_menu: String,
+    pub media_cutter_menu: String,
     pub file_exit: String,
     pub edit_undo: String,
     pub edit_cut: String,
@@ -369,7 +374,7 @@ pub fn menu_labels(language: Language) -> MenuLabels {
             String::new()
         },
         menu_sonarpad_audiodescrizioni: if language == Language::Italian {
-            "Audiodescrizioni Sonarpad (&H)...\tCtrl+Shift+Y".to_string()
+            "&Audiodescrizioni Sonarpad...\tCtrl+Shift+Y".to_string()
         } else {
             String::new()
         },
@@ -442,6 +447,9 @@ pub fn menu_labels(language: Language) -> MenuLabels {
         file_podcast: i18n::tr(language, "file.podcast"),
         file_batch_audiobooks: i18n::tr(language, "file.batch_audiobooks"),
         file_convert_audio: i18n::tr(language, "file.convert_audio"),
+        convert_folder_menu: i18n::tr(language, "convert_folder.menu"),
+        media_join_menu: i18n::tr(language, "media_join.menu"),
+        media_cutter_menu: i18n::tr(language, "media_cutter.menu"),
         file_exit: i18n::tr(language, "file.exit"),
         edit_undo: i18n::tr(language, "edit.undo"),
         edit_cut: i18n::tr(language, "edit.cut"),
@@ -530,6 +538,32 @@ fn menu_mnemonic(label: &str) -> Option<String> {
         return chars.next().map(|value| value.to_lowercase().collect());
     }
     None
+}
+
+const PLAYBACK_GROUP_KEYS: [&str; 8] = [
+    "playback.group.navigation",
+    "playback.group.tracks",
+    "playback.group.volume",
+    "playback.group.speed",
+    "playback.group.pitch",
+    "playback.group.audio",
+    "playback.group.transcription",
+    "playback.group.media",
+];
+
+fn attach_playback_groups(parent: HMENU, groups: &[HMENU; 8], language: Language) {
+    for (menu, key) in groups.iter().zip(PLAYBACK_GROUP_KEYS) {
+        if *menu == parent {
+            continue;
+        }
+        unsafe {
+            if GetMenuItemCount(*menu) > 0 {
+                append_menu_string(parent, MF_POPUP, menu.0 as usize, &i18n::tr(language, key));
+            } else {
+                crate::log_if_err!(DestroyMenu(*menu));
+            }
+        }
+    }
 }
 
 pub fn update_playback_menu(hwnd: HWND, show: bool) {
@@ -693,6 +727,17 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
             if playback_menu.0 == 0 {
                 return;
             }
+            let groups = PLAYBACK_GROUP_KEYS.map(|_| CreateMenu().unwrap_or(playback_menu));
+            let [
+                navigation_menu,
+                tracks_menu,
+                volume_menu,
+                speed_menu,
+                pitch_menu,
+                audio_menu,
+                transcription_menu,
+                media_menu,
+            ] = groups;
             let title = i18n::tr(language, "menu.playback");
             let play_pause = i18n::tr(language, "playback.play_pause");
             let stop = i18n::tr(language, "playback.stop");
@@ -721,7 +766,6 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
             let pitch_up = i18n::tr(language, "playback.pitch_up");
             let pitch_down = i18n::tr(language, "playback.pitch_down");
             let pitch_reset = i18n::tr(language, "playback.pitch_reset");
-            let reset_menu_label = i18n::tr(language, "playback.reset_menu");
             let mute_toggle = i18n::tr(language, "playback.mute_toggle");
             let add_subtitles = i18n::tr(language, "playback.add_subtitles");
             let remove_subtitles = i18n::tr(language, "playback.remove_subtitles");
@@ -741,7 +785,7 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
             let transcribe_current = i18n::tr(language, "playback.transcribe_current");
             let create_audio_description = format!(
                 "{}\tCtrl+Shift+I",
-                i18n::tr(language, "menu.create_audio_description").replace('&', "")
+                i18n::tr(language, "playback.create_audio_description")
             );
             let split_media = i18n::tr(language, "playback.split_media");
             let split_media_parts = i18n::tr(language, "playback.split_media.parts");
@@ -783,58 +827,48 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
                 MF_STRING
             };
             append_menu_string(
-                playback_menu,
+                navigation_menu,
                 seek_flags,
                 IDM_PLAYBACK_SEEK_FORWARD,
                 &seek_forward,
             );
             append_menu_string(
-                playback_menu,
+                navigation_menu,
                 seek_flags,
                 IDM_PLAYBACK_SEEK_BACKWARD,
                 &seek_backward,
             );
             if !live_tv_playback && !raiplay_live_stream_playback {
                 append_menu_string(
-                    playback_menu,
+                    navigation_menu,
                     seek_flags,
                     IDM_PLAYBACK_SEEK_TO_START,
                     &seek_to_start,
                 );
                 append_menu_string(
-                    playback_menu,
+                    navigation_menu,
                     seek_flags,
                     IDM_PLAYBACK_SEEK_TO_END,
                     &seek_to_end,
                 );
             }
-            append_menu_string(
-                playback_menu,
-                MF_STRING,
-                IDM_PLAYBACK_TRACK_PREV,
-                &track_prev,
-            );
-            append_menu_string(
-                playback_menu,
-                MF_STRING,
-                IDM_PLAYBACK_TRACK_NEXT,
-                &track_next,
-            );
+            append_menu_string(tracks_menu, MF_STRING, IDM_PLAYBACK_TRACK_PREV, &track_prev);
+            append_menu_string(tracks_menu, MF_STRING, IDM_PLAYBACK_TRACK_NEXT, &track_next);
             if has_chapters {
                 append_menu_string(
-                    playback_menu,
+                    tracks_menu,
                     MF_STRING,
                     IDM_PLAYBACK_CHAPTER_PREV,
                     &chapter_prev,
                 );
                 append_menu_string(
-                    playback_menu,
+                    tracks_menu,
                     MF_STRING,
                     IDM_PLAYBACK_CHAPTER_NEXT,
                     &chapter_next,
                 );
                 append_menu_string(
-                    playback_menu,
+                    tracks_menu,
                     MF_STRING,
                     IDM_PLAYBACK_CHAPTER_LIST,
                     &chapter_list,
@@ -846,7 +880,7 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
                 && !live_tv_playback
             {
                 append_menu_string(
-                    playback_menu,
+                    media_menu,
                     MF_STRING,
                     IDM_PLAYBACK_DOWNLOAD_EPISODE,
                     &download_episode,
@@ -854,7 +888,7 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
             }
             if audio_description_available {
                 append_menu_string(
-                    playback_menu,
+                    transcription_menu,
                     MF_STRING,
                     IDM_PLAYBACK_CREATE_AUDIO_DESCRIPTION,
                     &create_audio_description,
@@ -862,7 +896,7 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
             }
             if !hls_m3u8_playback {
                 append_menu_string(
-                    playback_menu,
+                    transcription_menu,
                     MF_STRING,
                     IDM_PLAYBACK_TRANSCRIBE_CURRENT,
                     &transcribe_current,
@@ -870,7 +904,7 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
             }
             if !hls_m3u8_playback && !direct_stream_playback {
                 append_menu_string(
-                    playback_menu,
+                    transcription_menu,
                     MF_STRING,
                     IDM_PLAYBACK_TRANSCRIBE_CURRENT_FOLDER,
                     &transcribe_current_folder,
@@ -891,37 +925,32 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
                         IDM_PLAYBACK_SPLIT_TIME,
                         &split_media_time,
                     );
-                    append_menu_string(
-                        playback_menu,
-                        MF_POPUP,
-                        split_menu.0 as usize,
-                        &split_media,
-                    );
+                    append_menu_string(media_menu, MF_POPUP, split_menu.0 as usize, &split_media);
                 }
             }
             if !live_tv_playback && !raiplay_live_stream_playback {
                 append_menu_string(
-                    playback_menu,
+                    navigation_menu,
                     seek_flags,
                     IDM_PLAYBACK_GO_TO_TIME,
                     &go_to_time,
                 );
             }
             append_menu_string(
-                playback_menu,
+                navigation_menu,
                 MF_STRING,
                 IDM_PLAYBACK_ANNOUNCE_TIME,
                 &announce_time,
             );
             if !raiplay_live_stream_playback {
                 append_menu_string(
-                    playback_menu,
+                    audio_menu,
                     MF_STRING,
                     IDM_PLAYBACK_ADD_SUBTITLES,
                     &add_subtitles,
                 );
                 append_menu_string(
-                    playback_menu,
+                    audio_menu,
                     MF_STRING,
                     IDM_PLAYBACK_REMOVE_SUBTITLES,
                     &remove_subtitles,
@@ -964,16 +993,16 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
                         );
                     }
                     append_menu_string(
-                        playback_menu,
+                        audio_menu,
                         MF_POPUP,
                         audio_tracks_menu.0 as usize,
                         &audio_track_label,
                     );
                 }
             }
-            append_menu_string(playback_menu, MF_STRING, IDM_PLAYBACK_VOLUME_UP, &volume_up);
+            append_menu_string(volume_menu, MF_STRING, IDM_PLAYBACK_VOLUME_UP, &volume_up);
             append_menu_string(
-                playback_menu,
+                volume_menu,
                 MF_STRING,
                 IDM_PLAYBACK_VOLUME_DOWN,
                 &volume_down,
@@ -983,61 +1012,35 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
             } else {
                 MF_STRING
             };
-            append_menu_string(playback_menu, rate_flags, IDM_PLAYBACK_SPEED_UP, &speed_up);
+            append_menu_string(speed_menu, rate_flags, IDM_PLAYBACK_SPEED_UP, &speed_up);
+            append_menu_string(speed_menu, rate_flags, IDM_PLAYBACK_SPEED_DOWN, &speed_down);
+            append_menu_string(pitch_menu, rate_flags, IDM_PLAYBACK_PITCH_UP, &pitch_up);
+            append_menu_string(pitch_menu, rate_flags, IDM_PLAYBACK_PITCH_DOWN, &pitch_down);
             append_menu_string(
-                playback_menu,
-                rate_flags,
-                IDM_PLAYBACK_SPEED_DOWN,
-                &speed_down,
+                volume_menu,
+                MF_STRING,
+                IDM_PLAYBACK_VOLUME_RESET,
+                &volume_reset,
             );
-            append_menu_string(playback_menu, rate_flags, IDM_PLAYBACK_PITCH_UP, &pitch_up);
             append_menu_string(
-                playback_menu,
+                speed_menu,
                 rate_flags,
-                IDM_PLAYBACK_PITCH_DOWN,
-                &pitch_down,
+                IDM_PLAYBACK_SPEED_RESET,
+                &speed_reset,
             );
-            let reset_menu = CreateMenu().unwrap_or(HMENU(0));
-            if reset_menu.0 != 0 {
-                append_menu_string(
-                    reset_menu,
-                    MF_STRING,
-                    IDM_PLAYBACK_VOLUME_RESET,
-                    &volume_reset,
-                );
-                append_menu_string(
-                    reset_menu,
-                    if direct_stream_playback && !mpv_playback_active {
-                        MF_STRING | MF_GRAYED
-                    } else {
-                        MF_STRING
-                    },
-                    IDM_PLAYBACK_SPEED_RESET,
-                    &speed_reset,
-                );
-                append_menu_string(
-                    reset_menu,
-                    if direct_stream_playback && !mpv_playback_active {
-                        MF_STRING | MF_GRAYED
-                    } else {
-                        MF_STRING
-                    },
-                    IDM_PLAYBACK_PITCH_RESET,
-                    &pitch_reset,
-                );
-                append_menu_string(
-                    playback_menu,
-                    MF_POPUP,
-                    reset_menu.0 as usize,
-                    &reset_menu_label,
-                );
-            }
             append_menu_string(
-                playback_menu,
+                pitch_menu,
+                rate_flags,
+                IDM_PLAYBACK_PITCH_RESET,
+                &pitch_reset,
+            );
+            append_menu_string(
+                volume_menu,
                 MF_STRING,
                 IDM_PLAYBACK_MUTE_TOGGLE,
                 &mute_toggle,
             );
+            attach_playback_groups(playback_menu, &groups, language);
             let wide = to_wide(&title);
             crate::log_if_err!(InsertMenuW(
                 hmenu,
@@ -1732,13 +1735,25 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                 multimedia_menu,
                 MF_STRING,
                 IDM_TOOLS_MEDIA_CUTTER,
-                &crate::i18n::tr(language, "media_cutter.menu"),
+                &labels.media_cutter_menu,
             );
             append_menu_string(
                 multimedia_menu,
                 MF_STRING,
                 IDM_FILE_CONVERT_AUDIO,
                 &labels.file_convert_audio,
+            );
+            append_menu_string(
+                multimedia_menu,
+                MF_STRING,
+                IDM_TOOLS_CONVERT_FOLDER,
+                &labels.convert_folder_menu,
+            );
+            append_menu_string(
+                multimedia_menu,
+                MF_STRING,
+                IDM_TOOLS_MEDIA_JOIN,
+                &labels.media_join_menu,
             );
 
             append_menu_string(
@@ -1865,13 +1880,25 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                 tools_menu,
                 MF_STRING,
                 IDM_TOOLS_MEDIA_CUTTER,
-                &crate::i18n::tr(language, "media_cutter.menu"),
+                &labels.media_cutter_menu,
             );
             append_menu_string(
                 tools_menu,
                 MF_STRING,
                 IDM_FILE_CONVERT_AUDIO,
                 &labels.file_convert_audio,
+            );
+            append_menu_string(
+                tools_menu,
+                MF_STRING,
+                IDM_TOOLS_CONVERT_FOLDER,
+                &labels.convert_folder_menu,
+            );
+            append_menu_string(
+                tools_menu,
+                MF_STRING,
+                IDM_TOOLS_MEDIA_JOIN,
+                &labels.media_join_menu,
             );
             append_menu_string(tools_menu, MF_STRING, IDM_TOOLS_PROMPT, &labels.menu_prompt);
             append_menu_string(tools_menu, MF_STRING, IDM_TOOLS_RSS, &labels.menu_rss);
@@ -2143,10 +2170,9 @@ pub fn append_menu_string(menu: HMENU, flags: MENU_ITEM_FLAGS, id: usize, text: 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
 
-    fn assert_unique_group(language: &str, menu: &str, labels: &[&str]) {
-        let mut used = HashMap::new();
+    fn assert_valid_group(language: &str, menu: &str, labels: &[&str]) {
+        let redundant = regex::Regex::new(r"\(\s*&[\p{L}\p{N}]\s*\)").unwrap();
         for label in labels {
             if strip_menu_shortcut(label).trim().is_empty() {
                 continue;
@@ -2157,18 +2183,33 @@ mod tests {
                 mnemonic.chars().all(char::is_alphanumeric),
                 "invalid mnemonic {mnemonic:?} in {language}/{menu}: {label:?}"
             );
-            if let Some(previous) = used.insert(mnemonic.clone(), *label) {
-                panic!(
-                    "duplicate mnemonic {mnemonic:?} in {language}/{menu}: {previous:?} and {label:?}"
-                );
+            assert!(
+                !redundant.is_match(label),
+                "redundant visible mnemonic in {language}/{menu}: {label:?}"
+            );
+            let display = strip_menu_shortcut(label);
+            let mut chars = display.chars().peekable();
+            let mut count = 0;
+            while let Some(ch) = chars.next() {
+                if ch == '&' {
+                    if chars.peek() == Some(&'&') {
+                        chars.next();
+                    } else {
+                        count += 1;
+                    }
+                }
             }
+            assert_eq!(
+                count, 1,
+                "expected one embedded mnemonic in {language}/{menu}: {label:?}"
+            );
         }
     }
 
     macro_rules! assert_menu_group {
         ($labels:ident, $language:expr, $menu:expr, $($field:ident),+ $(,)?) => {{
             let group = [$( $labels.$field.as_str() ),+];
-            assert_unique_group($language, $menu, &group);
+            assert_valid_group($language, $menu, &group);
         }};
     }
 
@@ -2340,6 +2381,9 @@ mod tests {
                 language,
                 "tools/multimedia",
                 file_convert_audio,
+                convert_folder_menu,
+                media_join_menu,
+                media_cutter_menu,
                 menu_podcasts,
                 menu_import_youtube,
                 menu_stream_audio,
@@ -2367,6 +2411,9 @@ mod tests {
                 language,
                 "tools/flat",
                 file_convert_audio,
+                convert_folder_menu,
+                media_join_menu,
+                media_cutter_menu,
                 menu_prompt,
                 menu_rss,
                 menu_podcasts,
@@ -2411,7 +2458,30 @@ mod tests {
     }
 
     #[test]
-    fn every_localized_main_menu_has_unique_sibling_mnemonics() {
+    fn localized_labels_do_not_repeat_mnemonics_in_visible_parentheses() {
+        let repeated = regex::Regex::new(r"\(\s*&[\p{L}\p{N}]\s*\)").unwrap();
+        let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("i18n");
+        for entry in std::fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().and_then(|v| v.to_str()) != Some("json") {
+                continue;
+            }
+            let labels: std::collections::HashMap<String, String> =
+                serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+            for (key, label) in labels {
+                assert!(
+                    !repeated.is_match(&label),
+                    "redundant visible mnemonic in {} / {key}: {label}",
+                    path.display()
+                );
+            }
+        }
+        let labels = menu_labels(Language::Italian);
+        assert!(!repeated.is_match(&labels.menu_sonarpad_audiodescrizioni));
+    }
+
+    #[test]
+    fn every_localized_main_menu_has_valid_embedded_mnemonics() {
         let languages = [
             (Language::Italian, "it"),
             (Language::English, "en"),
@@ -2442,7 +2512,7 @@ mod tests {
     }
 
     #[test]
-    fn dynamic_file_and_view_items_have_explicit_unique_mnemonics() {
+    fn dynamic_file_and_view_items_have_valid_embedded_mnemonics() {
         let languages = [
             (Language::Italian, "it"),
             (Language::English, "en"),
@@ -2467,7 +2537,7 @@ mod tests {
         for (language, code) in languages {
             let labels = menu_labels(language);
             let save_image = i18n::tr(language, "file.save_image");
-            assert_unique_group(
+            assert_valid_group(
                 code,
                 "file/dynamic",
                 &[
@@ -2485,7 +2555,7 @@ mod tests {
             );
 
             let epub_index = i18n::tr(language, "view.show_epub_index");
-            assert_unique_group(
+            assert_valid_group(
                 code,
                 "view/dynamic",
                 &[
@@ -2505,7 +2575,7 @@ mod tests {
     }
 
     #[test]
-    fn playback_menu_mnemonics_are_unique_in_every_language() {
+    fn playback_menu_mnemonics_are_embedded_in_every_language() {
         let languages = [
             (Language::Italian, "it"),
             (Language::English, "en"),
@@ -2530,7 +2600,7 @@ mod tests {
         for (language, code) in languages {
             let main_labels = menu_labels(language);
             let title = i18n::tr(language, "menu.playback");
-            assert_unique_group(
+            assert_valid_group(
                 code,
                 "top/playback",
                 &[
@@ -2546,59 +2616,119 @@ mod tests {
                 ],
             );
 
-            let playback = [
-                i18n::tr(language, "playback.play_pause"),
-                i18n::tr(language, "playback.stop"),
-                i18n::tr(language, "playback.seek_forward"),
-                i18n::tr(language, "playback.seek_backward"),
-                i18n::tr(language, "playback.seek_to_start"),
-                i18n::tr(language, "playback.seek_to_end"),
-                i18n::tr(language, "playback.track_prev"),
-                i18n::tr(language, "playback.track_next"),
-                i18n::tr(language, "playback.chapter_prev"),
-                i18n::tr(language, "playback.chapter_next"),
-                i18n::tr(language, "playback.chapter_list"),
-                i18n::tr(language, "playback.download_episode"),
-                i18n::tr(language, "playback.transcribe_current"),
-                i18n::tr(language, "playback.transcribe_current_folder"),
-                i18n::tr(language, "playback.split_media"),
-                i18n::tr(language, "playback.go_to_time"),
-                i18n::tr(language, "playback.announce_time"),
-                i18n::tr(language, "playback.add_subtitles"),
-                i18n::tr(language, "playback.remove_subtitles"),
-                i18n::tr(language, "playback.audio_track"),
-                i18n::tr(language, "playback.volume_up"),
-                i18n::tr(language, "playback.volume_down"),
-                i18n::tr(language, "playback.speed_up"),
-                i18n::tr(language, "playback.speed_down"),
-                i18n::tr(language, "playback.pitch_up"),
-                i18n::tr(language, "playback.pitch_down"),
-                i18n::tr(language, "playback.reset_menu"),
-                i18n::tr(language, "playback.mute_toggle"),
+            let root_keys: Vec<&str> = ["playback.play_pause", "playback.stop"]
+                .into_iter()
+                .chain(PLAYBACK_GROUP_KEYS)
+                .collect();
+            let groups: &[&[&str]] = &[
+                &root_keys,
+                &[
+                    "playback.seek_forward",
+                    "playback.seek_backward",
+                    "playback.seek_to_start",
+                    "playback.seek_to_end",
+                    "playback.go_to_time",
+                    "playback.announce_time",
+                ],
+                &[
+                    "playback.track_prev",
+                    "playback.track_next",
+                    "playback.chapter_prev",
+                    "playback.chapter_next",
+                    "playback.chapter_list",
+                ],
+                &[
+                    "playback.volume_up",
+                    "playback.volume_down",
+                    "playback.volume_reset",
+                    "playback.mute_toggle",
+                ],
+                &[
+                    "playback.speed_up",
+                    "playback.speed_down",
+                    "playback.speed_reset",
+                ],
+                &[
+                    "playback.pitch_up",
+                    "playback.pitch_down",
+                    "playback.pitch_reset",
+                ],
+                &[
+                    "playback.audio_track",
+                    "playback.add_subtitles",
+                    "playback.remove_subtitles",
+                ],
+                &[
+                    "playback.transcribe_current",
+                    "playback.transcribe_current_folder",
+                    "playback.create_audio_description",
+                ],
+                &["playback.download_episode", "playback.split_media"],
+                &["playback.split_media.parts", "playback.split_media.time"],
             ];
-            let playback_refs: Vec<&str> = playback.iter().map(String::as_str).collect();
-            assert_unique_group(code, "playback", &playback_refs);
+            for keys in groups {
+                let labels: Vec<String> = keys.iter().map(|key| i18n::tr(language, key)).collect();
+                let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+                assert_valid_group(code, "playback/submenu", &refs);
+                let mut used = std::collections::HashSet::new();
+                for label in labels {
+                    let mnemonic = menu_mnemonic(&label).unwrap();
+                    assert!(
+                        used.insert(mnemonic.clone()),
+                        "duplicate mnemonic {mnemonic} within one playback submenu in {code}: {keys:?}"
+                    );
+                }
+            }
 
             let split = [
                 i18n::tr(language, "playback.split_media.parts"),
                 i18n::tr(language, "playback.split_media.time"),
             ];
             let split_refs: Vec<&str> = split.iter().map(String::as_str).collect();
-            assert_unique_group(code, "playback/split", &split_refs);
-
-            let reset = [
-                i18n::tr(language, "playback.volume_reset"),
-                i18n::tr(language, "playback.speed_reset"),
-                i18n::tr(language, "playback.pitch_reset"),
-            ];
-            let reset_refs: Vec<&str> = reset.iter().map(String::as_str).collect();
-            assert_unique_group(code, "playback/reset", &reset_refs);
+            assert_valid_group(code, "playback/split", &split_refs);
         }
     }
 
     #[test]
-    fn font_menu_uses_explicit_unique_mnemonics() {
-        assert_unique_group(
+    fn playback_groups_attach_in_order_and_omit_empty_categories() {
+        use windows::Win32::UI::WindowsAndMessaging::{GetMenuItemID, GetMenuState};
+        unsafe {
+            let parent = CreateMenu().unwrap();
+            let groups = PLAYBACK_GROUP_KEYS.map(|_| CreateMenu().unwrap());
+            append_menu_string(parent, MF_STRING, IDM_PLAYBACK_PLAY_PAUSE, "Play");
+            append_menu_string(parent, MF_STRING, IDM_PLAYBACK_STOP, "Stop");
+            append_menu_string(
+                groups[0],
+                MF_STRING | MF_GRAYED,
+                IDM_PLAYBACK_SEEK_FORWARD,
+                "Forward",
+            );
+            append_menu_string(
+                groups[2],
+                MF_STRING,
+                IDM_PLAYBACK_VOLUME_RESET,
+                "Reset volume",
+            );
+            attach_playback_groups(parent, &groups, Language::Italian);
+            assert_eq!(GetMenuItemCount(parent), 4);
+            assert_eq!(GetSubMenu(parent, 2), groups[0]);
+            assert_eq!(GetSubMenu(parent, 3), groups[2]);
+            assert_eq!(
+                GetMenuItemID(groups[0], 0),
+                IDM_PLAYBACK_SEEK_FORWARD as u32
+            );
+            assert_eq!(
+                GetMenuItemID(groups[2], 0),
+                IDM_PLAYBACK_VOLUME_RESET as u32
+            );
+            assert_ne!(GetMenuState(groups[0], 0, MF_BYPOSITION) & MF_GRAYED.0, 0);
+            crate::log_if_err!(DestroyMenu(parent));
+        }
+    }
+
+    #[test]
+    fn font_menu_uses_valid_embedded_mnemonics() {
+        assert_valid_group(
             "all",
             "view/fonts",
             &[

@@ -1830,7 +1830,11 @@ extern "system" fn browse_folder_focus_callback(
 
 pub(crate) fn browse_for_folder(owner: HWND, language: Language) -> Option<PathBuf> {
     let labels = labels(language);
-    let title = to_wide(&labels.folder_label);
+    browse_for_folder_with_title(owner, &labels.folder_label)
+}
+
+pub(crate) fn browse_for_folder_with_title(owner: HWND, title: &str) -> Option<PathBuf> {
+    let title = to_wide(title);
     let bi = BROWSEINFOW {
         hwndOwner: owner,
         lpszTitle: PCWSTR(title.as_ptr()),

@@ -4,8 +4,11 @@ Version 0.9.18 – 2026-10-16
 
 1. Adicionado Cortar ficheiro multimédia em Ferramentas → Multimédia: corte guiado e avançado de áudio e vídeo, pré-visualização, ajuste preciso e restauro das partes eliminadas. A reprodução salta os cortes aplicados. Inclui rotação de vídeo e faixa de áudio adicional com volumes ajustáveis e repetição. Gravação com progresso real e cancelamento através das bibliotecas FFmpeg incluídas, sem executáveis externos; instruções faladas e controlos acessíveis.
 2. Adicionada uma área de comandos em Cortar ficheiro multimédia para utilizar comandos de corte pelo teclado sem Alt ou Ctrl. F1 lê a lista de teclas disponíveis.
-3. Melhorada a reprodução de livros DAISY: o capítulo seguinte começa automaticamente e os avanços e recuos com as setas atravessam os limites entre capítulos. As subsecções não são repetidas e o anúncio de fim da leitura só é ouvido no final do livro.
-4. Adicionado o indonésio (Bahasa Indonesia), com interface, guia e traduções das novas ferramentas multimédia. Obrigado a Muhammad pelo contributo para a tradução.
+3. Adicionado Converter pasta em Ferramentas → Multimédia (Alt+Shift+Q), com os controlos do Mac: conversão em lote de áudio e vídeo, qualidade e imagem para criar vídeo a partir de áudio. Inclui progresso real, cancelamento, resumo de erros e proteção dos ficheiros existentes. Usa apenas as bibliotecas FFmpeg incluídas.
+4. Adicionado Unir ficheiros multimédia em Ferramentas → Multimédia (Alt+Shift+Y): une ficheiros de áudio ou vídeo pela ordem escolhida, com botões para adicionar, remover e reordenar ficheiros, seleção do formato de destino, progresso real e cancelamento. Os vídeos também podem ser unidos num ficheiro de áudio.
+5. Cortar multimédia: adicionada a opção «Inserir multimédia antes da parte selecionada…» para inserir áudio ou vídeo mantendo os cortes existentes. A reprodução e a exportação seguem a nova ordem; a parte inserida pode ser dividida, eliminada e restaurada. As partes apenas de áudio têm fundo preto nos vídeos.
+6. Melhorada a reprodução de livros DAISY: o capítulo seguinte começa automaticamente e os avanços e recuos com as setas atravessam os limites entre capítulos. As subsecções não são repetidas e o anúncio de fim da leitura só é ouvido no final do livro.
+7. Adicionado o indonésio (Bahasa Indonesia), com interface, guia e traduções das novas ferramentas multimédia. Obrigado a Muhammad pelo contributo para a tradução.
 
 Version 0.9.17 – 2026-10-15
 

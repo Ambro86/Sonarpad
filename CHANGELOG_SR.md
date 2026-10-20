@@ -4,8 +4,11 @@ Version 0.9.18 – 2026-10-16
 
 1. Додато је исецање медијских датотека у Алатке → Мултимедија: вођено и напредно уређивање звука и видеа, преслушавање исечка, прецизно подешавање граница и враћање уклоњених делова. Репродукција прескаче примењене исечке. Подржани су ротација видеа и додатна звучна нумера са подешавањем јачине и понављањем. Чување са стварним напретком и отказивањем користи приложене FFmpeg библиотеке без спољних програма; гласовна упутства и приступачне контроле.
 2. Додата је област команди за сечење медијских датотека, која омогућава команде са тастатуре без Alt или Ctrl. F1 чита списак доступних тастера.
-3. Poboljšana reprodukcija DAISY knjiga: sledeće poglavlje počinje automatski, a pomeranje unapred i unazad strelicama prelazi granice poglavlja. Pododeljci se ne ponavljaju, a obaveštenje o završetku čitanja izgovara se tek na kraju knjige.
-4. Додат је индонежански језик (Bahasa Indonesia), са интерфејсом, упутством и преводима нових мултимедијалних алата. Хвала Muhammad-у на доприносу преводу.
+3. Додато Конвертуј фасциклу у Алатке → Мултимедија (Alt+Shift+Q), са контролама као на Mac-у: групна конверзија звука и видеа, квалитет и слика за видео из звука. Стварни напредак, отказивање, преглед грешака и заштита постојећих датотека. Користе се само уграђене FFmpeg библиотеке.
+4. Dodata je opcija Spoji medijske datoteke u Alati → Multimedija (Alt+Shift+Y): spajanje audio ili video datoteka po izabranom redu, dugmad za dodavanje, uklanjanje i promenu redosleda, izbor izlaznog formata, stvarni napredak i otkazivanje. Video datoteke se mogu spojiti i u jednu audio datoteku.
+5. Sečenje medija: opcija „Umetni medij pre izabranog dela…“ dodaje audio ili video kao novi deo, čuvajući postojeće rezove. Reprodukcija i izvoz prate novi redosled. Umetnuti delovi mogu se deliti, brisati i vraćati; delovi samo sa zvukom imaju crnu pozadinu u videu.
+6. Poboljšana reprodukcija DAISY knjiga: sledeće poglavlje počinje automatski, a pomeranje unapred i unazad strelicama prelazi granice poglavlja. Pododeljci se ne ponavljaju, a obaveštenje o završetku čitanja izgovara se tek na kraju knjige.
+7. Додат је индонежански језик (Bahasa Indonesia), са интерфејсом, упутством и преводима нових мултимедијалних алата. Хвала Muhammad-у на доприносу преводу.
 
 Version 0.9.17 – 2026-10-15
 

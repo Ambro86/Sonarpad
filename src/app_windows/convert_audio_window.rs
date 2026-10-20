@@ -107,6 +107,13 @@ struct ConvertLabels {
 struct ConvertWindowState {
     hwnd: HWND,
     parent: HWND,
+    folder_mode: bool,
+    join_mode: bool,
+    join_files: Vec<PathBuf>,
+    controls: Vec<HWND>,
+    hidden_controls: Vec<HWND>,
+    batch_progress: Arc<Mutex<String>>,
+    batch_result: Arc<Mutex<Option<crate::media_conversion_batch::BatchResult>>>,
     input_edit: HWND,
     input_probe: Arc<Mutex<(String, Option<bool>)>>,
     image_label: HWND,
@@ -165,6 +172,11 @@ fn labels(language: Language) -> ConvertLabels {
 }
 
 pub fn handle_navigation(hwnd: HWND, msg: &windows::Win32::UI::WindowsAndMessaging::MSG) -> bool {
+    if msg.hwnd != hwnd
+        && !unsafe { windows::Win32::UI::WindowsAndMessaging::IsChild(hwnd, msg.hwnd).as_bool() }
+    {
+        return false;
+    }
     if msg.message == WM_KEYDOWN && msg.wParam.0 as u32 == VK_ESCAPE.0 as u32 {
         if let Err(e) = crate::post_message_w_safe(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0)) {
             crate::log_debug(&format!("Failed to post WM_CLOSE: {}", e));
@@ -175,12 +187,43 @@ pub fn handle_navigation(hwnd: HWND, msg: &windows::Win32::UI::WindowsAndMessagi
 }
 
 pub fn open(parent: HWND) {
-    let existing = { with_state(parent, |state| state.convert_audio_window).unwrap_or(HWND(0)) };
+    open_mode(parent, 0);
+}
+
+pub fn open_folder(parent: HWND) {
+    open_mode(parent, 1);
+}
+
+pub fn open_join(parent: HWND) {
+    open_mode(parent, 2);
+}
+
+fn open_mode(parent: HWND, mode: u8) {
+    let folder_mode = mode == 1;
+    let join_mode = mode == 2;
+    let existing = {
+        with_state(parent, |state| {
+            if join_mode {
+                state.media_join_window
+            } else if folder_mode {
+                state.convert_folder_window
+            } else {
+                state.convert_audio_window
+            }
+        })
+        .unwrap_or(HWND(0))
+    };
     if existing.0 != 0 {
         if !crate::is_window_handle_valid(existing) {
             let result = {
                 with_state(parent, |state| {
-                    state.convert_audio_window = HWND(0);
+                    if join_mode {
+                        state.media_join_window = HWND(0);
+                    } else if folder_mode {
+                        state.convert_folder_window = HWND(0);
+                    } else {
+                        state.convert_audio_window = HWND(0);
+                    }
                 })
             };
             if result.is_none() {
@@ -209,7 +252,7 @@ pub fn open(parent: HWND) {
     };
     crate::register_class_w_safe(&wc);
 
-    let labels = labels(language);
+    let labels = mode_labels(language, folder_mode, join_mode);
     let title = to_wide(&labels.title);
 
     let hwnd = unsafe {
@@ -220,12 +263,12 @@ pub fn open(parent: HWND) {
             WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
             140,
             140,
-            660,
-            390,
+            if folder_mode || join_mode { 760 } else { 660 },
+            if join_mode { 440 } else { 390 },
             parent,
             HMENU(0),
             hinstance,
-            None,
+            Some((&mode as *const u8).cast()),
         )
     };
     if hwnd.0 == 0 {
@@ -234,7 +277,13 @@ pub fn open(parent: HWND) {
 
     if {
         with_state(parent, |state| {
-            state.convert_audio_window = hwnd;
+            if join_mode {
+                state.media_join_window = hwnd;
+            } else if folder_mode {
+                state.convert_folder_window = hwnd;
+            } else {
+                state.convert_audio_window = hwnd;
+            }
         })
     }
     .is_none()
@@ -263,9 +312,16 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
             WM_CREATE => {
                 let cs = &*(lparam.0 as *const CREATESTRUCTW);
                 let parent = cs.hwndParent;
+                let mode = if cs.lpCreateParams.is_null() {
+                    0
+                } else {
+                    *(cs.lpCreateParams as *const u8)
+                };
+                let folder_mode = mode == 1;
+                let join_mode = mode == 2;
                 let language =
                     with_state(parent, |state| state.settings.language).unwrap_or_default();
-                let labels = labels(language);
+                let labels = mode_labels(language, folder_mode, join_mode);
                 let hfont = with_state(parent, |state| state.hfont).unwrap_or(HFONT(0));
 
                 let input_label = CreateWindowExW(
@@ -284,13 +340,20 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                 );
                 let input_edit = CreateWindowExW(
                     WS_EX_CLIENTEDGE,
-                    WC_EDIT,
+                    if join_mode { WC_COMBOBOXW } else { WC_EDIT },
                     PCWSTR::null(),
-                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(ES_AUTOHSCROLL as u32),
+                    WS_CHILD
+                        | WS_VISIBLE
+                        | WS_TABSTOP
+                        | WINDOW_STYLE(if join_mode {
+                            CBS_DROPDOWNLIST as u32
+                        } else {
+                            ES_AUTOHSCROLL as u32
+                        }),
                     20,
                     42,
                     380,
-                    26,
+                    if join_mode { 250 } else { 26 },
                     hwnd,
                     HMENU(CONVERT_ID_INPUT_EDIT as isize),
                     HINSTANCE(0),
@@ -303,7 +366,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     412,
                     42,
-                    200,
+                    if folder_mode || join_mode { 300 } else { 200 },
                     26,
                     hwnd,
                     HMENU(CONVERT_ID_INPUT_BROWSE as isize),
@@ -346,7 +409,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     412,
                     106,
-                    200,
+                    if folder_mode || join_mode { 300 } else { 200 },
                     26,
                     hwnd,
                     HMENU(CONVERT_ID_OUTPUT_BROWSE as isize),
@@ -569,7 +632,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     None,
                 );
 
-                for control in [
+                let mut controls = vec![
                     image_label,
                     image_edit,
                     image_browse,
@@ -587,7 +650,28 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     status_label,
                     convert_button,
                     close_button,
-                ] {
+                ];
+                if join_mode {
+                    for (index, key) in ["remove", "up", "down"].iter().enumerate() {
+                        controls.push(CreateWindowExW(
+                            Default::default(),
+                            WC_BUTTON,
+                            PCWSTR(
+                                to_wide(&i18n::tr(language, &format!("media_join.{key}"))).as_ptr(),
+                            ),
+                            WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                            20 + index as i32 * 230,
+                            330,
+                            220,
+                            30,
+                            hwnd,
+                            HMENU((9620 + index) as isize),
+                            HINSTANCE(0),
+                            None,
+                        ));
+                    }
+                }
+                for &control in &controls {
                     if control.0 != 0 && hfont.0 != 0 {
                         SendMessageW(control, WM_SETFONT, WPARAM(hfont.0 as usize), LPARAM(1));
                     }
@@ -596,6 +680,13 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                 let mut state = Box::new(ConvertWindowState {
                     hwnd,
                     parent,
+                    folder_mode,
+                    join_mode,
+                    join_files: Vec::new(),
+                    controls,
+                    hidden_controls: Vec::new(),
+                    batch_progress: Arc::new(Mutex::new(String::new())),
+                    batch_result: Arc::new(Mutex::new(None)),
                     input_edit,
                     input_probe: Arc::new(Mutex::new((String::new(), None))),
                     image_label,
@@ -620,7 +711,10 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     state.quality_combo,
                     windows::Win32::UI::WindowsAndMessaging::SW_HIDE,
                 );
-                if let Some(path) = current_media_path(parent) {
+                if !folder_mode
+                    && !join_mode
+                    && let Some(path) = current_media_path(parent)
+                {
                     set_edit_text(state.input_edit, &path);
                     if get_edit_text(state.output_edit).is_empty()
                         && let Some(suggested) =
@@ -635,6 +729,11 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA,
                     Box::into_raw(state) as isize,
                 );
+                if join_mode {
+                    for control in [image_label, image_edit, image_browse] {
+                        ShowWindow(control, windows::Win32::UI::WindowsAndMessaging::SW_HIDE);
+                    }
+                }
                 SetFocus(input_edit);
                 LRESULT(0)
             }
@@ -659,9 +758,29 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     return LRESULT(0);
                 }
                 let state = &mut *ptr;
-                let labels = labels(state.language);
+                let labels = mode_labels(state.language, state.folder_mode, state.join_mode);
 
                 match cmd_id {
+                    9620..=9622 if state.join_mode && !state.running => {
+                        let selected =
+                            SendMessageW(state.input_edit, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
+                        if selected >= 0 {
+                            let mut index = selected as usize;
+                            if cmd_id == 9620 {
+                                state.join_files.remove(index);
+                                index = index.saturating_sub(1);
+                            } else if cmd_id == 9621 && index > 0 {
+                                state.join_files.swap(index, index - 1);
+                                index -= 1;
+                            } else if cmd_id == 9622 && index + 1 < state.join_files.len() {
+                                state.join_files.swap(index, index + 1);
+                                index += 1;
+                            }
+                            refresh_join_files(state, index);
+                            SetFocus(state.input_edit);
+                        }
+                    }
+
                     CONVERT_ID_INPUT_EDIT
                         if notify as u32 == windows::Win32::UI::WindowsAndMessaging::EN_CHANGE =>
                     {
@@ -684,9 +803,54 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                         if state.running {
                             return LRESULT(0);
                         }
-                        if let Some(path) =
+                        if state.join_mode {
+                            state
+                                .join_files
+                                .extend(open_join_inputs(state.hwnd, &labels.choose_input));
+                            refresh_join_files(state, state.join_files.len().saturating_sub(1));
+                            if get_edit_text(state.output_edit).is_empty()
+                                && let Some(first) = state.join_files.first()
+                            {
+                                let name = format!(
+                                    "{}_{}.{}",
+                                    first.file_stem().unwrap_or_default().to_string_lossy(),
+                                    i18n::tr(state.language, "media_join.suffix"),
+                                    extension_for_format(current_format(state.format_combo))
+                                );
+                                set_edit_text(state.output_edit, &first.with_file_name(name));
+                            }
+                            SetFocus(state.input_edit);
+                            return LRESULT(0);
+                        }
+                        let chosen = if state.folder_mode {
+                            crate::app_windows::find_in_files_window::browse_for_folder_with_title(
+                                state.hwnd,
+                                &labels.input,
+                            )
+                        } else {
                             open_input_dialog(state.hwnd, state.language, &labels, false)
-                        {
+                        };
+                        if let Some(path) = chosen {
+                            if state.folder_mode {
+                                set_edit_text(state.input_edit, &path);
+                                set_edit_text(
+                                    state.output_edit,
+                                    &path.join(i18n::tr(
+                                        state.language,
+                                        "convert_folder.default_subfolder",
+                                    )),
+                                );
+                                if let Ok(files) =
+                                    crate::media_conversion_batch::folder_files(&path)
+                                {
+                                    set_status(
+                                        state,
+                                        &i18n::tr(state.language, "convert_folder.found")
+                                            .replace("{count}", &files.len().to_string()),
+                                    );
+                                }
+                                return LRESULT(0);
+                            }
                             set_edit_text(state.input_edit, &path);
                             if get_edit_text(state.output_edit).is_empty()
                                 && let Some(suggested) = build_default_output_path(
@@ -702,6 +866,18 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     }
                     CONVERT_ID_OUTPUT_BROWSE => {
                         if state.running {
+                            return LRESULT(0);
+                        }
+                        if state.folder_mode {
+                            if let Some(path) =
+                                crate::app_windows::find_in_files_window::browse_for_folder_with_title(
+                                    state.hwnd,
+                                    &labels.output,
+                                )
+                            {
+                                set_edit_text(state.output_edit, &path);
+                                SetFocus(state.output_edit);
+                            }
                             return LRESULT(0);
                         }
                         let format = current_format(state.format_combo);
@@ -730,7 +906,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                         let format = current_format(state.format_combo);
                         update_quality_controls(state, format, &labels);
                         let current_output = get_edit_text(state.output_edit);
-                        if !current_output.is_empty() {
+                        if !state.folder_mode && !current_output.is_empty() {
                             let mut path = PathBuf::from(current_output);
                             path.set_extension(extension_for_format(format));
                             set_edit_text(state.output_edit, &path);
@@ -739,6 +915,14 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     CONVERT_ID_FORMAT => {}
                     CONVERT_ID_CONVERT => {
                         if state.running {
+                            return LRESULT(0);
+                        }
+                        if state.join_mode {
+                            start_join(state, &labels);
+                            return LRESULT(0);
+                        }
+                        if state.folder_mode {
+                            start_folder_conversion(state, &labels);
                             return LRESULT(0);
                         }
                         let input_text = get_edit_text(state.input_edit);
@@ -909,6 +1093,16 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                             WPARAM(wparam.0.min(100)),
                             LPARAM(0),
                         );
+                        if state.folder_mode
+                            && let Ok(text) = state.batch_progress.lock()
+                        {
+                            podcast_save_window::set_status_text(state.status_dialog, &text);
+                        } else if state.join_mode {
+                            podcast_save_window::set_status_text(
+                                state.status_dialog,
+                                &i18n::tr(state.language, "media_join.running"),
+                            );
+                        }
                     }
                 }
                 LRESULT(0)
@@ -921,7 +1115,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     return LRESULT(0);
                 }
                 let state = &mut *ptr;
-                let labels = labels(state.language);
+                let labels = mode_labels(state.language, state.folder_mode, state.join_mode);
 
                 let boxed = Box::from_raw(lparam.0 as *mut Result<PathBuf, String>);
                 state.running = false;
@@ -930,7 +1124,14 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                 if state.status_dialog.0 != 0 {
                     let dialog = state.status_dialog;
                     state.status_dialog = HWND(0);
-                    if IsWindow(dialog).as_bool()
+                    if (state.folder_mode || state.join_mode) && IsWindow(dialog).as_bool() {
+                        SendMessageW(
+                            dialog,
+                            podcast_save_window::WM_PODCAST_SAVE_DONE,
+                            WPARAM(0),
+                            LPARAM(0),
+                        );
+                    } else if IsWindow(dialog).as_bool()
                         && let Err(e) = PostMessageW(
                             dialog,
                             podcast_save_window::WM_PODCAST_SAVE_DONE,
@@ -942,25 +1143,62 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     }
                 }
 
+                if state.folder_mode || state.join_mode {
+                    for &control in &state.hidden_controls {
+                        ShowWindow(control, windows::Win32::UI::WindowsAndMessaging::SW_SHOW);
+                    }
+                    state.hidden_controls.clear();
+                    update_image_controls(state);
+                    let result = state
+                        .batch_result
+                        .lock()
+                        .ok()
+                        .and_then(|mut result| result.take());
+                    if let Some(result) = result {
+                        let key = if result.cancelled {
+                            "convert_folder.cancelled"
+                        } else if result.failures.is_empty() {
+                            "convert_folder.done"
+                        } else {
+                            "convert_folder.done_with_errors"
+                        };
+                        let text = i18n::tr(state.language, key)
+                            .replace("{success}", &result.succeeded.to_string())
+                            .replace("{failed}", &result.failures.len().to_string())
+                            .replace("{errors}", &result.failures.join("\r\n"));
+                        set_status(state, &text);
+                        show_info(state.hwnd, state.language, &text);
+                    }
+                    SetForegroundWindow(state.hwnd);
+                    SetFocus(state.convert_button);
+                    if state.folder_mode {
+                        return LRESULT(0);
+                    }
+                }
+                let message_owner = if state.join_mode {
+                    state.hwnd
+                } else {
+                    state.parent
+                };
                 match *boxed {
                     Ok(path) => {
                         set_status(state, &labels.status_done);
                         set_edit_text(state.output_edit, &path);
-                        show_info(state.parent, state.language, &labels.success);
+                        show_info(message_owner, state.language, &labels.success);
                     }
                     Err(err) => {
                         if err == "Conversion canceled." {
                             log_debug("Convert media canceled by user");
                             set_status(state, &labels.status_ready);
                             show_info(
-                                state.parent,
+                                message_owner,
                                 state.language,
                                 &i18n::tr(state.language, "tts.cancelled"),
                             );
                         } else {
                             log_debug(&format!("Convert media failed: {}", err));
                             set_status(state, &labels.status_ready);
-                            show_error(state.parent, state.language, &labels.error_failed);
+                            show_error(message_owner, state.language, &labels.error_failed);
                         }
                     }
                 }
@@ -980,6 +1218,15 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                 LRESULT(0)
             }
             WM_CLOSE => {
+                let ptr =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut ConvertWindowState;
+                if !ptr.is_null() && ((*ptr).folder_mode || (*ptr).join_mode) && (*ptr).running {
+                    if (*ptr).status_dialog.0 != 0 {
+                        SetForegroundWindow((*ptr).status_dialog);
+                    }
+                    return LRESULT(0);
+                }
                 crate::log_if_err!(crate::destroy_window_safe(hwnd));
                 LRESULT(0)
             }
@@ -996,7 +1243,15 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                 }
                 let parent = windows::Win32::UI::WindowsAndMessaging::GetParent(hwnd);
                 if with_state(parent, |state| {
-                    state.convert_audio_window = HWND(0);
+                    if state.convert_audio_window == hwnd {
+                        state.convert_audio_window = HWND(0);
+                    }
+                    if state.media_join_window == hwnd {
+                        state.media_join_window = HWND(0);
+                    }
+                    if state.convert_folder_window == hwnd {
+                        state.convert_folder_window = HWND(0);
+                    }
                 })
                 .is_none()
                 {
@@ -1022,6 +1277,369 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
             _ => DefWindowProcW(hwnd, msg, wparam, lparam),
         }
     }
+}
+
+fn mode_labels(language: Language, folder: bool, join: bool) -> ConvertLabels {
+    let mut result = labels(language);
+    if folder {
+        result.title = i18n::tr(language, "convert_folder.title");
+        result.input = i18n::tr(language, "convert_folder.input");
+        result.output = i18n::tr(language, "convert_folder.output");
+        result.choose_input = i18n::tr(language, "convert_folder.browse_input");
+        result.choose_output = i18n::tr(language, "convert_folder.browse_output");
+        result.button_convert = i18n::tr(language, "convert_folder.button");
+        result.error_no_input = i18n::tr(language, "convert_folder.no_input");
+        result.error_no_output = i18n::tr(language, "convert_folder.no_output");
+    }
+    if join {
+        result.title = i18n::tr(language, "media_join.title");
+        result.input = i18n::tr(language, "media_join.input");
+        result.choose_input = i18n::tr(language, "media_join.add");
+        result.output = i18n::tr(language, "media_join.output");
+        result.choose_output = i18n::tr(language, "media_join.choose_output");
+        result.button_convert = i18n::tr(language, "media_join.button");
+        result.status_running = i18n::tr(language, "media_join.running");
+        result.success = i18n::tr(language, "media_join.done");
+        result.error_failed = i18n::tr(language, "media_join.failed");
+    }
+    result
+}
+
+fn refresh_join_files(state: &ConvertWindowState, selected: usize) {
+    crate::send_message_w_safe(state.input_edit, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
+    for (index, path) in state.join_files.iter().enumerate() {
+        let text = to_wide(&format!("{}. {}", index + 1, path.display()));
+        crate::send_message_w_safe(
+            state.input_edit,
+            CB_ADDSTRING,
+            WPARAM(0),
+            LPARAM(text.as_ptr() as isize),
+        );
+    }
+    crate::send_message_w_safe(state.input_edit, CB_SETCURSEL, WPARAM(selected), LPARAM(0));
+}
+
+fn open_join_inputs(parent: HWND, title: &str) -> Vec<PathBuf> {
+    let mut buffer = vec![0u16; 65536];
+    let title = to_wide(title);
+    let filter = to_wide(
+        "Media\0*.mp3;*.m4a;*.mp4;*.aac;*.mkv;*.avi;*.mov;*.webm;*.flac;*.ogg;*.opus;*.wav;*.aiff;*.wma;*.m4b;*.ts;*.m2ts;*.mpg;*.mpeg;*.wmv;*.flv\0*.*\0*.*\0\0",
+    );
+    let mut dialog = OPENFILENAMEW {
+        lStructSize: std::mem::size_of::<OPENFILENAMEW>() as u32,
+        hwndOwner: parent,
+        lpstrFile: PWSTR(buffer.as_mut_ptr()),
+        nMaxFile: buffer.len() as u32,
+        lpstrTitle: PCWSTR(title.as_ptr()),
+        lpstrFilter: PCWSTR(filter.as_ptr()),
+        Flags: OFN_EXPLORER
+            | OFN_FILEMUSTEXIST
+            | OFN_PATHMUSTEXIST
+            | windows::Win32::UI::Controls::Dialogs::OFN_ALLOWMULTISELECT,
+        ..Default::default()
+    };
+    if !unsafe { GetOpenFileNameW(&mut dialog).as_bool() } {
+        return Vec::new();
+    }
+    let parts: Vec<_> = buffer
+        .split(|c| *c == 0)
+        .take_while(|s| !s.is_empty())
+        .map(String::from_utf16_lossy)
+        .collect();
+    if parts.len() == 1 {
+        return vec![PathBuf::from(&parts[0])];
+    }
+    parts
+        .iter()
+        .skip(1)
+        .map(|name| Path::new(&parts[0]).join(name))
+        .collect()
+}
+
+fn start_join(state: &mut ConvertWindowState, labels: &ConvertLabels) {
+    if state.join_files.len() < 2 {
+        show_error(
+            state.hwnd,
+            state.language,
+            &i18n::tr(state.language, "media_join.no_input"),
+        );
+        return;
+    }
+    let output_text = get_edit_text(state.output_edit);
+    if output_text.trim().is_empty() {
+        show_error(state.hwnd, state.language, &labels.error_no_output);
+        return;
+    }
+    let format = current_format(state.format_combo);
+    let quality = match read_quality(state, format, labels) {
+        Ok(q) => q,
+        Err(e) => {
+            show_error(state.hwnd, state.language, &e);
+            return;
+        }
+    };
+    let output = PathBuf::from(output_text);
+    if state
+        .join_files
+        .iter()
+        .any(|p| crate::media_conversion::same_file(p, &output))
+    {
+        show_error(state.hwnd, state.language, &labels.error_same_path);
+        return;
+    }
+    if output.exists() {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            IDYES, MB_DEFBUTTON2, MB_ICONQUESTION, MB_YESNO, MessageBoxW,
+        };
+        let response = unsafe {
+            MessageBoxW(
+                state.hwnd,
+                PCWSTR(to_wide(&i18n::tr(state.language, "media_join.overwrite")).as_ptr()),
+                PCWSTR(to_wide(&labels.title).as_ptr()),
+                MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2,
+            )
+        };
+        if response != IDYES {
+            return;
+        }
+    }
+    let files = state.join_files.clone();
+    let settings = ConvertAudioSettings {
+        format: map_format(format),
+        quality,
+    };
+    let cancel = Arc::new(AtomicBool::new(false));
+    let dialog = podcast_save_window::open_with_labels_and_status_field(
+        state.hwnd,
+        state.language,
+        SaveDialogLabels {
+            title: labels.title.clone(),
+            in_progress: labels.status_running.clone(),
+            cancel: i18n::tr(state.language, "convert_folder.cancel_button"),
+            cancel_confirm: i18n::tr(state.language, "podcast.cancel_confirm"),
+        },
+        true,
+        true,
+    );
+    if dialog.0 == 0 {
+        return;
+    }
+    state.running = true;
+    state.cancel_flag = Some(cancel.clone());
+    state.status_dialog = dialog;
+    podcast_save_window::enable_accessible_progress_context(dialog);
+    podcast_save_window::show_indeterminate_progress(dialog);
+    unsafe {
+        state.hidden_controls = state
+            .controls
+            .iter()
+            .copied()
+            .filter(|&c| windows::Win32::UI::WindowsAndMessaging::IsWindowVisible(c).as_bool())
+            .collect();
+        for &control in &state.hidden_controls {
+            ShowWindow(control, windows::Win32::UI::WindowsAndMessaging::SW_HIDE);
+        }
+    }
+    let target = state.hwnd;
+    std::thread::spawn(move || {
+        let result = crate::media_join::join(
+            &files,
+            &output,
+            &settings,
+            is_video(format),
+            cancel,
+            &mut |pct| {
+                if let Err(e) = crate::post_message_w_safe(
+                    target,
+                    WM_CONVERT_PROGRESS,
+                    WPARAM(pct as usize),
+                    LPARAM(0),
+                ) {
+                    log_debug(&format!("Media join progress: {e}"));
+                }
+            },
+        )
+        .map(|()| output);
+        if let Err(e) = &result {
+            log_debug(&format!("Media join failed: {e}"));
+        }
+        let raw = Box::into_raw(Box::new(result));
+        if let Err(e) =
+            crate::post_message_w_safe(target, WM_CONVERT_DONE, WPARAM(0), LPARAM(raw as isize))
+        {
+            let _cleanup = unsafe { Box::from_raw(raw) };
+            log_debug(&format!("Media join completion: {e}"));
+        }
+    });
+}
+
+fn start_folder_conversion(state: &mut ConvertWindowState, labels: &ConvertLabels) {
+    let input = PathBuf::from(get_edit_text(state.input_edit));
+    let output_text = get_edit_text(state.output_edit);
+    if !input.is_dir() {
+        show_error(state.hwnd, state.language, &labels.error_no_input);
+        return;
+    }
+    if output_text.trim().is_empty() {
+        show_error(state.hwnd, state.language, &labels.error_no_output);
+        return;
+    }
+    let format = current_format(state.format_combo);
+    let quality = match read_quality(state, format, labels) {
+        Ok(quality) => quality,
+        Err(error) => {
+            show_error(state.hwnd, state.language, &error);
+            return;
+        }
+    };
+    let image_text = get_edit_text(state.image_edit);
+    let image = (!image_text.trim().is_empty()).then(|| PathBuf::from(image_text));
+    let output_dir = PathBuf::from(output_text);
+    let settings = ConvertAudioSettings {
+        format: map_format(format),
+        quality,
+    };
+    let cancel = Arc::new(AtomicBool::new(false));
+    let dialog = podcast_save_window::open_with_labels_and_status_field(
+        state.hwnd,
+        state.language,
+        SaveDialogLabels {
+            title: labels.title.clone(),
+            in_progress: labels.status_running.clone(),
+            cancel: i18n::tr(state.language, "convert_folder.cancel_button"),
+            cancel_confirm: i18n::tr(state.language, "podcast.cancel_confirm"),
+        },
+        true,
+        true,
+    );
+    if dialog.0 == 0 {
+        return;
+    }
+    state.running = true;
+    state.cancel_flag = Some(cancel.clone());
+    state.status_dialog = dialog;
+    podcast_save_window::enable_accessible_progress_context(dialog);
+    podcast_save_window::show_indeterminate_progress(dialog);
+    set_controls_enabled(state, false);
+    unsafe {
+        state.hidden_controls = state
+            .controls
+            .iter()
+            .copied()
+            .filter(|&control| {
+                windows::Win32::UI::WindowsAndMessaging::IsWindowVisible(control).as_bool()
+            })
+            .collect();
+        for &control in &state.hidden_controls {
+            ShowWindow(control, windows::Win32::UI::WindowsAndMessaging::SW_HIDE);
+        }
+    }
+    let hwnd_target = state.hwnd;
+    let progress = Arc::clone(&state.batch_progress);
+    let result_slot = Arc::clone(&state.batch_result);
+    let template = i18n::tr(state.language, "convert_folder.running");
+    let no_files = i18n::tr(state.language, "convert_folder.no_files");
+    let no_image = i18n::tr(state.language, "convert_audio.error.no_image");
+    let create_error = i18n::tr(state.language, "convert_folder.output_create_failed");
+    std::thread::spawn(move || {
+        let prepare = (|| -> Result<_, String> {
+            let files = crate::media_conversion_batch::folder_files(&input)?;
+            if files.is_empty() {
+                return Err(no_files);
+            }
+            for input in &files {
+                if cancel.load(Ordering::Relaxed) {
+                    return Err("Conversion canceled.".into());
+                }
+                if is_video(format)
+                    && is_audio_only_input(input)
+                    && !image.as_ref().is_some_and(|path| path.is_file())
+                {
+                    return Err(no_image);
+                }
+            }
+            std::fs::create_dir_all(&output_dir)
+                .map_err(|e| create_error.replace("{error}", &e.to_string()))?;
+            let outputs = crate::media_conversion_batch::plan_outputs(
+                &files,
+                &output_dir,
+                extension_for_format(format),
+            );
+            Ok((files, outputs))
+        })();
+        let result = match prepare {
+            Err(error) => crate::media_conversion_batch::BatchResult {
+                succeeded: 0,
+                cancelled: cancel.load(Ordering::Relaxed),
+                failures: vec![error],
+            },
+            Ok((files, outputs)) => {
+                let total = files.len();
+                log_debug(&format!(
+                    "Convert folder start: files={total}, output={}",
+                    output_dir.display()
+                ));
+                crate::media_conversion_batch::run(
+                    &files,
+                    &outputs,
+                    &cancel,
+                    |input, output, report| {
+                        let image = if is_video(format) && is_audio_only_input(input) {
+                            image.as_deref()
+                        } else {
+                            None
+                        };
+                        crate::media_conversion::convert(
+                            input,
+                            output,
+                            &settings,
+                            is_video(format),
+                            image,
+                            cancel.clone(),
+                            report,
+                        )
+                    },
+                    |current, input, pct| {
+                        let text = template
+                            .replace("{current}", &current.to_string())
+                            .replace("{total}", &total.to_string())
+                            .replace(
+                                "{file}",
+                                &input.file_name().unwrap_or_default().to_string_lossy(),
+                            );
+                        if let Ok(mut progress) = progress.lock() {
+                            *progress = text;
+                        }
+                        if let Err(error) = crate::post_message_w_safe(
+                            hwnd_target,
+                            WM_CONVERT_PROGRESS,
+                            WPARAM(pct as usize),
+                            LPARAM(0),
+                        ) {
+                            log_debug(&format!("Convert folder progress: {error}"));
+                        }
+                    },
+                )
+            }
+        };
+        log_debug(&format!(
+            "Convert folder done: success={}, cancelled={}, errors={:?}",
+            result.succeeded, result.cancelled, result.failures
+        ));
+        if let Ok(mut slot) = result_slot.lock() {
+            *slot = Some(result);
+        }
+        let raw = Box::into_raw(Box::new(Ok::<PathBuf, String>(output_dir)));
+        if let Err(error) = crate::post_message_w_safe(
+            hwnd_target,
+            WM_CONVERT_DONE,
+            WPARAM(0),
+            LPARAM(raw as isize),
+        ) {
+            let _cleanup = unsafe { Box::from_raw(raw) };
+            log_debug(&format!("Convert folder completion: {error}"));
+        }
+    });
 }
 
 fn is_video(format: MediaFormat) -> bool {
@@ -1193,7 +1811,14 @@ fn is_audio_only_input(path: &Path) -> bool {
 }
 
 fn update_image_controls(state: &ConvertWindowState) {
+    if state.join_mode {
+        return;
+    }
+    if state.folder_mode && state.running {
+        return;
+    }
     let input = get_edit_text(state.input_edit);
+    let folder_mode = state.folder_mode;
     let video_output = is_video(current_format(state.format_combo));
     let mut visible = false;
     if let Ok(mut probe) = state.input_probe.lock() {
@@ -1209,7 +1834,12 @@ fn update_image_controls(state: &ConvertWindowState) {
                 let result = Arc::clone(&state.input_probe);
                 let target = state.hwnd;
                 std::thread::spawn(move || {
-                    let audio_only = is_audio_only_input(Path::new(&input));
+                    let audio_only = if folder_mode {
+                        crate::media_conversion_batch::folder_files(Path::new(&input))
+                            .is_ok_and(|files| files.iter().any(|path| is_audio_only_input(path)))
+                    } else {
+                        is_audio_only_input(Path::new(&input))
+                    };
                     if let Ok(mut probe) = result.lock() {
                         if probe.0 != input {
                             return;

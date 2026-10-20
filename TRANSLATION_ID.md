@@ -3,11 +3,10 @@
 Based on Muhammad's contribution in https://github.com/Ambro86/Sonarpad/pull/45
 (commit 7f7793b058cdce395e606891f5962c763701a219).
 
-This merge adds 90 strings for the committed media cutter and command area,
-bringing the base resource to 2,300 keys (2,456 including feature resources).
-It updates the DAISY end-of-book message. Menu mnemonics follow the committed
-menu structure; pending menu regrouping and its translations remain local.
-Additional translations for pending local features remain in the main working tree.
+The current working tree adds 140 strings for media cutting, folder conversion,
+media joining and playback submenus, bringing the base resource to 2,350 keys
+(2,506 including feature resources). It updates the DAISY end-of-book message
+and removes visible mnemonic-letter suffixes in line with the current menu rules.
 Guide and donation text come from the contributor. Current release notes are
 translated; older release history is explicitly retained in English.
 

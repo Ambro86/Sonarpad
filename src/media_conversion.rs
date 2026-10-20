@@ -156,6 +156,17 @@ fn encode_video(
     cancel: &AtomicBool,
     progress: &mut dyn FnMut(u32),
 ) -> Result<(), String> {
+    encode_video_sized(input, output, still_duration, None, cancel, progress)
+}
+
+pub(crate) fn encode_video_sized(
+    input: &Path,
+    output: &Path,
+    still_duration: Option<f64>,
+    dimensions: Option<(i32, i32)>,
+    cancel: &AtomicBool,
+    progress: &mut dyn FnMut(u32),
+) -> Result<(), String> {
     let duration = still_duration
         .or_else(|| crate::ffmpeg_export::media_duration_seconds(input))
         .filter(|duration| duration.is_finite() && *duration > 0.0);
@@ -231,8 +242,8 @@ fn encode_video(
             if stream.is_null() {
                 return Err("Video stream allocation failed".to_string());
             }
-            (*encoder).width = ((*decoder).width + 1) & !1;
-            (*encoder).height = ((*decoder).height + 1) & !1;
+            (*encoder).width = (dimensions.map_or((*decoder).width, |d| d.0) + 1) & !1;
+            (*encoder).height = (dimensions.map_or((*decoder).height, |d| d.1) + 1) & !1;
             (*encoder).pix_fmt = AVPixelFormat_AV_PIX_FMT_YUV420P;
             (*encoder).time_base = AVRational { num: 1, den: 30000 };
             (*encoder).framerate = if still_duration.is_some() {
@@ -256,7 +267,11 @@ fn encode_video(
             }
             let ticks_per_second =
                 (*encoder).time_base.den as f64 / (*encoder).time_base.num as f64;
-            (*encoder).sample_aspect_ratio = (*decoder).sample_aspect_ratio;
+            (*encoder).sample_aspect_ratio = if dimensions.is_some() {
+                AVRational { num: 1, den: 1 }
+            } else {
+                (*decoder).sample_aspect_ratio
+            };
             (*encoder).gop_size = 12;
             (*encoder).max_b_frames = 0;
             (*encoder).flags |= 1 << 1; // AV_CODEC_FLAG_QSCALE, matching Mobile q=4.
@@ -324,8 +339,27 @@ fn encode_video(
                         return Ok(());
                     }
                     ffcheck(api, ret)?;
-                    let dimensions = ((*decoded).width, (*decoded).height, (*decoded).format);
-                    if scaled_source != Some(dimensions) {
+                    let source_dimensions =
+                        ((*decoded).width, (*decoded).height, (*decoded).format);
+                    let (scaled_width, scaled_height) = if dimensions.is_some() {
+                        let sar = (*decoder).sample_aspect_ratio;
+                        let pixel_ratio = if sar.num > 0 && sar.den > 0 {
+                            sar.num as f64 / sar.den as f64
+                        } else {
+                            1.0
+                        };
+                        let width = (*decoded).width as f64 * pixel_ratio;
+                        let height = (*decoded).height as f64;
+                        let ratio = ((*encoder).width as f64 / width)
+                            .min((*encoder).height as f64 / height);
+                        (
+                            ((width * ratio).round() as i32 & !1).clamp(2, (*encoder).width),
+                            ((height * ratio).round() as i32 & !1).clamp(2, (*encoder).height),
+                        )
+                    } else {
+                        ((*encoder).width, (*encoder).height)
+                    };
+                    if scaled_source != Some(source_dimensions) {
                         if !scaler.is_null() {
                             (api.sws_free_context)(scaler);
                         }
@@ -333,8 +367,8 @@ fn encode_video(
                             (*decoded).width,
                             (*decoded).height,
                             (*decoded).format,
-                            (*encoder).width,
-                            (*encoder).height,
+                            scaled_width,
+                            scaled_height,
                             (*encoder).pix_fmt,
                             2,
                             ptr::null_mut(),
@@ -344,7 +378,7 @@ fn encode_video(
                         if scaler.is_null() {
                             return Err("Video color conversion failed".to_string());
                         }
-                        scaled_source = Some(dimensions);
+                        scaled_source = Some(source_dimensions);
                     }
                     let repeats = still_duration
                         .map(|d| (d * 25.0).ceil() as u64)
@@ -368,6 +402,25 @@ fn encode_video(
                     for frame_index in 0..repeats {
                         check_cancel(cancel)?;
                         ffcheck(api, (api.av_frame_make_writable)(scaled))?;
+                        let mut target_data = (*scaled).data;
+                        if dimensions.is_some() {
+                            let left = (((*encoder).width - scaled_width) / 2) & !1;
+                            let top = (((*encoder).height - scaled_height) / 2) & !1;
+                            for (plane, target) in target_data.iter_mut().enumerate().take(3) {
+                                let divisor = if plane == 0 { 1 } else { 2 };
+                                let stride = (*scaled).linesize[plane];
+                                for row in 0..(*encoder).height / divisor {
+                                    ptr::write_bytes(
+                                        (*scaled).data[plane].offset((row * stride) as isize),
+                                        if plane == 0 { 16 } else { 128 },
+                                        ((*encoder).width / divisor) as usize,
+                                    );
+                                }
+                                *target = (*scaled).data[plane]
+                                    .offset(((top / divisor) * stride + left / divisor) as isize);
+                            }
+                        }
+
                         ffcheck(
                             api,
                             (api.sws_scale)(
@@ -376,7 +429,7 @@ fn encode_video(
                                 (*decoded).linesize.as_ptr(),
                                 0,
                                 (*decoded).height,
-                                (*scaled).data.as_ptr(),
+                                target_data.as_ptr(),
                                 (*scaled).linesize.as_ptr(),
                             ),
                         )?;

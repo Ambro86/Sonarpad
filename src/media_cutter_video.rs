@@ -51,6 +51,18 @@ pub(super) fn encode_video(
     cancel: &AtomicBool,
     progress: &mut dyn FnMut(u32),
 ) -> Result<(), String> {
+    encode_video_sized(input, output, parts, rotation, None, cancel, progress)
+}
+
+pub(super) fn encode_video_sized(
+    input: &Path,
+    output: &Path,
+    parts: &[MediaPart],
+    rotation: u16,
+    dimensions: Option<(i32, i32)>,
+    cancel: &AtomicBool,
+    progress: &mut dyn FnMut(u32),
+) -> Result<(), String> {
     let duration = Some(kept_duration(parts));
     let api = ffmpeg_api()?;
     let input_name = CString::new(input.to_string_lossy().as_bytes()).map_err(|e| e.to_string())?;
@@ -125,8 +137,8 @@ pub(super) fn encode_video(
             if stream.is_null() {
                 return Err("Video stream allocation failed".to_string());
             }
-            (*encoder).width = ((*decoder).width + 1) & !1;
-            (*encoder).height = ((*decoder).height + 1) & !1;
+            (*encoder).width = (dimensions.map_or((*decoder).width, |d| d.0) + 1) & !1;
+            (*encoder).height = (dimensions.map_or((*decoder).height, |d| d.1) + 1) & !1;
             let source_width = (*encoder).width;
             let source_height = (*encoder).height;
             if rotation == 90 || rotation == 270 {
@@ -152,7 +164,11 @@ pub(super) fn encode_video(
             }
             let ticks_per_second =
                 (*encoder).time_base.den as f64 / (*encoder).time_base.num as f64;
-            (*encoder).sample_aspect_ratio = (*decoder).sample_aspect_ratio;
+            (*encoder).sample_aspect_ratio = if dimensions.is_some() {
+                AVRational { num: 1, den: 1 }
+            } else {
+                (*decoder).sample_aspect_ratio
+            };
             (*encoder).gop_size = 12;
             (*encoder).max_b_frames = 0;
             (*encoder).flags |= 1 << 1; // AV_CODEC_FLAG_QSCALE, matching Mobile q=4.

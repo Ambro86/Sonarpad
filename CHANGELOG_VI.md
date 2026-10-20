@@ -4,8 +4,11 @@ Version 0.9.18 – 2026-10-16
 
 1. Thêm Cắt tệp đa phương tiện trong Công cụ → Đa phương tiện: chỉnh sửa âm thanh và video theo hướng dẫn hoặc nâng cao, nghe thử đoạn cắt, điều chỉnh chính xác và khôi phục các phần đã xóa. Phát bỏ qua các đoạn đã cắt. Hỗ trợ xoay video và thêm bản âm thanh với âm lượng tùy chỉnh, lặp lại. Lưu với tiến trình thực và khả năng hủy bằng thư viện FFmpeg đi kèm, không dùng chương trình ngoài; hướng dẫn bằng giọng nói và điều khiển trợ năng.
 2. Thêm vùng lệnh trong chức năng cắt tệp đa phương tiện để dùng lệnh bàn phím không cần Alt hay Ctrl. F1 đọc danh sách các phím khả dụng.
-3. Cải thiện phát sách DAISY: chương tiếp theo tự động bắt đầu và thao tác tua tiến hoặc lùi bằng phím mũi tên có thể vượt qua ranh giới giữa các chương. Các mục con không bị phát lặp lại và thông báo kết thúc đọc chỉ được phát khi hết sách.
-4. Đã thêm tiếng Indonesia (Bahasa Indonesia), gồm giao diện, hướng dẫn và bản dịch cho các công cụ đa phương tiện mới. Cảm ơn Muhammad đã đóng góp bản dịch.
+3. Thêm Chuyển đổi thư mục trong Công cụ → Đa phương tiện (Alt+Shift+Q), với các điều khiển như bản Mac: chuyển đổi hàng loạt âm thanh và video, chất lượng và ảnh để tạo video từ âm thanh. Có tiến trình thực, hủy, tổng hợp lỗi và bảo vệ tệp hiện có. Chỉ dùng thư viện FFmpeg đi kèm.
+4. Đã thêm Ghép tệp phương tiện trong Công cụ → Đa phương tiện (Alt+Shift+Y): ghép tệp âm thanh hoặc video theo thứ tự đã chọn, với các nút thêm, xóa và sắp xếp, chọn định dạng đầu ra, tiến độ thực và hủy. Video cũng có thể được ghép thành một tệp âm thanh.
+5. Cắt phương tiện: thêm “Chèn phương tiện trước phần đã chọn…” để chèn âm thanh hoặc video thành phần mới mà vẫn giữ các chỉnh sửa. Phát và xuất theo thứ tự mới; phần đã chèn có thể chia, xóa và khôi phục. Phần chỉ có âm thanh có nền đen trong video.
+6. Cải thiện phát sách DAISY: chương tiếp theo tự động bắt đầu và thao tác tua tiến hoặc lùi bằng phím mũi tên có thể vượt qua ranh giới giữa các chương. Các mục con không bị phát lặp lại và thông báo kết thúc đọc chỉ được phát khi hết sách.
+7. Đã thêm tiếng Indonesia (Bahasa Indonesia), gồm giao diện, hướng dẫn và bản dịch cho các công cụ đa phương tiện mới. Cảm ơn Muhammad đã đóng góp bản dịch.
 
 Version 0.9.17 – 2026-10-15
 

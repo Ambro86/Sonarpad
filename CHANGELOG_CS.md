@@ -4,8 +4,11 @@ Version 0.9.18 – 2026-10-16
 
 1. Do Nástroje → Multimédia přidáno Oříznout multimediální soubor: řízený a pokročilý střih zvuku i videa, poslech střihu, přesná úprava hranic a obnovení odstraněných částí. Přehrávání přeskakuje použité střihy. Podporuje otočení videa a přidání zvukové stopy s nastavením hlasitosti a opakováním. Ukládání se skutečným průběhem a zrušením používá přiložené knihovny FFmpeg bez externích programů; hlasové pokyny a přístupné ovládání.
 2. Přidána oblast příkazů pro střih mediálních souborů, kde lze používat klávesové příkazy bez Alt nebo Ctrl. F1 přečte seznam dostupných kláves.
-3. Vylepšeno přehrávání knih DAISY: další kapitola se spustí automaticky a posun vpřed či vzad šipkami překračuje hranice kapitol. Pododdíly se neopakují a oznámení o konci čtení zazní až na konci knihy.
-4. Přidána indonéština (Bahasa Indonesia), včetně rozhraní, příručky a překladů nových multimediálních nástrojů. Děkujeme Muhammadovi za překlad.
+3. Přidána funkce Převést složku v Nástroje → Multimédia (Alt+Shift+Q), se stejnými ovládacími prvky jako na Macu: dávkový převod zvuku a videa, nastavení kvality a obrázek pro video ze zvuku. Obsahuje skutečný průběh, zrušení, přehled chyb a ochranu existujících souborů. Používá pouze přibalené knihovny FFmpeg.
+4. Přidáno Spojit multimediální soubory v Nástroje → Multimédia (Alt+Shift+Y): spojování zvukových nebo video souborů ve zvoleném pořadí, tlačítka pro přidání, odebrání a změnu pořadí, výběr výstupního formátu, skutečný průběh a zrušení. Videa lze také spojit do jednoho zvukového souboru.
+5. Střih médií: nová volba „Vložit média před vybranou část…“ vkládá zvuk nebo video jako novou část a zachovává dosavadní střihy. Přehrávání a export respektují nové pořadí. Vložené části lze dělit, odstranit a obnovit; části pouze se zvukem mají ve videu černé pozadí.
+6. Vylepšeno přehrávání knih DAISY: další kapitola se spustí automaticky a posun vpřed či vzad šipkami překračuje hranice kapitol. Pododdíly se neopakují a oznámení o konci čtení zazní až na konci knihy.
+7. Přidána indonéština (Bahasa Indonesia), včetně rozhraní, příručky a překladů nových multimediálních nástrojů. Děkujeme Muhammadovi za překlad.
 
 Version 0.9.17 – 2026-10-15
 

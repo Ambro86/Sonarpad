@@ -4,8 +4,11 @@ Version 0.9.18 – 2026-10-16
 
 1. Added Cut media file under Tools → Multimedia: guided and advanced audio/video editing, cut preview, precise boundary adjustment and restoration of deleted parts. Play skips applied cuts. Includes video rotation and an additional audio track with adjustable volumes and looping. Saving uses bundled FFmpeg libraries, with real progress and cancellation, without external executables; spoken guidance and accessible controls.
 2. Added a command area in Cut media file to use keyboard editing commands without Alt or Ctrl. F1 reads the list of available keys.
-3. Improved DAISY book playback: the next chapter starts automatically, and seeking forward or backward with the arrow keys crosses chapter boundaries. Subsections are not repeated, and the end-of-reading announcement is spoken only at the end of the book.
-4. Added Indonesian (Bahasa Indonesia), including the interface, user guide and translations for the latest media tools. Thanks to Muhammad for the translation contribution.
+3. Added Convert Folder under Tools → Multimedia (Alt+Shift+Q), matching the Mac controls: batch audio/video conversion, quality settings and an image for audio-to-video conversion. Includes real progress, cancellation, an error summary and protection against overwriting existing files. Uses only the bundled FFmpeg libraries.
+4. Added Join media files under Tools → Multimedia (Alt+Shift+Y): join audio or video files in the chosen order, with buttons to add, remove and reorder files, output format selection, real progress and cancellation. Videos can also be joined into one audio file.
+5. Cut media: added “Insert media before the selected part…” to insert audio or video as a new part while preserving existing edits. Playback and export follow the new order; inserted parts can be split, deleted and restored. Audio-only parts have a black background in video output.
+6. Improved DAISY book playback: the next chapter starts automatically, and seeking forward or backward with the arrow keys crosses chapter boundaries. Subsections are not repeated, and the end-of-reading announcement is spoken only at the end of the book.
+7. Added Indonesian (Bahasa Indonesia), including the interface, user guide and translations for the latest media tools. Thanks to Muhammad for the translation contribution.
 
 Version 0.9.17 – 2026-10-15
 

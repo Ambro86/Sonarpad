@@ -252,6 +252,20 @@ pub fn show_indeterminate_progress(hwnd: HWND) {
         state.has_real_progress = true;
         state.show_percentage = false;
         state.current_pct = 0;
+        unsafe {
+            use windows::Win32::UI::WindowsAndMessaging::{
+                GWL_STYLE, GetWindowLongPtrW, SetWindowLongPtrW,
+            };
+            let style = GetWindowLongPtrW(state.progress, GWL_STYLE);
+            SetWindowLongPtrW(state.progress, GWL_STYLE, style | 8); // PBS_MARQUEE
+        }
+        crate::send_message_w_safe(
+            state.progress,
+            windows::Win32::UI::Controls::PBM_SETMARQUEE,
+            WPARAM(1),
+            LPARAM(40),
+        );
+
         crate::send_message_w_safe(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0));
         update_progress_label(state);
         if state.accessible_progress_context {
@@ -750,8 +764,23 @@ fn save_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> L
                 // Avoid redundant logging, native progress updates and accessible
                 // label changes for repeated percentages. The first real update
                 // must still be applied after fake/timer-based progress.
-                if state.has_real_progress && state.current_pct == pct {
+                if state.has_real_progress && state.show_percentage && state.current_pct == pct {
                     return false;
+                }
+                if !state.show_percentage {
+                    crate::send_message_w_safe(
+                        state.progress,
+                        windows::Win32::UI::Controls::PBM_SETMARQUEE,
+                        WPARAM(0),
+                        LPARAM(0),
+                    );
+                    unsafe {
+                        use windows::Win32::UI::WindowsAndMessaging::{
+                            GWL_STYLE, GetWindowLongPtrW, SetWindowLongPtrW,
+                        };
+                        let style = GetWindowLongPtrW(state.progress, GWL_STYLE);
+                        SetWindowLongPtrW(state.progress, GWL_STYLE, style & !8);
+                    }
                 }
                 crate::send_message_w_safe(state.progress, PBM_SETPOS, WPARAM(pct), LPARAM(0));
                 state.has_real_progress = true;

@@ -52,8 +52,11 @@ mod ffmpeg_dyn;
 mod ffmpeg_export;
 mod ffmpeg_source;
 mod media_conversion;
+mod media_conversion_batch;
 mod media_cutter_export;
 mod media_cutter_model;
+mod media_cutter_timeline;
+mod media_join;
 mod stream_recording;
 mod subtitle_wasapi;
 mod subtitles;
@@ -9782,6 +9785,8 @@ fn has_secondary_window_open(hwnd: HWND) -> bool {
                 || state.transcription_progress_window.0 != 0
                 || state.batch_audiobooks_window.0 != 0
                 || state.convert_audio_window.0 != 0
+                || state.convert_folder_window.0 != 0
+                || state.media_join_window.0 != 0
                 || state.media_cutter_window.0 != 0
                 || app_windows::audio_description_window::blocks_parent_focus(
                     hwnd,
@@ -10013,6 +10018,8 @@ pub(crate) struct AppState {
     transcription_progress_window: HWND,
     batch_audiobooks_window: HWND,
     convert_audio_window: HWND,
+    convert_folder_window: HWND,
+    media_join_window: HWND,
     media_cutter_window: HWND,
     audio_description_window: HWND,
     audio_description_project_window: HWND,
@@ -11503,6 +11510,36 @@ fn run_app(
                     handled = true;
                     return;
                 }
+                if state.media_join_window.0 != 0
+                    && app_windows::convert_audio_window::handle_navigation(
+                        state.media_join_window,
+                        &msg,
+                    )
+                {
+                    handled = true;
+                    return;
+                }
+                if state.media_join_window.0 != 0
+                    && handle_accessibility(state.media_join_window, &msg)
+                {
+                    handled = true;
+                    return;
+                }
+                if state.convert_folder_window.0 != 0
+                    && app_windows::convert_audio_window::handle_navigation(
+                        state.convert_folder_window,
+                        &msg,
+                    )
+                {
+                    handled = true;
+                    return;
+                }
+                if state.convert_folder_window.0 != 0
+                    && handle_accessibility(state.convert_folder_window, &msg)
+                {
+                    handled = true;
+                    return;
+                }
                 if state.convert_audio_window.0 != 0
                     && app_windows::convert_audio_window::handle_navigation(
                         state.convert_audio_window,
@@ -12137,6 +12174,8 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     transcription_progress_window: HWND(0),
                     batch_audiobooks_window: HWND(0),
                     convert_audio_window: HWND(0),
+                    convert_folder_window: HWND(0),
+                    media_join_window: HWND(0),
                     media_cutter_window: HWND(0),
                     audio_description_window: HWND(0),
                     audio_description_project_window: HWND(0),
@@ -14363,6 +14402,14 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     }
                     IDM_TOOLS_MEDIA_CUTTER => {
                         app_windows::media_cutter_window::open(hwnd);
+                        LRESULT(0)
+                    }
+                    IDM_TOOLS_MEDIA_JOIN => {
+                        app_windows::convert_audio_window::open_join(hwnd);
+                        LRESULT(0)
+                    }
+                    IDM_TOOLS_CONVERT_FOLDER => {
+                        app_windows::convert_audio_window::open_folder(hwnd);
                         LRESULT(0)
                     }
                     IDM_FILE_CONVERT_AUDIO => {
@@ -21649,6 +21696,18 @@ fn handle_custom_shortcuts(hwnd: HWND, msg: &MSG) -> bool {
     }
     if key == 'T' as u16 && !ctrl_down && shift_down && alt_down {
         dispatch_shortcut_command(hwnd, IDM_PLAYBACK_TRANSCRIBE_CURRENT);
+        return true;
+    }
+    if key == 'Y' as u16 && !ctrl_down && shift_down && alt_down {
+        dispatch_shortcut_command(hwnd, IDM_TOOLS_MEDIA_JOIN);
+        return true;
+    }
+    if key == 'Q' as u16 && !ctrl_down && shift_down && alt_down {
+        dispatch_shortcut_command(hwnd, IDM_TOOLS_CONVERT_FOLDER);
+        return true;
+    }
+    if key == 'X' as u16 && !ctrl_down && shift_down && alt_down {
+        dispatch_shortcut_command(hwnd, IDM_TOOLS_MEDIA_CUTTER);
         return true;
     }
     if key == 'C' as u16 && !ctrl_down && shift_down && alt_down {

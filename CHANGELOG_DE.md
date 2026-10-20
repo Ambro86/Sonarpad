@@ -4,8 +4,11 @@ Version 0.9.18 – 2026-10-16
 
 1. Unter Werkzeuge → Multimedia wurde Mediendatei schneiden hinzugefügt: geführter und erweiterter Audio-/Videoschnitt, Schnittvorschau, genaue Anpassung und Wiederherstellung gelöschter Teile. Die Wiedergabe überspringt angewendete Schnitte. Videodrehung und zusätzliche Audiospur mit Lautstärkeregelung und Wiederholung. Speichern mit echtem Fortschritt und Abbruch über die mitgelieferten FFmpeg-Bibliotheken, ohne externe Programme; gesprochene Anleitung und zugängliche Bedienelemente.
 2. Befehlsbereich zum Schneiden von Mediendateien hinzugefügt: Schnittbefehle lassen sich ohne Alt oder Strg über die Tastatur verwenden. F1 liest die verfügbaren Tasten vor.
-3. Wiedergabe von DAISY-Büchern verbessert: Das nächste Kapitel startet automatisch, und das Vor- und Zurückspringen mit den Pfeiltasten funktioniert über Kapitelgrenzen hinweg. Unterabschnitte werden nicht wiederholt; die Ansage zum Leseende erfolgt erst am Ende des Buches.
-4. Indonesisch (Bahasa Indonesia) hinzugefügt, einschließlich Oberfläche, Benutzerhandbuch und Übersetzungen für die neuesten Medienwerkzeuge. Vielen Dank an Muhammad für die Übersetzung.
+3. Ordner konvertieren unter Werkzeuge → Multimedia hinzugefügt (Alt+Shift+Q), mit den Bedienelementen der Mac-Version: Stapelkonvertierung von Audio und Video, Qualitätseinstellungen und Bild für Videos aus Audio. Mit tatsächlichem Fortschritt, Abbruch, Fehlerübersicht und Schutz vorhandener Dateien. Verwendet nur die mitgelieferten FFmpeg-Bibliotheken.
+4. Mediendateien zusammenfügen unter Werkzeuge → Multimedia hinzugefügt (Alt+Shift+Y): Audio- oder Videodateien in gewählter Reihenfolge verbinden, mit Schaltflächen zum Hinzufügen, Entfernen und Sortieren, Auswahl des Ausgabeformats, echtem Fortschritt und Abbruch. Videos lassen sich auch zu einer Audiodatei zusammenfügen.
+5. Medien schneiden: „Medien vor dem ausgewählten Abschnitt einfügen…“ fügt Audio oder Video als neuen Abschnitt ein und erhält vorhandene Schnitte. Wiedergabe und Export folgen der neuen Reihenfolge. Eingefügte Abschnitte lassen sich teilen, löschen und wiederherstellen; reine Audioabschnitte erhalten im Video einen schwarzen Hintergrund.
+6. Wiedergabe von DAISY-Büchern verbessert: Das nächste Kapitel startet automatisch, und das Vor- und Zurückspringen mit den Pfeiltasten funktioniert über Kapitelgrenzen hinweg. Unterabschnitte werden nicht wiederholt; die Ansage zum Leseende erfolgt erst am Ende des Buches.
+7. Indonesisch (Bahasa Indonesia) hinzugefügt, einschließlich Oberfläche, Benutzerhandbuch und Übersetzungen für die neuesten Medienwerkzeuge. Vielen Dank an Muhammad für die Übersetzung.
 
 Version 0.9.17 – 2026-10-15
 

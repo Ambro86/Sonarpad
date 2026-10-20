@@ -4,8 +4,11 @@ Version 0.9.18 – 2026-10-16
 
 1. Dodano Przytnij plik multimedialny w Narzędzia → Multimedia: prowadzone i zaawansowane cięcie dźwięku i wideo, odsłuch cięcia, dokładna regulacja granic i przywracanie usuniętych części. Odtwarzanie pomija zastosowane cięcia. Dostępny jest obrót wideo i dodatkowa ścieżka dźwiękowa z regulacją głośności i zapętlaniem. Zapis z rzeczywistym postępem i anulowaniem korzysta z dołączonych bibliotek FFmpeg bez zewnętrznych programów; wskazówki głosowe i dostępne elementy sterujące.
 2. Dodano obszar poleceń w przycinaniu plików multimedialnych, umożliwiający używanie poleceń klawiaturowych bez Alt i Ctrl. F1 odczytuje listę dostępnych klawiszy.
-3. Ulepszono odtwarzanie książek DAISY: kolejny rozdział rozpoczyna się automatycznie, a przewijanie strzałkami w przód i w tył działa również przez granice rozdziałów. Podrozdziały nie są powtarzane, a komunikat o zakończeniu czytania jest wypowiadany dopiero na końcu książki.
-4. Dodano język indonezyjski (Bahasa Indonesia), w tym interfejs, podręcznik i tłumaczenia nowych narzędzi multimedialnych. Dziękujemy Muhammadowi za wkład w tłumaczenie.
+3. Dodano Konwertuj folder w Narzędzia → Multimedia (Alt+Shift+Q), z kontrolkami wersji Mac: zbiorcza konwersja audio i wideo, jakość oraz obraz do tworzenia wideo z dźwięku. Rzeczywisty postęp, anulowanie, podsumowanie błędów i ochrona istniejących plików. Używane są wyłącznie dołączone biblioteki FFmpeg.
+4. Dodano Połącz pliki multimedialne w Narzędzia → Multimedia (Alt+Shift+Y): łączenie plików audio lub wideo w wybranej kolejności, przyciski dodawania, usuwania i zmiany kolejności, wybór formatu wyjściowego, rzeczywisty postęp i anulowanie. Filmy można też połączyć w jeden plik audio.
+5. Przycinanie multimediów: opcja „Wstaw multimedia przed wybraną częścią…” dodaje dźwięk lub wideo jako nową część, zachowując dotychczasowe cięcia. Odtwarzanie i eksport uwzględniają nową kolejność. Wstawione części można dzielić, usuwać i przywracać; fragmenty tylko dźwiękowe mają w filmie czarne tło.
+6. Ulepszono odtwarzanie książek DAISY: kolejny rozdział rozpoczyna się automatycznie, a przewijanie strzałkami w przód i w tył działa również przez granice rozdziałów. Podrozdziały nie są powtarzane, a komunikat o zakończeniu czytania jest wypowiadany dopiero na końcu książki.
+7. Dodano język indonezyjski (Bahasa Indonesia), w tym interfejs, podręcznik i tłumaczenia nowych narzędzi multimedialnych. Dziękujemy Muhammadowi za wkład w tłumaczenie.
 
 Version 0.9.17 – 2026-10-15
 

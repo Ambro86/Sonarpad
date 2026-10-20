@@ -71,6 +71,9 @@ const BACK_FIVE: usize = 9840;
 const NEXT_FIVE: usize = 9841;
 const BACK_TEN: usize = 9842;
 const NEXT_TEN: usize = 9843;
+const FILE_HOME: usize = 9844;
+const FILE_END: usize = 9845;
+const INSERT_MEDIA: usize = 9846;
 const TICK: usize = 1;
 #[derive(Default)]
 struct Job {
@@ -119,6 +122,7 @@ struct State {
     duration: f64,
     has_video: bool,
     parts: Vec<MediaPart>,
+    sources: Vec<crate::media_cutter_timeline::MediaSpan>,
     position: f64,
     start: Option<f64>,
     end: Option<f64>,
@@ -333,8 +337,18 @@ impl State {
                 "--video-rotate={}",
                 [0, 90, 270, 180][self.selected(ROTATE).min(3)]
             ))
+            // Mixed EDLs may start with audio before the first video frame. Do not discard it.
+            .args(if self.sources.is_empty() {
+                vec![]
+            } else {
+                vec!["--initial-audio-sync=no"]
+            })
             .arg(format!("--input-ipc-server={}", ipc.display()))
-            .arg(playback_edl(path, &ranges))
+            .arg(crate::media_cutter_timeline::playback_edl(
+                path,
+                &self.sources,
+                &ranges,
+            )?)
             .creation_flags(0x08000000)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -399,6 +413,60 @@ impl State {
         }
         true
     }
+    fn insert_media(&mut self, path: PathBuf) -> Result<(), String> {
+        let input = self.input.clone().ok_or_else(|| self.tr("no_file"))?;
+        let index = self.selected(PARTS);
+        if index >= self.parts.len() {
+            return Err(self.tr("invalid_cut"));
+        }
+        let length = crate::ffmpeg_export::media_duration_seconds(&path)
+            .filter(|d| d.is_finite() && *d >= MIN_PART_SECONDS)
+            .ok_or_else(|| self.tr("invalid_media"))?;
+        let video = crate::ffmpeg_source::has_real_video_stream(&path)?;
+        if !video && crate::ffmpeg_source::list_audio_streams(&path)?.is_empty() {
+            return Err(self.tr("invalid_media"));
+        }
+        let mut sources = self.sources.clone();
+        if sources.is_empty() {
+            sources.push(crate::media_cutter_timeline::MediaSpan {
+                path: input,
+                start: 0.0,
+                end: self.duration,
+                source_start: 0.0,
+            });
+        }
+        let duration = crate::media_cutter_timeline::insert_before(
+            &mut self.parts,
+            &mut sources,
+            index,
+            path,
+            length,
+        )?;
+        self.sources = sources;
+        self.duration = duration;
+        self.has_video |= video;
+        self.position = self.parts[index].start;
+        self.dirty = true;
+        self.start = None;
+        self.end = None;
+        self.refresh_parts();
+        unsafe {
+            SendMessageW(self.ctrl(PARTS), CB_SETCURSEL, WPARAM(index), LPARAM(0));
+            SetFocus(self.ctrl(PARTS));
+        }
+        self.set(POSITION, &format!("{:.3}", self.position));
+        self.show_bounds();
+        self.visibility();
+        self.say(&format!(
+            "{} {} {}: {} – {}",
+            self.tr("media_inserted"),
+            self.tr("part_singular"),
+            index + 1,
+            spoken_time(self.parts[index].start, self.language),
+            spoken_time(self.parts[index].end, self.language)
+        ));
+        Ok(())
+    }
     fn command(&mut self, id: usize, notification: u32) -> Result<(), String> {
         if self.job.is_some() {
             if id == CANCEL {
@@ -440,6 +508,7 @@ impl State {
                         self.tr("file_loaded"),
                         path.file_name().unwrap_or_default().to_string_lossy()
                     );
+                    self.sources.clear();
                     self.input = Some(path);
                     self.duration = duration;
                     self.has_video = has_video;
@@ -516,6 +585,16 @@ impl State {
                 }
                 self.say(&spoken_time(self.position, self.language));
             }
+            FILE_HOME | FILE_END => {
+                let running = self.player.is_some();
+                self.stop();
+                self.position = if id == FILE_HOME { 0.0 } else { self.duration };
+                self.set(POSITION, &format!("{:.3}", self.position));
+                if running && id == FILE_HOME && self.parts.iter().any(|p| p.keep) {
+                    self.play(false)?;
+                }
+                self.say(&spoken_time(self.position, self.language));
+            }
             GO => {
                 let position = self.number(POSITION)?;
                 let running = self.player.is_some();
@@ -568,13 +647,15 @@ impl State {
                 self.visibility();
             }
             COMMAND_HELP => {
+                let delete_keys = format!("D / {}", self.tr("delete_key"));
                 let mut commands =
                     vec![("←", "back"), ("→", "forward"), ("3 / Enter", "listen_cut")];
                 if self.selected(MODE) == 1 {
                     commands.extend([
                         ("↑ / ↓", "part_singular"),
                         ("S", "split_here"),
-                        ("D", "delete"),
+                        (delete_keys.as_str(), "delete"),
+                        ("R", "restore"),
                     ]);
                 } else {
                     commands.extend([("1", "set_start"), ("2", "set_end"), ("4", "apply_cut")]);
@@ -606,6 +687,7 @@ impl State {
                         ));
                     }
                 }
+                lines.push(self.tr("home_end_help"));
                 lines.push(self.tr("save"));
                 self.say(&lines.join(". "));
             }
@@ -621,6 +703,15 @@ impl State {
                     self.say(&self.tr("part_deleted"));
                 } else {
                     self.play(true)?;
+                }
+            }
+            INSERT_MEDIA if self.selected(MODE) == 1 => {
+                self.stop();
+                if self.input.is_none() {
+                    return Err(self.tr("no_file"));
+                }
+                if let Some(path) = choose(self.hwnd, false, true, &self.tr("insert_media"), None) {
+                    self.insert_media(path)?;
                 }
             }
             SPLIT if self.selected(MODE) == 1 => {
@@ -813,6 +904,7 @@ impl State {
                         input,
                         output,
                         parts: self.parts.clone(),
+                        sources: self.sources.clone(),
                         rotation: [0, 90, 270, 180][self.selected(ROTATE).min(3)],
                         track,
                     };
@@ -1117,6 +1209,7 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         duration: 0.0,
         has_video: false,
         parts: vec![],
+        sources: vec![],
         position: 0.0,
         start: None,
         end: None,
@@ -1168,9 +1261,10 @@ fn create(hwnd: HWND, parent: HWND) -> State {
     combo(&mut s, "part_selection", PARTS, &values, 12, 183, 460);
     button(&mut s, "delete", DELETE, 490, 203, 105);
     button(&mut s, "restore", RESTORE, 605, 203, 170);
+    button(&mut s, "insert_media", INSERT_MEDIA, 12, 240, 760);
     s.advanced_controls = s.controls[first..].to_vec();
-    edit(&mut s, "start_value", START, "0.000", 12, 242, 180);
-    edit(&mut s, "end_value", END, "0.000", 205, 242, 180);
+    edit(&mut s, "start_value", START, "0.000", 12, 282, 180);
+    edit(&mut s, "end_value", END, "0.000", 205, 282, 180);
     combo(
         &mut s,
         "precision",
@@ -1182,7 +1276,7 @@ fn create(hwnd: HWND, parent: HWND) -> State {
             "1 s".into(),
         ],
         620,
-        242,
+        282,
         140,
     );
     for (key, id, x, width) in [
@@ -1197,7 +1291,7 @@ fn create(hwnd: HWND, parent: HWND) -> State {
             "BUTTON",
             &label,
             id,
-            [x, 300, width, 36],
+            [x, 340, width, 36],
             WS_TABSTOP | WINDOW_STYLE(BS_MULTILINE as u32),
         );
     }
@@ -1207,48 +1301,48 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         s.tr("rotation_left"),
         "180°".into(),
     ];
-    combo(&mut s, "rotation", ROTATE, &rotations, 12, 340, 220);
+    combo(&mut s, "rotation", ROTATE, &rotations, 12, 380, 220);
     let label = s.tr("show_video");
     control(
         &mut s,
         "BUTTON",
         &label,
         VIDEO,
-        [250, 362, 400, 25],
+        [250, 402, 400, 25],
         WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
     );
-    button(&mut s, "choose_track", TRACK, 12, 400, 470);
+    button(&mut s, "choose_track", TRACK, 12, 440, 470);
     let track_start = s.controls.len();
-    button(&mut s, "track_remove", REMOVE_TRACK, 495, 400, 270);
+    button(&mut s, "track_remove", REMOVE_TRACK, 495, 440, 270);
     edit(
         &mut s,
         "original_volume",
         ORIGINAL_GAIN,
         "100",
         12,
-        438,
+        478,
         220,
     );
-    edit(&mut s, "new_volume", ADDED_GAIN, "100", 245, 438, 220);
+    edit(&mut s, "new_volume", ADDED_GAIN, "100", 245, 478, 220);
     let label = s.tr("loop_track");
     control(
         &mut s,
         "BUTTON",
         &label,
         LOOP,
-        [12, 494, 750, 25],
+        [12, 534, 750, 25],
         WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
     );
     s.track_controls = s.controls[track_start..].to_vec();
-    button(&mut s, "save", SAVE, 12, 540, 200);
-    button(&mut s, "close", CLOSE, 230, 540, 180);
+    button(&mut s, "save", SAVE, 12, 580, 200);
+    button(&mut s, "close", CLOSE, 230, 580, 180);
     let label = s.tr("ready");
     s.status = control(
         &mut s,
         "STATIC",
         &label,
         0,
-        [12, 585, 750, 24],
+        [12, 625, 750, 24],
         WINDOW_STYLE(0),
     );
     s.controls.pop();
@@ -1371,6 +1465,7 @@ fn shortcut_command(
             0x33 => Some(LISTEN),
             0x34 => Some(SHORTCUT_APPLY),
             0x44 => Some(DELETE),
+            0x52 => Some(RESTORE),
             key if key == VK_UP.0 as u32 => Some(PART_PREVIOUS),
             key if key == VK_DOWN.0 as u32 => Some(PART_NEXT),
             key if key == VK_LEFT.0 as u32 => Some(BACK),
@@ -1419,10 +1514,13 @@ fn area_command(key: u32, advanced: bool) -> Option<usize> {
         0x27 => Some(NEXT),
         0x0d | 0x33 => Some(LISTEN),
         0x70 => Some(COMMAND_HELP),
+        0x24 => Some(FILE_HOME),
+        0x23 => Some(FILE_END),
         0x26 if advanced => Some(PART_PREVIOUS),
         0x28 if advanced => Some(PART_NEXT),
         0x53 if advanced => Some(SPLIT),
-        0x44 if advanced => Some(DELETE),
+        0x44 | 0x2e if advanced => Some(DELETE),
+        0x52 if advanced => Some(RESTORE),
         0x31 if !advanced => Some(SHORTCUT_START),
         0x32 if !advanced => Some(SHORTCUT_END),
         0x34 if !advanced => Some(SHORTCUT_APPLY),
@@ -1581,7 +1679,7 @@ pub fn open(parent: HWND) {
             80,
             30,
             805,
-            660,
+            700,
             parent,
             HMENU(0),
             instance,
@@ -1676,8 +1774,21 @@ fn inner(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
                     return LRESULT(0);
                 }
                 s.stop();
+                let parent = s.parent;
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, ptr as isize);
-                crate::log_if_err!(DestroyWindow(hwnd));
+                match DestroyWindow(hwnd) {
+                    Ok(()) => {
+                        // WM_NCDESTROY has cleared media_cutter_window: restoring now
+                        // cannot redirect focus back to the cutter being closed.
+                        if IsWindow(parent).as_bool() {
+                            crate::log_debug(
+                                "Media cutter closed: restoring editor focus with retries",
+                            );
+                            crate::restore_editor_focus(parent);
+                        }
+                    }
+                    Err(error) => crate::log_debug(&format!("Media cutter close failed: {error}")),
+                }
                 return LRESULT(0);
             }
             WM_NCDESTROY => {
@@ -1734,14 +1845,29 @@ mod tests {
                 modified_area_command(0x09, advanced, false, false, true),
                 None
             );
+            assert_eq!(area_command(0x24, advanced), Some(FILE_HOME));
+            assert_eq!(area_command(0x23, advanced), Some(FILE_END));
+            for key in [0x24, 0x23] {
+                assert_eq!(shortcut_command(key, false, false, false, false), None);
+                assert_eq!(
+                    modified_area_command(key, advanced, true, false, false),
+                    None
+                );
+            }
             assert_eq!(area_command(0x20, advanced), Some(PLAY));
             assert_eq!(area_command(0x33, advanced), Some(LISTEN));
             assert_eq!(area_command(0x0d, advanced), Some(LISTEN));
             assert_eq!(area_command(0x09, advanced), None); // Tab must leave the area.
             assert_eq!(area_command(0x70, advanced), Some(COMMAND_HELP));
         }
+        assert_eq!(area_command(0x52, true), Some(RESTORE));
+        assert_eq!(area_command(0x52, false), None);
+        assert_eq!(shortcut_command(0x52, false, false, false, true), None);
         assert_eq!(area_command(0x44, true), Some(DELETE));
         assert_eq!(area_command(0x44, false), None);
+        assert_eq!(area_command(0x2e, true), Some(DELETE));
+        assert_eq!(area_command(0x2e, false), None);
+        assert_eq!(shortcut_command(0x2e, false, false, false, true), None);
         assert_eq!(area_command(0x53, true), Some(SPLIT));
         assert_eq!(area_command(0x31, false), Some(SHORTCUT_START));
         assert_eq!(area_command(0x31, true), None);
@@ -1773,6 +1899,7 @@ mod tests {
             ('3' as u32, LISTEN),
             ('4' as u32, SHORTCUT_APPLY),
             ('D' as u32, DELETE),
+            ('R' as u32, RESTORE),
             (VK_UP.0 as u32, PART_PREVIOUS),
             (VK_DOWN.0 as u32, PART_NEXT),
             (VK_LEFT.0 as u32, BACK),
@@ -1955,6 +2082,7 @@ mod tests {
             );
             assert!(!visible((*ptr).ctrl(PRIMARY)));
             assert!(visible((*ptr).ctrl(PARTS)));
+            assert!(visible((*ptr).ctrl(INSERT_MEDIA)));
             (*ptr).set(START, "0.25");
             (*ptr).set(END, "5.75");
             assert_eq!(GetDlgItem(hwnd, 9817), HWND(0));
@@ -1998,6 +2126,44 @@ mod tests {
             SendMessageW(hwnd, WM_COMMAND, WPARAM(PART_PREVIOUS), LPARAM(0));
             SendMessageW(hwnd, WM_COMMAND, WPARAM(PART_PREVIOUS), LPARAM(0));
             assert_eq!((*ptr).selected(PARTS), 0);
+            // Insert through the same handler used after the file picker, then audition/delete/restore.
+            let inserted =
+                std::env::temp_dir().join(format!("cutter-ui-insert-{}.wav", uuid::Uuid::new_v4()));
+            let mut writer = hound::WavWriter::create(
+                &inserted,
+                hound::WavSpec {
+                    channels: 1,
+                    sample_rate: 8000,
+                    bits_per_sample: 16,
+                    sample_format: hound::SampleFormat::Int,
+                },
+            )
+            .unwrap();
+            for _ in 0..8000 {
+                writer.write_sample(1000_i16).unwrap();
+            }
+            writer.finalize().unwrap();
+            SendMessageW((*ptr).ctrl(PARTS), CB_SETCURSEL, WPARAM(1), LPARAM(0));
+            (*ptr).insert_media(inserted.clone()).unwrap();
+            assert_eq!((*ptr).selected(PARTS), 1);
+            assert_eq!((*ptr).duration, 7.0);
+            assert_eq!((*ptr).position, 2.0);
+            assert!((*ptr).dirty);
+            assert_eq!((*ptr).audition_bounds().unwrap(), (2.0, 3.0));
+            assert!(!(&(*ptr).parts)[3].keep);
+            let clips = crate::media_cutter_timeline::resolve(
+                &(*ptr).sources,
+                &(*ptr).playback_ranges(true).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(clips.len(), 1);
+            assert_eq!(clips[0].path, inserted);
+            assert_eq!((clips[0].start, clips[0].end), (0.0, 1.0));
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(DELETE), LPARAM(0));
+            assert!((*ptr).playback_ranges(true).is_err());
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(RESTORE), LPARAM(0));
+            assert_eq!((*ptr).audition_bounds().unwrap(), (2.0, 3.0));
+            std::fs::remove_file(inserted).unwrap();
             let job = Arc::new(Mutex::new(Job {
                 percent: 37,
                 result: None,
@@ -2030,7 +2196,8 @@ mod tests {
             assert!((*ptr).job.is_none());
             assert!(!(*ptr).dirty);
             assert!((*ptr).start.is_none());
-            crate::log_if_err!(DestroyWindow(hwnd));
+            // The same close path used by Escape runs after cancellation completes.
+            SendMessageW(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0));
             assert!(!IsWindow(hwnd).as_bool());
         }
     }

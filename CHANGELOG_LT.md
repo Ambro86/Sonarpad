@@ -4,8 +4,11 @@ Version 0.9.18 – 2026-10-16
 
 1. Į Įrankiai → Multimedija įtraukta medijos failų kirpimo funkcija: vedamas ir išplėstinis garso bei vaizdo redagavimas, iškerpamos dalies perklausa, tikslus ribų keitimas ir pašalintų dalių atkūrimas. Atkūrimas praleidžia pritaikytus kirpimus. Galima pasukti vaizdą ir pridėti garso takelį su garsumo reguliavimu bei kartojimu. Įrašymas su tikra eiga ir atšaukimu naudoja pridėtas FFmpeg bibliotekas be išorinių programų; balso nurodymai ir prieinami valdikliai.
 2. Pridėta komandų sritis medijos failų kirpimo lange, leidžianti naudoti klaviatūros komandas be Alt ar Ctrl. F1 perskaito galimų klavišų sąrašą.
-3. Patobulintas DAISY knygų atkūrimas: kitas skyrius pradedamas automatiškai, o rodyklių klavišais galima persukti pirmyn ir atgal per skyrių ribas. Poskyriai nekartojami, o pranešimas apie skaitymo pabaigą skamba tik knygos pabaigoje.
-4. Pridėta indoneziečių kalba (Bahasa Indonesia): sąsaja, naudotojo vadovas ir naujausių medijos įrankių vertimai. Dėkojame Muhammad už vertimą.
+3. Į Įrankiai → Multimedija įtraukta Konvertuoti aplanką (Alt+Shift+Q), su Mac versijos valdikliais: paketinis garso ir vaizdo konvertavimas, kokybė ir paveikslėlis vaizdo įrašui iš garso sukurti. Tikra eiga, atšaukimas, klaidų suvestinė ir esamų failų apsauga. Naudojamos tik pridėtos FFmpeg bibliotekos.
+4. Įrankiai → Multimedija pridėta Sujungti medijos failus (Alt+Shift+Y): garso ir vaizdo failų jungimas pasirinkta tvarka, failų pridėjimo, pašalinimo ir rikiavimo mygtukai, išvesties formato pasirinkimas, tikra eiga ir atšaukimas. Vaizdo įrašus taip pat galima sujungti į vieną garso failą.
+5. Medijos kirpimas: „Įterpti mediją prieš pasirinktą dalį…“ prideda garso arba vaizdo failą kaip naują dalį, išsaugant ankstesnius kirpimus. Atkūrimas ir eksportas laikosi naujos tvarkos. Įterptas dalis galima skaidyti, šalinti ir atkurti; tik garso dalys vaizdo įraše turi juodą foną.
+6. Patobulintas DAISY knygų atkūrimas: kitas skyrius pradedamas automatiškai, o rodyklių klavišais galima persukti pirmyn ir atgal per skyrių ribas. Poskyriai nekartojami, o pranešimas apie skaitymo pabaigą skamba tik knygos pabaigoje.
+7. Pridėta indoneziečių kalba (Bahasa Indonesia): sąsaja, naudotojo vadovas ir naujausių medijos įrankių vertimai. Dėkojame Muhammad už vertimą.
 
 Version 0.9.17 – 2026-10-15
 

@@ -578,6 +578,14 @@ fn find_fixed_shortcut_conflict_label(
     let labels = crate::menu::menu_labels(language);
     let fixed = vec![
         (
+            ShortcutBinding::new(false, true, true, 'Y' as u16),
+            labels.media_join_menu,
+        ),
+        (
+            ShortcutBinding::new(false, true, true, 'Q' as u16),
+            labels.convert_folder_menu,
+        ),
+        (
             ShortcutBinding::new(true, false, false, 'N' as u16),
             labels.file_new,
         ),
@@ -728,6 +736,10 @@ fn find_fixed_shortcut_conflict_label(
         (
             ShortcutBinding::new(false, true, true, 'T' as u16),
             i18n::tr(language, "playback.transcribe_current"),
+        ),
+        (
+            ShortcutBinding::new(false, true, true, 'X' as u16),
+            i18n::tr(language, "media_cutter.menu"),
         ),
         (
             ShortcutBinding::new(false, true, true, 'C' as u16),
