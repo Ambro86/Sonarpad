@@ -1368,6 +1368,7 @@ struct OptionsLabels {
     lang_ru: String,
     lang_zh: String,
     lang_hi: String,
+    lang_id: String,
     lang_de: String,
     marker_position_end: String,
     marker_position_beginning: String,
@@ -1792,6 +1793,7 @@ fn options_labels(language: Language) -> OptionsLabels {
             }
         },
         lang_de: i18n::tr(language, "options.lang.de"),
+        lang_id: "Bahasa Indonesia".to_string(),
         lang_hi: {
             let value = i18n::tr(language, "options.lang.hi");
             if value == "options.lang.hi" {
@@ -1878,6 +1880,7 @@ fn sonarpad_language_index(language: Language) -> usize {
         Language::Chinese => 14,
         Language::Hindi => 15,
         Language::German => 16,
+        Language::Indonesian => 17,
     }
 }
 
@@ -1900,6 +1903,7 @@ fn sonarpad_language_from_index(index: isize) -> Option<Language> {
         14 => Some(Language::Chinese),
         15 => Some(Language::Hindi),
         16 => Some(Language::German),
+        17 => Some(Language::Indonesian),
         _ => None,
     }
 }
@@ -1923,6 +1927,7 @@ fn sonarpad_language_code(language: Language) -> &'static str {
         Language::Russian => "ru",
         Language::Chinese => "zh",
         Language::Hindi => "hi",
+        Language::Indonesian => "id",
     }
 }
 
@@ -1945,6 +1950,7 @@ fn whisper_audio_language_from_code(code: &str) -> Option<Language> {
         "ru" => Some(Language::Russian),
         "zh" => Some(Language::Chinese),
         "hi" => Some(Language::Hindi),
+        "id" => Some(Language::Indonesian),
         _ => None,
     }
 }
@@ -1979,6 +1985,7 @@ fn localized_voice_language_name(language: Language, labels: &OptionsLabels, cod
         "ru" => labels.lang_ru.clone(),
         "zh" => labels.lang_zh.clone(),
         "hi" => labels.lang_hi.clone(),
+        "id" => labels.lang_id.clone(),
         "de" => match language {
             Language::Italian => "Tedesco".to_string(),
             Language::Spanish => "Aleman".to_string(),
@@ -5407,6 +5414,7 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     labels.lang_zh.as_str(),
                     labels.lang_hi.as_str(),
                     labels.lang_de.as_str(),
+                    labels.lang_id.as_str(),
                 ] {
                     SendMessageW(
                         combo_whisper_audio_language,
@@ -7956,6 +7964,12 @@ fn initialize_options_dialog(hwnd: HWND) {
             WPARAM(0),
             LPARAM(to_wide(&labels.lang_de).as_ptr() as isize),
         );
+        SendMessageW(
+            combo_lang,
+            CB_ADDSTRING,
+            WPARAM(0),
+            LPARAM(to_wide(&labels.lang_id).as_ptr() as isize),
+        );
 
         let lang_index = match settings.language {
             Language::Italian => 0,
@@ -7975,6 +7989,7 @@ fn initialize_options_dialog(hwnd: HWND) {
             Language::Chinese => 14,
             Language::Hindi => 15,
             Language::German => 16,
+            Language::Indonesian => 17,
         };
         SendMessageW(combo_lang, CB_SETCURSEL, WPARAM(lang_index), LPARAM(0));
 
@@ -8596,6 +8611,7 @@ fn initialize_options_dialog(hwnd: HWND) {
             ("Polski (Polska)".to_string(), "pl-PL"),
             (labels.spellcheck_lang_ru.clone(), "ru-RU"),
             (labels.spellcheck_lang_hi.clone(), "hi-IN"),
+            ("Bahasa Indonesia (Indonesia)".to_string(), "id-ID"),
         ];
         let mut selected_idx = 0;
         let current_val = if settings.spellcheck_language_mode
@@ -8649,6 +8665,7 @@ fn initialize_options_dialog(hwnd: HWND) {
             (labels.lang_zh.clone(), "zh"),
             (labels.lang_hi.clone(), "hi"),
             (labels.lang_de.clone(), "de"),
+            (labels.lang_id.clone(), "id"),
         ];
         let current_dict_lang = settings
             .dictionary_translation_language
@@ -8696,6 +8713,7 @@ fn initialize_options_dialog(hwnd: HWND) {
             (labels.lang_zh.clone(), "zh"),
             (labels.lang_hi.clone(), "hi"),
             (labels.lang_de.clone(), "de"),
+            (labels.lang_id.clone(), "id"),
         ];
         let current_wikipedia_lang = settings.wikipedia_language.trim().to_ascii_lowercase();
         let mut wiki_selected_idx = 0;
@@ -12072,6 +12090,7 @@ fn apply_options_dialog(hwnd: HWND) {
             14 => Language::Chinese,
             15 => Language::Hindi,
             16 => Language::German,
+            17 => Language::Indonesian,
             _ => Language::Italian,
         };
 

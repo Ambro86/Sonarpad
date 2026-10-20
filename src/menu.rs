@@ -2430,6 +2430,7 @@ mod tests {
             (Language::Russian, "ru"),
             (Language::Chinese, "zh"),
             (Language::Hindi, "hi"),
+            (Language::Indonesian, "id"),
         ];
 
         for (language, code) in languages {
@@ -2460,6 +2461,7 @@ mod tests {
             (Language::Russian, "ru"),
             (Language::Chinese, "zh"),
             (Language::Hindi, "hi"),
+            (Language::Indonesian, "id"),
         ];
 
         for (language, code) in languages {
@@ -2522,6 +2524,7 @@ mod tests {
             (Language::Russian, "ru"),
             (Language::Chinese, "zh"),
             (Language::Hindi, "hi"),
+            (Language::Indonesian, "id"),
         ];
 
         for (language, code) in languages {

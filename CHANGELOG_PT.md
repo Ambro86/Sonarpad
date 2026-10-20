@@ -5,6 +5,7 @@ Version 0.9.18 – 2026-10-16
 1. Adicionado Cortar ficheiro multimédia em Ferramentas → Multimédia: corte guiado e avançado de áudio e vídeo, pré-visualização, ajuste preciso e restauro das partes eliminadas. A reprodução salta os cortes aplicados. Inclui rotação de vídeo e faixa de áudio adicional com volumes ajustáveis e repetição. Gravação com progresso real e cancelamento através das bibliotecas FFmpeg incluídas, sem executáveis externos; instruções faladas e controlos acessíveis.
 2. Adicionada uma área de comandos em Cortar ficheiro multimédia para utilizar comandos de corte pelo teclado sem Alt ou Ctrl. F1 lê a lista de teclas disponíveis.
 3. Melhorada a reprodução de livros DAISY: o capítulo seguinte começa automaticamente e os avanços e recuos com as setas atravessam os limites entre capítulos. As subsecções não são repetidas e o anúncio de fim da leitura só é ouvido no final do livro.
+4. Adicionado o indonésio (Bahasa Indonesia), com interface, guia e traduções das novas ferramentas multimédia. Obrigado a Muhammad pelo contributo para a tradução.
 
 Version 0.9.17 – 2026-10-15
 

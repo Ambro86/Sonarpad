@@ -1132,6 +1132,7 @@ fn format_timestamp_for_list(
         crate::settings::Language::Ukrainian => ("%d.%m.%Y", "%H:%M"),
         crate::settings::Language::Russian => ("%d.%m.%Y", "%H:%M"),
         crate::settings::Language::Hindi => ("%d/%m/%Y", "%H:%M"),
+        crate::settings::Language::Indonesian => ("%d/%m/%Y", "%H:%M"),
     };
     let show_date = matches!(date_mode, ListDateDisplayMode::Always);
     let show_time = match time_mode {
@@ -1188,6 +1189,7 @@ fn format_timestamp_for_language(
         crate::settings::Language::Ukrainian => ("%d.%m.%Y", "%H:%M"),
         crate::settings::Language::Russian => ("%d.%m.%Y", "%H:%M"),
         crate::settings::Language::Hindi => ("%d/%m/%Y", "%H:%M"),
+        crate::settings::Language::Indonesian => ("%d/%m/%Y", "%H:%M"),
     };
     let now = Local::now().date_naive();
     let item_day = dt.date_naive();
@@ -2369,6 +2371,7 @@ fn default_feed_path(language: crate::settings::Language) -> Option<PathBuf> {
         crate::settings::Language::German => "feed_de.txt",
         crate::settings::Language::Ukrainian => "feed_uk.txt",
         crate::settings::Language::English
+        | crate::settings::Language::Indonesian
         | crate::settings::Language::Lithuanian
         | crate::settings::Language::Chinese => "feed_en.txt",
         crate::settings::Language::Italian => "feed_it.txt",
@@ -2402,6 +2405,7 @@ fn embedded_default_feeds(language: crate::settings::Language) -> &'static str {
         crate::settings::Language::German => FEED_DE_DATA,
         crate::settings::Language::Ukrainian => FEED_UK_DATA,
         crate::settings::Language::English
+        | crate::settings::Language::Indonesian
         | crate::settings::Language::Lithuanian
         | crate::settings::Language::Chinese => FEED_EN_DATA,
         crate::settings::Language::Italian => FEED_IT_DATA,
@@ -2450,6 +2454,7 @@ fn is_default_key(
         crate::settings::Language::German
         | crate::settings::Language::Ukrainian
         | crate::settings::Language::English
+        | crate::settings::Language::Indonesian
         | crate::settings::Language::Lithuanian
         | crate::settings::Language::Chinese
         | crate::settings::Language::Russian => settings
@@ -3974,6 +3979,7 @@ fn app_language_code(language: crate::settings::Language) -> &'static str {
         crate::settings::Language::Russian => "ru",
         crate::settings::Language::Chinese => "zh",
         crate::settings::Language::Hindi => "hi",
+        crate::settings::Language::Indonesian => "id",
     }
 }
 
@@ -9020,6 +9026,7 @@ fn removed_default_list_mut(
         crate::settings::Language::Serbian => &mut settings.rss_removed_default_sr,
         crate::settings::Language::Hindi => &mut settings.rss_removed_default_hi,
         crate::settings::Language::English
+        | crate::settings::Language::Indonesian
         | crate::settings::Language::Swedish
         | crate::settings::Language::Ukrainian
         | crate::settings::Language::Lithuanian
@@ -9248,6 +9255,7 @@ fn handle_delete(hwnd: HWND) {
                     if matches!(
                         news_language,
                         crate::settings::Language::English
+                            | crate::settings::Language::Indonesian
                             | crate::settings::Language::German
                             | crate::settings::Language::Swedish
                             | crate::settings::Language::Italian
@@ -9274,6 +9282,7 @@ fn handle_delete(hwnd: HWND) {
                                 let removed_list = match news_language {
                                     crate::settings::Language::Ukrainian
                                     | crate::settings::Language::English
+                                    | crate::settings::Language::Indonesian
                                     | crate::settings::Language::Lithuanian
                                     | crate::settings::Language::Chinese
                                     | crate::settings::Language::Russian => {
@@ -9549,6 +9558,7 @@ fn undo_last_delete(hwnd: HWND) {
                         let removed_list = match language {
                             crate::settings::Language::Ukrainian
                             | crate::settings::Language::English
+                            | crate::settings::Language::Indonesian
                             | crate::settings::Language::Lithuanian
                             | crate::settings::Language::Chinese
                             | crate::settings::Language::Russian => {

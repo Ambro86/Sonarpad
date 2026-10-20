@@ -170,6 +170,7 @@ pub fn language_to_code(language: Language) -> &'static str {
         Language::Russian => "ru",
         Language::Chinese => "zh",
         Language::Hindi => "hi",
+        Language::Indonesian => "id",
     }
 }
 

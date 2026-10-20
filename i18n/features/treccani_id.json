@@ -1,0 +1,19 @@
+{
+  "menu.treccani": "&Ensiklopedia Treccani...\tCtrl+Shift+E",
+  "treccani.close": "Tutup",
+  "treccani.import_all_article": "Baca seluruh artikel",
+  "treccani.import_button": "Baca",
+  "treccani.import_error": "Tidak dapat memuat artikel dari Treccani.",
+  "treccani.importing": "Memuat artikel...",
+  "treccani.language_italian": "Italia",
+  "treccani.language_label": "Bahasa:",
+  "treccani.loading": "Mencari...",
+  "treccani.no_query": "Masukkan istilah yang akan dicari.",
+  "treccani.no_results": "Tidak ada hasil.",
+  "treccani.results_label": "Hasil:",
+  "treccani.search_button": "Cari",
+  "treccani.search_error": "Terjadi kesalahan saat mencari di Treccani.",
+  "treccani.search_label": "Cari:",
+  "treccani.sections_label": "Bacaan:",
+  "treccani.title": "Ensiklopedia Treccani"
+}

@@ -438,6 +438,7 @@ fn help_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> L
                         Language::Russian => include_str!("../../guida_ru.txt").to_string(),
                         Language::Chinese => include_str!("../../guida_zh.txt").to_string(),
                         Language::Hindi => include_str!("../../guida_hi.txt").to_string(),
+                        Language::Indonesian => include_str!("../../guida_id.txt").to_string(),
                     },
                     HelpWindowKind::Changelog => changelog_content(init.language),
                     HelpWindowKind::UpdateChangelog => {
@@ -607,6 +608,7 @@ fn changelog_content(language: Language) -> String {
         Language::Italian => include_str!("../../CHANGELOG_IT.md").to_string(),
         Language::German => include_str!("../../CHANGELOG_DE.md").to_string(),
         Language::English => include_str!("../../CHANGELOG.md").to_string(),
+        Language::Indonesian => include_str!("../../CHANGELOG_ID.md").to_string(),
         Language::Ukrainian => include_str!("../../CHANGELOG_UK.md").to_string(),
         Language::Hindi => include_str!("../../CHANGELOG-HI.txt").to_string(),
         Language::Spanish => include_str!("../../CHANGELOG_ES.md").to_string(),
@@ -661,6 +663,7 @@ fn donations_content(language: Language) -> String {
         Language::Russian => DONATIONS_RU.to_string(),
         Language::Chinese => DONATIONS_ZH.to_string(),
         Language::Hindi => DONATIONS_EN.to_string(),
+        Language::Indonesian => include_str!("../../donations_id.txt").to_string(),
     }
 }
 

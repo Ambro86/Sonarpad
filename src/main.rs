@@ -2078,6 +2078,7 @@ fn dictionary_cache_key(language: Language, pref: &str, word: &str) -> String {
         Language::Russian => "ru",
         Language::Chinese => "zh",
         Language::Hindi => "hi",
+        Language::Indonesian => "id",
     };
     format!(
         "{}|{}|{}",
@@ -8255,6 +8256,7 @@ fn whisper_audio_language_from_setting(code: &str, fallback: Language) -> Langua
         "ru" => Language::Russian,
         "zh" => Language::Chinese,
         "hi" => Language::Hindi,
+        "id" => Language::Indonesian,
         _ => fallback,
     }
 }
@@ -9160,6 +9162,7 @@ fn dictation_language_name(language: Language) -> &'static str {
         Language::Russian => "ru",
         Language::Chinese => "zh",
         Language::Hindi => "hi",
+        Language::Indonesian => "id",
     }
 }
 

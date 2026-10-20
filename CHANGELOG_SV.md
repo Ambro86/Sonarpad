@@ -5,6 +5,7 @@ Version 0.9.18 – 2026-10-16
 1. Klipp mediefil har lagts till under Verktyg → Multimedia: guidad och avancerad ljud- och videoredigering, förhandslyssning, exakt justering och återställning av borttagna delar. Uppspelningen hoppar över tillämpade klipp. Videorotation och extra ljudspår med justerbara volymer och upprepning stöds. Sparande med verkligt förlopp och möjlighet att avbryta använder medföljande FFmpeg-bibliotek utan externa program; talade instruktioner och tillgängliga kontroller.
 2. Ett kommandoområde har lagts till för klippning av mediefiler, där tangentbordskommandon kan användas utan Alt eller Ctrl. F1 läser upp listan över tillgängliga tangenter.
 3. Förbättrad uppspelning av DAISY-böcker: nästa kapitel startar automatiskt och hopp framåt och bakåt med piltangenterna fungerar över kapitelgränser. Underavsnitt upprepas inte och meddelandet om avslutad läsning hörs först i slutet av boken.
+4. Indonesiska (Bahasa Indonesia) har lagts till, med gränssnitt, användarguide och översättningar för de senaste medieverktygen. Tack till Muhammad för översättningen.
 
 Version 0.9.17 – 2026-10-15
 

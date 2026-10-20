@@ -5,6 +5,7 @@ Version 0.9.18 – 2026-10-16
 1. Unter Werkzeuge → Multimedia wurde Mediendatei schneiden hinzugefügt: geführter und erweiterter Audio-/Videoschnitt, Schnittvorschau, genaue Anpassung und Wiederherstellung gelöschter Teile. Die Wiedergabe überspringt angewendete Schnitte. Videodrehung und zusätzliche Audiospur mit Lautstärkeregelung und Wiederholung. Speichern mit echtem Fortschritt und Abbruch über die mitgelieferten FFmpeg-Bibliotheken, ohne externe Programme; gesprochene Anleitung und zugängliche Bedienelemente.
 2. Befehlsbereich zum Schneiden von Mediendateien hinzugefügt: Schnittbefehle lassen sich ohne Alt oder Strg über die Tastatur verwenden. F1 liest die verfügbaren Tasten vor.
 3. Wiedergabe von DAISY-Büchern verbessert: Das nächste Kapitel startet automatisch, und das Vor- und Zurückspringen mit den Pfeiltasten funktioniert über Kapitelgrenzen hinweg. Unterabschnitte werden nicht wiederholt; die Ansage zum Leseende erfolgt erst am Ende des Buches.
+4. Indonesisch (Bahasa Indonesia) hinzugefügt, einschließlich Oberfläche, Benutzerhandbuch und Übersetzungen für die neuesten Medienwerkzeuge. Vielen Dank an Muhammad für die Übersetzung.
 
 Version 0.9.17 – 2026-10-15
 

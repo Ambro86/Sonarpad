@@ -7,6 +7,7 @@ use std::sync::OnceLock;
 // the executable so language and territory names never depend on an online
 // translation service.
 const DISPLAY_NAMES_JSON: &str = include_str!("locale_display_names.json");
+// Indonesian display names: Unicode CLDR 47.0.0, cldr-localenames-full/main/id.
 const LANGUAGE_CODE_ALIASES_JSON: &str = include_str!("language_code_aliases.json");
 const LANGUAGE_NAME_ALIASES_JSON: &str = include_str!("language_name_aliases.json");
 
@@ -52,6 +53,7 @@ pub fn app_locale(language: Language) -> &'static str {
         Language::Russian => "ru",
         Language::Chinese => "zh",
         Language::Hindi => "hi",
+        Language::Indonesian => "id",
     }
 }
 
@@ -550,6 +552,7 @@ mod tests {
             Language::Russian,
             Language::Chinese,
             Language::Hindi,
+            Language::Indonesian,
         ] {
             assert!(language_name(language, "ace").is_some());
             assert!(language_name(language, "en-us").is_some());
@@ -573,6 +576,27 @@ mod tests {
         assert_eq!(
             territory_name(Language::Vietnamese, "IT").as_deref(),
             Some("Italy")
+        );
+    }
+}
+
+#[cfg(test)]
+mod indonesian_tests {
+    use super::*;
+
+    #[test]
+    fn indonesian_language_and_country_names_are_embedded() {
+        assert_eq!(
+            language_name(Language::Indonesian, "en").as_deref(),
+            Some("Inggris")
+        );
+        assert_eq!(
+            language_name(Language::Indonesian, "de").as_deref(),
+            Some("Jerman")
+        );
+        assert_eq!(
+            territory_name(Language::Indonesian, "US").as_deref(),
+            Some("Amerika Serikat")
         );
     }
 }

@@ -1,0 +1,229 @@
+Panduan Program
+
+Berkas:
+Baru: Membuat dokumen baru (Ctrl+N).
+Buka: Membuka berkas teks, PDF, EPUB, MP3, dan format lain yang didukung (Ctrl+O).
+Simpan: Menyimpan dokumen (Ctrl+S).
+Simpan Sebagai: Menyimpan dengan nama baru.
+Simpan Semua: Menyimpan semua dokumen (Ctrl+Shift+S).
+Berkas Terbaru: Membuka berkas yang baru digunakan.
+
+Berkas Multimedia:
+Saat Anda membuka berkas multimedia (MP3, WAV, MP4, AVI), Sonarpad menjadi pemutar audio.
+Tombol pemutaran:
+- SPASI: Putar / Jeda.
+- PANAH KANAN: Maju 1 menit.
+- PANAH KIRI: Mundur 1 menit.
+- PANAH ATAS: Naikkan volume.
+- PANAH BAWAH: Turunkan volume.
+- +: Percepat pemutaran.
+- -: Perlambat pemutaran.
+- SHIFT +: Naikkan nada.
+- SHIFT -: Turunkan nada.
+- CTRL+I: Umumkan waktu pemutaran.
+- CTRL+T: Ke waktu tertentu.
+- CTRL+B: Sisipkan penanda pada waktu saat ini.
+
+Memisahkan media saat ini:
+Saat berkas multimedia lokal terbuka, perintah Pisahkan media tersedia di menu Pemutaran.
+Anda dapat memisahkan berkas dengan dua cara:
+- Menjadi beberapa bagian: tentukan jumlah bagian, dari 2 hingga 999.
+- Berdasarkan waktu: tentukan durasi setiap bagian dalam format detik, mm:ss, atau hh:mm:ss.
+Fitur ini tersedia untuk berkas lokal, seperti MP3, MP4, dan format lain yang didukung.
+Selama pemisahan, Sonarpad menampilkan persentase progres.
+Setelah proses selesai, berkas hasilnya disimpan di folder yang ditunjukkan program.
+
+Edit:
+Urungkan: Membatalkan operasi terakhir (Ctrl+Z).
+Potong: Menghapus teks yang dipilih dan menyalinnya ke papan klip (Ctrl+X).
+Salin: Menyalin teks yang dipilih ke papan klip (Ctrl+C).
+Tempel: Menempelkan isi papan klip ke dokumen (Ctrl+V).
+Pilih Semua: Memilih seluruh teks (Ctrl+A).
+Cari: Mencari teks dalam dokumen (Ctrl+F).
+Cari dalam Berkas: Mencari teks di beberapa berkas (Ctrl+Shift+F).
+Cari Berikutnya: Mencari kemunculan berikutnya (F3).
+Ganti: Mencari dan mengganti teks (Ctrl+H).
+Normalkan Spasi: Menghapus spasi di awal dan akhir baris serta merapikan spasi yang berulang (Ctrl+Shift+Enter).
+Gabungkan Baris: Menggabungkan baris dalam paragraf atau teks yang dipilih (Ctrl+Shift+J).
+Sisipkan Pemisah Baris: Menata ulang baris dalam paragraf atau teks yang dipilih (Ctrl+Shift+H).
+Hapus Tag Markdown: Menghapus tag Markdown (Ctrl+Shift+M).
+Urutkan Item: Mengurutkan baris paragraf atau teks yang dipilih (Alt+Shift+O).
+Pertahankan Item Unik: Menyisakan satu salinan dari setiap baris yang sama dalam paragraf atau teks yang dipilih (Alt+Shift+K).
+Balik Urutan Item: Membalik urutan baris dalam paragraf atau teks yang dipilih (Alt+Shift+Z).
+Kutip Baris: Menambahkan awalan pada baris dalam paragraf atau teks yang dipilih (Ctrl+Q).
+Hapus Kutipan Baris: Menghapus awalan dari baris dalam paragraf atau teks yang dipilih (Ctrl+Shift+Q).
+Statistik Teks: Menampilkan jumlah karakter, kata, dan baris untuk teks yang dipilih atau seluruh dokumen (Alt+Y).
+Navigasi Pemeriksaan Ejaan: F7 untuk kesalahan sebelumnya, F8 untuk kesalahan berikutnya.
+
+Tampilan:
+Tampilkan Suara di Editor: Menampilkan sistem suara, daftar suara, dan filter multibahasa.
+Tampilkan Suara Favorit: Menampilkan daftar suara favorit di editor.
+Warna Teks: Mengubah warna teks, termasuk warna terang dan gelap.
+Ukuran Teks: Mengubah ukuran teks (kecil, normal, besar, ekstra besar, ekstra ekstra besar).
+Saat daftar suara terlihat, tekan Tab untuk memindahkan fokus antara editor dan kontrol, atau Shift+Tab untuk bergerak ke arah sebaliknya.
+Untuk menambahkan atau menghapus suara dari favorit, gunakan Tab untuk menuju daftar suara, lalu gunakan tombol Aplikasi atau tombol kanan tetikus. Dari daftar suara favorit, Anda juga dapat menekan tombol Aplikasi untuk menghapus suara yang sudah ditambahkan.
+Pintasan keyboard: Tekan F9 dan F10 untuk berpindah suara selama pembacaan, bergiliran di antara suara favorit.
+
+Penanda:
+Sisipkan Penanda: Menyimpan posisi kursor atau waktu buku audio saat ini (Ctrl+B).
+Kelola Penanda: Melihat, membuka, atau menghapus penanda tersimpan. Saat membuka berkas yang memiliki penanda, posisi kursor atau pemutaran akan dilanjutkan secara otomatis dari penanda pertama yang tersedia.
+
+Suara dan Audio:
+Pembacaan: F5 untuk Mulai Membaca, F4 untuk Jeda/Lanjutkan, F6 untuk Hentikan Pembacaan.
+Kalimat sebelumnya: Shift+F5 menuju kalimat sebelumnya selama pembacaan.
+Kalimat berikutnya: Ctrl+F5 menuju kalimat berikutnya selama pembacaan.
+Favorit selama pembacaan: F9 untuk suara favorit sebelumnya, F10 untuk suara favorit berikutnya.
+Rekam Buku Audio: Membuat berkas MP3 dari teks saat ini (Ctrl+R).
+Buku Audio Massal: Mengonversi daftar berkas menjadi buku audio (Ctrl+Shift+B).
+Rekam Podcast: Merekam podcast dari mikrofon dan/atau audio sistem (Ctrl+Shift+R).
+Konversi media di menu Alat, Multimedia: Mengubah format berkas audio atau video (Ctrl+Shift+A).
+Jalankan Berkas dengan Interpreter di menu Berkas: Menjalankan berkas saat ini menggunakan program penerjemah perintah yang dipilih di Opsi (Ctrl+Shift+F5).
+
+Alat:
+Buku Audio Massal di menu Suara dan Audio: Membuka jendela untuk mengonversi daftar berkas atau seluruh folder menjadi buku audio.
+- Tambahkan berkas/folder ke antrean.
+- Pilih folder tujuan dan format (MP3 atau WAV).
+- Atur opsi pembuatan subfolder dan pencegahan penimpaan.
+- Tekan Mulai untuk memproses semuanya di latar belakang.
+Suara & Kamus: Membuka kamus pengucapan untuk mengatur cara kata dibacakan. Gunakan Panah Atas/Bawah untuk menelusuri daftar.
+Tab memindahkan fokus ke tombol "Tambah Entri ke Kamus", yang dapat diaktifkan dengan Enter atau Spasi.
+Di jendela tambah/edit: masukkan "Kata Asli", lalu tekan Tab ke "Kata Pengganti", kemudian pilih OK atau Batal (Enter/Spasi). ESC membatalkan.
+Dalam daftar, Tab memindahkan fokus ke "Edit Entri" dan "Hapus Entri yang Dipilih".
+Penggantian kata dalam kamus diterapkan selama pembacaan dan pembuatan buku audio, serta disimpan secara otomatis.
+Impor transkrip YouTube: Tempel URL, pilih bahasa, lalu impor teks ke editor (Ctrl+Y). Penanda waktu dapat disertakan.
+Cari dan Impor dari Wikipedia: Cari artikel di Wikipedia dan impor teksnya ke editor (Alt+Shift+W).
+Cari di Kamus: Mencari definisi dan terjemahan kata di Wiktionary melalui internet (Alt+Shift+D).
+Putar Audio Streaming (Alt+Shift+S): Memutar audio dari situs streaming seperti YouTube, memungkinkan pemilihan format dan kualitas, serta mendengarkan tanpa mengunduh, misalnya untuk radio daring.
+
+Radio dari Seluruh Dunia (Alt+Shift+R): Membuka jendela untuk mencari dan mendengarkan stasiun radio daring dari berbagai negara. Anda dapat mencari berdasarkan nama, negara, bahasa, dan genre. Dari daftar hasil, tekan Enter untuk memutar stasiun yang dipilih. Tambahkan stasiun ke favorit agar lebih mudah ditemukan nanti. Sonarpad juga memungkinkan Anda menambahkan stasiun radio lokal ke basis data bersama program agar pengguna lain dapat menemukan dan mendengarkannya. Saat menambahkan stasiun, Anda harus memasukkan setidaknya nama radio dan alamat streaming.
+
+Rute dan Navigasi (Alt+Shift+N): Membuka jendela untuk menghitung rute antara dua alamat. Masukkan titik awal dan tujuan, lalu pilih cara perjalanan: berjalan kaki, bersepeda, berkendara, atau kursi roda. Pilih jenis rute tercepat atau terpendek. Untuk rute berkendara, Anda juga dapat memilih untuk menghindari jalan bebas hambatan, jalan berbayar, atau keduanya. Anda dapat mengaktifkan opsi untuk menyertakan wilayah yang dilalui dalam hasil. Setelah perhitungan selesai, Sonarpad menampilkan rute utama dan, jika tersedia, rute alternatif. Rute diimpor ke editor sebagai teks yang memuat titik awal, tujuan, jarak, perkiraan durasi, dan petunjuk arah langkah demi langkah. Jika peta rute tersedia, Anda dapat menyimpannya sebagai gambar PNG melalui menu Berkas, Simpan gambar.
+
+Terminal Aksesibel: Membuka jendela untuk menjalankan perintah teks dengan keluaran yang dapat dibaca pembaca layar (Ctrl+Shift+T).
+Pintasan: Alt+I memfokuskan masukan, Alt+O memfokuskan keluaran, Tab/Shift+Tab berpindah antara masukan, keluaran, dan opsi.
+Enter mengirim masukan. Ctrl+C menyalin keluaran atau mengirim Ctrl+C ke program. Ctrl+L membersihkan keluaran setelah konfirmasi.
+Opsi terminal: gulir otomatis, hapus kode ANSI, umumkan baris baru, bunyi bip setelah tidak aktif selama 1 detik, dan cegah mode tidur.
+Pilihan program: Command Prompt (cmd.exe), PowerShell, Codex CLI (melalui Opsi).
+
+RSS / Artikel: Mengumpulkan artikel dari sumber berita atau situs. Tambahkan sumber, buka daftar artikelnya, lalu tekan Enter untuk memasukkan artikel ke editor.
+Di jendela RSS, pilih umpan atau situs dan tekan Delete untuk menghapusnya dari pustaka.
+Dari menu konteks umpan atau situs, Anda dapat mengedit atau menghapus sumber RSS atau situs.
+Setelah mengimpor artikel, tekan Esc untuk kembali ke daftar RSS.
+Podcast: Membuka jendela Podcast untuk mencari dan mengelola langganan.
+Dalam daftar episode, tekan Enter untuk memutar episode.
+Selama pemutaran, Esc menghentikan podcast dan kembali ke pustaka.
+
+Deskripsi Audio dengan AI:
+Dengan fitur ini, Anda dapat membuat narasi yang menjelaskan kejadian di layar untuk berbagai konten video. Sebagai seseorang yang menyukai deskripsi audio, saya sangat peduli terhadap fitur ini. Saya merilisnya untuk umum karena kualitasnya sudah mencapai tingkat yang saya anggap memuaskan. Ada pula layanan berbayar yang menawarkan fitur serupa; jika Sonarpad bermanfaat bagi Anda, saya mengundang Anda untuk mendukung pekerjaan saya. Fitur ini juga telah diuji dalam penggunaan nyata dengan ratusan film dan serial.
+
+Masalah lain yang ditangani Sonarpad berkaitan dengan konten yang dianggap mengandung kekerasan atau sensitif oleh Gemini. Beberapa metode mungkin menolak mendeskripsikan seluruh adegan, terkadang karena kesalahan deteksi. Sonarpad mencoba menangani kasus tersebut dengan meminta Gemini merumuskan deskripsi yang sesuai dengan kebijakannya: jika suatu detail tidak dapat dijelaskan secara eksplisit, detail itu dihilangkan atau disampaikan dengan lebih halus, alih-alih mengabaikan seluruh adegan.
+
+Fitur pentingnya adalah pengelolaan bagian hening: suara sintesis tidak boleh menimpa dialog. Karena itu, sebagai langkah pertama, Sonarpad menganalisis audio dan mencari waktu ketika deskripsi audio dapat dibacakan tanpa mengganggu pengalaman mendengarkan.
+
+Fitur ini telah diuji dengan ratusan film dan serial. Seiring waktu, banyak ketidakakuratan yang dapat dibuat Gemini telah diperbaiki, misalnya sinkronisasi antara kejadian di layar dan deskripsinya. Tentu saja, hasilnya juga bergantung pada layanan eksternal, sehingga saya tidak dapat menjamin bahwa setiap deskripsi dalam setiap film akan selalu sempurna. Saya terus berupaya meningkatkan Sonarpad, termasuk fitur ini.
+
+Saat membuka fitur ini, Anda akan menemukan kolom Berkas media lokal yang awalnya kosong, diikuti tombol Pilih video. Aktifkan tombol tersebut dengan Spasi untuk memilih video yang ingin diberi deskripsi audio.
+
+Setelah video dipilih, Sonarpad mengisi lokasi Berkas MP3 tujuan secara otomatis. Gunakan Tab untuk menuju kolom ini dan mengubah lokasinya, atau gunakan tombol Ubah folder tujuan.
+
+Tekan Tab lagi untuk mengubah bahasa deskripsi audio. Pilihannya mengikuti Sonarpad dan mencakup semua bahasa yang saat ini didukung program.
+
+Berikutnya adalah Tingkat perincian deskripsi audio. Nilai bawaannya Terperinci karena, berdasarkan pengujian saya, pilihan ini memberikan hasil yang baik, terutama pada film dengan adegan hening yang panjang. Anda tetap dapat memilih tingkat lain yang tersedia.
+
+Dengan Tab, Anda selanjutnya akan menemukan Aktifkan jeda tambahan. Opsi ini nonaktif secara bawaan. Opsi ini dapat berguna untuk film dengan banyak dialog, adegan bertempo cepat, atau sangat sedikit ruang kosong untuk pembacaan deskripsi audio. Dalam kondisi khusus, Sonarpad dapat menjeda film sejenak untuk menyisipkan deskripsi yang tidak muat dalam bagian hening.
+
+Kotak centang Coba kenali tokoh dan gunakan nama mereka memungkinkan Sonarpad mencoba menyebutkan nama tokoh dalam deskripsi audio. Jika dinonaktifkan, deskripsi tetap lebih umum, misalnya “pria itu mendekat” atau “wanita itu masuk”. Pengenalan ditangani oleh Gemini dan tidak selalu dapat dijamin: tokoh yang mirip, pengambilan gambar yang kurang jelas, atau gambar yang sulit dikenali dapat menyebabkan kekeliruan identitas.
+
+Tekan Tab lagi untuk menemukan Simpan katalog tokoh. Ini sangat berguna saat membuat deskripsi audio serial karena memungkinkan Gemini mempertahankan deskripsi dan identitas tokoh dari satu episode ke episode berikutnya. Jika belum ada katalog, pilih Buat katalog baru dan masukkan namanya di kolom berikutnya, misalnya judul serial.
+
+Sonarpad menyimpan informasi tokoh dalam katalog untuk meningkatkan konsistensi pengenalan. Anda juga dapat menggunakan contoh katalog yang dibuat Sonarpad, menyalinnya ke AI lain, dan meminta AI tersebut melengkapinya dengan deskripsi tokoh serial yang Anda inginkan. Katalog hasilnya harus tetap berformat JSON dan dapat disalin ke Documents\Sonarpad\Audiodescriptions\Catalogs. Dengan cara ini, Anda dapat memulai serial dengan katalog yang sudah disiapkan.
+
+Tekan Tab lagi untuk menemukan Simpan juga proyek untuk pengeditan mendatang. Aktifkan jika Anda ingin meninjau deskripsi audio, memperbaiki deskripsi, atau mengubah suara di kemudian hari.
+
+Kotak centang Buat deskripsi audio pada berkas video asli memungkinkan Anda memperoleh berkas video yang sudah dilengkapi deskripsi audio, bukan hanya berkas MP3. Saat opsi ini aktif, Sonarpad mempertahankan video asli dan menambahkan deskripsi yang dihasilkan ke trek audionya tanpa mengodekan ulang video jika tidak diperlukan. Format bawaannya MP4, tetapi Anda juga dapat memilih MKV di jendela penyimpanan. Berkas video asli tidak pernah ditimpa.
+
+Saat Anda membuat video dengan deskripsi audio secara langsung, jeda tambahan tidak digunakan karena akan mengubah durasi dan sinkronisasi film. Sonarpad hanya menyisipkan deskripsi ke ruang yang tersedia pada trek audio asli.
+
+Kotak centang Pindahkan berkas video ke Keranjang Sampah setelah deskripsi audio selesai berguna jika Anda tidak ingin menyimpan video asli setelah MP3 dengan deskripsi audio dibuat. Opsi ini nonaktif secara bawaan dan tersedia jika penyimpanan proyek tidak diaktifkan, karena proyek yang dapat diedit masih membutuhkan video asli.
+
+Selanjutnya adalah Kunci API Gemini. Kunci API adalah kode akses untuk menggunakan layanan Gemini. Masukkan kunci API Anda di sini. Kunci dapat dibuat secara gratis. Dengan Tab, Anda dapat menuju tombol Dapatkan kunci API Gemini, yang membuka halaman Google di peramban. Setelah masuk dengan akun Anda, Anda dapat membuat kunci. Prosedur ini biasanya sangat cepat.
+
+Setelah kunci API, Anda akan menemukan Model Gemini dan tombol Segarkan daftar model. Dalam kebanyakan kasus, model yang sudah dipilih dapat dibiarkan; segarkan daftar saat ingin memeriksa model yang tersedia untuk kunci Anda.
+
+Tekan Tab lagi untuk menemukan Sistem teks ke suara dan Suara, yang dapat diubah sesuai preferensi Anda.
+
+Berikutnya adalah Edit proyek deskripsi audio. Fitur ini memungkinkan Anda membuka kembali dan mengedit proyek yang sebelumnya disimpan. Penting: untuk mengedit proyek, berkas video asli harus masih tersedia.
+
+Jendela Edit proyek deskripsi audio juga mencakup Analisis ulang segmen. Fitur ini berguna jika satu atau beberapa deskripsi pada bagian film kurang memuaskan dan Anda ingin Gemini menganalisis bagian tersebut lagi tanpa membuat ulang seluruh deskripsi audio.
+
+Pilih deskripsi dari bagian yang ingin ditinjau dan aktifkan Analisis ulang segmen. Sonarpad menganalisis ulang segmen video yang memuat deskripsi tersebut dan mengusulkan teks baru, sambil mempertahankan waktu dan ruang yang tersedia yang sudah disimpan dalam proyek. Setelah analisis ulang selesai, pratinjau suara baru untuk segmen sudah disiapkan: telusuri deskripsi dan tekan Spasi untuk langsung mendengarkannya bersama audio asli.
+
+Deskripsi yang terdampak ditandai sebagai segmen dianalisis ulang. Hasil analisis ulang tetap berupa usulan sampai Anda memilih Terapkan segmen dan ekspor ulang MP3. Setelah itu, Sonarpad menerapkan deskripsi baru ke proyek dan membuat ulang berkas dengan deskripsi audio. Jika Anda tidak menerapkan segmen, proyek tersimpan tidak berubah.
+
+Selanjutnya adalah Lanjutkan deskripsi audio yang terhenti. Sonarpad dirancang agar pekerjaan yang telah selesai tidak hilang: jika koneksi terputus selama pembuatan, Gemini mengalami masalah, atau proses terhenti, Sonarpad menyimpan titik pemulihan progres secara berkala. Dengan fitur ini, Anda dapat melanjutkan pekerjaan yang belum selesai tanpa memulai dari awal.
+
+Terakhir adalah Buat deskripsi audio. Jika Anda belum memasukkan kunci API Gemini yang valid, Sonarpad akan menampilkan kesalahan. Jika semuanya telah dikonfigurasi dengan benar, proses akan dimulai. Durasinya terutama bergantung pada panjang dan kompleksitas video: pemrosesan film panjang dapat memerlukan waktu yang cukup lama.
+
+Ucapan Terima Kasih
+
+Terima kasih saya sampaikan kepada Ömer Yılmaz, pembuat proyek Omni Describer, yang memberikan inspirasi awal untuk mengembangkan fitur deskripsi audio AI Sonarpad. Fitur Sonarpad kemudian dikembangkan dan disempurnakan secara mandiri melalui pengujian ekstensif dengan film dan serial TV.
+
+Opsi
+Jendela Opsi memungkinkan Anda menyesuaikan perilaku Sonarpad. Pengaturan dibagi ke beberapa tab.
+
+Tab Umum
+Bahasa antarmuka: Memilih bahasa program.
+Perilaku Saat Membuka (tab baru / jendela baru): Dengan Tab baru, Anda dapat berpindah antarberkas terbuka menggunakan Ctrl+Tab. Dengan Jendela baru, Anda dapat berpindah antarjendela menggunakan Alt+Tab.
+Periksa pembaruan saat memulai: Memeriksa pembaruan secara otomatis saat program dijalankan.
+Kirim laporan kerusakan anonim: Mengirim laporan kesalahan anonim secara otomatis kepada pembuat program.
+Tambahkan “Buka dengan Sonarpad” ke menu konteks: Menambahkan entri di File Explorer untuk membuka berkas langsung dengan Sonarpad.
+Asosiasi berkas: Membuka dialog Windows untuk mengelola asosiasi berkas yang didukung Sonarpad.
+Proksi jaringan (global): Mengatur server perantara untuk koneksi internet program. Isi hanya jika jaringan Anda memerlukan proksi.
+
+Tab Suara
+Sistem teks ke suara: Memilih layanan untuk membacakan teks. Fitur ini disebut TTS, singkatan dari text-to-speech.
+Suara: Memilih suara untuk membacakan teks. Untuk suara Edge, tersedia kolom kedua untuk memfilter suara menurut bahasa serta opsi “Tampilkan Hanya Suara Multibahasa”.
+Pratinjau suara: Memutar sampel suara yang dipilih.
+Nada, kecepatan, dan volume: Menyesuaikan parameter tersebut.
+Gunakan Suara Lain untuk Dialog: Jika diaktifkan, bagian dialog dapat dibacakan dengan suara lain.
+Suara Dialog (opsional): Menetapkan suara khusus untuk dialog.
+Suara dialog kedua (opsional): Menambahkan suara kedua untuk dialog.
+Jika diaktifkan, Sonarpad dapat menggunakan hingga tiga suara berbeda.
+
+Tab Editor
+Pindah Baris Otomatis di Editor: Menampilkan teks panjang pada baris berikutnya secara otomatis tanpa menambahkan pemisah baris ke dokumen.
+Panjang Baris (Karakter): Mengatur panjang baris saat menggunakan Sisipkan Pemisah Baris di menu Edit, Teks.
+Tanda kutip cerdas: Mengganti tanda kutip lurus secara otomatis dengan tanda kutip tipografis.
+Pemeriksaan ejaan: Mengaktifkan pemeriksa ejaan untuk bahasa saat ini.
+Bahasa terjemahan kamus: Mengatur bahasa tujuan kamus daring.
+Bahasa Wikipedia: Memilih bahasa untuk pencarian Wikipedia.
+
+Tab Audio
+Interval lompatan maju/mundur: Menentukan jumlah detik untuk melompat maju atau mundur selama pemutaran.
+Folder buku audio bawaan: Mengatur folder tujuan buku audio yang dibuat.
+Pemisahan buku audio: Tanpa pemisahan, berdasarkan teks, menjadi sejumlah bagian tertentu, atau berdasarkan durasi.
+Pembacaan takarir: Mengatur pembacaan teks ucapan yang menyertai video. Takarir juga dikenal sebagai subtitle.
+
+Tab RSS dan Podcast
+Batas cache podcast (MB): Menentukan ruang penyimpanan sementara untuk podcast yang diunduh.
+Podcast Index (kunci API / rahasia API): Memasukkan kredensial Podcast Index.
+Konfirmasi penghapusan RSS/Podcast: Menampilkan pesan konfirmasi sebelum menghapus item.
+Pengumuman status belum dibaca/belum diputar: Menunjukkan apakah suatu item sudah dibaca atau diputar.
+Tampilan tanggal/waktu: Menyesuaikan tampilan tanggal dan waktu.
+Salin cepat RSS: Memilih konten yang disalin dengan Ctrl+C.
+
+Tab Pintasan
+Daftar perintah dengan pintasan yang dapat diedit.
+Rekam kombinasi tombol baru.
+Pulihkan pintasan bawaan.
+
+Jendela:
+Dokumen Terbuka...: Menampilkan daftar dokumen yang terbuka.
+Tutup Semua Kecuali Ini: Menutup semua dokumen kecuali yang sedang digunakan.
+Tutup Semua: Menutup semua dokumen yang terbuka.
+
+Bantuan:
+Panduan: Membuka panduan ini (F1).
+Periksa pembaruan: Memeriksa pembaruan yang tersedia (F2).
+Catatan Perubahan: Membuka jendela catatan perubahan.
+Tentang Program: Menampilkan informasi program.

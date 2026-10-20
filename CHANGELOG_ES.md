@@ -5,6 +5,7 @@ Version 0.9.18 – 2026-10-16
 1. Añadido Cortar archivo multimedia en Herramientas → Multimedia: corte guiado y avanzado de audio y vídeo, escucha del corte, ajuste preciso y restauración de partes eliminadas. La reproducción omite los cortes aplicados. Incluye rotación de vídeo y pista de audio adicional con volúmenes ajustables y repetición. Guardado con progreso real y cancelación mediante las bibliotecas FFmpeg incluidas, sin ejecutables externos; instrucciones habladas y controles accesibles.
 2. Añadida un área de comandos en Cortar archivo multimedia para usar órdenes de corte con el teclado sin Alt ni Ctrl. F1 lee la lista de teclas disponibles.
 3. Mejorada la reproducción de libros DAISY: el siguiente capítulo comienza automáticamente y los desplazamientos hacia delante y atrás con las flechas atraviesan los límites entre capítulos. Las subsecciones no se repiten y el anuncio de fin de lectura se escucha solo al terminar el libro.
+4. Añadido el indonesio (Bahasa Indonesia), con interfaz, guía y traducciones de las nuevas herramientas multimedia. Gracias a Muhammad por su contribución a la traducción.
 
 Version 0.9.17 – 2026-10-15
 

@@ -188,6 +188,7 @@ fn language_from_code(code: &str, fallback: Language) -> Language {
         "ru" => Language::Russian,
         "zh" => Language::Chinese,
         "hi" => Language::Hindi,
+        "id" => Language::Indonesian,
         _ => fallback,
     }
 }

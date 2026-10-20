@@ -5,6 +5,7 @@ Version 0.9.18 – 2026-10-16
 1. Aggiunta Taglia file media in Strumenti → Multimedia: taglio guidato e avanzato di audio e video, anteprima delle parti da eliminare, regolazione precisa dei confini e ripristino delle parti eliminate. Riproduci salta i tagli già applicati. Sono disponibili rotazione video e aggiunta di una traccia audio con volumi regolabili e ripetizione. Salvataggio con avanzamento reale e annullamento tramite le librerie FFmpeg incluse, senza eseguibili esterni; istruzioni vocali e comandi accessibili.
 2. Aggiunta un’area comandi in Taglia file media per usare i comandi di taglio da tastiera senza Alt o Ctrl. F1 legge l’elenco dei tasti disponibili.
 3. Migliorata la riproduzione dei libri DAISY: il capitolo successivo parte automaticamente e gli spostamenti avanti e indietro con le frecce attraversano i confini tra capitoli. Le sottosezioni non vengono ripetute e l’annuncio di fine lettura viene pronunciato soltanto al termine del libro.
+4. Aggiunto l’indonesiano (Bahasa Indonesia), con interfaccia, guida e traduzioni aggiornate per i nuovi strumenti multimediali. Grazie a Muhammad per il contributo alla traduzione.
 
 Version 0.9.17 – 2026-10-15
 

@@ -1577,6 +1577,7 @@ fn language_from_combo(combo: HWND) -> Language {
         14 => Language::Russian,
         15 => Language::Chinese,
         16 => Language::Hindi,
+        17 => Language::Indonesian,
         _ => Language::Italian,
     }
 }
@@ -1600,6 +1601,7 @@ fn language_combo_index(language: Language) -> usize {
         Language::Russian => 14,
         Language::Chinese => 15,
         Language::Hindi => 16,
+        Language::Indonesian => 17,
     }
 }
 
@@ -2716,6 +2718,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     let translated = i18n::tr(language, &format!("voice.lang.{key}"));
                     add_combo_item(language_combo, &translated);
                 }
+                add_combo_item(language_combo, "Bahasa Indonesia");
                 SendMessageW(
                     language_combo,
                     CB_SETCURSEL,
