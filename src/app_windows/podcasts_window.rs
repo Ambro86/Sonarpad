@@ -3120,6 +3120,7 @@ fn perform_search(hwnd: HWND, query: &str) {
     if matches!(provider, SearchProvider::PodcastIndex) && podcastindex_auth.is_none() {
         return;
     }
+    let exact_key = podcast_title_key(trimmed);
     let query = percent_encode(trimmed);
     let hwnd_copy = hwnd;
     std::thread::spawn(move || {
@@ -3169,7 +3170,30 @@ fn perform_search(hwnd: HWND, query: &str) {
                     }
                 }
 
+                if !exact_key.is_empty() {
+                    let url = format!(
+                        "https://api.spreaker.com/v2/shows/{}",
+                        percent_encode(&exact_key)
+                    );
+                    match rt.block_on(rss::fetch_url_bytes(&url, fetch_config)) {
+                        Ok(bytes) => match parse_spreaker_exact(&bytes, &exact_key) {
+                            Ok(mut exact) => {
+                                log_debug(&format!(
+                                    "spreaker_exact_search: {} results",
+                                    exact.len()
+                                ));
+                                exact.extend(results);
+                                results = exact;
+                            }
+                            Err(err) => {
+                                log_debug(&format!("spreaker_exact_search_unavailable: {err}"))
+                            }
+                        },
+                        Err(err) => log_debug(&format!("spreaker_exact_search_unavailable: {err}")),
+                    }
+                }
                 dedup_podcast_search_results(&mut results);
+                results.sort_by_key(|item| podcast_title_key(&item.title) != exact_key);
             }
             SearchProvider::PodcastIndex => {
                 let Some((key, secret)) = podcastindex_auth else {
@@ -3288,6 +3312,27 @@ fn itunes_items_to_results(items: Vec<ItunesSearchItem>) -> Vec<PodcastSearchRes
     results
 }
 
+fn podcast_title_key(title: &str) -> String {
+    title
+        .to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
+fn parse_spreaker_exact(
+    bytes: &[u8],
+    key: &str,
+) -> Result<Vec<PodcastSearchResult>, serde_json::Error> {
+    let response: SpreakerShowResponse = serde_json::from_slice(bytes)?;
+    let item = response.response.show;
+    if podcast_title_key(&item.title) != key {
+        return Ok(Vec::new());
+    }
+    Ok(spreaker_items_to_results(vec![item]))
+}
+
 fn spreaker_items_to_results(items: Vec<SpreakerShowItem>) -> Vec<PodcastSearchResult> {
     let mut results = Vec::new();
     for item in items {
@@ -3296,7 +3341,11 @@ fn spreaker_items_to_results(items: Vec<SpreakerShowItem>) -> Vec<PodcastSearchR
         }
         results.push(PodcastSearchResult {
             title: item.title,
-            artist: item.author_name,
+            artist: item
+                .author_name
+                .filter(|name| !name.trim().is_empty())
+                .or_else(|| item.author.and_then(|author| author.fullname))
+                .unwrap_or_default(),
             feed_url: format!(
                 "https://www.spreaker.com/show/{}/episodes/feed",
                 item.show_id
@@ -3308,20 +3357,9 @@ fn spreaker_items_to_results(items: Vec<SpreakerShowItem>) -> Vec<PodcastSearchR
 
 fn dedup_podcast_search_results(results: &mut Vec<PodcastSearchResult>) {
     let mut seen_feed_urls = HashSet::new();
-    let mut seen_titles = HashSet::new();
     results.retain(|result| {
         let feed_key = normalize_podcast_key(&result.feed_url);
-        let title_key = format!(
-            "{}|{}",
-            result.title.trim().to_ascii_lowercase(),
-            result.artist.trim().to_ascii_lowercase()
-        );
-
-        if !feed_key.is_empty() && !seen_feed_urls.insert(feed_key) {
-            return false;
-        }
-
-        seen_titles.insert(title_key)
+        feed_key.is_empty() || seen_feed_urls.insert(feed_key)
     });
 }
 
@@ -5059,7 +5097,24 @@ struct SpreakerShowItem {
     #[serde(default)]
     title: String,
     #[serde(default)]
-    author_name: String,
+    author_name: Option<String>,
+    #[serde(default)]
+    author: Option<SpreakerAuthor>,
+}
+
+#[derive(serde::Deserialize)]
+struct SpreakerAuthor {
+    fullname: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct SpreakerShowResponse {
+    response: SpreakerShowPayload,
+}
+
+#[derive(serde::Deserialize)]
+struct SpreakerShowPayload {
+    show: SpreakerShowItem,
 }
 
 #[derive(serde::Deserialize)]
@@ -12188,5 +12243,63 @@ mod tests {
             ensure_opml_extension(PathBuf::from("Sonarpad Podcast.opml")),
             PathBuf::from("Sonarpad Podcast.opml")
         );
+    }
+}
+
+#[cfg(test)]
+mod spreaker_search_tests {
+    use super::*;
+
+    #[test]
+    fn exact_match_handles_null_author_and_rejects_renamed_show() {
+        let bytes = br#"{"response":{"show":{"show_id":5587296,"title":"Almanacco",
+            "author_name":null,"author":{"fullname":"Radio Taormina"}}}}"#;
+        let found = parse_spreaker_exact(bytes, "almanacco").unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].artist, "Radio Taormina");
+        assert!(found[0].feed_url.contains("/5587296/"));
+        assert!(
+            parse_spreaker_exact(bytes, "different-title")
+                .unwrap()
+                .is_empty()
+        );
+        assert!(parse_spreaker_exact(b"not json", "almanacco").is_err());
+    }
+
+    #[test]
+    fn duplicate_feeds_removed_but_distinct_homonyms_kept() {
+        let mut results = vec![];
+        for id in [1, 2, 1] {
+            results.extend(spreaker_items_to_results(vec![SpreakerShowItem {
+                show_id: id,
+                title: "Almanacco".into(),
+                author_name: None,
+                author: None,
+            }]));
+        }
+        dedup_podcast_search_results(&mut results);
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            podcast_title_key(" L'Almanacco del GIORNO "),
+            "l-almanacco-del-giorno"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires live Spreaker service"]
+    fn live_almanacco_exact_lookup() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let key = podcast_title_key("Almanacco");
+        let url = format!("https://api.spreaker.com/v2/shows/{}", percent_encode(&key));
+        let bytes = rt
+            .block_on(rss::fetch_url_bytes(&url, Default::default()))
+            .unwrap();
+        let found = parse_spreaker_exact(&bytes, &key).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].artist, "Radio Taormina");
+        let feed = rt
+            .block_on(rss::fetch_url_bytes(&found[0].feed_url, Default::default()))
+            .unwrap();
+        assert!(String::from_utf8_lossy(&feed).contains("<enclosure"));
     }
 }
