@@ -1,0 +1,37 @@
+name: Indonesian Windows UI test
+
+on:
+  push:
+    branches: [codex/indonesian-language]
+    paths:
+      - 'scripts/check_indonesian_ui.py'
+      - '.github/workflows/indonesian-ui-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  test-built-application:
+    if: github.repository == 'muhammadGagah/Sonarpad'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify sources still match the tested binary
+        run: |
+          git diff --exit-code 7465f08dda1f2f156a9632198c7c01d48a6c1835 -- src i18n Cargo.toml Cargo.lock build.rs .cargo guida_id.txt donations_id.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: Sonarpad-Indonesian-test-7465f08dda1f2f156a9632198c7c01d48a6c1835
+          run-id: 39373589127
+          github-token: ${{ github.token }}
+          path: test-binary
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Select Indonesian, verify menus, and restart application
+        run: python scripts/check_indonesian_ui.py test-binary/sonarpad.exe

@@ -1,0 +1,21 @@
+Donasi
+Sonarpad awalnya dibuat untuk memenuhi kebutuhan pribadi, tetapi seiring waktu terus berkembang. Pengembangannya memerlukan pekerjaan berkelanjutan untuk meningkatkan fitur, memperbaiki kesalahan, mencari ide baru, dan menguji semua fungsi dengan saksama.
+Jika program ini bermanfaat dan Anda ingin mendukung pengembangannya, Anda dapat memberikan donasi.
+
+PayPal
+Anda dapat berdonasi melalui PayPal menggunakan tautan berikut:
+https://www.paypal.me/ambrogio86
+Jika memungkinkan, sertakan “Sonarpad” sebagai catatan pembayaran.
+
+Transfer bank
+Anda juga dapat berdonasi melalui transfer bank ke rekening atas nama Ambrogio Riili.
+IBAN: IT77W0306901020100000064149
+Jika memungkinkan, gunakan keterangan pembayaran yang jelas, misalnya “Sonarpad”.
+Setiap pendukung proyek akan disebutkan dalam program dan repositori GitHub, kecuali jika mereka memilih untuk tetap anonim atau menggunakan nama panggilan.
+
+Terima kasih kepada Jiri Holzinger dan Paola Vagata atas kontribusi mereka.
+Untuk terjemahan bahasa Vietnam, terima kasih kepada Anh Đức Nguyễn.
+Untuk terjemahan bahasa Ceko, terima kasih kepada Radek Žalud dan Jiri Holzinger.
+Untuk terjemahan bahasa Spanyol, terima kasih kepada Arturo Fernandez Rivas.
+Untuk terjemahan bahasa Serbia, terima kasih kepada Mila Kuran.
+Untuk terjemahan bahasa Ukraina, terima kasih kepada Ivan Shtefuriak.

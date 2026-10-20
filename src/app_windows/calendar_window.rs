@@ -2512,6 +2512,7 @@ fn localized_date_names(
         Language::Russian => (&WEEKDAYS_RU, &MONTHS_RU),
         Language::Chinese => (&WEEKDAYS_ZH, &MONTHS_ZH),
         Language::Hindi => (&WEEKDAYS_HI, &MONTHS_HI),
+        Language::Indonesian => (&WEEKDAYS_ID, &MONTHS_ID),
         Language::German => (&WEEKDAYS_DE, &MONTHS_DE),
         Language::English => (&WEEKDAYS_EN, &MONTHS_EN),
     }
@@ -2536,6 +2537,7 @@ fn language_code(language: Language) -> &'static str {
         Language::Russian => "ru",
         Language::Chinese => "zh",
         Language::Hindi => "hi",
+        Language::Indonesian => "id",
     }
 }
 
@@ -2889,6 +2891,23 @@ const MONTHS_DE: [&str; 12] = [
     "Oktober",
     "November",
     "Dezember",
+];
+const WEEKDAYS_ID: [&str; 7] = [
+    "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu",
+];
+const MONTHS_ID: [&str; 12] = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
 ];
 const WEEKDAYS_EN: [&str; 7] = [
     "Monday",

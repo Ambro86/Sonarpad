@@ -18,6 +18,7 @@ const UK_JSON: &str = include_str!("../i18n/uk.json");
 const LT_JSON: &str = include_str!("../i18n/lt.json");
 const RU_JSON: &str = include_str!("../i18n/ru.json");
 const ZH_JSON: &str = include_str!("../i18n/zh.json");
+const ID_JSON: &str = include_str!("../i18n/id.json");
 const HI_JSON: &str = include_str!("../i18n/hi.json");
 const TRECCANI_IT_JSON: &str = include_str!("../i18n/features/treccani_it.json");
 const TV_IT_JSON: &str = include_str!("../i18n/features/tv/it.json");
@@ -198,6 +199,7 @@ fn map_for_language(language: Language) -> &'static HashMap<String, String> {
     static LT: OnceLock<HashMap<String, String>> = OnceLock::new();
     static RU: OnceLock<HashMap<String, String>> = OnceLock::new();
     static ZH: OnceLock<HashMap<String, String>> = OnceLock::new();
+    static ID: OnceLock<HashMap<String, String>> = OnceLock::new();
     static HI: OnceLock<HashMap<String, String>> = OnceLock::new();
     match language {
         Language::Italian => IT.get_or_init(|| load_map(IT_JSON)),
@@ -215,6 +217,7 @@ fn map_for_language(language: Language) -> &'static HashMap<String, String> {
         Language::Russian => RU.get_or_init(|| load_map(RU_JSON)),
         Language::Chinese => ZH.get_or_init(|| load_map(ZH_JSON)),
         Language::Hindi => HI.get_or_init(|| load_map(HI_JSON)),
+        Language::Indonesian => ID.get_or_init(|| load_map(ID_JSON)),
         Language::German => DE.get_or_init(|| load_map(DE_JSON)),
         Language::English => EN.get_or_init(|| load_map(EN_JSON)),
     }
@@ -336,6 +339,23 @@ pub fn tr_f(language: Language, key: &str, args: &[(&str, &str)]) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn indonesian_settings_roundtrip_loads_embedded_translation() {
+        let language: crate::settings::Language = serde_json::from_str("\"id\"").unwrap();
+        assert_eq!(language, crate::settings::Language::Indonesian);
+        assert_eq!(serde_json::to_string(&language).unwrap(), "\"id\"");
+        let source: std::collections::HashMap<String, String> =
+            serde_json::from_str(super::ID_JSON).unwrap();
+        assert_eq!(
+            super::tr(language, "options.cancel"),
+            source["options.cancel"]
+        );
+        assert_ne!(
+            super::tr(language, "options.cancel"),
+            super::tr(crate::settings::Language::English, "options.cancel")
+        );
+    }
+
     use super::{dialog_filter_pairs, parse_dialog_filter_pairs};
     use crate::settings::Language;
 
@@ -394,6 +414,7 @@ mod tests {
             Language::Russian,
             Language::Chinese,
             Language::Hindi,
+            Language::Indonesian,
         ];
         for language in languages {
             let pairs = dialog_filter_pairs(language, "dialog.open_filter");

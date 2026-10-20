@@ -234,6 +234,7 @@ fn default_route_country(language: Language) -> &'static str {
         Language::Russian => "ru",
         Language::Chinese => "cn",
         Language::Hindi => "in",
+        Language::Indonesian => "id",
     }
 }
 

@@ -15,9 +15,9 @@ class AudioDescriptionLocalizationTests(unittest.TestCase):
             key for key in self.english if key.startswith("audio_description.")
         )
 
-    def test_all_17_locales_contain_every_audio_description_key(self):
+    def test_all_18_locales_contain_every_audio_description_key(self):
         locale_files = sorted(I18N_DIR.glob("*.json"))
-        self.assertEqual(len(locale_files), 17)
+        self.assertEqual(len(locale_files), 18)
         for path in locale_files:
             with self.subTest(locale=path.stem):
                 values = json.loads(path.read_text(encoding="utf-8"))

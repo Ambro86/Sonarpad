@@ -21,6 +21,7 @@ mod settings {
         Russian,
         Chinese,
         Hindi,
+        Indonesian,
     }
 }
 
@@ -44,7 +45,9 @@ mod i18n {
                 Language::Russian => "Без названия".to_string(),
                 Language::Chinese => "无标题".to_string(),
                 Language::Hindi => "कोई शीर्षक नहीं".to_string(),
-                Language::Ukrainian | Language::English => "No Title".to_string(),
+                Language::Indonesian | Language::Ukrainian | Language::English => {
+                    "No Title".to_string()
+                }
             },
             "reader.external_link" => match language {
                 Language::Italian => "Link esterno:\n{url}".to_string(),
@@ -63,7 +66,9 @@ mod i18n {
                 Language::Russian => "Внешняя ссылка:\n{url}".to_string(),
                 Language::Chinese => "外部链接：\n{url}".to_string(),
                 Language::Hindi => "बाहरी लिंक:\n{url}".to_string(),
-                Language::Ukrainian | Language::English => "External link:\n{url}".to_string(),
+                Language::Indonesian | Language::Ukrainian | Language::English => {
+                    "External link:\n{url}".to_string()
+                }
             },
             _ => key.to_string(),
         }

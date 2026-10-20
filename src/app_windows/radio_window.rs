@@ -1520,6 +1520,7 @@ fn app_language_code(language: Language) -> &'static str {
         Language::Russian => "ru",
         Language::Chinese => "zh",
         Language::Hindi => "hi",
+        Language::Indonesian => "id",
     }
 }
 
@@ -2542,6 +2543,7 @@ fn default_country_code(language: Language) -> &'static str {
         Language::Russian => "ru",
         Language::Chinese => "cn",
         Language::Hindi => "in",
+        Language::Indonesian => "id",
         _ => "it",
     }
 }

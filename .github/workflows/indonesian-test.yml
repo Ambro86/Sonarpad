@@ -1,0 +1,80 @@
+name: Indonesian standalone test build
+
+on:
+  push:
+    branches: [codex/indonesian-language]
+    paths-ignore:
+      - 'scripts/check_indonesian_ui.py'
+      - '.github/workflows/indonesian-ui-test.yml'
+      - '.github/workflows/indonesian-test.yml'
+      - 'TRANSLATION_ID.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: indonesian-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    if: github.repository == 'muhammadGagah/Sonarpad'
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      CARGO_TERM_COLOR: always
+      SONARPAD_RELEASE_TAG: indonesian-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Validate Indonesian resources
+        run: python scripts/check_indonesian_translation.py
+      - name: Format Rust and save review patch
+        shell: pwsh
+        run: |
+          cargo fmt
+          git diff --output=rustfmt.patch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rustfmt-review
+          path: rustfmt.patch
+      - name: Python tests
+        run: |
+          python -m pip install -r bridge/requirements-test.txt
+          python bridge/run_audio_description_tests.py
+      - name: Configure vcpkg
+        shell: pwsh
+        run: |
+          "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+          "FFMPEG_DIR=${{ github.workspace }}\vcpkg_installed\x64-windows" >> $env:GITHUB_ENV
+      - uses: actions/cache@v4
+        id: vcpkg-cache
+        with:
+          path: |
+            ${{ github.workspace }}\vcpkg_installed
+            C:\vcpkg\downloads
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+      - name: Install native dependencies
+        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+        run: vcpkg install --triplet x64-windows --x-install-root="${{ github.workspace }}\vcpkg_installed"
+      - name: Rust tests
+        run: cargo test --locked --all --features standalone
+      - name: Build standalone executable
+        run: cargo build --locked --release --features standalone
+      - name: Verify runtime startup
+        run: |
+          python -m pip install pefile==2024.8.26
+          python scripts/check_runtime_startup.py target/release/sonarpad.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sonarpad-Indonesian-test-${{ github.sha }}
+          path: target/release/sonarpad.exe
+          if-no-files-found: error
+          retention-days: 14

@@ -55,7 +55,7 @@ class WindowsWhisperAudioLanguageOptionTests(unittest.TestCase):
 
     def test_every_interface_language_has_audio_language_label(self):
         files = sorted((ROOT / "i18n").glob("*.json"))
-        self.assertEqual(17, len(files))
+        self.assertEqual(18, len(files))
         for path in files:
             data = json.loads(path.read_text(encoding="utf-8"))
             self.assertIn("options.label.whisper_audio_language", data, path.name)
