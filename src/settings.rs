@@ -902,6 +902,8 @@ pub struct AppSettings {
     #[serde(default)]
     pub audio_description_after_tv_recording: bool,
     pub youtube_include_timestamps: bool,
+    #[serde(default)]
+    pub sonarmusic_search_type: String,
     #[serde(default = "default_stream_audio_output_format")]
     pub stream_audio_default_format: String,
     #[serde(default)]
@@ -1402,6 +1404,7 @@ impl Default for AppSettings {
             audio_description_delete_video_after: false,
             audio_description_after_tv_recording: false,
             youtube_include_timestamps: true,
+            sonarmusic_search_type: String::new(),
             stream_audio_default_format: default_stream_audio_output_format(),
             stream_favorites: Vec::new(),
             whisper_model_profile: String::new(),

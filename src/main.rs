@@ -9624,8 +9624,11 @@ pub(crate) fn handle_player_command(hwnd: HWND, command: PlayerCommand) {
                 with_state(hwnd, |state| state.active_podcast_episode_url.clone()).flatten();
             save_automatic_bookmark_for_active_raiplaysound_episode(hwnd);
             stop_audiobook_playback(hwnd);
-            let restored_archive =
-                app_windows::internet_archive_window::restore_episode_list_after_stop(
+            let restored_archive = app_windows::sonarmusic_window::restore_after_player_stop(
+                hwnd,
+                stopped_url.as_deref(),
+            )
+                || app_windows::internet_archive_window::restore_episode_list_after_stop(
                     hwnd,
                     stopped_url.as_deref(),
                 );
@@ -11238,6 +11241,13 @@ fn run_app(
                                     return;
                                 }
                                 if app_windows::sonarpad_audiodescrizioni_window::restore_after_player_stop(
+                                    hwnd,
+                                    stopped_url.as_deref(),
+                                ) {
+                                    handled = true;
+                                    return;
+                                }
+                                if app_windows::sonarmusic_window::restore_after_player_stop(
                                     hwnd,
                                     stopped_url.as_deref(),
                                 ) {

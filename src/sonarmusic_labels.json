@@ -16,7 +16,9 @@
     "back": "Zpět",
     "loading": "Načítání",
     "close": "Zavřít",
-    "type": "Typ hledání"
+    "type": "Typ hledání",
+    "previous_results": "Přejít na předchozí výsledky",
+    "next_results": "Přejít na další výsledky"
   },
   "de": {
     "query": "Titel, Künstler oder Album",
@@ -35,7 +37,9 @@
     "back": "Zurück",
     "loading": "Wird geladen",
     "close": "Schließen",
-    "type": "Suchtyp"
+    "type": "Suchtyp",
+    "previous_results": "Zu den vorherigen Ergebnissen",
+    "next_results": "Zu den nächsten Ergebnissen"
   },
   "en": {
     "query": "Song, artist or album",
@@ -54,7 +58,9 @@
     "back": "Back",
     "loading": "Loading",
     "close": "Close",
-    "type": "Search type"
+    "type": "Search type",
+    "previous_results": "Go to previous results",
+    "next_results": "Go to next results"
   },
   "es": {
     "query": "Canción, artista o álbum",
@@ -73,7 +79,9 @@
     "back": "Atrás",
     "loading": "Cargando",
     "close": "Cerrar",
-    "type": "Tipo de búsqueda"
+    "type": "Tipo de búsqueda",
+    "previous_results": "Ir a los resultados anteriores",
+    "next_results": "Ir a los resultados siguientes"
   },
   "fr": {
     "query": "Titre, artiste ou album",
@@ -92,7 +100,9 @@
     "back": "Retour",
     "loading": "Chargement",
     "close": "Fermer",
-    "type": "Type de recherche"
+    "type": "Type de recherche",
+    "previous_results": "Aller aux résultats précédents",
+    "next_results": "Aller aux résultats suivants"
   },
   "it": {
     "query": "Titolo, artista o album",
@@ -111,7 +121,9 @@
     "back": "Indietro",
     "loading": "Caricamento",
     "close": "Chiudi",
-    "type": "Tipo di ricerca"
+    "type": "Tipo di ricerca",
+    "previous_results": "Vai ai risultati precedenti",
+    "next_results": "Vai ai risultati successivi"
   },
   "pl": {
     "query": "Utwór, artysta lub album",
@@ -130,7 +142,9 @@
     "back": "Wstecz",
     "loading": "Ładowanie",
     "close": "Zamknij",
-    "type": "Typ wyszukiwania"
+    "type": "Typ wyszukiwania",
+    "previous_results": "Przejdź do poprzednich wyników",
+    "next_results": "Przejdź do następnych wyników"
   },
   "pt": {
     "query": "Música, artista ou álbum",
@@ -149,7 +163,9 @@
     "back": "Voltar",
     "loading": "A carregar",
     "close": "Fechar",
-    "type": "Tipo de pesquisa"
+    "type": "Tipo de pesquisa",
+    "previous_results": "Ir para os resultados anteriores",
+    "next_results": "Ir para os resultados seguintes"
   },
   "pt_BR": {
     "query": "Música, artista ou álbum",
@@ -168,7 +184,9 @@
     "back": "Voltar",
     "loading": "Carregando",
     "close": "Fechar",
-    "type": "Tipo de pesquisa"
+    "type": "Tipo de pesquisa",
+    "previous_results": "Ir para os resultados anteriores",
+    "next_results": "Ir para os resultados seguintes"
   },
   "ro": {
     "query": "Melodie, artist sau album",
@@ -187,7 +205,9 @@
     "back": "Înapoi",
     "loading": "Se încarcă",
     "close": "Închide",
-    "type": "Tip de căutare"
+    "type": "Tip de căutare",
+    "previous_results": "Mergi la rezultatele anterioare",
+    "next_results": "Mergi la rezultatele următoare"
   },
   "tr": {
     "query": "Şarkı, sanatçı veya albüm",
@@ -206,7 +226,9 @@
     "back": "Geri",
     "loading": "Yükleniyor",
     "close": "Kapat",
-    "type": "Arama türü"
+    "type": "Arama türü",
+    "previous_results": "Önceki sonuçlara git",
+    "next_results": "Sonraki sonuçlara git"
   },
   "uk": {
     "query": "Пісня, виконавець або альбом",
@@ -225,7 +247,9 @@
     "back": "Назад",
     "loading": "Завантаження",
     "close": "Закрити",
-    "type": "Тип пошуку"
+    "type": "Тип пошуку",
+    "previous_results": "Перейти до попередніх результатів",
+    "next_results": "Перейти до наступних результатів"
   },
   "zh": {
     "query": "歌曲、艺人或专辑",
@@ -244,7 +268,9 @@
     "back": "返回",
     "loading": "正在加载",
     "close": "关闭",
-    "type": "搜索类型"
+    "type": "搜索类型",
+    "previous_results": "转到上一页结果",
+    "next_results": "转到下一页结果"
   },
   "zh_CN": {
     "query": "歌曲、艺人或专辑",
@@ -263,7 +289,9 @@
     "back": "返回",
     "loading": "正在加载",
     "close": "关闭",
-    "type": "搜索类型"
+    "type": "搜索类型",
+    "previous_results": "转到上一页结果",
+    "next_results": "转到下一页结果"
   },
   "pt-BR": {
     "query": "Música, artista ou álbum",
@@ -282,7 +310,9 @@
     "back": "Voltar",
     "loading": "Carregando",
     "close": "Fechar",
-    "type": "Tipo de pesquisa"
+    "type": "Tipo de pesquisa",
+    "previous_results": "Ir para os resultados anteriores",
+    "next_results": "Ir para os resultados seguintes"
   },
   "pt_br": {
     "query": "Música, artista ou álbum",
@@ -301,7 +331,9 @@
     "back": "Voltar",
     "loading": "Carregando",
     "close": "Fechar",
-    "type": "Tipo de pesquisa"
+    "type": "Tipo de pesquisa",
+    "previous_results": "Ir para os resultados anteriores",
+    "next_results": "Ir para os resultados seguintes"
   },
   "zh_cn": {
     "query": "歌曲、艺人或专辑",
@@ -320,7 +352,9 @@
     "back": "返回",
     "loading": "正在加载",
     "close": "关闭",
-    "type": "搜索类型"
+    "type": "搜索类型",
+    "previous_results": "转到上一页结果",
+    "next_results": "转到下一页结果"
   },
   "sv": {
     "query": "Titel, artist eller album",
@@ -339,7 +373,9 @@
     "back": "Tillbaka",
     "loading": "Laddar",
     "close": "Stäng",
-    "type": "Söktyp"
+    "type": "Söktyp",
+    "previous_results": "Gå till föregående resultat",
+    "next_results": "Gå till nästa resultat"
   },
   "vi": {
     "query": "Tên bài hát, nghệ sĩ hoặc album",
@@ -358,7 +394,9 @@
     "back": "Quay lại",
     "loading": "Đang tải",
     "close": "Đóng",
-    "type": "Loại tìm kiếm"
+    "type": "Loại tìm kiếm",
+    "previous_results": "Đến kết quả trước",
+    "next_results": "Đến kết quả tiếp theo"
   },
   "sr": {
     "query": "Наслов, извођач или албум",
@@ -377,7 +415,9 @@
     "back": "Назад",
     "loading": "Учитавање",
     "close": "Затвори",
-    "type": "Врста претраге"
+    "type": "Врста претраге",
+    "previous_results": "Иди на претходне резултате",
+    "next_results": "Иди на следеће резултате"
   },
   "lt": {
     "query": "Pavadinimas, atlikėjas arba albumas",
@@ -396,7 +436,9 @@
     "back": "Atgal",
     "loading": "Įkeliama",
     "close": "Užverti",
-    "type": "Paieškos tipas"
+    "type": "Paieškos tipas",
+    "previous_results": "Eiti į ankstesnius rezultatus",
+    "next_results": "Eiti į kitus rezultatus"
   },
   "ru": {
     "query": "Название, исполнитель или альбом",
@@ -415,7 +457,9 @@
     "back": "Назад",
     "loading": "Загрузка",
     "close": "Закрыть",
-    "type": "Тип поиска"
+    "type": "Тип поиска",
+    "previous_results": "Перейти к предыдущим результатам",
+    "next_results": "Перейти к следующим результатам"
   },
   "hi": {
     "query": "शीर्षक, कलाकार या एल्बम",
@@ -434,7 +478,9 @@
     "back": "वापस",
     "loading": "लोड हो रहा है",
     "close": "बंद करें",
-    "type": "खोज का प्रकार"
+    "type": "खोज का प्रकार",
+    "previous_results": "पिछले परिणामों पर जाएँ",
+    "next_results": "अगले परिणामों पर जाएँ"
   },
   "id": {
     "query": "Judul, artis, atau album",
@@ -453,6 +499,8 @@
     "back": "Kembali",
     "loading": "Memuat",
     "close": "Tutup",
-    "type": "Jenis pencarian"
+    "type": "Jenis pencarian",
+    "previous_results": "Ke hasil sebelumnya",
+    "next_results": "Ke hasil berikutnya"
   }
 }

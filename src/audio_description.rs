@@ -2426,10 +2426,25 @@ fn trim_edge_trailing_silence(samples: &mut Vec<f32>, sample_rate: u32, channels
     old_len.saturating_sub(samples.len())
 }
 
+fn normalize_audio_description_pronunciation(text: &str) -> String {
+    text.replace('_', " ")
+        .split_inclusive(|c: char| !c.is_alphanumeric())
+        .map(|part| {
+            if part.eq_ignore_ascii_case("dr.") {
+                "dr"
+            } else if part.eq_ignore_ascii_case("mr.") {
+                "mr"
+            } else {
+                part
+            }
+        })
+        .collect()
+}
+
 fn audio_description_tts_chunks(text: &str, job: &AudioDescriptionJob) -> Vec<TtsChunk> {
     // Pronunciation-only normalization: keep the generated description and the
-    // scheduling pipeline untouched, but never send underscores to the TTS engine.
-    let pronunciation_text = text.replace('_', " ");
+    // scheduling pipeline untouched; avoid underscores and pauses after Dr./Mr.
+    let pronunciation_text = normalize_audio_description_pronunciation(text);
     split_into_tts_chunks(&pronunciation_text, false, &job.dictionary, job.tts_engine)
 }
 

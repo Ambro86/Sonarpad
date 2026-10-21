@@ -7,6 +7,10 @@ use std::time::Duration;
 pub const ENDPOINT: &str = "https://sonarpad.com/api/youtube_music_resolve.php";
 pub const TYPES: &[&str] = &["all", "song", "album", "artist", "playlist", "video"];
 
+pub fn search_type_index(saved: &str) -> usize {
+    TYPES.iter().position(|kind| *kind == saved).unwrap_or(0)
+}
+
 pub fn label(locale: &str, key: &str) -> String {
     static LABELS: OnceLock<Value> = OnceLock::new();
     let data = LABELS.get_or_init(|| {
@@ -195,6 +199,7 @@ impl Page {
             next: (!next.is_empty()).then_some(next),
         })
     }
+    #[cfg(test)]
     pub fn append(&mut self, other: Self) {
         let mut seen: HashSet<_> = self.items.iter().map(Item::key).collect();
         self.items
@@ -205,6 +210,62 @@ impl Page {
         } else {
             other.next
         };
+    }
+}
+#[derive(Clone, Default)]
+pub struct Pagination {
+    previous: Vec<Page>,
+}
+#[derive(Debug, PartialEq, Eq)]
+pub enum ResultRow {
+    Previous,
+    Item(usize),
+    Next,
+}
+impl Pagination {
+    pub fn can_return(&self, suggestions: bool, parent_list: bool) -> bool {
+        suggestions || self.has_previous() || parent_list
+    }
+    pub fn has_previous(&self) -> bool {
+        !self.previous.is_empty()
+    }
+    pub fn row(&self, page: &Page, index: usize) -> Option<ResultRow> {
+        if !self.previous.is_empty() && index == 0 {
+            return Some(ResultRow::Previous);
+        }
+        let index = index.checked_sub(usize::from(!self.previous.is_empty()))?;
+        if index < page.items.len() {
+            Some(ResultRow::Item(index))
+        } else if index == page.items.len() && page.next.is_some() {
+            Some(ResultRow::Next)
+        } else {
+            None
+        }
+    }
+    pub fn labels(&self, page: &Page, locale: &str) -> Vec<String> {
+        let mut rows = Vec::new();
+        if !self.previous.is_empty() {
+            rows.push(label(locale, "previous_results"));
+        }
+        rows.extend(page.items.iter().map(|i| i.display(locale)));
+        if page.next.is_some() {
+            rows.push(label(locale, "next_results"));
+        }
+        rows
+    }
+    pub fn advance(&mut self, current: &mut Page, mut next: Page) {
+        if next.next == current.next {
+            next.next = None;
+        }
+        self.previous.push(std::mem::replace(current, next));
+    }
+    pub fn back(&mut self, current: &mut Page) -> bool {
+        if let Some(previous) = self.previous.pop() {
+            *current = previous;
+            true
+        } else {
+            false
+        }
     }
 }
 #[derive(Clone)]
@@ -316,6 +377,101 @@ mod tests {
     }
     fn item() -> Item {
         Item::parse(&song()).unwrap()
+    }
+    fn catalog_page(title: &str, next: Option<&str>) -> Page {
+        let mut track = item();
+        track.title = title.into();
+        Page {
+            items: vec![track],
+            next: next.map(str::to_owned),
+        }
+    }
+    #[test]
+    fn saved_search_type_restores_all_choices_and_defaults_unknown_values() {
+        for (index, kind) in TYPES.iter().enumerate() {
+            assert_eq!(search_type_index(kind), index);
+        }
+        assert_eq!(search_type_index(""), 0);
+        assert_eq!(search_type_index("not-a-type"), 0);
+    }
+    #[test]
+    fn escape_returns_from_second_search_page_without_an_album_parent() {
+        let mut navigation = Pagination::default();
+        let mut page = catalog_page("first", Some("one"));
+        assert!(!navigation.can_return(false, false));
+        navigation.advance(&mut page, catalog_page("second", None));
+        assert!(navigation.can_return(false, false));
+        assert!(navigation.back(&mut page));
+        assert_eq!(page.items[0].title, "first");
+        assert!(!navigation.can_return(false, false));
+        assert!(navigation.can_return(false, true));
+        assert!(navigation.can_return(true, false));
+    }
+    #[test]
+    fn pagination_first_page_has_track_then_next() {
+        let nav = Pagination::default();
+        let page = catalog_page("first", Some("token"));
+        assert_eq!(nav.row(&page, 0), Some(ResultRow::Item(0)));
+        assert_eq!(nav.row(&page, 1), Some(ResultRow::Next));
+        assert_eq!(nav.row(&page, 2), None);
+    }
+    #[test]
+    fn pagination_second_page_replaces_tracks_and_offsets_selection() {
+        let mut nav = Pagination::default();
+        let mut page = catalog_page("first", Some("one"));
+        nav.advance(&mut page, catalog_page("second", Some("two")));
+        assert_eq!(page.items.len(), 1);
+        assert_eq!(page.items[0].title, "second");
+        assert_eq!(nav.row(&page, 0), Some(ResultRow::Previous));
+        assert_eq!(nav.row(&page, 1), Some(ResultRow::Item(0)));
+        assert_eq!(nav.row(&page, 2), Some(ResultRow::Next));
+    }
+    #[test]
+    fn pagination_last_page_has_no_next() {
+        let mut nav = Pagination::default();
+        let mut page = catalog_page("first", Some("one"));
+        nav.advance(&mut page, catalog_page("last", None));
+        assert_eq!(nav.row(&page, 0), Some(ResultRow::Previous));
+        assert_eq!(nav.row(&page, 2), None);
+    }
+    #[test]
+    fn pagination_back_restores_cached_page_and_continuation() {
+        let mut nav = Pagination::default();
+        let mut page = catalog_page("first", Some("one"));
+        nav.advance(&mut page, catalog_page("second", Some("two")));
+        nav.advance(&mut page, catalog_page("third", None));
+        assert!(nav.back(&mut page));
+        assert_eq!(page.items[0].title, "second");
+        assert_eq!(page.next.as_deref(), Some("two"));
+        assert!(nav.back(&mut page));
+        assert_eq!(page.items[0].title, "first");
+        assert_eq!(nav.row(&page, 0), Some(ResultRow::Item(0)));
+        assert!(!nav.back(&mut page));
+    }
+    #[test]
+    fn pagination_empty_page_still_allows_return() {
+        let mut nav = Pagination::default();
+        let mut page = catalog_page("first", Some("one"));
+        nav.advance(&mut page, Page::default());
+        assert_eq!(nav.row(&page, 0), Some(ResultRow::Previous));
+        assert_eq!(nav.row(&page, 1), None);
+    }
+    #[test]
+    fn pagination_repeated_token_does_not_offer_endless_next() {
+        let mut nav = Pagination::default();
+        let mut page = catalog_page("first", Some("one"));
+        nav.advance(&mut page, catalog_page("second", Some("one")));
+        assert!(page.next.is_none());
+    }
+    #[test]
+    fn pagination_rows_use_localized_navigation_labels() {
+        let mut nav = Pagination::default();
+        let mut page = catalog_page("first", Some("one"));
+        nav.advance(&mut page, catalog_page("second", Some("two")));
+        let rows = nav.labels(&page, "it");
+        assert_eq!(rows.first().unwrap(), "Vai ai risultati precedenti");
+        assert_eq!(rows.last().unwrap(), "Vai ai risultati successivi");
+        assert_eq!(rows.len(), 3);
     }
     #[test]
     #[ignore = "Requires network and SONARMUSIC_LIVE_TOKEN"]
