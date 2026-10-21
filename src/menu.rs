@@ -167,6 +167,7 @@ pub const IDM_TOOLS_PATHS_NAVIGATION: usize = 5017;
 pub const IDM_TOOLS_TV: usize = 5018;
 pub const IDM_TOOLS_WEATHER: usize = 5019;
 pub const IDM_TOOLS_CINEMA: usize = 5020;
+pub const IDM_TOOLS_SONARMUSIC: usize = 5098;
 pub const IDM_TOOLS_CALENDAR: usize = 5021;
 pub const IDM_TOOLS_TRECCANI: usize = 5022;
 pub const IDM_TOOLS_GUTENBERG: usize = 5023;
@@ -1818,6 +1819,15 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             append_menu_string(
                 multimedia_menu,
                 MF_STRING,
+                IDM_TOOLS_SONARMUSIC,
+                &label_with_shortcut(
+                    "Sonar&Music...",
+                    ShortcutBinding::new(true, true, true, 'M' as u16),
+                ),
+            );
+            append_menu_string(
+                multimedia_menu,
+                MF_STRING,
                 IDM_TOOLS_CINEMA,
                 &labels.menu_cinema,
             );
@@ -2034,6 +2044,15 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                 MF_STRING,
                 IDM_TOOLS_WEATHER,
                 &labels.menu_weather,
+            );
+            append_menu_string(
+                tools_menu,
+                MF_STRING,
+                IDM_TOOLS_SONARMUSIC,
+                &label_with_shortcut(
+                    "Sonar&Music...",
+                    ShortcutBinding::new(true, true, true, 'M' as u16),
+                ),
             );
             append_menu_string(tools_menu, MF_STRING, IDM_TOOLS_CINEMA, &labels.menu_cinema);
             append_menu_string(

@@ -232,9 +232,21 @@ pub(crate) fn japanese_ocr_is_available() -> bool {
     }
 }
 
-pub fn recognize_text_from_pdf(path: &Path, language: Language) -> Result<String, String> {
-    // This function must be synchronous/blocking as per caller expectation.
-    let abs_path = path.canonicalize().map_err(|e| e.to_string())?;
+fn ocr_file_path(
+    path: &Path,
+    canonicalize: impl FnOnce(&Path) -> std::io::Result<std::path::PathBuf>,
+) -> Result<String, String> {
+    // Some mapped/virtual drives can read files but cannot resolve their final
+    // handle path (ERROR_INVALID_FUNCTION). WinRT only needs an absolute path.
+    let abs_path = canonicalize(path)
+        .or_else(|err| {
+            crate::log_debug(&format!(
+                "PDF OCR: canonicalize failed for {}: {err}; trying absolute path",
+                path.display()
+            ));
+            std::path::absolute(path)
+        })
+        .map_err(|err| format!("PDF OCR: absolute path failed: {err}"))?;
     let mut path_str = abs_path.to_string_lossy().to_string();
 
     // WinRT APIs can be picky about the \\?\ prefix added by canonicalize.
@@ -243,7 +255,12 @@ pub fn recognize_text_from_pdf(path: &Path, language: Language) -> Result<String
     } else if path_str.starts_with(r"\\?\") {
         path_str = path_str[4..].to_string();
     }
+    Ok(path_str)
+}
 
+pub fn recognize_text_from_pdf(path: &Path, language: Language) -> Result<String, String> {
+    // This function must be synchronous/blocking as per caller expectation.
+    let path_str = ocr_file_path(path, |path| path.canonicalize())?;
     let future = async {
         let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(&path_str))?.await?;
         let pdf_doc = PdfDocument::LoadFromFileAsync(&file)?.await?;
@@ -367,6 +384,28 @@ pub fn recognize_text_from_pdf(path: &Path, language: Language) -> Result<String
 #[cfg(test)]
 mod tests {
     use super::{ScannedLine, contains_japanese, merge_japanese_lines, render_ocr_lines};
+
+    #[test]
+    fn ocr_mapped_drive_invalid_function_uses_absolute_path() {
+        let path = std::path::Path::new(r"R:\CONV. J. ORD. HAYA 20-22 27.10.26.pdf");
+        let resolved =
+            super::ocr_file_path(path, |_| Err(std::io::Error::from_raw_os_error(1))).unwrap();
+        assert_eq!(resolved, path.to_string_lossy());
+    }
+
+    #[test]
+    fn ocr_canonical_paths_keep_existing_winrt_prefix_handling() {
+        for (canonical, expected) in [
+            (r"\\?\C:\Documents\scan.pdf", r"C:\Documents\scan.pdf"),
+            (r"\\?\UNC\server\share\scan.pdf", r"\\server\share\scan.pdf"),
+        ] {
+            let resolved = super::ocr_file_path(std::path::Path::new("scan.pdf"), |_| {
+                Ok(std::path::PathBuf::from(canonical))
+            })
+            .unwrap();
+            assert_eq!(resolved, expected);
+        }
+    }
 
     fn line(text: &str, x: f32, y: f32) -> ScannedLine {
         ScannedLine {

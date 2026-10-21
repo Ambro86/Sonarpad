@@ -10,6 +10,8 @@ Version 0.9.18 – 2026-10-16
 6. Patobulintas DAISY knygų atkūrimas: kitas skyrius pradedamas automatiškai, o rodyklių klavišais galima persukti pirmyn ir atgal per skyrių ribas. Poskyriai nekartojami, o pranešimas apie skaitymo pabaigą skamba tik knygos pabaigoje.
 7. Pridėta indoneziečių kalba (Bahasa Indonesia): sąsaja, naudotojo vadovas ir naujausių medijos įrankių vertimai. Dėkojame Muhammad už vertimą.
 
+8. Į Multimediją įtrauktas SonarMusic: dainų, albumų, atlikėjų, grojaraščių ir muzikos vaizdo įrašų paieška, pasiūlymai įvedus tekstą ir rezultatų puslapiai. Įrašus galima leisti, išsaugoti, transkribuoti ir kurti DI garsinį vaizdavimą esamomis priemonėmis.
+
 Version 0.9.17 – 2026-10-15
 
 1. Pridėta Microsoft Visual C++ Redistributable x64 patikra paleidžiant su prieinamu dialogu ir oficialia nuoroda, jei komponento nėra arba jis neveikia. Paleidimas nebepriklauso nuo šių DLL, todėl pranešimas rodomas ir be komponento.

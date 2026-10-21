@@ -10,6 +10,8 @@ Version 0.9.18 – 2026-10-16
 6. Cải thiện phát sách DAISY: chương tiếp theo tự động bắt đầu và thao tác tua tiến hoặc lùi bằng phím mũi tên có thể vượt qua ranh giới giữa các chương. Các mục con không bị phát lặp lại và thông báo kết thúc đọc chỉ được phát khi hết sách.
 7. Đã thêm tiếng Indonesia (Bahasa Indonesia), gồm giao diện, hướng dẫn và bản dịch cho các công cụ đa phương tiện mới. Cảm ơn Muhammad đã đóng góp bản dịch.
 
+8. Thêm SonarMusic trong Đa phương tiện: tìm bài hát, album, nghệ sĩ, danh sách phát và video âm nhạc, gợi ý sau khi nhập và phân trang kết quả. Hỗ trợ phát, lưu, phiên âm và mô tả âm thanh bằng AI qua các công cụ hiện có.
+
 Version 0.9.17 – 2026-10-15
 
 1. Thêm kiểm tra Microsoft Visual C++ Redistributable x64 khi khởi động, với hộp thoại dễ tiếp cận và liên kết chính thức nếu thành phần bị thiếu hoặc không dùng được. Khởi động không còn phụ thuộc vào các DLL này nên vẫn hiển thị được thông báo.

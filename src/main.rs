@@ -12,6 +12,7 @@ mod embedded_deps;
 mod google_tts;
 mod macros;
 mod runtime_prerequisite;
+mod sonarmusic;
 use accessibility::*;
 mod conpty;
 mod diagnostics;
@@ -15190,6 +15191,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                         app_windows::weather_window::open(hwnd);
                         LRESULT(0)
                     }
+                    IDM_TOOLS_SONARMUSIC => {
+                        app_windows::sonarmusic_window::open(hwnd);
+                        LRESULT(0)
+                    }
                     IDM_TOOLS_CINEMA => {
                         log_debug("Menu: Cinema");
                         app_windows::cinema_window::open(hwnd);
@@ -21696,6 +21701,10 @@ fn handle_custom_shortcuts(hwnd: HWND, msg: &MSG) -> bool {
     }
     if key == 'T' as u16 && !ctrl_down && shift_down && alt_down {
         dispatch_shortcut_command(hwnd, IDM_PLAYBACK_TRANSCRIBE_CURRENT);
+        return true;
+    }
+    if key == 'M' as u16 && ctrl_down && shift_down && alt_down {
+        dispatch_shortcut_command(hwnd, IDM_TOOLS_SONARMUSIC);
         return true;
     }
     if key == 'Y' as u16 && !ctrl_down && shift_down && alt_down {

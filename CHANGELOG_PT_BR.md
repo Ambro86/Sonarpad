@@ -10,6 +10,8 @@ Version 0.9.18 – 2026-10-16
 6. Melhorada a reprodução de livros DAISY: o próximo capítulo começa automaticamente e os avanços e retrocessos com as setas atravessam os limites entre capítulos. As subseções não são repetidas e o anúncio de fim da leitura só é ouvido no final do livro.
 7. Adicionado o indonésio (Bahasa Indonesia), com interface, guia e traduções das novas ferramentas multimídia. Agradecemos a Muhammad pela contribuição à tradução.
 
+8. Adicionado SonarMusic em Multimídia: pesquisa de músicas, álbuns, artistas, playlists e vídeos musicais, sugestões após digitar, navegação e paginação. Permite reprodução, salvamento, transcrição e audiodescrição com IA pelas ferramentas multimídia existentes.
+
 Version 0.9.17 – 2026-10-15
 
 1. Adicionada uma verificação inicial do Microsoft Visual C++ Redistributable x64, com diálogo acessível e link oficial se estiver ausente ou inutilizável. A inicialização não depende mais dessas DLLs, permitindo mostrar o aviso sem o componente.

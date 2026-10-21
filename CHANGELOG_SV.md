@@ -10,6 +10,8 @@ Version 0.9.18 – 2026-10-16
 6. Förbättrad uppspelning av DAISY-böcker: nästa kapitel startar automatiskt och hopp framåt och bakåt med piltangenterna fungerar över kapitelgränser. Underavsnitt upprepas inte och meddelandet om avslutad läsning hörs först i slutet av boken.
 7. Indonesiska (Bahasa Indonesia) har lagts till, med gränssnitt, användarguide och översättningar för de senaste medieverktygen. Tack till Muhammad för översättningen.
 
+8. SonarMusic har lagts till i Multimedia: sök låtar, album, artister, spellistor och musikvideor, med förslag efter inmatning och sidindelade resultat. Spåren kan spelas, sparas, transkriberas och få AI-syntolkning med befintliga medieverktyg.
+
 Version 0.9.17 – 2026-10-15
 
 1. Lagt till startkontroll av Microsoft Visual C++ Redistributable x64 med tillgänglig dialog och officiell länk om komponenten saknas eller inte fungerar. Starten är inte längre beroende av dessa DLL-filer, så meddelandet kan visas utan komponenten.

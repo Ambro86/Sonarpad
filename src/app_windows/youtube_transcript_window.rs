@@ -454,6 +454,59 @@ pub(crate) fn play_youtube_video_in_mpv(
     )
 }
 
+/// SonarMusic uses the same download, transcription and AD pipelines as YouTube.
+pub(crate) fn sonarmusic_action(
+    parent: HWND,
+    url: &str,
+    title: &str,
+    action: usize,
+) -> Result<(), String> {
+    let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
+    let Some(ytdlp) = ensure_ytdlp_available(parent, language, &labels(language), None)? else {
+        return Ok(());
+    };
+    let entry = StreamCollectionEntry {
+        label: title.into(),
+        title: title.into(),
+        url: url.into(),
+        position: 0,
+    };
+    let context = youtube_selection_save_context(
+        parent,
+        &ytdlp,
+        &entry,
+        StreamOutputFormat::Auto,
+        StreamQualitySelection::Original,
+    );
+    if action == 0 {
+        crate::launch_video_stream_in_mpv(
+            parent,
+            url,
+            title,
+            Some(&ytdlp),
+            Some(YOUTUBE_MPV_STREAM_FORMAT),
+            None,
+        )?;
+        set_active_stream_save_context(context);
+        crate::menu::update_playback_menu(parent, true);
+    } else {
+        let actions = youtube_video_context_actions(
+            parent,
+            language,
+            Arc::new(ytdlp),
+            Arc::new(vec![entry]),
+            PlaylistDownloadOptions {
+                format: StreamOutputFormat::Auto,
+                quality: StreamQualitySelection::Original,
+            },
+        );
+        if let Some(action) = actions.get(action - 1) {
+            (action.handler)(title.into());
+        }
+    }
+    Ok(())
+}
+
 fn ytdlp_command(path: &Path) -> Command {
     const BELOW_NORMAL_PRIORITY_CLASS_FLAG: u32 = 0x0000_4000;
     let mut cmd = Command::new(path);

@@ -56,3 +56,5 @@ pub mod whisper_model_window;
 pub mod wikipedia_window;
 pub mod wiktionary_window;
 pub mod youtube_transcript_window;
+
+pub mod sonarmusic_window;

@@ -10,6 +10,8 @@ Version 0.9.18 – 2026-10-16
 6. Vylepšeno přehrávání knih DAISY: další kapitola se spustí automaticky a posun vpřed či vzad šipkami překračuje hranice kapitol. Pododdíly se neopakují a oznámení o konci čtení zazní až na konci knihy.
 7. Přidána indonéština (Bahasa Indonesia), včetně rozhraní, příručky a překladů nových multimediálních nástrojů. Děkujeme Muhammadovi za překlad.
 
+8. Přidán SonarMusic do Multimédií: vyhledávání skladeb, alb, interpretů, playlistů a hudebních videí, návrhy po zadání textu, procházení a stránkování výsledků. Skladby lze přehrát, uložit, přepsat a vytvořit k nim audiopopis pomocí AI se stávajícími multimediálními nástroji.
+
 Version 0.9.17 – 2026-10-15
 
 1. Přidána kontrola Microsoft Visual C++ Redistributable x64 při spuštění s přístupným dialogem a oficiálním odkazem, pokud součást chybí nebo nefunguje. Spuštění již nezávisí na těchto DLL, takže lze upozornění zobrazit i bez součásti.

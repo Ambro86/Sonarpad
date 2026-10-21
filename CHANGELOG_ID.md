@@ -12,6 +12,8 @@ Version 0.9.18 – 2026-10-16
 
 ## Riwayat versi sebelumnya (dalam bahasa Inggris)
 
+8. Menambahkan SonarMusic di Multimedia: pencarian lagu, album, artis, daftar putar, dan video musik, saran setelah mengetik, navigasi dan halaman hasil. Lagu dapat diputar, disimpan, ditranskripsikan, dan dibuatkan deskripsi audio AI melalui alat media yang tersedia.
+
 Version 0.9.17 – 2026-10-15
 
 1. Added a startup check for Microsoft Visual C++ Redistributable x64: if missing or unusable, an accessible dialog offers the official Microsoft download link. Sonarpad startup no longer depends on these runtime DLLs, allowing the message to appear even when the component is missing.

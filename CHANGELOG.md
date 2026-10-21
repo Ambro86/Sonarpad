@@ -10,6 +10,8 @@ Version 0.9.18 – 2026-10-16
 6. Improved DAISY book playback: the next chapter starts automatically, and seeking forward or backward with the arrow keys crosses chapter boundaries. Subsections are not repeated, and the end-of-reading announcement is spoken only at the end of the book.
 7. Added Indonesian (Bahasa Indonesia), including the interface, user guide and translations for the latest media tools. Thanks to Muhammad for the translation contribution.
 
+8. Added SonarMusic in Multimedia: search songs, albums, artists, playlists and music videos, with suggestions shown only after typing, result navigation and pagination. Tracks support playback, saving, transcription and AI audio description through the existing media tools.
+
 Version 0.9.17 – 2026-10-15
 
 1. Added a startup check for Microsoft Visual C++ Redistributable x64: if missing or unusable, an accessible dialog offers the official Microsoft download link. Sonarpad startup no longer depends on these runtime DLLs, allowing the message to appear even when the component is missing.

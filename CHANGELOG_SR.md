@@ -10,6 +10,8 @@ Version 0.9.18 – 2026-10-16
 6. Poboljšana reprodukcija DAISY knjiga: sledeće poglavlje počinje automatski, a pomeranje unapred i unazad strelicama prelazi granice poglavlja. Pododeljci se ne ponavljaju, a obaveštenje o završetku čitanja izgovara se tek na kraju knjige.
 7. Додат је индонежански језик (Bahasa Indonesia), са интерфејсом, упутством и преводима нових мултимедијалних алата. Хвала Muhammad-у на доприносу преводу.
 
+8. Додат SonarMusic у Мултимедију: претрага песама, албума, извођача, листа и музичких видео-снимака, предлози после уноса текста и странице резултата. Доступни су репродукција, чување, транскрипција и аудио-дескрипција помоћу ВИ кроз постојеће алате.
+
 Version 0.9.17 – 2026-10-15
 
 1. Dodata je provera Microsoft Visual C++ Redistributable x64 pri pokretanju, sa pristupačnim dijalogom i zvaničnom vezom ako komponenta nedostaje ili ne radi. Pokretanje više ne zavisi od ovih DLL datoteka, pa se poruka može prikazati i bez komponente.
