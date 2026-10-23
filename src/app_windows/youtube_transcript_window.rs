@@ -462,31 +462,65 @@ pub(crate) fn sonarmusic_action(
     action: usize,
 ) -> Result<(), String> {
     let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
-    let Some(ytdlp) = ensure_ytdlp_available(parent, language, &labels(language), None)? else {
-        return Ok(());
+    let action_started = std::time::Instant::now();
+    let local_ytdlp = settings_dir().join(YTDLP_EXE_NAME);
+    // An installed extractor needs no version/network probe for direct playback.
+    // Keep the first-install flow so the playback menu retains working downloads.
+    let installed_ytdlp = if local_ytdlp.is_file() {
+        Some(local_ytdlp)
+    } else {
+        find_ytdlp_in_path()
     };
+    let mut ytdlp = if action == 0 && installed_ytdlp.is_some() {
+        installed_ytdlp.unwrap_or_default()
+    } else {
+        let Some(path) = ensure_ytdlp_available(parent, language, &labels(language), None)? else {
+            return Ok(());
+        };
+        path
+    };
+    crate::log_debug(&format!(
+        "SonarMusic preparation: {} ms",
+        action_started.elapsed().as_millis()
+    ));
     let entry = StreamCollectionEntry {
         label: title.into(),
         title: title.into(),
         url: url.into(),
         position: 0,
     };
-    let context = youtube_selection_save_context(
-        parent,
-        &ytdlp,
-        &entry,
-        StreamOutputFormat::Auto,
-        StreamQualitySelection::Original,
-    );
     if action == 0 {
-        crate::launch_video_stream_in_mpv(
+        if !crate::try_launch_sonarmusic_direct_in_mpv(parent, url, title)? {
+            let fallback_started = std::time::Instant::now();
+            let Some(path) = ensure_ytdlp_available(parent, language, &labels(language), None)?
+            else {
+                return Ok(());
+            };
+            ytdlp = path;
+            crate::log_debug(&format!(
+                "SonarMusic fallback preparation: {} ms",
+                fallback_started.elapsed().as_millis()
+            ));
+            crate::launch_video_stream_in_mpv(
+                parent,
+                url,
+                title,
+                Some(&ytdlp),
+                Some(YOUTUBE_MPV_STREAM_FORMAT),
+                None,
+            )?;
+        }
+        let context = youtube_selection_save_context(
             parent,
-            url,
-            title,
-            Some(&ytdlp),
-            Some(YOUTUBE_MPV_STREAM_FORMAT),
-            None,
-        )?;
+            &ytdlp,
+            &entry,
+            StreamOutputFormat::Auto,
+            StreamQualitySelection::Original,
+        );
+        crate::log_debug(&format!(
+            "SonarMusic opening complete: {} ms",
+            action_started.elapsed().as_millis()
+        ));
         set_active_stream_save_context(context);
         crate::menu::update_playback_menu(parent, true);
     } else {
@@ -1982,12 +2016,19 @@ fn load_stream_favorites(parent: HWND) -> Vec<StreamFavorite> {
 fn refill_stream_favorites_combo(state: &StreamDialogState, selection: Option<usize>) {
     unsafe {
         SendMessageW(state.favorites_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
-        for favorite in &state.favorites {
-            let display = if favorite.label.trim().is_empty() {
-                favorite.url.clone()
-            } else {
-                favorite.label.clone()
-            };
+        for display in crate::result_labels::accessible_result_labels(
+            state
+                .favorites
+                .iter()
+                .map(|favorite| {
+                    if favorite.label.trim().is_empty() {
+                        favorite.url.clone()
+                    } else {
+                        favorite.label.clone()
+                    }
+                })
+                .collect(),
+        ) {
             let wide = to_wide(&display);
             SendMessageW(
                 state.favorites_combo,
@@ -2617,6 +2658,20 @@ struct ResolvedStreamSelection {
     previous_selected_label: Option<String>,
 }
 
+impl ResolvedStreamSelection {
+    fn remember_search_page(&mut self, query: &str, page: usize, selected: String) {
+        if self.collection_url.is_some() {
+            self.previous_input = Some(query.to_owned());
+            self.previous_collection_page = Some(page);
+            self.previous_selected_label = Some(selected);
+        } else {
+            // This field carries the page for both collections and search results.
+            self.collection_page = Some(page);
+            self.selected_label = Some(selected);
+        }
+    }
+}
+
 const STREAM_SELECTION_PAGE_SIZE: usize = 20;
 const STREAM_SELECTION_LOAD_MORE_KEY: &str = "stream_audio.load_more_videos";
 const STREAM_SELECTION_PREVIOUS_KEY: &str = "stream_audio.previous_results";
@@ -2704,6 +2759,12 @@ fn collect_stream_collection_entries(
             position,
         });
     }
+    let labels = crate::result_labels::accessible_result_labels(
+        out.iter().map(|entry| entry.label.clone()).collect(),
+    );
+    for (entry, display) in out.iter_mut().zip(labels) {
+        entry.label = display;
+    }
     out
 }
 
@@ -2713,6 +2774,22 @@ fn probe_youtube_collection_entries(
     language: Language,
     page: usize,
 ) -> Result<(Vec<StreamCollectionEntry>, bool), String> {
+    let locale = serde_json::to_value(language)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_else(|| "en".into());
+    if let Some(page_data) = crate::sonartube::page(url, true, &locale, page)? {
+        crate::log_debug(&format!(
+            "SonarTube service navigation: collection=true page={} entries={}",
+            page,
+            page_data.entries.len()
+        ));
+        return Ok((
+            collect_stream_collection_entries(&page_data.entries, language, false),
+            page_data.next.is_some(),
+        ));
+    }
+    crate::log_debug("SonarTube navigation fallback: yt-dlp");
     let start = page * STREAM_SELECTION_PAGE_SIZE + 1;
     let end = start + STREAM_SELECTION_PAGE_SIZE;
     let target_url = normalize_youtube_collection_url(url).unwrap_or_else(|| url.to_string());
@@ -2820,6 +2897,22 @@ fn probe_youtube_search_entries(
     language: Language,
     page: usize,
 ) -> Result<(Vec<StreamCollectionEntry>, bool), String> {
+    let locale = serde_json::to_value(language)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_else(|| "en".into());
+    if let Some(page_data) = crate::sonartube::page(query, false, &locale, page)? {
+        crate::log_debug(&format!(
+            "SonarTube service navigation: collection=false page={} entries={}",
+            page,
+            page_data.entries.len()
+        ));
+        return Ok((
+            collect_stream_collection_entries(&page_data.entries, language, true),
+            page_data.next.is_some(),
+        ));
+    }
+    crate::log_debug("SonarTube navigation fallback: yt-dlp");
     let limit = (page + 1) * STREAM_SELECTION_PAGE_SIZE + 1;
     let encoded_query: String = url::form_urlencoded::byte_serialize(query.as_bytes()).collect();
     let search_url = format!("https://www.youtube.com/results?search_query={encoded_query}");
@@ -6612,12 +6705,14 @@ fn choose_youtube_search_entry(
     options: StreamSelectionResolveOptions<'_>,
 ) -> Result<Option<ResolvedStreamSelection>, String> {
     let StreamSelectionResolveOptions {
+        initial_collection_page,
         initial_selected_label,
         initial_progress,
         playlist_download_options,
         ..
     } = options;
-    let mut page = 0usize;
+    let initial_page = initial_collection_page.unwrap_or(0);
+    let mut page = initial_page;
     let mut shared_progress = initial_progress;
     loop {
         let progress = if let Some(existing) = shared_progress.take() {
@@ -6687,7 +6782,7 @@ fn choose_youtube_search_entry(
             has_previous: page > 0,
             has_more,
             show_playlist_download_action: false,
-            initial_selected_label: initial_selected_label.filter(|_| page == 0),
+            initial_selected_label: initial_selected_label.filter(|_| page == initial_page),
             download_options: playlist_download_options,
         }) else {
             if context_stream_selector_unwind_pending(parent) {
@@ -6741,14 +6836,7 @@ fn choose_youtube_search_entry(
                     },
                 )? {
                     Some(mut selection) => {
-                        if selection.collection_url.is_some() || selection.collection_page.is_some()
-                        {
-                            selection.previous_input = Some(query.to_string());
-                            selection.previous_collection_page = None;
-                            selection.previous_selected_label = Some(selected);
-                        } else {
-                            selection.selected_label = Some(selected);
-                        }
+                        selection.remember_search_page(query, page, selected);
                         return Ok(Some(selection));
                     }
                     None => {
@@ -6762,16 +6850,18 @@ fn choose_youtube_search_entry(
                     }
                 }
             }
-            return Ok(Some(ResolvedStreamSelection {
+            let mut selection = ResolvedStreamSelection {
                 url: selected_url,
                 collection_url: None,
                 collection_page: None,
-                selected_label: Some(selected),
+                selected_label: None,
                 selected_title: Some(selected_title),
                 previous_input: None,
                 previous_collection_page: None,
                 previous_selected_label: None,
-            }));
+            };
+            selection.remember_search_page(query, page, selected);
+            return Ok(Some(selection));
         }
         return Ok(None);
     }
@@ -8969,6 +9059,7 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                 DefWindowProcW(hwnd, msg, wparam, lparam)
             }
             WM_CLOSE => {
+                prepare_stream_dialog_close(hwnd);
                 crate::log_if_err!(crate::destroy_window_safe(hwnd));
                 LRESULT(0)
             }
@@ -9185,9 +9276,14 @@ fn open_progress_dialog(
     // Long-running/cancellable stream downloads expose a focusable read-only status field.
     // This gives screen readers the current item/status when the user returns with Alt+Tab,
     // without changing the existing Cancel action or keyboard navigation.
-    let dialog = if show_cancel {
+    let accessible_status = show_cancel || title_key == "stream_audio.ytdlp_progress_title";
+    let dialog = if accessible_status {
         crate::app_windows::podcast_save_window::open_with_labels_and_status_field(
-            parent, language, labels, true, true,
+            parent,
+            language,
+            labels,
+            show_cancel,
+            true,
         )
     } else {
         crate::app_windows::podcast_save_window::open_with_labels(parent, language, labels, false)
@@ -9198,11 +9294,11 @@ fn open_progress_dialog(
     ));
     if dialog.0 != 0 {
         crate::app_windows::podcast_save_window::disable_fake_progress(dialog);
-        if show_cancel {
+        if accessible_status {
             crate::app_windows::podcast_save_window::enable_accessible_progress_context(dialog);
         }
         activate_stream_progress_window(dialog);
-        if show_cancel {
+        if accessible_status {
             crate::app_windows::podcast_save_window::focus_primary_control(dialog);
         } else {
             crate::app_windows::podcast_save_window::focus_cancel_button(dialog);
@@ -9370,10 +9466,31 @@ fn pin_stream_modal_window(hwnd: HWND) {
     crate::set_foreground_window_safe(hwnd);
 }
 
+/// Re-enable the owner BEFORE destroying an active modal window. Doing this
+/// in WM_DESTROY/after the modal loop is too late: Windows may already have
+/// activated an unrelated application because the owner was still disabled.
+/// No editor focus/timers are scheduled; the next streaming dialog takes over.
+pub(crate) fn prepare_stream_dialog_close(dialog: HWND) {
+    use windows::Win32::UI::WindowsAndMessaging::{GW_OWNER, GetWindow};
+    let parent = unsafe { GetWindow(dialog, GW_OWNER) };
+    if parent.0 == 0 || !crate::is_window_handle_valid(parent) {
+        return;
+    }
+    let active = crate::get_foreground_window_safe() == dialog;
+    crate::enable_window_safe(parent, true);
+    if active {
+        crate::set_foreground_window_safe(parent);
+    }
+    crate::log_debug(&format!(
+        "stream modal handoff: closing={dialog:?} owner={parent:?} active={active}"
+    ));
+}
+
 fn close_progress_dialog(dialog: HWND) {
     if dialog.0 == 0 {
         return;
     }
+    prepare_stream_dialog_close(dialog);
     crate::send_message_w_safe(
         dialog,
         crate::app_windows::podcast_save_window::WM_PODCAST_SAVE_DONE,
@@ -10463,7 +10580,7 @@ fn format_stream_entry_label(entry: &serde_json::Value, language: Language) -> S
     }
     parts.join(" - ")
 }
-fn probe_stream_media_title(ytdlp_path: &Path, url: &str) -> Option<String> {
+pub(crate) fn probe_stream_media_title(ytdlp_path: &Path, url: &str) -> Option<String> {
     let mut command = ytdlp_command(ytdlp_path);
     configure_ytdlp_standard_youtube_client(&mut command, url);
     let output = command
@@ -10807,8 +10924,8 @@ fn stream_track_dialog_wndproc_inner(
                     }
                 }
 
-                for option in &init.options {
-                    let w = to_wide(option);
+                for option in crate::result_labels::accessible_result_labels(init.options.clone()) {
+                    let w = to_wide(&option);
                     SendMessageW(combo, CB_ADDSTRING, WPARAM(0), LPARAM(w.as_ptr() as isize));
                 }
                 let default_selection = init
@@ -12509,6 +12626,7 @@ pub(crate) fn download_active_streaming_audio_media_for_transcription(
 
 pub fn play_streaming_audio_from_url(parent: HWND) {
     log_stream_transition("play_streaming_audio.start", parent);
+    start_ytdlp_update_check(parent);
     let (language, default_format) = {
         with_state(parent, |state| {
             (
@@ -12843,15 +12961,7 @@ pub fn play_streaming_audio_from_url(parent: HWND) {
         };
         reclaim_stream_modal_parent_foreground(parent, "play_streaming_audio.before_mpv_title");
         let stream_title = if is_youtube {
-            selected_title
-                .clone()
-                .or_else(|| selected_label.clone())
-                .or_else(|| {
-                    crate::log_debug(
-                        "Direct YouTube stream has no selected title; probing title with yt-dlp",
-                    );
-                    probe_stream_media_title(&ytdlp_path, &url)
-                })
+            selected_title.clone().or_else(|| selected_label.clone())
         } else {
             probe_stream_media_title(&ytdlp_path, &url)
         };
@@ -13572,7 +13682,7 @@ fn ensure_ytdlp_available(
             report_progress_status(progress, &i18n::tr(language, "podcasts.loading"));
             keep_stream_progress_focus(progress);
         }
-        check_ytdlp_update(hwnd, language, labels, &local_path);
+        // Update checks run asynchronously when the streaming dialog opens.
         if let Some(progress) = progress {
             keep_stream_progress_focus(progress);
         }
@@ -13590,8 +13700,7 @@ fn ensure_ytdlp_available(
             labels.ytdlp_found_in_path,
             path_in_system.display()
         ));
-        let selected_path =
-            check_ytdlp_path_update(hwnd, language, labels, &path_in_system, &local_path);
+        let selected_path = path_in_system;
         if let Some(progress) = progress {
             keep_stream_progress_focus(progress);
         }
@@ -13620,8 +13729,7 @@ fn ensure_ytdlp_available(
         "stream_audio.ytdlp_progress_downloading",
         false,
     );
-    let download_result =
-        download_ytdlp_with_progress(&local_path, |pct| report_progress(progress, pct));
+    let download_result = download_ytdlp_responsive(hwnd, progress, &local_path);
     close_progress_dialog(progress);
     restore_stream_parent_focus(hwnd);
     match download_result {
@@ -13641,131 +13749,167 @@ fn find_ytdlp_in_path() -> Option<PathBuf> {
     None
 }
 
-fn check_ytdlp_path_update(
-    hwnd: HWND,
-    language: Language,
-    labels: &Labels,
-    path_in_system: &Path,
-    local_path: &Path,
-) -> PathBuf {
-    restore_stream_parent_focus(hwnd);
-    if YTDLP_UPDATE_CHECKED.swap(true, Ordering::SeqCst) {
-        return path_in_system.to_path_buf();
-    }
-    let installed = match ytdlp_installed_version(path_in_system) {
-        Ok(version) => version,
-        Err(err) => {
-            crate::log_debug(&format!("yt-dlp PATH version read failed: {}", err));
-            return path_in_system.to_path_buf();
-        }
-    };
-    let latest = match fetch_latest_ytdlp_version() {
-        Ok(version) => version,
-        Err(err) => {
-            crate::log_debug(&format!("yt-dlp latest version fetch failed: {}", err));
-            return path_in_system.to_path_buf();
-        }
-    };
-    if compare_versions(&installed, &latest) != Some(CmpOrdering::Less) {
-        return path_in_system.to_path_buf();
-    }
+pub(crate) const YTDLP_UPDATE_TIMER_ID: usize = 0xD0F3;
+struct YtdlpUpdateNotice {
+    installed: String,
+    latest: String,
+    external: bool,
+    target: PathBuf,
+}
+type YtdlpUpdateResult = Result<Option<YtdlpUpdateNotice>, String>;
+static YTDLP_UPDATE_RESULT: Mutex<Option<YtdlpUpdateResult>> = Mutex::new(None);
 
-    let prompt = i18n::tr_f(
-        language,
-        "youtube.ytdlp_path_update_prompt",
-        &[("current", &installed), ("latest", &latest)],
-    );
-    crate::log_debug(&format!(
-        "{} / {}",
-        labels.ytdlp_path_update_download_local, labels.ytdlp_path_update_keep_system
-    ));
-    let title = to_wide(&confirm_title(language));
-    let message = to_wide(&prompt);
-    let response = crate::message_box_w_safe(
-        hwnd,
-        PCWSTR(message.as_ptr()),
-        PCWSTR(title.as_ptr()),
-        MB_YESNO | MB_ICONQUESTION,
-    );
-    restore_stream_parent_focus(hwnd);
-    if response != IDYES {
-        return path_in_system.to_path_buf();
-    }
-
-    let progress = open_progress_dialog(
-        hwnd,
-        language,
-        "stream_audio.ytdlp_progress_title",
-        "stream_audio.ytdlp_progress_downloading",
-        false,
-    );
-    let result = download_ytdlp_with_progress(local_path, |pct| report_progress(progress, pct));
-    close_progress_dialog(progress);
-    restore_stream_parent_focus(hwnd);
-    if let Err(err) = result {
-        crate::log_debug(&format!(
-            "yt-dlp local download from PATH prompt failed: {}",
-            err
-        ));
-        show_error(hwnd, language, &labels.ytdlp_update_failed);
-        return path_in_system.to_path_buf();
-    }
-    local_path.to_path_buf()
+fn claim_ytdlp_update_check(checked: &AtomicBool) -> bool {
+    !checked.swap(true, Ordering::SeqCst)
 }
 
-fn check_ytdlp_update(hwnd: HWND, language: Language, labels: &Labels, path: &Path) {
-    restore_stream_parent_focus(hwnd);
-    if YTDLP_UPDATE_CHECKED.swap(true, Ordering::SeqCst) {
+fn start_ytdlp_update_check(parent: HWND) {
+    if !claim_ytdlp_update_check(&YTDLP_UPDATE_CHECKED) {
         return;
     }
-    let installed = match ytdlp_installed_version(path) {
-        Ok(version) => version,
-        Err(err) => {
-            crate::log_debug(&format!("yt-dlp version read failed: {}", err));
-            return;
-        }
-    };
-    let latest = match fetch_latest_ytdlp_version() {
-        Ok(version) => version,
-        Err(err) => {
-            crate::log_debug(&format!("yt-dlp latest version fetch failed: {}", err));
-            return;
-        }
-    };
-    if compare_versions(&installed, &latest) != Some(CmpOrdering::Less) {
+    crate::log_debug("yt-dlp asynchronous update check started (once per session)");
+    if unsafe { SetTimer(parent, YTDLP_UPDATE_TIMER_ID, 500, None) } == 0 {
+        crate::log_debug("yt-dlp update notification timer unavailable");
         return;
     }
+    std::thread::spawn(|| {
+        let started = std::time::Instant::now();
+        let result = (|| -> YtdlpUpdateResult {
+            let target = settings_dir().join(YTDLP_EXE_NAME);
+            let external = !target.is_file();
+            let path = if external {
+                let Some(path) = find_ytdlp_in_path() else {
+                    return Ok(None);
+                };
+                path
+            } else {
+                target.clone()
+            };
+            let installed = ytdlp_installed_version(&path)?;
+            let latest = fetch_latest_ytdlp_version()?;
+            if compare_versions(&installed, &latest) != Some(CmpOrdering::Less) {
+                return Ok(None);
+            }
+            Ok(Some(YtdlpUpdateNotice {
+                installed,
+                latest,
+                external,
+                target,
+            }))
+        })();
+        crate::log_debug(&format!(
+            "yt-dlp asynchronous update check completed: {} ms",
+            started.elapsed().as_millis()
+        ));
+        if let Ok(mut pending) = YTDLP_UPDATE_RESULT.lock() {
+            *pending = Some(result);
+        }
+    });
+}
 
+pub(crate) fn poll_ytdlp_update_check(parent: HWND) {
+    // Never interrupt a modal search/input dialog or steal focus from another app.
+    // Only the worker probes versions; this UI timer merely consumes its result.
+    if !unsafe { IsWindowEnabled(parent).as_bool() } || unsafe { GetForegroundWindow() } != parent {
+        return;
+    }
+    let result = YTDLP_UPDATE_RESULT
+        .lock()
+        .ok()
+        .and_then(|mut result| result.take());
+    let Some(result) = result else {
+        return;
+    };
+    crate::log_if_err!(unsafe { KillTimer(parent, YTDLP_UPDATE_TIMER_ID) });
+    let notice = match result {
+        Ok(Some(notice)) => notice,
+        Ok(None) => return,
+        Err(err) => {
+            crate::log_debug(&format!("yt-dlp asynchronous update check failed: {err}"));
+            return;
+        }
+    };
+    let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
+    if notice.external {
+        let labels = labels(language);
+        crate::log_debug(&format!(
+            "{} / {}",
+            labels.ytdlp_path_update_download_local, labels.ytdlp_path_update_keep_system
+        ));
+    }
     let prompt = i18n::tr_f(
         language,
-        "youtube.ytdlp_update_prompt",
-        &[("current", &installed), ("latest", &latest)],
+        if notice.external {
+            "youtube.ytdlp_path_update_prompt"
+        } else {
+            "youtube.ytdlp_update_prompt"
+        },
+        &[("current", &notice.installed), ("latest", &notice.latest)],
     );
     let title = to_wide(&confirm_title(language));
     let message = to_wide(&prompt);
     let response = crate::message_box_w_safe(
-        hwnd,
+        parent,
         PCWSTR(message.as_ptr()),
         PCWSTR(title.as_ptr()),
         MB_YESNO | MB_ICONQUESTION,
     );
-    restore_stream_parent_focus(hwnd);
+    restore_stream_parent_focus(parent);
     if response != IDYES {
         return;
     }
     let progress = open_progress_dialog(
-        hwnd,
+        parent,
         language,
         "stream_audio.ytdlp_progress_title",
         "stream_audio.ytdlp_progress_downloading",
         false,
     );
-    let result = download_ytdlp_with_progress(path, |pct| report_progress(progress, pct));
+    let result = download_ytdlp_responsive(parent, progress, &notice.target);
     close_progress_dialog(progress);
-    restore_stream_parent_focus(hwnd);
+    restore_stream_parent_focus(parent);
     if let Err(err) = result {
-        crate::log_debug(&format!("yt-dlp update failed: {}", err));
-        show_error(hwnd, language, &labels.ytdlp_update_failed);
+        crate::log_debug(&format!("yt-dlp update failed: {err}"));
+        show_error(parent, language, &labels(language).ytdlp_update_failed);
+    } else {
+        crate::log_debug("yt-dlp update completed successfully");
+        crate::show_info(
+            parent,
+            language,
+            &i18n::tr(language, "youtube.ytdlp_update_success"),
+        );
+    }
+}
+
+#[cfg(test)]
+mod ytdlp_session_check_tests {
+    use super::*;
+    #[test]
+    fn check_is_claimed_once_even_by_concurrent_openings() {
+        let flag = Arc::new(AtomicBool::new(false));
+        let threads: Vec<_> = (0..12)
+            .map(|_| {
+                let flag = Arc::clone(&flag);
+                std::thread::spawn(move || claim_ytdlp_update_check(&flag))
+            })
+            .collect();
+        assert_eq!(
+            threads
+                .into_iter()
+                .filter_map(|thread| thread.join().ok())
+                .filter(|claimed| *claimed)
+                .count(),
+            1
+        );
+        assert!(!claim_ytdlp_update_check(&flag));
+    }
+    #[test]
+    fn new_session_can_check_again() {
+        let first = AtomicBool::new(false);
+        let next = AtomicBool::new(false);
+        assert!(claim_ytdlp_update_check(&first));
+        assert!(!claim_ytdlp_update_check(&first));
+        assert!(claim_ytdlp_update_check(&next));
     }
 }
 
@@ -13832,6 +13976,45 @@ fn compare_versions(current: &str, latest: &str) -> Option<CmpOrdering> {
         }
     }
     Some(CmpOrdering::Equal)
+}
+
+// Network reads run off the UI thread so painting and accessibility stay responsive.
+fn download_ytdlp_responsive(parent: HWND, dialog: HWND, target: &Path) -> Result<(), String> {
+    let target = target.to_path_buf();
+    let progress = Arc::new(AtomicU32::new(0));
+    let worker_progress = Arc::clone(&progress);
+    let worker = std::thread::Builder::new()
+        .name("ytdlp-download".to_string())
+        .spawn(move || {
+            download_ytdlp_with_progress(&target, |pct| {
+                worker_progress.store(pct, Ordering::Relaxed);
+            })
+        })
+        .map_err(|err| err.to_string())?;
+    crate::app_windows::podcast_save_window::enable_accessible_progress_context(dialog);
+    crate::app_windows::podcast_save_window::focus_primary_control(dialog);
+    let mut last_reported = u32::MAX;
+    let mut last_focus_keepalive = std::time::Instant::now();
+    while !worker.is_finished() {
+        ignore_bool(pump_messages_detect_stream_cancel(parent, dialog));
+        let pct = progress.load(Ordering::Relaxed);
+        if pct != last_reported {
+            report_progress(dialog, pct);
+            last_reported = pct;
+        }
+        if last_focus_keepalive.elapsed() >= std::time::Duration::from_millis(300) {
+            keep_stream_progress_focus(dialog);
+            last_focus_keepalive = std::time::Instant::now();
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    let result = worker
+        .join()
+        .map_err(|_| "yt-dlp download worker panicked".to_string())?;
+    if result.is_ok() {
+        report_progress(dialog, 100);
+    }
+    result
 }
 
 fn download_ytdlp_with_progress<F: FnMut(u32)>(
@@ -14830,5 +15013,50 @@ fn get_transcript_language_code(transcript: &YtSubtitleOption) -> &str {
             .unwrap_or(&transcript.code)
     } else {
         &transcript.code
+    }
+}
+
+#[cfg(test)]
+mod stream_search_return_tests {
+    use super::ResolvedStreamSelection;
+    fn selection(collection: Option<&str>) -> ResolvedStreamSelection {
+        ResolvedStreamSelection {
+            url: "https://www.youtube.com/watch?v=4K6cvc27_CE".into(),
+            collection_url: collection.map(str::to_owned),
+            collection_page: collection.map(|_| 3),
+            selected_label: Some("Track".into()),
+            selected_title: Some("Track".into()),
+            previous_input: None,
+            previous_collection_page: None,
+            previous_selected_label: None,
+        }
+    }
+    #[test]
+    fn playback_from_second_search_page_keeps_page_and_selection() {
+        let mut s = selection(None);
+        s.remember_search_page("query", 1, "Second page video".into());
+        assert_eq!(s.collection_page, Some(1));
+        assert_eq!(s.selected_label.as_deref(), Some("Second page video"));
+        assert!(s.previous_input.is_none());
+        assert_eq!(s.collection_page.map(|p| p.saturating_sub(1)), Some(0));
+    }
+    #[test]
+    fn collection_return_remembers_parent_search_page() {
+        let mut s = selection(Some("https://www.youtube.com/playlist?list=PLtest"));
+        s.remember_search_page("query", 2, "Playlist result".into());
+        assert_eq!(s.collection_page, Some(3));
+        assert_eq!(s.selected_label.as_deref(), Some("Track"));
+        assert_eq!(s.previous_collection_page, Some(2));
+        assert_eq!(s.previous_input.as_deref(), Some("query"));
+        assert_eq!(
+            s.previous_selected_label.as_deref(),
+            Some("Playlist result")
+        );
+    }
+    #[test]
+    fn first_search_page_remains_first_page() {
+        let mut s = selection(None);
+        s.remember_search_page("query", 0, "First video".into());
+        assert_eq!(s.collection_page, Some(0));
     }
 }

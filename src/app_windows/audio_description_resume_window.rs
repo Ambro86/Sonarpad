@@ -12,12 +12,12 @@ use windows::Win32::UI::Controls::{WC_BUTTON, WC_COMBOBOXW, WC_STATIC};
 use windows::Win32::UI::Input::KeyboardAndMouse::{EnableWindow, SetFocus, VK_ESCAPE};
 use windows::Win32::UI::WindowsAndMessaging::{
     BS_DEFPUSHBUTTON, CB_ADDSTRING, CB_FINDSTRINGEXACT, CB_GETCURSEL, CB_GETLBTEXT,
-    CB_GETLBTEXTLEN, CB_SETCURSEL, CBN_SELCHANGE, CBS_DROPDOWNLIST, CREATESTRUCTW, CW_USEDEFAULT,
-    CreateWindowExW, DestroyWindow, DispatchMessageW, GWLP_USERDATA, GetWindowLongPtrW, HMENU,
-    IDC_ARROW, IsDialogMessageW, LoadCursorW, MSG, SendMessageW, SetForegroundWindow,
-    SetWindowLongPtrW, TranslateMessage, WINDOW_STYLE, WM_CLOSE, WM_COMMAND, WM_CREATE, WM_KEYDOWN,
-    WM_NCDESTROY, WM_SETFONT, WNDCLASSW, WS_CAPTION, WS_CHILD, WS_EX_CLIENTEDGE,
-    WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_SYSMENU, WS_TABSTOP, WS_VISIBLE,
+    CB_GETLBTEXTLEN, CB_RESETCONTENT, CB_SETCURSEL, CBN_SELCHANGE, CBS_DROPDOWNLIST, CREATESTRUCTW,
+    CW_USEDEFAULT, CreateWindowExW, DestroyWindow, DispatchMessageW, GWLP_USERDATA,
+    GetWindowLongPtrW, HMENU, IDC_ARROW, IsDialogMessageW, LoadCursorW, MSG, SendMessageW,
+    SetForegroundWindow, SetWindowLongPtrW, TranslateMessage, WINDOW_STYLE, WM_CLOSE, WM_COMMAND,
+    WM_CREATE, WM_KEYDOWN, WM_NCDESTROY, WM_SETFONT, WNDCLASSW, WS_CAPTION, WS_CHILD,
+    WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_SYSMENU, WS_TABSTOP, WS_VISIBLE,
 };
 use windows::core::{PCWSTR, PWSTR};
 
@@ -297,15 +297,6 @@ fn select_combo_text(combo: HWND, text: &str) {
 }
 
 fn append_candidate(state: &mut ResumeSelectorState, candidate: ResumeCandidate) {
-    let wide = to_wide(&candidate.label);
-    unsafe {
-        SendMessageW(
-            state.combo,
-            CB_ADDSTRING,
-            WPARAM(0),
-            LPARAM(wide.as_ptr() as isize),
-        );
-    }
     add_model_if_missing(&mut state.available_models, &candidate.gemini_model);
     if !candidate.gemini_model.trim().is_empty() {
         let model_wide = to_wide(&candidate.gemini_model);
@@ -330,6 +321,19 @@ fn append_candidate(state: &mut ResumeSelectorState, candidate: ResumeCandidate)
         }
     }
     state.candidates.push(candidate);
+    unsafe {
+        SendMessageW(state.combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
+        for display in crate::result_labels::accessible_result_labels(
+            state.candidates.iter().map(|c| c.label.clone()).collect(),
+        ) {
+            SendMessageW(
+                state.combo,
+                CB_ADDSTRING,
+                WPARAM(0),
+                LPARAM(to_wide(&display).as_ptr() as isize),
+            );
+        }
+    }
     let index = state.candidates.len() - 1;
     unsafe {
         SendMessageW(state.combo, CB_SETCURSEL, WPARAM(index), LPARAM(0));
@@ -518,8 +522,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     HINSTANCE(0),
                     None,
                 );
-                for candidate in &init.candidates {
-                    let wide = to_wide(&candidate.label);
+                for display in crate::result_labels::accessible_result_labels(
+                    init.candidates.iter().map(|c| c.label.clone()).collect(),
+                ) {
+                    let wide = to_wide(&display);
                     SendMessageW(
                         combo,
                         CB_ADDSTRING,

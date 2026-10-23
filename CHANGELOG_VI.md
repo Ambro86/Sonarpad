@@ -11,6 +11,7 @@ Version 0.9.18 – 2026-10-16
 7. Đã thêm tiếng Indonesia (Bahasa Indonesia), gồm giao diện, hướng dẫn và bản dịch cho các công cụ đa phương tiện mới. Cảm ơn Muhammad đã đóng góp bản dịch.
 
 8. Thêm SonarMusic trong Đa phương tiện: tìm bài hát, album, nghệ sĩ, danh sách phát và video âm nhạc, gợi ý sau khi nhập và phân trang kết quả. Hỗ trợ phát, lưu, phiên âm và mô tả âm thanh bằng AI qua các công cụ hiện có.
+9. Tăng tốc tìm kiếm và mở video YouTube.
 
 Version 0.9.17 – 2026-10-15
 

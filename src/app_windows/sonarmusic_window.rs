@@ -8,11 +8,13 @@ use windows::Win32::Graphics::Gdi::{COLOR_WINDOW, HBRUSH};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Accessibility::NotifyWinEvent;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    EnableWindow, GetFocus, GetKeyState, SetFocus, VK_APPS, VK_ESCAPE, VK_F10, VK_RETURN, VK_SHIFT,
+    EnableWindow, GetFocus, GetKeyState, IsWindowEnabled, SetFocus, VK_APPS, VK_ESCAPE, VK_F10,
+    VK_RETURN, VK_SHIFT,
 };
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::core::{PCWSTR, w};
 
+const WM_RESTORE_MUSIC_FOCUS: u32 = WM_APP + 211;
 const SEARCH: usize = 101;
 const SUGGEST: usize = 102;
 const QUERY: usize = 103;
@@ -26,6 +28,11 @@ const CLOSE: usize = 109;
 const SAVE: usize = 110;
 const TRANSCRIBE: usize = 111;
 const AD: usize = 112;
+const FAVORITES: usize = 114;
+const OPEN_FAVORITE: usize = 115;
+const ADD_FAVORITE: usize = 116;
+const REMOVE_FAVORITE: usize = 117;
+const REMOVE_SAVED: usize = 118;
 #[derive(Clone, Default)]
 struct SearchSnapshot {
     query: String,
@@ -34,7 +41,7 @@ struct SearchSnapshot {
     request: Option<Request>,
     page_number: usize,
     pagination: Pagination,
-    history: Vec<(Request, Page, usize, usize, Pagination)>,
+    history: Vec<(Option<Request>, Page, usize, usize, Pagination)>,
     selection: usize,
 }
 struct PlayerReturn {
@@ -81,24 +88,69 @@ enum Reply {
     Suggestions(Vec<String>),
 }
 struct State {
+    parent: HWND,
     client: Client,
     locale: String,
     query: HWND,
     kind: HWND,
     results: HWND,
     status: HWND,
+    favorites_combo: HWND,
+    last_focus: HWND,
+    favorites: Vec<music::Item>,
     suggest: HWND,
     controls: Vec<HWND>,
     page: Page,
     request: Option<Request>,
     page_number: usize,
     pagination: Pagination,
-    history: Vec<(Request, Page, usize, usize, Pagination)>,
+    history: Vec<(Option<Request>, Page, usize, usize, Pagination)>,
     suggestions: Option<Vec<String>>,
     receiver: Option<Receiver<Result<Reply, String>>>,
     selected_action: Option<(String, String, usize)>,
     playback_snapshot: Option<SearchSnapshot>,
 }
+fn remember_focus(hwnd: HWND, state: &mut State) {
+    unsafe {
+        let mut focus = GetFocus();
+        // Remember the combo itself, not its transient internal edit/list window.
+        while focus.0 != 0 && IsChild(hwnd, focus).as_bool() {
+            if GetWindowLongW(focus, GWL_STYLE) as u32 & WS_TABSTOP.0 != 0 {
+                state.last_focus = focus;
+                break;
+            }
+            focus = GetParent(focus);
+        }
+    }
+}
+
+fn restore_focus(hwnd: HWND, state: &State) {
+    unsafe {
+        if GetForegroundWindow() != hwnd || !IsWindowEnabled(hwnd).as_bool() {
+            return;
+        }
+        let target = [
+            state.last_focus,
+            state.query,
+            GetDlgItem(hwnd, CLOSE as i32),
+        ]
+        .into_iter()
+        .find(|&control| {
+            control.0 != 0
+                && IsChild(hwnd, control).as_bool()
+                && IsWindowEnabled(control).as_bool()
+                && IsWindowVisible(control).as_bool()
+        });
+        if let Some(target) = target {
+            SetFocus(target);
+            crate::log_debug(&format!(
+                "SonarMusic focus restored: control={}",
+                GetDlgCtrlID(target)
+            ));
+        }
+    }
+}
+
 fn text(hwnd: HWND) -> String {
     unsafe {
         let mut b = vec![0u16; GetWindowTextLengthW(hwnd) as usize + 1];
@@ -138,7 +190,8 @@ fn label(s: &State, key: &str) -> String {
 fn render(hwnd: HWND, s: &State, index: usize) {
     fill(
         s.results,
-        s.pagination.labels(&s.page, &s.locale).into_iter(),
+        crate::result_labels::accessible_result_labels(s.pagination.labels(&s.page, &s.locale))
+            .into_iter(),
     );
     unsafe {
         SendMessageW(s.results, CB_SETCURSEL, WPARAM(index), LPARAM(0));
@@ -175,6 +228,43 @@ fn update(hwnd: HWND, s: &State) {
         );
     }
 }
+fn refresh_favorites(s: &State, selected_index: usize) {
+    let labels = crate::result_labels::accessible_result_labels(
+        s.favorites
+            .iter()
+            .map(|item| item.display(&s.locale))
+            .collect(),
+    );
+    fill(s.favorites_combo, labels.into_iter());
+    if !s.favorites.is_empty() {
+        unsafe {
+            SendMessageW(
+                s.favorites_combo,
+                CB_SETCURSEL,
+                WPARAM(selected_index.min(s.favorites.len() - 1)),
+                LPARAM(0),
+            );
+        }
+    }
+}
+fn persist_favorites(s: &State) {
+    if let Some(settings) = with_state(s.parent, |state| {
+        state.settings.sonarmusic_favorites =
+            s.favorites.iter().map(music::favorite_value).collect();
+        state.settings.clone()
+    }) {
+        crate::settings::save_settings(settings);
+    }
+}
+fn selected_item(s: &State) -> Option<&music::Item> {
+    if s.suggestions.is_some() {
+        return None;
+    }
+    match s.pagination.row(&s.page, selected(s.results)) {
+        Some(ResultRow::Item(i)) => s.page.items.get(i),
+        _ => None,
+    }
+}
 fn result_actions(s: &State) -> Vec<usize> {
     if s.receiver.is_some() {
         return Vec::new();
@@ -193,13 +283,38 @@ fn result_actions(s: &State) -> Vec<usize> {
         None => return Vec::new(),
     };
     match s.page.items.get(index) {
-        Some(item) if item.playable() => vec![OPEN, SAVE, TRANSCRIBE, AD],
-        Some(item) if item.browse_request().is_some() => vec![OPEN],
+        Some(item) if item.playable() => vec![
+            OPEN,
+            SAVE,
+            TRANSCRIBE,
+            AD,
+            if s.favorites.iter().any(|f| music::same_favorite(f, item)) {
+                REMOVE_FAVORITE
+            } else {
+                ADD_FAVORITE
+            },
+        ],
+        Some(item) if item.browse_request().is_some() => vec![
+            OPEN,
+            if s.favorites.iter().any(|f| music::same_favorite(f, item)) {
+                REMOVE_FAVORITE
+            } else {
+                ADD_FAVORITE
+            },
+        ],
         _ => Vec::new(),
     }
 }
-fn show_result_menu(hwnd: HWND, s: &State, position: LPARAM) {
-    let actions = result_actions(s);
+fn show_result_menu(hwnd: HWND, s: &State, position: LPARAM, favorites: bool) {
+    let actions = if favorites {
+        if s.receiver.is_none() && s.favorites.get(selected(s.favorites_combo)).is_some() {
+            vec![OPEN_FAVORITE, REMOVE_SAVED]
+        } else {
+            Vec::new()
+        }
+    } else {
+        result_actions(s)
+    };
     if actions.is_empty() {
         return;
     }
@@ -211,6 +326,9 @@ fn show_result_menu(hwnd: HWND, s: &State, position: LPARAM) {
             with_state(GetParent(hwnd), |state| state.settings.language).unwrap_or_default();
         for action in actions {
             let title = match action {
+                ADD_FAVORITE => label(s, "add_favorite"),
+                REMOVE_FAVORITE | REMOVE_SAVED => label(s, "remove_favorite"),
+                OPEN_FAVORITE => label(s, "open_favorite"),
                 MORE => label(s, "next_results"),
                 PREVIOUS => label(s, "previous_results"),
                 SAVE => i18n::tr(language, "playback.download_episode"),
@@ -227,13 +345,24 @@ fn show_result_menu(hwnd: HWND, s: &State, position: LPARAM) {
         }
         let (x, y) = if position.0 == -1 {
             let mut rect = RECT::default();
-            crate::log_if_err!(GetWindowRect(s.results, &mut rect));
+            crate::log_if_err!(GetWindowRect(
+                if favorites {
+                    s.favorites_combo
+                } else {
+                    s.results
+                },
+                &mut rect
+            ));
             (rect.left, rect.bottom)
         } else {
             (position.0 as i16 as i32, (position.0 >> 16) as i16 as i32)
         };
         SendMessageW(s.results, CB_SHOWDROPDOWN, WPARAM(0), LPARAM(0));
-        focus_results(s);
+        if favorites {
+            SetFocus(s.favorites_combo);
+        } else {
+            focus_results(s);
+        }
         let command =
             TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON, x, y, 0, hwnd, None).0 as usize;
         crate::log_if_err!(DestroyMenu(menu));
@@ -275,9 +404,26 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) ->
             }
             let s = &mut *ptr;
             match msg {
+                WM_ACTIVATE => {
+                    if w.0 & 0xffff == WA_INACTIVE as usize {
+                        remember_focus(hwnd, s);
+                    } else {
+                        let _ignored =
+                            PostMessageW(hwnd, WM_RESTORE_MUSIC_FOCUS, WPARAM(0), LPARAM(0));
+                    }
+                    DefWindowProcW(hwnd, msg, w, l)
+                }
+                WM_SETFOCUS => {
+                    let _ignored = PostMessageW(hwnd, WM_RESTORE_MUSIC_FOCUS, WPARAM(0), LPARAM(0));
+                    LRESULT(0)
+                }
+                WM_RESTORE_MUSIC_FOCUS => {
+                    restore_focus(hwnd, s);
+                    LRESULT(0)
+                }
                 WM_CONTEXTMENU => {
-                    if HWND(w.0 as isize) == s.results {
-                        show_result_menu(hwnd, s, l);
+                    if HWND(w.0 as isize) == s.results || HWND(w.0 as isize) == s.favorites_combo {
+                        show_result_menu(hwnd, s, l, HWND(w.0 as isize) == s.favorites_combo);
                         return LRESULT(0);
                     }
                     DefWindowProcW(hwnd, msg, w, l)
@@ -293,10 +439,14 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) ->
                     }
                     if id == KIND && notification == CBN_SELCHANGE {
                         let kind = TYPES[selected(s.kind).min(TYPES.len() - 1)].to_owned();
-                        if let Some(settings) = with_state(GetParent(hwnd), |state| {
+                        if let Some(settings) = with_state(s.parent, |state| {
                             state.settings.sonarmusic_search_type = kind;
                             state.settings.clone()
                         }) {
+                            crate::log_debug(&format!(
+                                "SonarMusic search type saved: {}",
+                                settings.sonarmusic_search_type
+                            ));
                             crate::settings::save_settings(settings);
                         }
                     }
@@ -314,6 +464,58 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) ->
                         return LRESULT(0);
                     }
                     match id {
+                        ADD_FAVORITE | REMOVE_FAVORITE | REMOVE_SAVED => {
+                            let item = if id == REMOVE_SAVED {
+                                s.favorites.get(selected(s.favorites_combo)).cloned()
+                            } else {
+                                selected_item(s).cloned()
+                            };
+                            if let Some(item) = item {
+                                let index = selected(s.favorites_combo);
+                                let mut values: Vec<_> =
+                                    s.favorites.iter().map(music::favorite_value).collect();
+                                if id == ADD_FAVORITE {
+                                    music::add_favorite(&mut values, &item);
+                                } else {
+                                    music::remove_favorite(&mut values, &item);
+                                }
+                                s.favorites = music::favorite_items(&values);
+                                persist_favorites(s);
+                                refresh_favorites(s, index);
+                                set(
+                                    s.status,
+                                    &format!("{}: {}", label(s, "favorites"), s.favorites.len()),
+                                );
+                            }
+                        }
+                        OPEN_FAVORITE => {
+                            let index = selected(s.favorites_combo);
+                            if index < s.favorites.len() {
+                                s.history.push((
+                                    s.request.clone(),
+                                    s.page.clone(),
+                                    s.page_number,
+                                    selected(s.results),
+                                    s.pagination.clone(),
+                                ));
+                                s.page = Page {
+                                    items: s.favorites.clone(),
+                                    next: None,
+                                };
+                                s.request = None;
+                                s.page_number = 1;
+                                s.pagination = Pagination::default();
+                                s.suggestions = None;
+                                render(hwnd, s, index);
+                                let kind = TYPES[selected(s.kind).min(TYPES.len() - 1)];
+                                if let Some(request) = s.favorites[index].favorite_search(kind) {
+                                    set(s.query, &s.favorites[index].title);
+                                    load(hwnd, s, request, false);
+                                } else {
+                                    PostMessageW(hwnd, WM_COMMAND, WPARAM(OPEN), LPARAM(0)).ok();
+                                }
+                            }
+                        }
                         SEARCH => {
                             if let Ok(r) = Request::search(
                                 &text(s.query),
@@ -357,7 +559,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) ->
                                 s.page_number = s.page_number.saturating_sub(1);
                                 render(hwnd, s, 0);
                             } else if let Some((r, p, n, index, pagination)) = s.history.pop() {
-                                s.request = Some(r);
+                                s.request = r;
                                 s.page = p;
                                 s.page_number = n;
                                 s.pagination = pagination;
@@ -420,9 +622,9 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) ->
                                         s.selected_action = Some((url, item.title, action));
                                         let _ignored = DestroyWindow(hwnd);
                                     } else if let Some(r) = item.browse_request() {
-                                        if let Some(current) = s.request.clone() {
+                                        {
                                             s.history.push((
-                                                current,
+                                                s.request.clone(),
                                                 s.page.clone(),
                                                 s.page_number,
                                                 index,
@@ -533,7 +735,7 @@ fn open_with_snapshot(parent: HWND, snapshot: Option<SearchSnapshot>) {
             200,
             180,
             760,
-            425,
+            485,
             parent,
             HMENU(0),
             instance,
@@ -580,6 +782,26 @@ fn open_with_snapshot(parent: HWND, snapshot: Option<SearchSnapshot>) {
             25,
             WS_TABSTOP | WINDOW_STYLE(ES_AUTOHSCROLL as u32),
         );
+        make(
+            w!("STATIC"),
+            &t("favorites"),
+            0,
+            15,
+            245,
+            710,
+            22,
+            WINDOW_STYLE(0),
+        );
+        let favorites_combo = make(
+            w!("COMBOBOX"),
+            "",
+            FAVORITES,
+            15,
+            270,
+            710,
+            220,
+            WS_TABSTOP | WS_VSCROLL | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+        );
         let suggest = make(
             w!("BUTTON"),
             &t("suggest"),
@@ -616,6 +838,7 @@ fn open_with_snapshot(parent: HWND, snapshot: Option<SearchSnapshot>) {
             state.settings.sonarmusic_search_type.clone()
         })
         .unwrap_or_default();
+        crate::log_debug(&format!("SonarMusic search type restored: {saved_kind}"));
         SendMessageW(
             kind,
             CB_SETCURSEL,
@@ -652,21 +875,29 @@ fn open_with_snapshot(parent: HWND, snapshot: Option<SearchSnapshot>) {
             240,
             WS_TABSTOP | WS_VSCROLL | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
         );
-        let status = make(w!("STATIC"), "", 0, 15, 245, 710, 40, WINDOW_STYLE(0));
-        let mut controls = vec![query, search, suggest, kind, results];
+        let favorites = with_state(parent, |state| {
+            music::favorite_items(&state.settings.sonarmusic_favorites)
+        })
+        .unwrap_or_default();
+        let status = make(w!("STATIC"), "", 0, 15, 310, 710, 40, WINDOW_STYLE(0));
+        let mut controls = vec![query, search, suggest, kind, results, favorites_combo];
         for (id, key, x) in [(BACK, "back", 15), (CLOSE, "close", 535)] {
-            let h = make(w!("BUTTON"), &t(key), id, x, 300, 190, 35, WS_TABSTOP);
+            let h = make(w!("BUTTON"), &t(key), id, x, 365, 190, 35, WS_TABSTOP);
             if id != CLOSE {
                 controls.push(h);
             }
         }
         let mut state = State {
+            parent,
             client,
             locale,
             query,
             kind,
             results,
             status,
+            favorites_combo,
+            last_focus: query,
+            favorites,
             suggest,
             controls,
             page: Page::default(),
@@ -695,6 +926,7 @@ fn open_with_snapshot(parent: HWND, snapshot: Option<SearchSnapshot>) {
                 &format!("{}: {}", label(&state, "results"), state.page.items.len()),
             );
         }
+        refresh_favorites(&state, 0);
         update(hwnd, &state);
         SetTimer(hwnd, 1, 100, None);
         EnableWindow(parent, false);
@@ -704,17 +936,24 @@ fn open_with_snapshot(parent: HWND, snapshot: Option<SearchSnapshot>) {
         } else {
             SetFocus(query);
         }
+        remember_focus(hwnd, &mut state);
         let mut msg = MSG::default();
         while IsWindow(hwnd).as_bool() && GetMessageW(&mut msg, HWND(0), 0, 0).as_bool() {
+            remember_focus(hwnd, &mut state);
             if crate::app_windows::calendar_window::handle_reminder_alert_message(&msg) {
                 continue;
             }
             if msg.message == WM_KEYDOWN
-                && GetFocus() == results
+                && (GetFocus() == results || GetFocus() == favorites_combo)
                 && (msg.wParam.0 == VK_APPS.0 as usize
                     || (msg.wParam.0 == VK_F10.0 as usize && GetKeyState(VK_SHIFT.0 as i32) < 0))
             {
-                SendMessageW(hwnd, WM_CONTEXTMENU, WPARAM(results.0 as usize), LPARAM(-1));
+                SendMessageW(
+                    hwnd,
+                    WM_CONTEXTMENU,
+                    WPARAM(GetFocus().0 as usize),
+                    LPARAM(-1),
+                );
                 continue;
             }
             if msg.message == WM_KEYDOWN && msg.wParam.0 == VK_ESCAPE.0 as usize {
@@ -732,9 +971,15 @@ fn open_with_snapshot(parent: HWND, snapshot: Option<SearchSnapshot>) {
             }
             if msg.message == WM_KEYDOWN
                 && msg.wParam.0 == VK_RETURN.0 as usize
-                && (msg.hwnd == query || msg.hwnd == results)
+                && (msg.hwnd == query || msg.hwnd == results || msg.hwnd == favorites_combo)
             {
-                let id = if msg.hwnd == query { SEARCH } else { OPEN };
+                let id = if msg.hwnd == query {
+                    SEARCH
+                } else if msg.hwnd == favorites_combo {
+                    OPEN_FAVORITE
+                } else {
+                    OPEN
+                };
                 SendMessageW(hwnd, WM_COMMAND, WPARAM(id), LPARAM(0));
                 continue;
             }

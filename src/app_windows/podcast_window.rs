@@ -2048,8 +2048,15 @@ fn apply_settings_to_ui(state: &mut PodcastState, settings: &AppSettings) {
             LPARAM(0),
         );
 
-        for (index, device) in state.mic_devices.iter().enumerate() {
-            let name = to_wide(&device.name);
+        let displays = crate::result_labels::accessible_result_labels(
+            state
+                .mic_devices
+                .iter()
+                .map(|device| device.name.clone())
+                .collect(),
+        );
+        for ((index, device), display) in state.mic_devices.iter().enumerate().zip(displays) {
+            let name = to_wide(&display);
             SendMessageW(
                 state.mic_device,
                 CB_ADDSTRING,
@@ -2086,8 +2093,15 @@ fn apply_settings_to_ui(state: &mut PodcastState, settings: &AppSettings) {
             LPARAM(0),
         );
 
-        for (index, device) in state.system_devices.iter().enumerate() {
-            let name = to_wide(&device.name);
+        let displays = crate::result_labels::accessible_result_labels(
+            state
+                .system_devices
+                .iter()
+                .map(|device| device.name.clone())
+                .collect(),
+        );
+        for ((index, device), display) in state.system_devices.iter().enumerate().zip(displays) {
+            let name = to_wide(&display);
             SendMessageW(
                 state.system_device,
                 CB_ADDSTRING,
@@ -3181,8 +3195,15 @@ fn refresh_single_app_list(
         .cloned()
         .collect();
     let mut selected_index = 0usize;
-    for (index, app) in state.single_apps.iter().enumerate() {
-        let name = to_wide(&app.display_name);
+    let displays = crate::result_labels::accessible_result_labels(
+        state
+            .single_apps
+            .iter()
+            .map(|app| app.display_name.clone())
+            .collect(),
+    );
+    for ((index, app), display) in state.single_apps.iter().enumerate().zip(displays) {
+        let name = to_wide(&display);
         unsafe {
             SendMessageW(
                 state.single_app,

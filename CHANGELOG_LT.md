@@ -11,6 +11,7 @@ Version 0.9.18 – 2026-10-16
 7. Pridėta indoneziečių kalba (Bahasa Indonesia): sąsaja, naudotojo vadovas ir naujausių medijos įrankių vertimai. Dėkojame Muhammad už vertimą.
 
 8. Į Multimediją įtrauktas SonarMusic: dainų, albumų, atlikėjų, grojaraščių ir muzikos vaizdo įrašų paieška, pasiūlymai įvedus tekstą ir rezultatų puslapiai. Įrašus galima leisti, išsaugoti, transkribuoti ir kurti DI garsinį vaizdavimą esamomis priemonėmis.
+9. Paspartinta „YouTube“ vaizdo įrašų paieška ir atidarymas.
 
 Version 0.9.17 – 2026-10-15
 

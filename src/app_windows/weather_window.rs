@@ -642,8 +642,14 @@ fn populate_days(hwnd: HWND) {
     let Some(forecast) = forecast else {
         return;
     };
-    for (index, day) in forecast.days.iter().enumerate() {
-        let label = day_label(language, index, &day.date);
+    for label in crate::result_labels::accessible_result_labels(
+        forecast
+            .days
+            .iter()
+            .enumerate()
+            .map(|(index, day)| day_label(language, index, &day.date))
+            .collect(),
+    ) {
         let wide = to_wide(&label);
         crate::send_message_w_safe(
             combo_day,
@@ -871,8 +877,9 @@ fn populate_recent_cities(hwnd: HWND) {
         return;
     };
     crate::send_message_w_safe(list_recent, LB_RESETCONTENT, WPARAM(0), LPARAM(0));
-    for city in cities {
-        let label = city_display_label(&city);
+    for label in crate::result_labels::accessible_result_labels(
+        cities.iter().map(city_display_label).collect(),
+    ) {
         let wide = to_wide(&label);
         crate::send_message_w_safe(
             list_recent,

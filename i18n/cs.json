@@ -2202,6 +2202,7 @@
   "youtube.ytdlp_path_update_prompt": "yt-dlp byl nalezen v systémové proměnné PATH, ale tato kopie není spravována programem Sonarpad.\nNalezená verze: {current}\nNejnovější dostupná verze: {latest}\n\nChcete stáhnout lokální kopii yt-dlp, kterou bude Sonarpad moci automaticky aktualizovat?",
   "youtube.ytdlp_prompt_download": "yt-dlp je potřeba pro použití této funkce. Chcete jej stáhnout nyní?",
   "youtube.ytdlp_update_failed": "Aktualizace yt-dlp selhala.",
+  "youtube.ytdlp_update_success": "yt-dlp byl úspěšně aktualizován.",
   "youtube.ytdlp_update_prompt": "Je dostupná aktualizace yt-dlp.\nNainstalovaná verze: {current}\nNová verze: {latest}\n\nChcete stáhnout aktualizaci?",
   "audio_description.keep_character_catalog": "Zachovat katalog postav: užitečné pro audiopopis seriálu se zachováním návaznosti postav.",
   "audio_description.character_catalog.choose": "Vyberte uložený katalog postav",

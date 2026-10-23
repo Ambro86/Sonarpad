@@ -2202,6 +2202,7 @@
   "youtube.ytdlp_path_update_prompt": "yt-dlp सिस्टम PATH में मिला, लेकिन यह प्रति Sonarpad द्वारा प्रबंधित नहीं है।\nपता चला संस्करण: {current}\nनवीनतम उपलब्ध संस्करण: {latest}\n\nक्या आप yt-dlp की एक स्थानीय प्रति डाउनलोड करना चाहते हैं जिसे Sonarpad स्वचालित रूप से अपडेट कर सके?",
   "youtube.ytdlp_prompt_download": "इस सुविधा का उपयोग करने के लिए yt-dlp आवश्यक है। क्या इसे अभी डाउनलोड करें?",
   "youtube.ytdlp_update_failed": "yt-dlp अपडेट विफल हुआ।",
+  "youtube.ytdlp_update_success": "yt-dlp सफलतापूर्वक अपडेट हो गया है।",
   "youtube.ytdlp_update_prompt": "yt-dlp के लिए एक अपडेट उपलब्ध है।\nस्थापित संस्करण: {current}\nनवीनतम संस्करण: {latest}\n\nक्या अभी अपडेट डाउनलोड करें?",
   "audio_description.keep_character_catalog": "पात्र सूची बनाए रखें: किसी श्रृंखला का ऑडियो वर्णन करते समय पात्रों की निरंतरता बनाए रखने के लिए उपयोगी।",
   "audio_description.character_catalog.choose": "सहेजी गई पात्र सूची चुनें",

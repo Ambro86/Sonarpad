@@ -2202,6 +2202,7 @@
   "youtube.ytdlp_path_update_prompt": "在系统 PATH 中检测到 yt-dlp，但此副本不是由 Sonarpad 管理的。\n检测到的版本：{current}\n最新版本：{latest}\n\n是否下载一个由 Sonarpad 自动更新的本地 yt-dlp 副本？",
   "youtube.ytdlp_prompt_download": "使用此功能需要yt-dlp。现在下载吗？",
   "youtube.ytdlp_update_failed": "yt-dlp 更新失败。",
+  "youtube.ytdlp_update_success": "yt-dlp 已成功更新。",
   "youtube.ytdlp_update_prompt": "yt-dlp 有更新可用。已安装版本：{current}最新版本：{latest}现在下载更新？",
   "audio_description.keep_character_catalog": "保留角色目录：适合为系列节目制作音频描述，并保持角色连续性。",
   "audio_description.character_catalog.choose": "选择已保存的角色目录",

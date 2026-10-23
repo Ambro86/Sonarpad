@@ -2925,12 +2925,18 @@ fn render_search_results_list(
             LPARAM(previous.as_ptr() as isize),
         );
     }
-    for item in visible_results {
-        let label = if item.artist.trim().is_empty() {
-            item.title.clone()
-        } else {
-            format!("{} - {}", item.title, item.artist)
-        };
+    for label in crate::result_labels::accessible_result_labels(
+        visible_results
+            .iter()
+            .map(|item| {
+                if item.artist.trim().is_empty() {
+                    item.title.clone()
+                } else {
+                    format!("{} - {}", item.title, item.artist)
+                }
+            })
+            .collect(),
+    ) {
         let wide = to_wide(&label);
         crate::send_message_w_safe(
             hwnd_results,
@@ -3746,8 +3752,13 @@ fn update_category_list(hwnd: HWND, categories: Vec<Category>) {
         return;
     }
     crate::send_message_w_safe(hwnd_list, LB_RESETCONTENT, WPARAM(0), LPARAM(0));
-    for category in &categories {
-        let wide = to_wide(&category.name);
+    for display in crate::result_labels::accessible_result_labels(
+        categories
+            .iter()
+            .map(|category| category.name.clone())
+            .collect(),
+    ) {
+        let wide = to_wide(&display);
         crate::send_message_w_safe(
             hwnd_list,
             LB_ADDSTRING,

@@ -11,6 +11,7 @@ Version 0.9.18 – 2026-10-16
 7. Přidána indonéština (Bahasa Indonesia), včetně rozhraní, příručky a překladů nových multimediálních nástrojů. Děkujeme Muhammadovi za překlad.
 
 8. Přidán SonarMusic do Multimédií: vyhledávání skladeb, alb, interpretů, playlistů a hudebních videí, návrhy po zadání textu, procházení a stránkování výsledků. Skladby lze přehrát, uložit, přepsat a vytvořit k nim audiopopis pomocí AI se stávajícími multimediálními nástroji.
+9. Zrychleno vyhledávání a otevírání videí na YouTube.
 
 Version 0.9.17 – 2026-10-15
 

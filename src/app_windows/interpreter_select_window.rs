@@ -186,6 +186,7 @@ enum InterpreterDialogInitMode {
 }
 
 struct InterpreterSelectInit {
+    keep_stream_focus_on_close: bool,
     parent: HWND,
     mode: InterpreterDialogInitMode,
     language: Language,
@@ -199,6 +200,7 @@ struct InterpreterSelectInit {
 
 #[derive(Default)]
 struct InterpreterSelectOptions {
+    keep_stream_focus_on_close: bool,
     suppress_parent_restore_on_accept: bool,
     suppress_parent_restore_on_secondary: bool,
     suppress_parent_restore_on_cancel: bool,
@@ -218,6 +220,7 @@ enum ControlKind {
 }
 
 struct InterpreterSelectState {
+    keep_stream_focus_on_close: bool,
     control: ControlKind,
     original_mode: InterpreterDialogInitMode,
     language: Language,
@@ -395,6 +398,7 @@ pub fn select_interpreter_with_context_actions_without_parent_restore_on_accept(
         language,
         title,
         InterpreterSelectOptions {
+            keep_stream_focus_on_close: true,
             initial_list_value: initial_value,
             context_actions,
             suppress_parent_restore_on_accept: true,
@@ -518,6 +522,7 @@ fn select_interpreter_internal(
 
     let result = Arc::new(Mutex::new(None));
     let init = Box::new(InterpreterSelectInit {
+        keep_stream_focus_on_close: options.keep_stream_focus_on_close,
         parent,
         mode: mode.clone(),
         language,
@@ -1078,6 +1083,7 @@ fn interpreter_select_wndproc_inner(
             }
 
             let state = Box::new(InterpreterSelectState {
+                keep_stream_focus_on_close: init.keep_stream_focus_on_close,
                 control,
                 original_mode: init.mode,
                 language: init.language,
@@ -1311,7 +1317,7 @@ fn interpreter_select_wndproc_inner(
                     })
                     .unwrap_or(false)
                     {
-                        crate::log_if_err!(crate::destroy_window_safe(hwnd));
+                        close_interpreter_window(hwnd);
                     }
                     LRESULT(0)
                 }
@@ -1320,18 +1326,18 @@ fn interpreter_select_wndproc_inner(
                         *state.result.lock().unwrap_or_else(|e| e.into_inner()) =
                             Some(InterpreterSelectionResult::SecondaryAction);
                     });
-                    crate::log_if_err!(crate::destroy_window_safe(hwnd));
+                    close_interpreter_window(hwnd);
                     LRESULT(0)
                 }
                 ID_CANCEL => {
-                    crate::log_if_err!(crate::destroy_window_safe(hwnd));
+                    close_interpreter_window(hwnd);
                     LRESULT(0)
                 }
                 _ => crate::def_window_proc_w_safe(hwnd, msg, wparam, lparam),
             }
         }
         WM_CLOSE => {
-            crate::log_if_err!(crate::destroy_window_safe(hwnd));
+            close_interpreter_window(hwnd);
             LRESULT(0)
         }
         WM_NCDESTROY => {
@@ -1579,7 +1585,7 @@ fn activate_filtered_tree_group_selection(
         FlatListValue::Item(selected_item) => {
             *state.result.lock().unwrap_or_else(|e| e.into_inner()) =
                 Some(InterpreterSelectionResult::Item(selected_item));
-            crate::log_if_err!(crate::destroy_window_safe(hwnd));
+            close_interpreter_window(hwnd);
             true
         }
     }
@@ -1930,4 +1936,11 @@ fn is_list_navigation_key(key: u32) -> bool {
 
 fn is_tree_navigation_key(key: u32) -> bool {
     is_list_navigation_key(key) || key == VK_LEFT.0 as u32 || key == VK_RIGHT.0 as u32
+}
+
+fn close_interpreter_window(hwnd: HWND) {
+    if with_interpreter_state(hwnd, |state| state.keep_stream_focus_on_close).unwrap_or(false) {
+        crate::app_windows::youtube_transcript_window::prepare_stream_dialog_close(hwnd);
+    }
+    crate::log_if_err!(crate::destroy_window_safe(hwnd));
 }

@@ -1,4 +1,4 @@
-//! Shared Windows/macOS SonarMusic catalog client. Keep both copies identical.
+//! SonarMusic catalog client and native/PHP/yt-dlp search routing.
 use serde_json::Value;
 use std::collections::HashSet;
 use std::sync::OnceLock;
@@ -85,6 +85,15 @@ impl Item {
             id: normalize_browse_id(id),
             params: self.params.clone(),
         })
+    }
+    /// Apply the selected search filter when opening a saved artist.
+    /// Individual albums and tracks retain their normal open action.
+    pub fn favorite_search(&self, kind: &str) -> Option<Request> {
+        if self.available && self.kind == "artist" && kind != "all" {
+            Request::search(&self.title, kind).ok()
+        } else {
+            None
+        }
     }
     pub fn display(&self, locale: &str) -> String {
         [
@@ -320,9 +329,13 @@ impl Client {
         token: Option<&str>,
         page: usize,
     ) -> Result<Page, String> {
-        Page::parse(
-            &self.get(request.parameters(token, page))?,
-            request.collection(),
+        load_catalog(
+            request,
+            token,
+            page,
+            |cursor| crate::direct_catalog::music(request, cursor, &self.locale),
+            |cursor, index| self.get(request.parameters(cursor, index)),
+            |index| crate::direct_catalog::music_ytdlp(request, index),
         )
     }
     pub fn suggestions(&self, query: &str) -> Result<Vec<String>, String> {
@@ -341,6 +354,52 @@ impl Client {
             .map(str::to_owned)
             .collect())
     }
+}
+fn load_catalog(
+    request: &Request,
+    token: Option<&str>,
+    page: usize,
+    mut native: impl FnMut(Option<&str>) -> Result<Value, String>,
+    mut php: impl FnMut(Option<&str>, usize) -> Result<Value, String>,
+    mut ytdlp: impl FnMut(usize) -> Result<Value, String>,
+) -> Result<Page, String> {
+    // A continuation belongs to its provider. When switching to PHP,
+    // replay its earlier pages instead of submitting an internal cursor.
+    if token.is_none() || token.is_some_and(|t| t.starts_with("native:")) {
+        let raw = token.and_then(|t| t.strip_prefix("native:"));
+        if let Ok(data) = native(raw) {
+            let mut result = Page::parse(&data, request.collection())?;
+            result.next = result.next.map(|t| format!("native:{t}"));
+            return Ok(result);
+        }
+    }
+    if !token.is_some_and(|t| t.starts_with("ytdlp:")) {
+        let php_result = (|| {
+            let mut previous = token
+                .and_then(|t| t.strip_prefix("php:"))
+                .map(str::to_owned);
+            let replay = token.is_some_and(|t| t.starts_with("native:"));
+            let start = if replay { 1 } else { page.max(1) };
+            for index in start..=page.max(1) {
+                let mut result =
+                    Page::parse(&php(previous.as_deref(), index)?, request.collection())?;
+                if index == page.max(1) {
+                    result.next = result.next.map(|t| format!("php:{t}"));
+                    return Ok(result);
+                }
+                previous = Some(
+                    result
+                        .next
+                        .ok_or_else(|| "PHP pagination exhausted".to_string())?,
+                );
+            }
+            Err("PHP pagination unavailable".to_string())
+        })();
+        if let Ok(result) = php_result {
+            return Ok(result);
+        }
+    }
+    Page::parse(&ytdlp(page)?, request.collection())
 }
 pub fn locale_pair(locale: &str) -> (&str, &str) {
     match locale {
@@ -705,5 +764,364 @@ mod tests {
                 assert!(!language[key].as_str().unwrap().is_empty());
             }
         }
+    }
+}
+
+/// Resolve only progressive video+audio streams. Other formats keep the existing
+/// yt-dlp path; never hand a video-only stream to the player.
+pub fn resolve_playback(watch_url: &str) -> Result<String, String> {
+    resolve_playback_with_title(watch_url).map(|(url, _)| url)
+}
+
+pub fn resolve_playback_with_title(watch_url: &str) -> Result<(String, String), String> {
+    let url = reqwest::Url::parse(watch_url).map_err(|_| "Invalid watch URL")?;
+    if url.host_str() != Some("www.youtube.com") || url.path() != "/watch" {
+        return Err("Unsupported watch URL".into());
+    }
+    let id = url
+        .query_pairs()
+        .find(|(key, _)| key == "v")
+        .map(|(_, value)| value.into_owned())
+        .filter(|id| valid_video_id(id))
+        .ok_or("Invalid video ID")?;
+    static HTTP: OnceLock<reqwest::blocking::Client> = OnceLock::new();
+    let client = HTTP.get_or_init(reqwest::blocking::Client::new);
+    let data: Value = client.post("https://www.youtube.com/youtubei/v1/player?prettyPrint=false&key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vfUWA8808")
+        .timeout(Duration::from_secs(10))
+        .header("User-Agent", "com.google.android.youtube/21.29.366 (Linux; U; Android 16; en_US; SM-S908E Build/TP1A.220624.014) gzip")
+        .header("X-YouTube-Client-Name", "3")
+        .header("X-YouTube-Client-Version", "21.29.366")
+        .json(&serde_json::json!({"context":{"client":{"hl":"en","gl":"US","clientName":"ANDROID","clientVersion":"21.29.366","androidSdkVersion":33,"osName":"Android","osVersion":"16","platform":"MOBILE"}},"videoId":id,"playbackContext":{"contentPlaybackContext":{"html5Preference":"HTML5_PREF_WANTS"}},"contentCheckOk":true,"racyCheckOk":true}))
+        .send().map_err(|_| "Direct resolver network failure")?
+        .error_for_status().map_err(|_| "Direct resolver HTTP failure")?
+        .json().map_err(|_| "Direct resolver invalid response")?;
+    Ok((playback_url(&data)?, string(&data["videoDetails"], "title")))
+}
+
+fn playback_url(data: &Value) -> Result<String, String> {
+    if data["playabilityStatus"]["status"] != "OK" || data["videoDetails"]["isLiveContent"] == true
+    {
+        return Err("Direct playback unavailable".into());
+    }
+    let formats = data["streamingData"]["formats"]
+        .as_array()
+        .ok_or("No progressive formats")?;
+    let valid = |f: &&Value| {
+        f["audioQuality"].is_string()
+            && f["mimeType"]
+                .as_str()
+                .is_some_and(|mime| mime.starts_with("video/"))
+            && f["url"].as_str().is_some_and(|url| {
+                reqwest::Url::parse(url).is_ok_and(|u| {
+                    u.scheme() == "https"
+                        && u.host_str()
+                            .is_some_and(|host| host.ends_with(".googlevideo.com"))
+                })
+            })
+    };
+    formats
+        .iter()
+        .filter(valid)
+        .find(|f| f["itag"] == 18)
+        .or_else(|| {
+            formats
+                .iter()
+                .filter(valid)
+                .filter(|f| f["height"].as_u64().unwrap_or(u64::MAX) <= 480)
+                .max_by_key(|f| f["height"].as_u64().unwrap_or(0))
+        })
+        .and_then(|f| f["url"].as_str())
+        .map(str::to_owned)
+        .ok_or("No compatible direct stream".into())
+}
+
+#[cfg(test)]
+mod playback_tests {
+    use super::*;
+    use serde_json::json;
+    fn data() -> Value {
+        json!({"playabilityStatus":{"status":"OK"},"streamingData":{"formats":[{"itag":18,"height":360,"audioQuality":"AUDIO_QUALITY_MEDIUM","mimeType":"video/mp4","url":"https://rr1.googlevideo.com/videoplayback?test=1"}]}})
+    }
+    #[test]
+    fn progressive_stream() {
+        assert!(playback_url(&data()).is_ok());
+    }
+    #[test]
+    fn unavailable() {
+        let mut d = data();
+        d["playabilityStatus"]["status"] = json!("ERROR");
+        assert!(playback_url(&d).is_err());
+    }
+    #[test]
+    fn live_uses_fallback() {
+        let mut d = data();
+        d["videoDetails"] = json!({"isLiveContent":true});
+        assert!(playback_url(&d).is_err());
+    }
+    #[test]
+    fn cipher_uses_fallback() {
+        let mut d = data();
+        d["streamingData"]["formats"][0]["url"] = Value::Null;
+        assert!(playback_url(&d).is_err());
+    }
+    #[test]
+    fn video_only_uses_fallback() {
+        let mut d = data();
+        d["streamingData"]["formats"][0]["audioQuality"] = Value::Null;
+        assert!(playback_url(&d).is_err());
+    }
+    #[test]
+    fn reject_untrusted_url() {
+        let mut d = data();
+        d["streamingData"]["formats"][0]["url"] = json!("https://googlevideo.com.evil.test/a");
+        assert!(playback_url(&d).is_err());
+    }
+    #[test]
+    fn reject_plain_http() {
+        let mut d = data();
+        d["streamingData"]["formats"][0]["url"] = json!("http://rr1.googlevideo.com/a");
+        assert!(playback_url(&d).is_err());
+    }
+    #[test]
+    fn adaptive_only_uses_fallback() {
+        assert!(
+            playback_url(
+                &json!({"playabilityStatus":{"status":"OK"},"streamingData":{"adaptiveFormats":[]}})
+            )
+            .is_err()
+        );
+    }
+    #[test]
+    fn invalid_watch_url() {
+        assert!(resolve_playback("https://example.org/watch?v=4K6cvc27_CE").is_err());
+    }
+}
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod catalog_fallback_tests {
+    use super::*;
+    use serde_json::json;
+    fn result() -> Value {
+        json!({"ok":true,"items":[{"kind":"song","id":"4K6cvc27_CE","video_id":"4K6cvc27_CE"}],"next_token":"next"})
+    }
+    fn request() -> Request {
+        Request::search("Pink Floyd", "song").unwrap()
+    }
+    #[test]
+    fn native_success_does_not_contact_other_providers() {
+        let p = load_catalog(
+            &request(),
+            None,
+            1,
+            |t| {
+                assert!(t.is_none());
+                Ok(result())
+            },
+            |_, _| panic!(),
+            |_| panic!(),
+        )
+        .unwrap();
+        assert_eq!(p.next.as_deref(), Some("native:next"));
+    }
+    #[test]
+    fn native_failure_uses_php() {
+        let p = load_catalog(
+            &request(),
+            None,
+            1,
+            |_| Err("offline".into()),
+            |t, p| {
+                assert!(t.is_none());
+                assert_eq!(p, 1);
+                Ok(result())
+            },
+            |_| panic!(),
+        )
+        .unwrap();
+        assert_eq!(p.next.as_deref(), Some("php:next"));
+    }
+    #[test]
+    fn both_failures_use_ytdlp() {
+        let p = load_catalog(
+            &request(),
+            None,
+            1,
+            |_| Err("offline".into()),
+            |_, _| Err("offline".into()),
+            |p| {
+                assert_eq!(p, 1);
+                Ok(result())
+            },
+        )
+        .unwrap();
+        assert_eq!(p.items.len(), 1);
+    }
+    #[test]
+    fn php_cursor_never_reaches_native() {
+        load_catalog(
+            &request(),
+            Some("php:opaque"),
+            2,
+            |_| panic!(),
+            |t, p| {
+                assert_eq!(t, Some("opaque"));
+                assert_eq!(p, 2);
+                Ok(result())
+            },
+            |_| panic!(),
+        )
+        .unwrap();
+    }
+    #[test]
+    fn native_failure_replays_php_without_native_cursor() {
+        let mut calls = 0;
+        load_catalog(
+            &request(),
+            Some("native:albums:private"),
+            3,
+            |t| {
+                assert_eq!(t, Some("albums:private"));
+                Err("offline".into())
+            },
+            |t, p| {
+                calls += 1;
+                assert_eq!(p, calls);
+                assert_eq!(t, if p == 1 { None } else { Some("next") });
+                Ok(result())
+            },
+            |_| panic!(),
+        )
+        .unwrap();
+        assert_eq!(calls, 3);
+    }
+    #[test]
+    fn ytdlp_cursor_stays_with_ytdlp() {
+        load_catalog(
+            &request(),
+            Some("ytdlp:2"),
+            2,
+            |_| panic!(),
+            |_, _| panic!(),
+            |p| {
+                assert_eq!(p, 2);
+                Ok(result())
+            },
+        )
+        .unwrap();
+    }
+    #[test]
+    fn all_failed_returns_error() {
+        assert!(
+            load_catalog(
+                &request(),
+                None,
+                1,
+                |_| Err("offline".into()),
+                |_, _| Err("offline".into()),
+                |_| Err("offline".into())
+            )
+            .is_err()
+        );
+    }
+}
+
+/// Persist the original catalog fields, not the UI label or a temporary media URL.
+pub fn favorite_value(item: &Item) -> Value {
+    serde_json::json!({"kind":item.kind,"id":item.id,"title":item.title,
+        "video_id":item.video_id,"browse_id":item.browse_id,"browse_params":item.params,
+        "artist":item.artist,"duration":item.duration,"available":item.available})
+}
+pub fn favorite_items(values: &[Value]) -> Vec<Item> {
+    values
+        .iter()
+        .filter_map(Item::parse)
+        .filter(|item| item.playable() || item.browse_request().is_some())
+        .collect()
+}
+pub fn same_favorite(left: &Item, right: &Item) -> bool {
+    if let (Some(a), Some(b)) = (left.watch_url(), right.watch_url()) {
+        return a == b;
+    }
+    left.kind == right.kind
+        && left.browse_request().is_some()
+        && left.browse_request() == right.browse_request()
+}
+pub fn add_favorite(values: &mut Vec<Value>, item: &Item) -> bool {
+    if (!item.playable() && item.browse_request().is_none())
+        || favorite_items(values)
+            .iter()
+            .any(|saved| same_favorite(saved, item))
+    {
+        return false;
+    }
+    values.push(favorite_value(item));
+    true
+}
+pub fn remove_favorite(values: &mut Vec<Value>, item: &Item) {
+    values.retain(|value| !Item::parse(value).is_some_and(|saved| same_favorite(&saved, item)));
+}
+#[cfg(test)]
+mod favorite_tests {
+    use super::*;
+    #[test]
+    fn saved_artist_uses_selected_filter_but_albums_and_songs_keep_their_action() {
+        let mut item = Item::parse(&serde_json::json!({
+            "kind": "artist", "id": "UCartist", "title": "Gigi D'Alessio"
+        }))
+        .unwrap();
+        for kind in TYPES.iter().copied().filter(|kind| *kind != "all") {
+            assert_eq!(
+                item.favorite_search(kind),
+                Request::search("Gigi D'Alessio", kind).ok()
+            );
+        }
+        assert!(item.favorite_search("all").is_none());
+        assert!(item.favorite_search("invalid").is_none());
+        for kind in ["album", "song", "playlist", "video"] {
+            item.kind = kind.into();
+            assert!(item.favorite_search("album").is_none());
+        }
+    }
+
+    #[test]
+    fn track_round_trip_and_duplicate_identity() {
+        let a = Item::parse(
+            &serde_json::json!({"kind":"song","id":"a","video_id":"abcdefghijk","title":"Same"}),
+        )
+        .unwrap();
+        let mut favorites = Vec::new();
+        assert!(add_favorite(&mut favorites, &a));
+        let saved = serde_json::to_string(&favorites).unwrap();
+        let mut restored: Vec<Value> = serde_json::from_str(&saved).unwrap();
+        assert_eq!(favorite_items(&restored), vec![a.clone()]);
+        let mut renamed = a.clone();
+        renamed.title = "New title".into();
+        assert!(!add_favorite(&mut restored, &renamed));
+        remove_favorite(&mut restored, &renamed);
+        assert!(restored.is_empty());
+    }
+    #[test]
+    fn albums_keep_browse_parameters_and_same_titles_stay_distinct() {
+        let a=Item::parse(&serde_json::json!({"kind":"album","id":"MPREone","title":"Same","browse_params":"special"})).unwrap();
+        let mut b = a.clone();
+        b.id = "MPREtwo".into();
+        let mut saved = Vec::new();
+        assert!(add_favorite(&mut saved, &a));
+        assert!(add_favorite(&mut saved, &b));
+        let restored = favorite_items(&saved);
+        assert_eq!(restored.len(), 2);
+        assert_eq!(restored[0].browse_request(), a.browse_request());
+        remove_favorite(&mut saved, &a);
+        assert_eq!(favorite_items(&saved), vec![b]);
+    }
+    #[test]
+    fn damaged_and_unavailable_entries_are_not_opened() {
+        assert!(
+            favorite_items(&[
+                Value::Null,
+                serde_json::json!({"id":"x","kind":"song","available":false})
+            ])
+            .is_empty()
+        );
     }
 }

@@ -11,6 +11,7 @@ Version 0.9.18 – 2026-10-16
 7. Dodano język indonezyjski (Bahasa Indonesia), w tym interfejs, podręcznik i tłumaczenia nowych narzędzi multimedialnych. Dziękujemy Muhammadowi za wkład w tłumaczenie.
 
 8. Dodano SonarMusic w Multimediach: wyszukiwanie utworów, albumów, wykonawców, playlist i teledysków, sugestie po wpisaniu tekstu, nawigacja i stronicowanie wyników. Utwory można odtwarzać, zapisywać, transkrybować i tworzyć audiodeskrypcję AI istniejącymi narzędziami multimedialnymi.
+9. Przyspieszono wyszukiwanie i otwieranie filmów w YouTube.
 
 Version 0.9.17 – 2026-10-15
 

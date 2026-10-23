@@ -2254,6 +2254,7 @@
   "youtube.ytdlp_path_update_prompt": "yt-dlp wurde im Systempfad PATH gefunden, diese Kopie wird jedoch nicht von Sonarpad verwaltet.\nErkannte Version: {current}\nNeueste verfügbare Version: {latest}\n\nMöchten Sie eine lokale Kopie von yt-dlp herunterladen, die Sonarpad automatisch aktualisieren kann?",
   "youtube.ytdlp_prompt_download": "Für diese Funktion wird yt-dlp benötigt. Jetzt herunterladen?",
   "youtube.ytdlp_update_failed": "Die Aktualisierung von yt-dlp ist fehlgeschlagen.",
+  "youtube.ytdlp_update_success": "yt-dlp wurde erfolgreich aktualisiert.",
   "youtube.ytdlp_update_prompt": "Für yt-dlp ist eine Aktualisierung verfügbar.\nInstallierte Version: {current}\nNeueste Version: {latest}\n\nAktualisierung jetzt herunterladen?",
   "audio_description.keep_character_catalog": "Charakterkatalog beibehalten: nützlich für die Audiodeskription einer Serie mit durchgängigen Figuren.",
   "audio_description.character_catalog.choose": "Einen gespeicherten Charakterkatalog auswählen",

@@ -622,12 +622,14 @@ fn wikipedia_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM)
                 let is_empty = results.is_empty();
                 if results_hwnd.0 != 0 {
                     SendMessageW(results_hwnd, LB_RESETCONTENT, WPARAM(0), LPARAM(0));
-                    for item in &results {
+                    for display in crate::result_labels::accessible_result_labels(
+                        results.iter().map(|item| item.title.clone()).collect(),
+                    ) {
                         SendMessageW(
                             results_hwnd,
                             LB_ADDSTRING,
                             WPARAM(0),
-                            LPARAM(to_wide(&item.title).as_ptr() as isize),
+                            LPARAM(to_wide(&display).as_ptr() as isize),
                         );
                     }
                     if !results.is_empty() {
@@ -1204,8 +1206,9 @@ fn populate_sections(hwnd: HWND, extract: wikipedia::ExtractResult, label_set: &
             WPARAM(0),
             LPARAM(to_wide(&label_set.import_all).as_ptr() as isize),
         );
-        for section in &extract.sections {
-            let label = section_combo_label(section);
+        for label in crate::result_labels::accessible_result_labels(
+            extract.sections.iter().map(section_combo_label).collect(),
+        ) {
             crate::send_message_w_safe(
                 sections,
                 CB_ADDSTRING,

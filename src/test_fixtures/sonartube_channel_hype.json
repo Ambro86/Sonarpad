@@ -1,0 +1,176 @@
+{
+  "contents": [
+    {
+      "lockupViewModel": {
+        "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+        "contentId": "1o9lnx4-VrQ",
+        "metadata": {
+          "lockupMetadataViewModel": {
+            "title": {
+              "content": "Harry Potter e I Doni della Morte - Libro VS Film [PARTE 6]"
+            },
+            "metadata": {
+              "contentMetadataViewModel": {
+                "metadataRows": [
+                  {
+                    "metadataParts": [
+                      {
+                        "text": {
+                          "content": "25K visualizzazioni"
+                        }
+                      },
+                      {
+                        "text": {
+                          "content": "3 giorni fa"
+                        },
+                        "accessibilityLabel": "3 giorni fa"
+                      }
+                    ]
+                  },
+                  {
+                    "badges": [
+                      {
+                        "badgeViewModel": {
+                          "badgeText": "N. 70 classifica hype",
+                          "badgeStyle": "BADGE_DEFAULT",
+                          "iconName": "STAR_SHOOTING"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "delimiter": " • "
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "lockupViewModel": {
+        "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+        "contentId": "YWSvIPz82dY",
+        "metadata": {
+          "lockupMetadataViewModel": {
+            "title": {
+              "content": "[SOLO ABBONATI] Harry Potter e I Doni della Morte - Libro VS Film [PARTE 6]"
+            },
+            "metadata": {
+              "contentMetadataViewModel": {
+                "metadataRows": [
+                  {
+                    "metadataParts": [
+                      {
+                        "text": {
+                          "content": "3 giorni fa"
+                        },
+                        "accessibilityLabel": "3 giorni fa"
+                      }
+                    ]
+                  },
+                  {
+                    "badges": [
+                      {
+                        "badgeViewModel": {
+                          "badgeText": "Riservato agli abbonati",
+                          "badgeStyle": "BADGE_MEMBERS_ONLY",
+                          "iconName": "SPONSORSHIP_STAR"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "delimiter": " • "
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "lockupViewModel": {
+        "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+        "contentId": "t0x0gxyqnFI",
+        "metadata": {
+          "lockupMetadataViewModel": {
+            "title": {
+              "content": "Leggere Il Signore degli Anelli con @Golgota_79 - SCRIBLABLA"
+            },
+            "metadata": {
+              "contentMetadataViewModel": {
+                "metadataRows": [
+                  {
+                    "metadataParts": [
+                      {
+                        "text": {
+                          "content": "Lo Scribacchino e Golgota_79",
+                          "styleRuns": [
+                            {
+                              "startIndex": 0,
+                              "length": 28
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "metadataParts": [
+                      {
+                        "text": {
+                          "content": "6,7K visualizzazioni"
+                        }
+                      },
+                      {
+                        "text": {
+                          "content": "5 giorni fa"
+                        },
+                        "accessibilityLabel": "5 giorni fa"
+                      }
+                    ]
+                  }
+                ],
+                "delimiter": " • "
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "lockupViewModel": {
+        "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+        "contentId": "t4PepnB0X5s",
+        "metadata": {
+          "lockupMetadataViewModel": {
+            "title": {
+              "content": "Harry Potter e I Doni della Morte - Libro VS Film [PARTE 5]"
+            },
+            "metadata": {
+              "contentMetadataViewModel": {
+                "metadataRows": [
+                  {
+                    "metadataParts": [
+                      {
+                        "text": {
+                          "content": "32K visualizzazioni"
+                        }
+                      },
+                      {
+                        "text": {
+                          "content": "10 giorni fa"
+                        },
+                        "accessibilityLabel": "10 giorni fa"
+                      }
+                    ]
+                  }
+                ],
+                "delimiter": " • "
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

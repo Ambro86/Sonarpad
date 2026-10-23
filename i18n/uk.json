@@ -2202,6 +2202,7 @@
   "youtube.ytdlp_path_update_prompt": "yt-dlp знайдено у системному PATH, але ця копія не керується Sonarpad.\nЗнайдена версія: {current}\nОстання доступна версія: {latest}\n\nБажаєте завантажити локальну копію yt-dlp, яку Sonarpad зможе автоматично оновлювати?",
   "youtube.ytdlp_prompt_download": "Для завантаження тексту відео з YouTube потрібен yt-dlp. Встановити?",
   "youtube.ytdlp_update_failed": "Оновлення yt-dlp не вдалося.",
+  "youtube.ytdlp_update_success": "yt-dlp успішно оновлено.",
   "youtube.ytdlp_update_prompt": "Доступне оновлення yt-dlp.\nВстановлена версія: {current}\nОстання версія: {latest}\n\nОновити?",
   "audio_description.keep_character_catalog": "Зберігати каталог персонажів: корисно для аудіодескрипції серіалу зі збереженням послідовності персонажів.",
   "audio_description.character_catalog.choose": "Виберіть збережений каталог персонажів",

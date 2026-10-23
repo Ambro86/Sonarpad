@@ -698,16 +698,21 @@ fn show_results(state: &mut BdState, indices: Vec<usize>) {
     state.visible_indices = indices;
     crate::send_message_w_safe(state.results_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
 
-    for idx in &state.visible_indices {
-        if let Some(row) = state.catalog_rows.get(*idx) {
-            let text = row.to_string();
-            crate::send_message_w_safe(
-                state.results_combo,
-                CB_ADDSTRING,
-                WPARAM(0),
-                LPARAM(to_wide(&text).as_ptr() as isize),
-            );
-        }
+    let display_labels = crate::result_labels::accessible_result_labels(
+        state
+            .visible_indices
+            .iter()
+            .filter_map(|idx| state.catalog_rows.get(*idx))
+            .map(ToString::to_string)
+            .collect(),
+    );
+    for text in display_labels {
+        crate::send_message_w_safe(
+            state.results_combo,
+            CB_ADDSTRING,
+            WPARAM(0),
+            LPARAM(to_wide(&text).as_ptr() as isize),
+        );
     }
 
     if !state.visible_indices.is_empty() {

@@ -20,8 +20,8 @@ use windows::{
         UI::{
             Controls::{Dialogs::*, PBM_SETPOS, PBM_SETRANGE, PROGRESS_CLASSW},
             Input::KeyboardAndMouse::{
-                EnableWindow, SetFocus, VK_CONTROL, VK_DOWN, VK_ESCAPE, VK_LEFT, VK_MENU, VK_RIGHT,
-                VK_SHIFT, VK_SPACE, VK_UP,
+                EnableWindow, GetFocus, IsWindowEnabled, SetFocus, VK_CONTROL, VK_DOWN, VK_ESCAPE,
+                VK_LEFT, VK_MENU, VK_RIGHT, VK_SHIFT, VK_SPACE, VK_UP,
             },
             WindowsAndMessaging::*,
         },
@@ -75,6 +75,7 @@ const FILE_HOME: usize = 9844;
 const FILE_END: usize = 9845;
 const INSERT_MEDIA: usize = 9846;
 const TICK: usize = 1;
+const WM_RESTORE_CUTTER_FOCUS: u32 = WM_APP + 212;
 #[derive(Default)]
 struct Job {
     percent: u32,
@@ -113,6 +114,7 @@ struct State {
     parent: HWND,
     language: Language,
     controls: Vec<HWND>,
+    last_focus: HWND,
     advanced_controls: Vec<HWND>,
     track_controls: Vec<HWND>,
     status: HWND,
@@ -135,6 +137,45 @@ struct State {
     close_after_export: bool,
 }
 impl State {
+    fn remember_focus(&mut self) {
+        unsafe {
+            let mut focus = GetFocus();
+            while focus.0 != 0 && IsChild(self.hwnd, focus).as_bool() {
+                if GetWindowLongW(focus, GWL_STYLE) as u32 & WS_TABSTOP.0 != 0 {
+                    self.last_focus = focus;
+                    break;
+                }
+                focus = GetParent(focus);
+            }
+        }
+    }
+    fn restore_focus(&self) {
+        unsafe {
+            if GetForegroundWindow() != self.hwnd || !IsWindowEnabled(self.hwnd).as_bool() {
+                return;
+            }
+            let target = [
+                self.last_focus,
+                self.cancel_button,
+                self.ctrl(OPEN),
+                self.ctrl(CLOSE),
+            ]
+            .into_iter()
+            .find(|&control| {
+                control.0 != 0
+                    && IsChild(self.hwnd, control).as_bool()
+                    && IsWindowVisible(control).as_bool()
+                    && IsWindowEnabled(control).as_bool()
+            });
+            if let Some(target) = target {
+                SetFocus(target);
+                crate::log_debug(&format!(
+                    "Media cutter focus restored: control={}",
+                    GetDlgCtrlID(target)
+                ));
+            }
+        }
+    }
     fn tr(&self, key: &str) -> String {
         crate::i18n::tr(self.language, &format!("media_cutter.{key}"))
     }
@@ -1196,6 +1237,7 @@ fn edit(s: &mut State, key: &str, id: usize, value: &str, x: i32, y: i32, w: i32
 fn create(hwnd: HWND, parent: HWND) -> State {
     let language = crate::with_state(parent, |s| s.settings.language).unwrap_or_default();
     let mut s = State {
+        last_focus: HWND(0),
         hwnd,
         parent,
         language,
@@ -1640,13 +1682,12 @@ pub(crate) fn restore_on_parent_activation(parent: HWND) -> bool {
         }
         ShowWindow(window, SW_RESTORE);
         SetForegroundWindow(window);
-        let cancel = GetDlgItem(window, CANCEL as i32);
-        let target = if IsWindowVisible(cancel).as_bool() {
-            cancel
-        } else {
-            GetDlgItem(window, OPEN as i32)
-        };
-        SetFocus(target);
+        crate::log_if_err!(PostMessageW(
+            window,
+            WM_RESTORE_CUTTER_FOCUS,
+            WPARAM(0),
+            LPARAM(0)
+        ));
         crate::log_debug("Media cutter restored after parent activation");
     }
     true
@@ -1709,7 +1750,17 @@ fn inner(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
             SetTimer(hwnd, TICK, 150, None);
             return LRESULT(0);
         }
-        if ![WM_COMMAND, WM_TIMER, WM_CLOSE, WM_NCDESTROY].contains(&msg) {
+        if ![
+            WM_COMMAND,
+            WM_TIMER,
+            WM_CLOSE,
+            WM_NCDESTROY,
+            WM_ACTIVATE,
+            WM_SETFOCUS,
+            WM_RESTORE_CUTTER_FOCUS,
+        ]
+        .contains(&msg)
+        {
             return DefWindowProcW(hwnd, msg, w, l);
         }
         let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
@@ -1723,7 +1774,29 @@ fn inner(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
         // Detach while calling native controls/dialogs: nested notifications must not alias State.
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
         let s = &mut *ptr;
+        s.remember_focus();
         match msg {
+            WM_ACTIVATE => {
+                if w.0 & 0xffff != WA_INACTIVE as usize {
+                    crate::log_if_err!(PostMessageW(
+                        hwnd,
+                        WM_RESTORE_CUTTER_FOCUS,
+                        WPARAM(0),
+                        LPARAM(0)
+                    ));
+                }
+                // State remains detached while Windows processes activation and nested focus messages.
+                DefWindowProcW(hwnd, msg, w, l);
+            }
+            WM_SETFOCUS => {
+                crate::log_if_err!(PostMessageW(
+                    hwnd,
+                    WM_RESTORE_CUTTER_FOCUS,
+                    WPARAM(0),
+                    LPARAM(0)
+                ));
+            }
+            WM_RESTORE_CUTTER_FOCUS => s.restore_focus(),
             WM_COMMAND => {
                 let notification = (w.0 >> 16) as u32;
                 if notification == EN_CHANGE

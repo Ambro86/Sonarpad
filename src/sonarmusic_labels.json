@@ -18,7 +18,11 @@
     "close": "Zavřít",
     "type": "Typ hledání",
     "previous_results": "Přejít na předchozí výsledky",
-    "next_results": "Přejít na další výsledky"
+    "next_results": "Přejít na další výsledky",
+    "favorites": "Oblíbené",
+    "add_favorite": "Přidat do oblíbených",
+    "remove_favorite": "Odebrat z oblíbených",
+    "open_favorite": "Otevřít oblíbenou položku"
   },
   "de": {
     "query": "Titel, Künstler oder Album",
@@ -39,7 +43,11 @@
     "close": "Schließen",
     "type": "Suchtyp",
     "previous_results": "Zu den vorherigen Ergebnissen",
-    "next_results": "Zu den nächsten Ergebnissen"
+    "next_results": "Zu den nächsten Ergebnissen",
+    "favorites": "Favoriten",
+    "add_favorite": "Zu Favoriten hinzufügen",
+    "remove_favorite": "Aus Favoriten entfernen",
+    "open_favorite": "Favorit öffnen"
   },
   "en": {
     "query": "Song, artist or album",
@@ -60,7 +68,11 @@
     "close": "Close",
     "type": "Search type",
     "previous_results": "Go to previous results",
-    "next_results": "Go to next results"
+    "next_results": "Go to next results",
+    "favorites": "Favorites",
+    "add_favorite": "Add to favorites",
+    "remove_favorite": "Remove from favorites",
+    "open_favorite": "Open favorite"
   },
   "es": {
     "query": "Canción, artista o álbum",
@@ -81,7 +93,11 @@
     "close": "Cerrar",
     "type": "Tipo de búsqueda",
     "previous_results": "Ir a los resultados anteriores",
-    "next_results": "Ir a los resultados siguientes"
+    "next_results": "Ir a los resultados siguientes",
+    "favorites": "Favoritos",
+    "add_favorite": "Añadir a favoritos",
+    "remove_favorite": "Quitar de favoritos",
+    "open_favorite": "Abrir favorito"
   },
   "fr": {
     "query": "Titre, artiste ou album",
@@ -102,7 +118,11 @@
     "close": "Fermer",
     "type": "Type de recherche",
     "previous_results": "Aller aux résultats précédents",
-    "next_results": "Aller aux résultats suivants"
+    "next_results": "Aller aux résultats suivants",
+    "favorites": "Favoris",
+    "add_favorite": "Ajouter aux favoris",
+    "remove_favorite": "Retirer des favoris",
+    "open_favorite": "Ouvrir le favori"
   },
   "it": {
     "query": "Titolo, artista o album",
@@ -123,7 +143,11 @@
     "close": "Chiudi",
     "type": "Tipo di ricerca",
     "previous_results": "Vai ai risultati precedenti",
-    "next_results": "Vai ai risultati successivi"
+    "next_results": "Vai ai risultati successivi",
+    "favorites": "Preferiti",
+    "add_favorite": "Aggiungi ai preferiti",
+    "remove_favorite": "Rimuovi dai preferiti",
+    "open_favorite": "Apri preferito"
   },
   "pl": {
     "query": "Utwór, artysta lub album",
@@ -144,7 +168,11 @@
     "close": "Zamknij",
     "type": "Typ wyszukiwania",
     "previous_results": "Przejdź do poprzednich wyników",
-    "next_results": "Przejdź do następnych wyników"
+    "next_results": "Przejdź do następnych wyników",
+    "favorites": "Ulubione",
+    "add_favorite": "Dodaj do ulubionych",
+    "remove_favorite": "Usuń z ulubionych",
+    "open_favorite": "Otwórz ulubione"
   },
   "pt": {
     "query": "Música, artista ou álbum",
@@ -165,7 +193,11 @@
     "close": "Fechar",
     "type": "Tipo de pesquisa",
     "previous_results": "Ir para os resultados anteriores",
-    "next_results": "Ir para os resultados seguintes"
+    "next_results": "Ir para os resultados seguintes",
+    "favorites": "Favoritos",
+    "add_favorite": "Adicionar aos favoritos",
+    "remove_favorite": "Remover dos favoritos",
+    "open_favorite": "Abrir favorito"
   },
   "pt_BR": {
     "query": "Música, artista ou álbum",
@@ -186,7 +218,11 @@
     "close": "Fechar",
     "type": "Tipo de pesquisa",
     "previous_results": "Ir para os resultados anteriores",
-    "next_results": "Ir para os resultados seguintes"
+    "next_results": "Ir para os resultados seguintes",
+    "favorites": "Favoritos",
+    "add_favorite": "Adicionar aos favoritos",
+    "remove_favorite": "Remover dos favoritos",
+    "open_favorite": "Abrir favorito"
   },
   "ro": {
     "query": "Melodie, artist sau album",
@@ -207,7 +243,11 @@
     "close": "Închide",
     "type": "Tip de căutare",
     "previous_results": "Mergi la rezultatele anterioare",
-    "next_results": "Mergi la rezultatele următoare"
+    "next_results": "Mergi la rezultatele următoare",
+    "favorites": "Favorite",
+    "add_favorite": "Adaugă la favorite",
+    "remove_favorite": "Elimină din favorite",
+    "open_favorite": "Deschide favoritul"
   },
   "tr": {
     "query": "Şarkı, sanatçı veya albüm",
@@ -228,7 +268,11 @@
     "close": "Kapat",
     "type": "Arama türü",
     "previous_results": "Önceki sonuçlara git",
-    "next_results": "Sonraki sonuçlara git"
+    "next_results": "Sonraki sonuçlara git",
+    "favorites": "Favoriler",
+    "add_favorite": "Favorilere ekle",
+    "remove_favorite": "Favorilerden kaldır",
+    "open_favorite": "Favoriyi aç"
   },
   "uk": {
     "query": "Пісня, виконавець або альбом",
@@ -249,7 +293,11 @@
     "close": "Закрити",
     "type": "Тип пошуку",
     "previous_results": "Перейти до попередніх результатів",
-    "next_results": "Перейти до наступних результатів"
+    "next_results": "Перейти до наступних результатів",
+    "favorites": "Обране",
+    "add_favorite": "Додати до обраного",
+    "remove_favorite": "Видалити з обраного",
+    "open_favorite": "Відкрити обране"
   },
   "zh": {
     "query": "歌曲、艺人或专辑",
@@ -270,7 +318,11 @@
     "close": "关闭",
     "type": "搜索类型",
     "previous_results": "转到上一页结果",
-    "next_results": "转到下一页结果"
+    "next_results": "转到下一页结果",
+    "favorites": "收藏",
+    "add_favorite": "添加到收藏",
+    "remove_favorite": "从收藏中移除",
+    "open_favorite": "打开收藏"
   },
   "zh_CN": {
     "query": "歌曲、艺人或专辑",
@@ -291,7 +343,11 @@
     "close": "关闭",
     "type": "搜索类型",
     "previous_results": "转到上一页结果",
-    "next_results": "转到下一页结果"
+    "next_results": "转到下一页结果",
+    "favorites": "收藏",
+    "add_favorite": "添加到收藏",
+    "remove_favorite": "从收藏中移除",
+    "open_favorite": "打开收藏"
   },
   "pt-BR": {
     "query": "Música, artista ou álbum",
@@ -312,7 +368,11 @@
     "close": "Fechar",
     "type": "Tipo de pesquisa",
     "previous_results": "Ir para os resultados anteriores",
-    "next_results": "Ir para os resultados seguintes"
+    "next_results": "Ir para os resultados seguintes",
+    "favorites": "Favoritos",
+    "add_favorite": "Adicionar aos favoritos",
+    "remove_favorite": "Remover dos favoritos",
+    "open_favorite": "Abrir favorito"
   },
   "pt_br": {
     "query": "Música, artista ou álbum",
@@ -333,7 +393,11 @@
     "close": "Fechar",
     "type": "Tipo de pesquisa",
     "previous_results": "Ir para os resultados anteriores",
-    "next_results": "Ir para os resultados seguintes"
+    "next_results": "Ir para os resultados seguintes",
+    "favorites": "Favoritos",
+    "add_favorite": "Adicionar aos favoritos",
+    "remove_favorite": "Remover dos favoritos",
+    "open_favorite": "Abrir favorito"
   },
   "zh_cn": {
     "query": "歌曲、艺人或专辑",
@@ -354,7 +418,11 @@
     "close": "关闭",
     "type": "搜索类型",
     "previous_results": "转到上一页结果",
-    "next_results": "转到下一页结果"
+    "next_results": "转到下一页结果",
+    "favorites": "收藏",
+    "add_favorite": "添加到收藏",
+    "remove_favorite": "从收藏中移除",
+    "open_favorite": "打开收藏"
   },
   "sv": {
     "query": "Titel, artist eller album",
@@ -375,7 +443,11 @@
     "close": "Stäng",
     "type": "Söktyp",
     "previous_results": "Gå till föregående resultat",
-    "next_results": "Gå till nästa resultat"
+    "next_results": "Gå till nästa resultat",
+    "favorites": "Favoriter",
+    "add_favorite": "Lägg till i favoriter",
+    "remove_favorite": "Ta bort från favoriter",
+    "open_favorite": "Öppna favorit"
   },
   "vi": {
     "query": "Tên bài hát, nghệ sĩ hoặc album",
@@ -396,7 +468,11 @@
     "close": "Đóng",
     "type": "Loại tìm kiếm",
     "previous_results": "Đến kết quả trước",
-    "next_results": "Đến kết quả tiếp theo"
+    "next_results": "Đến kết quả tiếp theo",
+    "favorites": "Yêu thích",
+    "add_favorite": "Thêm vào yêu thích",
+    "remove_favorite": "Xóa khỏi yêu thích",
+    "open_favorite": "Mở mục yêu thích"
   },
   "sr": {
     "query": "Наслов, извођач или албум",
@@ -417,7 +493,11 @@
     "close": "Затвори",
     "type": "Врста претраге",
     "previous_results": "Иди на претходне резултате",
-    "next_results": "Иди на следеће резултате"
+    "next_results": "Иди на следеће резултате",
+    "favorites": "Омиљено",
+    "add_favorite": "Додај у омиљено",
+    "remove_favorite": "Уклони из омиљеног",
+    "open_favorite": "Отвори омиљено"
   },
   "lt": {
     "query": "Pavadinimas, atlikėjas arba albumas",
@@ -438,7 +518,11 @@
     "close": "Užverti",
     "type": "Paieškos tipas",
     "previous_results": "Eiti į ankstesnius rezultatus",
-    "next_results": "Eiti į kitus rezultatus"
+    "next_results": "Eiti į kitus rezultatus",
+    "favorites": "Mėgstamiausi",
+    "add_favorite": "Pridėti prie mėgstamiausių",
+    "remove_favorite": "Pašalinti iš mėgstamiausių",
+    "open_favorite": "Atverti mėgstamą"
   },
   "ru": {
     "query": "Название, исполнитель или альбом",
@@ -459,7 +543,11 @@
     "close": "Закрыть",
     "type": "Тип поиска",
     "previous_results": "Перейти к предыдущим результатам",
-    "next_results": "Перейти к следующим результатам"
+    "next_results": "Перейти к следующим результатам",
+    "favorites": "Избранное",
+    "add_favorite": "Добавить в избранное",
+    "remove_favorite": "Удалить из избранного",
+    "open_favorite": "Открыть избранное"
   },
   "hi": {
     "query": "शीर्षक, कलाकार या एल्बम",
@@ -480,7 +568,11 @@
     "close": "बंद करें",
     "type": "खोज का प्रकार",
     "previous_results": "पिछले परिणामों पर जाएँ",
-    "next_results": "अगले परिणामों पर जाएँ"
+    "next_results": "अगले परिणामों पर जाएँ",
+    "favorites": "पसंदीदा",
+    "add_favorite": "पसंदीदा में जोड़ें",
+    "remove_favorite": "पसंदीदा से हटाएँ",
+    "open_favorite": "पसंदीदा खोलें"
   },
   "id": {
     "query": "Judul, artis, atau album",
@@ -501,6 +593,10 @@
     "close": "Tutup",
     "type": "Jenis pencarian",
     "previous_results": "Ke hasil sebelumnya",
-    "next_results": "Ke hasil berikutnya"
+    "next_results": "Ke hasil berikutnya",
+    "favorites": "Favorit",
+    "add_favorite": "Tambahkan ke favorit",
+    "remove_favorite": "Hapus dari favorit",
+    "open_favorite": "Buka favorit"
   }
 }

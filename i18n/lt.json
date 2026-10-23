@@ -2202,6 +2202,7 @@
   "youtube.ytdlp_path_update_prompt": "yt-dlp buvo rastas sistemos PATH aplinkoje, tačiau ši kopija nėra valdoma Sonarpad.\nRasta versija: {current}\nNaujausia prieinama versija: {latest}\n\nAr norite atsisiųsti vietinę yt-dlp kopiją, kurią Sonarpad galės automatiškai atnaujinti?",
   "youtube.ytdlp_prompt_download": "Norint naudoti šią funkciją, reikalinga programa „yt-dlp“. Norite ją atsisiųsti dabar?",
   "youtube.ytdlp_update_failed": "yt-dlp atnaujinimas nepavyko.",
+  "youtube.ytdlp_update_success": "yt-dlp sėkmingai atnaujintas.",
   "youtube.ytdlp_update_prompt": "Yra nauja yt-dlp versija. Įdiegta versija: {current} Naujausia versija: {latest} Norite atsisiųsti naujinimą dabar?",
   "audio_description.keep_character_catalog": "Išlaikyti veikėjų katalogą: naudinga garsinant serialą ir užtikrinant veikėjų tęstinumą.",
   "audio_description.character_catalog.choose": "Pasirinkite išsaugotą veikėjų katalogą",

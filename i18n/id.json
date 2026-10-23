@@ -2202,6 +2202,7 @@
   "youtube.ytdlp_path_update_prompt": "yt-dlp ditemukan di PATH sistem, tetapi salinan ini tidak dikelola Sonarpad.\nVersi terdeteksi: {current}\nVersi terbaru yang tersedia: {latest}\n\nUnduh salinan lokal yt-dlp yang dapat diperbarui Sonarpad secara otomatis?",
   "youtube.ytdlp_prompt_download": "yt-dlp diperlukan untuk menggunakan fitur ini. Unduh sekarang?",
   "youtube.ytdlp_update_failed": "Pembaruan yt-dlp gagal.",
+  "youtube.ytdlp_update_success": "yt-dlp berhasil diperbarui.",
   "youtube.ytdlp_update_prompt": "Pembaruan yt-dlp tersedia.\nVersi terpasang: {current}\nVersi terbaru: {latest}\n\nUnduh pembaruan sekarang?",
   "audio_description.keep_character_catalog": "Simpan katalog tokoh: berguna untuk membuat deskripsi audio sebuah serial dengan menjaga konsistensi tokoh.",
   "audio_description.character_catalog.choose": "Pilih katalog tokoh tersimpan",

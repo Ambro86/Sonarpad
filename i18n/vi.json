@@ -2202,6 +2202,7 @@
   "youtube.ytdlp_path_update_prompt": "yt-dlp đã được tìm thấy trong PATH hệ thống, nhưng bản này không được Sonarpad quản lý.\nPhiên bản tìm thấy: {current}\nPhiên bản mới nhất: {latest}\n\nBạn có muốn tải xuống bản yt-dlp cục bộ để Sonarpad có thể tự động cập nhật không?",
   "youtube.ytdlp_prompt_download": "Cần yt-dlp để sử dụng tính năng này. Bạn có muốn tải ngay không?",
   "youtube.ytdlp_update_failed": "Cập nhật yt-dlp thất bại.",
+  "youtube.ytdlp_update_success": "yt-dlp đã được cập nhật thành công.",
   "youtube.ytdlp_update_prompt": "Có cập nhật yt-dlp.\nPhiên bản đã cài: {current}\nPhiên bản mới: {latest}\n\nBạn có muốn tải cập nhật không?",
   "audio_description.keep_character_catalog": "Duy trì danh mục nhân vật: hữu ích khi thuyết minh hình ảnh cho một loạt phim và giữ tính liên tục của nhân vật.",
   "audio_description.character_catalog.choose": "Chọn danh mục nhân vật đã lưu",

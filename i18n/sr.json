@@ -2202,6 +2202,7 @@
   "youtube.ytdlp_path_update_prompt": "yt-dlp je pronađen u sistemskom PATH-u, ali ovom kopijom ne upravlja Sonarpad.\nPronađena verzija: {current}\nNajnovija dostupna verzija: {latest}\n\nDa li želite da preuzmete lokalnu kopiju yt-dlp koju Sonarpad može automatski ažurirati?",
   "youtube.ytdlp_prompt_download": "yt-dlp je neophodan za korišćenje ove funkcije. Preuzeti ga sada?",
   "youtube.ytdlp_update_failed": "Ažuriranje yt-dlp‑a nije uspelo.",
+  "youtube.ytdlp_update_success": "yt-dlp je uspešno ažuriran.",
   "youtube.ytdlp_update_prompt": "Ažuriranje za yt-dlp je dostupno.\nInstalirana verzija: {current}\nNajnovija verzija: {latest}\n\nPreuzeti ažuriranje sada?",
   "audio_description.keep_character_catalog": "Задржи каталог ликова: корисно за аудиодескрипцију серије уз очување континуитета ликова.",
   "audio_description.character_catalog.choose": "Изабери сачувани каталог ликова",

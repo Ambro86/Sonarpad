@@ -489,12 +489,20 @@ fn refill_project_voice_combo(
     unsafe {
         SendMessageW(state.voice_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
     }
-    for voice in &state.voices {
-        let display = if voice.locale.trim().is_empty() {
-            voice.short_name.clone()
-        } else {
-            format!("{} ({})", voice.short_name, voice.locale)
-        };
+    let displays = crate::result_labels::accessible_result_labels(
+        state
+            .voices
+            .iter()
+            .map(|voice| {
+                if voice.locale.trim().is_empty() {
+                    voice.short_name.clone()
+                } else {
+                    format!("{} ({})", voice.short_name, voice.locale)
+                }
+            })
+            .collect(),
+    );
+    for display in displays {
         add_combo_item(state.voice_combo, &display);
     }
     let language_code = state.project.language_code.to_ascii_lowercase();

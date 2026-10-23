@@ -527,8 +527,10 @@ fn apply_loaded_programs(hwnd: HWND, result: Result<Vec<TvProgram>, String>) {
         match result {
             Ok(programs) if !programs.is_empty() => {
                 reset_program_combo(state.combo_programs, None);
-                for program in &programs {
-                    let label = to_wide(&program_label(program));
+                for display in crate::result_labels::accessible_result_labels(
+                    programs.iter().map(program_label).collect(),
+                ) {
+                    let label = to_wide(&display);
                     crate::send_message_w_safe(
                         state.combo_programs,
                         CB_ADDSTRING,

@@ -4818,8 +4818,10 @@ unsafe extern "system" fn community_list_wndproc(
                             );
                             crate::enable_window_safe(add_button, false);
                         } else {
-                            for source in &sources {
-                                let text = to_wide(&source.name);
+                            for display in crate::result_labels::accessible_result_labels(
+                                sources.iter().map(|source| source.name.clone()).collect(),
+                            ) {
+                                let text = to_wide(&display);
                                 SendMessageW(
                                     list,
                                     LB_ADDSTRING,

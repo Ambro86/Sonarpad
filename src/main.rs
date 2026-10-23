@@ -8,11 +8,14 @@ mod accessibility;
 mod audio_description;
 mod com_guard;
 mod curl_client;
+mod direct_catalog;
 mod embedded_deps;
 mod google_tts;
 mod macros;
+mod result_labels;
 mod runtime_prerequisite;
 mod sonarmusic;
+mod sonartube;
 use accessibility::*;
 mod conpty;
 mod diagnostics;
@@ -3780,7 +3783,15 @@ fn wait_for_youtube_mpv_file_loaded(
     ipc_path: &Path,
     log_path: Option<&Path>,
 ) -> Result<(), String> {
-    for attempt in 0..150_u64 {
+    // Long progressive MP4 files can need a remote index/range read before
+    // exposing tracks. Measured public videos take 19s direct and 44s via
+    // yt-dlp; the former 15s limit killed both valid loads prematurely.
+    let started = Instant::now();
+    let deadline = started + Duration::from_secs(60);
+    for attempt in 0_u64.. {
+        if Instant::now() >= deadline {
+            break;
+        }
         if let Some(status) = child.try_wait().map_err(|err| err.to_string())? {
             let detail = log_path
                 .and_then(|path| std::fs::read_to_string(path).ok())
@@ -3806,9 +3817,10 @@ fn wait_for_youtube_mpv_file_loaded(
                 });
             if has_audio {
                 log_debug(&format!(
-                    "Managed mpv YouTube IPC file-loaded confirmed: pid={} attempt={}",
+                    "Managed mpv YouTube IPC file-loaded confirmed: pid={} attempt={} elapsed_ms={}",
                     child.id(),
-                    attempt + 1
+                    attempt + 1,
+                    started.elapsed().as_millis()
                 ));
                 return Ok(());
             }
@@ -4971,22 +4983,54 @@ pub(crate) fn launch_stream_url_in_mpv(
     ytdl_format: Option<&str>,
     ytdlp_credentials: Option<(&str, &str)>,
 ) -> Result<(), String> {
-    launch_stream_url_in_mpv_with_options(
-        hwnd,
-        url,
-        StreamMpvOptions {
-            title,
-            ytdlp_path,
-            ytdl_format,
-            ytdlp_credentials,
-            user_agent: None,
-            prefer_audio_description: false,
-            allow_bookmark_resume: true,
-            force_video: false,
-            live_tv: false,
-            configure_tv_tracks_async: false,
-        },
-    )
+    let options = StreamMpvOptions {
+        title,
+        ytdlp_path,
+        ytdl_format,
+        ytdlp_credentials,
+        user_agent: None,
+        prefer_audio_description: false,
+        allow_bookmark_resume: true,
+        force_video: false,
+        live_tv: false,
+        configure_tv_tracks_async: false,
+    };
+    if let Some(watch_url) = sonartube::direct_watch_url(url, ytdlp_credentials.is_some()) {
+        let started = std::time::Instant::now();
+        match sonarmusic::resolve_playback_with_title(&watch_url) {
+            Ok((direct, resolved_title)) => {
+                log_debug(&format!(
+                    "SonarTube direct resolution: {} ms",
+                    started.elapsed().as_millis()
+                ));
+                let direct_options = StreamMpvOptions {
+                    title: title.or(Some(&resolved_title)),
+                    ..options
+                };
+                match launch_stream_url_in_mpv_with_input(hwnd, url, direct_options, Some(&direct))
+                {
+                    Ok(()) => return Ok(()),
+                    Err(err) if err.contains("richiesta più recente") => return Err(err),
+                    Err(_) => log_debug("SonarTube direct playback failed; fallback to yt-dlp"),
+                }
+            }
+            Err(err) => log_debug(&format!("SonarTube direct resolver fallback: {err}")),
+        }
+    }
+    let fallback_title = if title.is_none()
+        && sonartube::direct_watch_url(url, ytdlp_credentials.is_some()).is_some()
+    {
+        ytdlp_path.and_then(|path| {
+            app_windows::youtube_transcript_window::probe_stream_media_title(path, url)
+        })
+    } else {
+        None
+    };
+    let options = StreamMpvOptions {
+        title: title.or(fallback_title.as_deref()),
+        ..options
+    };
+    launch_stream_url_in_mpv_with_options(hwnd, url, options)
 }
 
 pub(crate) fn launch_tv_stream_in_mpv(
@@ -5065,6 +5109,53 @@ pub(crate) fn launch_video_stream_in_mpv(
             configure_tv_tracks_async: true,
         },
     )
+}
+
+pub(crate) fn try_launch_sonarmusic_direct_in_mpv(
+    hwnd: HWND,
+    url: &str,
+    title: &str,
+) -> Result<bool, String> {
+    let started = std::time::Instant::now();
+    match sonarmusic::resolve_playback(url) {
+        Ok(direct) => {
+            log_debug(&format!(
+                "SonarMusic direct resolution: {} ms",
+                started.elapsed().as_millis()
+            ));
+            let result = launch_stream_url_in_mpv_with_input(
+                hwnd,
+                url,
+                StreamMpvOptions {
+                    title: Some(title),
+                    ytdlp_path: None,
+                    ytdl_format: None,
+                    ytdlp_credentials: None,
+                    user_agent: None,
+                    prefer_audio_description: false,
+                    allow_bookmark_resume: false,
+                    force_video: true,
+                    live_tv: false,
+                    configure_tv_tracks_async: true,
+                },
+                Some(&direct),
+            );
+            if result.is_ok() {
+                return result.map(|()| true);
+            }
+            // A newer request cancels this one; never restart it through the fallback.
+            if result
+                .as_ref()
+                .err()
+                .is_some_and(|err| err.contains("richiesta più recente"))
+            {
+                return result.map(|()| true);
+            }
+            log_debug("SonarMusic direct player failed; retrying yt-dlp");
+        }
+        Err(err) => log_debug(&format!("SonarMusic direct resolver fallback: {err}")),
+    }
+    Ok(false)
 }
 
 fn is_mediaset_cdn_stream(url: &str) -> bool {
@@ -5360,6 +5451,7 @@ fn schedule_tv_track_configuration(
     });
 }
 
+#[derive(Clone, Copy)]
 struct StreamMpvOptions<'a> {
     title: Option<&'a str>,
     ytdlp_path: Option<&'a Path>,
@@ -5378,6 +5470,16 @@ fn launch_stream_url_in_mpv_with_options(
     url: &str,
     options: StreamMpvOptions<'_>,
 ) -> Result<(), String> {
+    launch_stream_url_in_mpv_with_input(hwnd, url, options, None)
+}
+
+fn launch_stream_url_in_mpv_with_input(
+    hwnd: HWND,
+    url: &str,
+    options: StreamMpvOptions<'_>,
+    direct_input: Option<&str>,
+) -> Result<(), String> {
+    let launch_started = std::time::Instant::now();
     let StreamMpvOptions {
         title,
         ytdlp_path,
@@ -5433,31 +5535,30 @@ fn launch_stream_url_in_mpv_with_options(
     let initial_mpv_volume =
         media_playback_volume_to_mpv(media_playback_volume_from_settings(hwnd));
 
-    // YouTube playback is deliberately handed to mpv's ytdl hook.  Resolving a
-    // googlevideo URL in Sonarpad made playback depend on the extractor client
-    // selected by a separate yt-dlp invocation (notably android_vr), and those
-    // short-lived URLs can fail even though the normal watch URL still works.
-    // Sonarpad continues to store and download the original watch URL through
-    // the independent download pipeline; this pseudo-URL is playback-only.
+    // Keep the canonical watch URL as the session identity. A resolved direct
+    // stream is playback-only; unsupported/failed streams use mpv's ytdl hook.
     let is_youtube = url.to_ascii_lowercase().contains("youtube.com/")
         || url.to_ascii_lowercase().contains("youtu.be/");
-    let playback_input = if is_youtube {
+    let playback_input = if let Some(input) = direct_input {
+        input.to_owned()
+    } else if is_youtube {
         format!("ytdl://{url}")
     } else {
         url.to_string()
     };
     // mpv logs its full command line. Never create this diagnostic file when
     // username/password options are present; IPC still performs the load check.
-    let youtube_log_path = (is_youtube && ytdlp_credentials.is_none()).then(|| {
-        std::env::temp_dir().join(format!(
-            "sonarpad-youtube-mpv-{}-{}.log",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis()
-        ))
-    });
+    let youtube_log_path = (is_youtube && direct_input.is_none() && ytdlp_credentials.is_none())
+        .then(|| {
+            std::env::temp_dir().join(format!(
+                "sonarpad-youtube-mpv-{}-{}.log",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis()
+            ))
+        });
 
     let mut command = std::process::Command::new(&mpv_exe);
     // Regression guard: .arg(if is_youtube { "--pause=no" } else { "--pause=yes" })
@@ -5474,7 +5575,11 @@ fn launch_stream_url_in_mpv_with_options(
         })
         .arg(format!("--input-ipc-server={}", ipc_path.display()));
     if is_youtube {
-        command.arg("--ytdl=yes");
+        command.arg(if direct_input.is_some() {
+            "--ytdl=no"
+        } else {
+            "--ytdl=yes"
+        });
         if let Some(log_path) = youtube_log_path.as_ref() {
             command
                 .arg(format!("--log-file={}", log_path.display()))
@@ -5515,7 +5620,18 @@ fn launch_stream_url_in_mpv_with_options(
             .arg("--force-window=yes")
             .arg("--vid=auto")
             .arg("--vo=gpu")
-            .arg("--gpu-context=win");
+            .arg(if is_youtube {
+                // Measured faster embedded-video startup for both direct SonarMusic
+                // and yt-dlp YouTube playback. Other streams keep their backend.
+                "--gpu-context=d3d11"
+            } else {
+                "--gpu-context=win"
+            });
+        log_debug(if is_youtube {
+            "Managed mpv graphics context: d3d11 (YouTube/SonarMusic)"
+        } else {
+            "Managed mpv graphics context: win"
+        });
     } else {
         command.arg("--no-video").arg("--force-window=no");
     }
@@ -5555,12 +5671,26 @@ fn launch_stream_url_in_mpv_with_options(
     }
     command.creation_flags(CREATE_NO_WINDOW_FLAGS);
 
+    let spawn_started = std::time::Instant::now();
     let mut child =
         spawn_mpv_with_runtime_repair(hwnd, &mpv_exe, &mut command).inspect_err(|_| {
             set_local_mpv_video_mode(hwnd, false);
         })?;
+    log_debug(&format!(
+        "Managed mpv startup timing: preparation_ms={} spawn_ms={} direct={}",
+        spawn_started.duration_since(launch_started).as_millis(),
+        spawn_started.elapsed().as_millis(),
+        direct_input.is_some()
+    ));
+    let ipc_started = std::time::Instant::now();
     for _ in 0..40 {
         if send_mpv_ipc_command(&ipc_path, r#"{"command":["get_property","pause"]}"#).is_ok() {
+            log_debug(&format!(
+                "Managed mpv startup timing: ipc_ready_ms={} total_ms={}",
+                ipc_started.elapsed().as_millis(),
+                launch_started.elapsed().as_millis()
+            ));
+            let load_started = std::time::Instant::now();
             if stop_obsolete_mpv_child(hwnd, mpv_generation, &mut child, "stream ipc ready") {
                 set_local_mpv_video_mode(hwnd, false);
                 return Err("Riproduzione mpv annullata da una richiesta più recente.".to_string());
@@ -5598,6 +5728,11 @@ fn launch_stream_url_in_mpv_with_options(
                 set_local_mpv_video_mode(hwnd, false);
                 return Err(detail);
             }
+            log_debug(&format!(
+                "Managed mpv startup timing: track_wait_ms={} total_ms={}",
+                load_started.elapsed().as_millis(),
+                launch_started.elapsed().as_millis()
+            ));
             let playback_path = PathBuf::from(url);
             if let Some(index) = editor_manager::ensure_audio_document_tab(hwnd, &playback_path) {
                 editor_manager::select_tab(hwnd, index);
@@ -5674,6 +5809,12 @@ fn launch_stream_url_in_mpv_with_options(
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
+    if let Err(err) = child.kill() {
+        log_debug(&format!("Managed mpv IPC timeout cleanup: {err}"));
+    }
+    if let Err(err) = child.wait() {
+        log_debug(&format!("Managed mpv IPC timeout wait: {err}"));
+    }
     set_local_mpv_video_mode(hwnd, false);
     Err("Impossibile inizializzare il controllo di mpv.".to_string())
 }
@@ -12730,6 +12871,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 LRESULT(0)
             }
             WM_TIMER => {
+                if wparam.0 == app_windows::youtube_transcript_window::YTDLP_UPDATE_TIMER_ID {
+                    app_windows::youtube_transcript_window::poll_ytdlp_update_check(hwnd);
+                    return LRESULT(0);
+                }
                 if wparam.0 == EPUB_INDEX_ANNOUNCE_TIMER_ID {
                     kill_timer_best_effort(
                         hwnd,

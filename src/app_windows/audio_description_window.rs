@@ -1311,8 +1311,14 @@ fn refill_character_catalog_combo(state: &WindowState, preferred_name: &str) {
         state.character_catalog_combo,
         &labels.character_catalog_choose,
     );
-    for catalog in &state.character_catalogs {
-        add_combo_item(state.character_catalog_combo, &catalog.name);
+    for display in crate::result_labels::accessible_result_labels(
+        state
+            .character_catalogs
+            .iter()
+            .map(|c| c.name.clone())
+            .collect(),
+    ) {
+        add_combo_item(state.character_catalog_combo, &display);
     }
     let selected = state
         .character_catalogs
@@ -1708,12 +1714,20 @@ fn refill_voice_combo(state: &mut WindowState, voices: Vec<VoiceInfo>) {
     state.voices = voices;
     state.voices_engine = Some(engine_from_combo(state.engine_combo));
     unsafe { SendMessageW(state.voice_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0)) };
-    for voice in &state.voices {
-        let display = if voice.locale.trim().is_empty() {
-            voice.short_name.clone()
-        } else {
-            format!("{} ({})", voice.short_name, voice.locale)
-        };
+    let displays = crate::result_labels::accessible_result_labels(
+        state
+            .voices
+            .iter()
+            .map(|voice| {
+                if voice.locale.trim().is_empty() {
+                    voice.short_name.clone()
+                } else {
+                    format!("{} ({})", voice.short_name, voice.locale)
+                }
+            })
+            .collect(),
+    );
+    for display in displays {
         add_combo_item(state.voice_combo, &display);
     }
     let selected_language = language_from_combo(state.language_combo);
@@ -2899,8 +2913,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     None,
                 );
                 add_combo_item(character_catalog_combo, &labels.character_catalog_choose);
-                for catalog in &character_catalogs {
-                    add_combo_item(character_catalog_combo, &catalog.name);
+                for display in crate::result_labels::accessible_result_labels(
+                    character_catalogs.iter().map(|c| c.name.clone()).collect(),
+                ) {
+                    add_combo_item(character_catalog_combo, &display);
                 }
                 let selected_catalog_index = character_catalogs
                     .iter()

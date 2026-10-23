@@ -2130,8 +2130,10 @@ fn replace_language_combo_options(
     fallback_code: &str,
 ) {
     crate::send_message_w_safe(combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
-    for (_, label) in options {
-        let wide = to_wide(label);
+    for label in crate::result_labels::accessible_result_labels(
+        options.iter().map(|(_, label)| label.clone()).collect(),
+    ) {
+        let wide = to_wide(&label);
         crate::send_message_w_safe(
             combo,
             CB_ADDSTRING,
@@ -2165,8 +2167,10 @@ fn replace_combo_options(
     fallback_code: &str,
 ) {
     crate::send_message_w_safe(combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
-    for (_, label) in options {
-        let wide = to_wide(label);
+    for label in crate::result_labels::accessible_result_labels(
+        options.iter().map(|(_, label)| label.clone()).collect(),
+    ) {
+        let wide = to_wide(&label);
         crate::send_message_w_safe(
             combo,
             CB_ADDSTRING,
@@ -2839,8 +2843,14 @@ fn focus_results_list_from_state(state: &RadioDialogState) {
 fn populate_favorites(hwnd: HWND) {
     with_radio_state(hwnd, |state| {
         crate::send_message_w_safe(state.list_favorites, LB_RESETCONTENT, WPARAM(0), LPARAM(0));
-        for item in &state.favorite_results {
-            let w = to_wide(&radio_label(item, state.language));
+        for display in crate::result_labels::accessible_result_labels(
+            state
+                .favorite_results
+                .iter()
+                .map(|item| radio_label(item, state.language))
+                .collect(),
+        ) {
+            let w = to_wide(&display);
             crate::send_message_w_safe(
                 state.list_favorites,
                 LB_ADDSTRING,
@@ -2875,8 +2885,13 @@ fn populate_results(hwnd: HWND) {
                 LPARAM(w.as_ptr() as isize),
             );
         }
-        for item in &state.all_results[start..end] {
-            let w = to_wide(&radio_label(item, state.language));
+        for display in crate::result_labels::accessible_result_labels(
+            state.all_results[start..end]
+                .iter()
+                .map(|item| radio_label(item, state.language))
+                .collect(),
+        ) {
+            let w = to_wide(&display);
             crate::send_message_w_safe(
                 state.list_results,
                 LB_ADDSTRING,
