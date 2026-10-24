@@ -171,6 +171,35 @@ pub fn is_video_path(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+pub(crate) fn media_files_in_folder(current: &Path) -> std::io::Result<Vec<PathBuf>> {
+    let folder = current
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let mut paths = Vec::new();
+    for entry in std::fs::read_dir(folder)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() && is_audio_path(&path) {
+            paths.push(path);
+        }
+    }
+    paths.sort_by(|a, b| {
+        let a_name =
+            crate::accessibility::to_wide(&a.file_name().unwrap_or_default().to_string_lossy());
+        let b_name =
+            crate::accessibility::to_wide(&b.file_name().unwrap_or_default().to_string_lossy());
+        let order = unsafe {
+            windows::Win32::UI::Shell::StrCmpLogicalW(
+                windows::core::PCWSTR(a_name.as_ptr()),
+                windows::core::PCWSTR(b_name.as_ptr()),
+            )
+        };
+        order.cmp(&0).then_with(|| a.cmp(b))
+    });
+    Ok(paths)
+}
+
 // --- Text Encoding / Decoding ---
 
 fn decode_ansi_with_acp(bytes: &[u8]) -> Option<String> {

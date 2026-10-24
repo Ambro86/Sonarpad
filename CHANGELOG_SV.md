@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Ljudbeskrivningar: om en mening inte ryms i det tillgängliga utrymmet försöker Sonarpad skapa den på nytt med talsyntesens hastighet ökad med 10 % eller vid behov 15 % och kontrollerar den faktiska längden. Hastigheten sparas endast för den beskrivningen och behålls vid redigering, förhandslyssning och senare export; övriga meningar förblir oförändrade.
 
 13. Ljudbeskrivningar: den minsta paus som krävs har kortats till 1,5 sekunder. Sonarpad kan därmed skapa fler beskrivningar, även i korta pauser som tidigare inte användes.
+14. Uppspelning av filer i samma mapp: Föregående spår och Nästa spår, även med Ctrl+PageUp och Ctrl+PageDown, bläddrar nu bland ljud- och videofiler i filnamnsordning. En ny kryssruta under Alternativ → Ljud, avmarkerad som standard, spelar automatiskt nästa mediefil när den aktuella slutar. Inställningen sparas; manuell navigering fungerar även när kryssrutan är avmarkerad.
 
 Version 0.9.17 – 2026-10-15
 

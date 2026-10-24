@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Zvukové popisy: pokud se věta nevejde do dostupné mezery, Sonarpad ji zkusí znovu vytvořit hlasovou syntézou s rychlostí vyšší o 10 %, případně o 15 %, a ověří skutečnou délku. Rychlost se ukládá pouze pro tento popis a zachová se při úpravách, náhledech i dalších exportech; ostatní věty zůstávají beze změny.
 
 13. Audiopopis: minimální požadovaná pauza byla zkrácena na 1,5 sekundy. Sonarpad tak může vytvářet více popisů, a to i v krátkých pauzách, které dříve zůstávaly nevyužité.
+14. Přehrávání souborů ve stejné složce: Předchozí skladba a Další skladba, včetně Ctrl+PageUp a Ctrl+PageDown, nyní procházejí zvukové a video soubory podle názvu. Nové políčko v Možnosti → Zvuk, ve výchozím nastavení vypnuté, automaticky přehraje další mediální soubor po skončení aktuálního. Nastavení se ukládá; ruční přepínání funguje i při vypnutém políčku.
 
 Version 0.9.17 – 2026-10-15
 

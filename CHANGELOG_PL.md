@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Audiodeskrypcja: jeśli zdanie nie mieści się w dostępnej przerwie, Sonarpad próbuje wygenerować je ponownie z prędkością syntezy zwiększoną o 10% lub, w razie potrzeby, o 15%, sprawdzając rzeczywisty czas trwania. Prędkość jest zapisywana tylko dla tego opisu i zachowywana przy edycji, odsłuchu i kolejnych eksportach; pozostałe zdania pozostają bez zmian.
 
 13. Audiodeskrypcja: minimalna wymagana przerwa została skrócona do 1,5 sekundy. Sonarpad może dzięki temu tworzyć więcej opisów, również w krótkich przerwach, które wcześniej pozostawały niewykorzystane.
+14. Odtwarzanie plików z tego samego folderu: Poprzedni utwór i Następny utwór, także Ctrl+PageUp i Ctrl+PageDown, przechodzą teraz między plikami audio i wideo według nazw. Nowe pole wyboru w Opcje → Audio, domyślnie wyłączone, pozwala automatycznie odtworzyć następny plik multimedialny po zakończeniu bieżącego. Ustawienie jest zapamiętywane; ręczne przełączanie działa również przy wyłączonej opcji.
 
 Version 0.9.17 – 2026-10-15
 

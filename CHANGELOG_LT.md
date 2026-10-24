@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Garsiniai aprašymai: jei sakinys netelpa į galimą laiko tarpą, Sonarpad bando jį iš naujo sugeneruoti kalbos sintezės greitį padidinęs 10 % arba, jei reikia, 15 % ir patikrina tikrąją trukmę. Greitis išsaugomas tik tam aprašymui ir naudojamas redaguojant, perklausant bei vėliau eksportuojant; kiti sakiniai nekeičiami.
 
 13. Garsiniai aprašymai: mažiausia reikalinga pauzė sutrumpinta iki 1,5 sekundės. Dabar „Sonarpad“ gali pateikti daugiau aprašymų, taip pat per trumpas pauzes, kurios anksčiau nebuvo naudojamos.
+14. Failų atkūrimas tame pačiame aplanke: Ankstesnis takelis ir Kitas takelis, taip pat Ctrl+PageUp ir Ctrl+PageDown, dabar perjungia garso ir vaizdo failus pagal pavadinimą. Naujas žymimasis langelis Parinktys → Garsas, pagal numatymą išjungtas, leidžia automatiškai paleisti kitą medijos failą pasibaigus dabartiniam. Pasirinkimas išsaugomas; rankinis perjungimas veikia ir išjungus šią parinktį.
 
 Version 0.9.17 – 2026-10-15
 

@@ -731,7 +731,7 @@ impl State {
                 ];
                 if self.selected(MODE) == 1 {
                     commands.extend([
-                        ("↑ / ↓", "part_singular"),
+                        ("↑ / ↓", "change_part"),
                         ("S", "split_here"),
                         (delete_keys.as_str(), "delete"),
                         ("R", "restore"),

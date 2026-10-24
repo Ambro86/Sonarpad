@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Audiodescrições: se uma frase não couber no intervalo disponível, o Sonarpad tenta gerá-la novamente com a velocidade da síntese aumentada em 10% ou, se necessário, 15%, verificando a duração real. A velocidade é salva apenas para essa descrição e mantida nas edições, prévias e exportações seguintes; as outras frases permanecem inalteradas.
 
 13. Audiodescrições: a pausa mínima necessária foi reduzida para 1,5 segundo. Assim, o Sonarpad pode produzir mais descrições, inclusive nas pausas curtas que antes não eram aproveitadas.
+14. Reprodução de arquivos na mesma pasta: Faixa anterior e Próxima faixa, também com Ctrl+PageUp e Ctrl+PageDown, agora percorrem os arquivos de áudio e vídeo por nome. Uma nova caixa em Opções → Áudio, desativada por padrão, permite reproduzir automaticamente o próximo arquivo de mídia quando o atual termina. A escolha é salva; a navegação manual também funciona com a opção desativada.
 
 Version 0.9.17 – 2026-10-15
 

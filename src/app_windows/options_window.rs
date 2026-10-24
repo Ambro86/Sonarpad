@@ -117,6 +117,7 @@ const OPTIONS_ID_DIALOGUE_SECONDARY_VOICE_RATE_EDIT: usize = 6101;
 const OPTIONS_ID_DIALOGUE_SECONDARY_VOICE_PITCH_EDIT: usize = 6102;
 const OPTIONS_ID_DIALOGUE_SECONDARY_VOICE_VOLUME_EDIT: usize = 6103;
 const OPTIONS_ID_SHOW_MEDIA_SAVE_CONFIRMATION: usize = 6104;
+const OPTIONS_ID_AUTO_ADVANCE_FOLDER_MEDIA: usize = 6158;
 const OPTIONS_ID_AUDIO_SKIP: usize = 6010;
 const OPTIONS_ID_SLEEP_TIMER: usize = 6155;
 const OPTIONS_ID_AUDIO_SPLIT: usize = 6011;
@@ -1029,6 +1030,7 @@ struct OptionsDialogState {
     edit_audiobook_save_folder: HWND,
     button_audiobook_save_folder_browse: HWND,
     checkbox_show_media_save_confirmation: HWND,
+    checkbox_auto_advance_folder_media: HWND,
     checkbox_audio_description_after_tv_recording: HWND,
     label_audio_split: HWND,
     combo_audio_split: HWND,
@@ -1317,6 +1319,7 @@ struct OptionsLabels {
     label_audiobook_save_folder: String,
     label_audiobook_save_folder_browse: String,
     label_show_media_save_confirmation: String,
+    label_auto_advance_folder_media: String,
     label_audio_description_after_tv_recording: String,
     label_audio_split: String,
     label_audio_split_minutes: String,
@@ -1636,6 +1639,10 @@ fn options_labels(language: Language) -> OptionsLabels {
         label_show_media_save_confirmation: i18n::tr(
             language,
             "options.label.show_media_save_confirmation",
+        ),
+        label_auto_advance_folder_media: i18n::tr(
+            language,
+            "options.label.auto_advance_folder_media",
         ),
         label_audio_description_after_tv_recording: if language == Language::Italian {
             "Crea l'audiodescrizione dopo il termine della registrazione tv.".to_string()
@@ -4576,6 +4583,21 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     None,
                 );
                 y += 28;
+                let checkbox_auto_advance_folder_media = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.label_auto_advance_folder_media).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
+                    170,
+                    y,
+                    360,
+                    20,
+                    hwnd,
+                    HMENU(OPTIONS_ID_AUTO_ADVANCE_FOLDER_MEDIA as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                y += 28;
 
                 let checkbox_audio_description_after_tv_recording = CreateWindowExW(
                     Default::default(),
@@ -6547,6 +6569,7 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     edit_audiobook_save_folder,
                     button_audiobook_save_folder_browse,
                     checkbox_show_media_save_confirmation,
+                    checkbox_auto_advance_folder_media,
                     checkbox_audio_description_after_tv_recording,
                     label_audio_split,
                     combo_audio_split,
@@ -6764,6 +6787,7 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     edit_audiobook_save_folder,
                     button_audiobook_save_folder_browse,
                     checkbox_show_media_save_confirmation,
+                    checkbox_auto_advance_folder_media,
                     checkbox_audio_description_after_tv_recording,
                     label_audio_split,
                     combo_audio_split,
@@ -7523,6 +7547,7 @@ fn initialize_options_dialog(hwnd: HWND) {
             edit_audiobook_save_folder,
             _button_audiobook_save_folder_browse,
             checkbox_show_media_save_confirmation,
+            checkbox_auto_advance_folder_media,
             checkbox_audio_description_after_tv_recording,
             combo_audio_split,
             combo_audio_split_minutes,
@@ -7677,6 +7702,7 @@ fn initialize_options_dialog(hwnd: HWND) {
                 state.edit_audiobook_save_folder,
                 state.button_audiobook_save_folder_browse,
                 state.checkbox_show_media_save_confirmation,
+                state.checkbox_auto_advance_folder_media,
                 state.checkbox_audio_description_after_tv_recording,
                 state.combo_audio_split,
                 state.combo_audio_split_minutes,
@@ -9466,6 +9492,16 @@ fn initialize_options_dialog(hwnd: HWND) {
             checkbox_show_media_save_confirmation,
             BM_SETCHECK,
             WPARAM(if settings.show_media_save_confirmation {
+                BST_CHECKED.0 as usize
+            } else {
+                0
+            }),
+            LPARAM(0),
+        );
+        SendMessageW(
+            checkbox_auto_advance_folder_media,
+            BM_SETCHECK,
+            WPARAM(if settings.auto_advance_folder_media {
                 BST_CHECKED.0 as usize
             } else {
                 0
@@ -11804,6 +11840,7 @@ fn apply_options_dialog(hwnd: HWND) {
             combo_audio_skip,
             edit_audiobook_save_folder,
             checkbox_show_media_save_confirmation,
+            checkbox_auto_advance_folder_media,
             checkbox_audio_description_after_tv_recording,
             combo_audio_split,
             combo_audio_split_minutes,
@@ -11906,6 +11943,7 @@ fn apply_options_dialog(hwnd: HWND) {
                 state.combo_audio_skip,
                 state.edit_audiobook_save_folder,
                 state.checkbox_show_media_save_confirmation,
+                state.checkbox_auto_advance_folder_media,
                 state.checkbox_audio_description_after_tv_recording,
                 state.combo_audio_split,
                 state.combo_audio_split_minutes,
@@ -13050,6 +13088,14 @@ fn apply_options_dialog(hwnd: HWND) {
         )
         .0 as u32
             == BST_CHECKED.0;
+        settings.auto_advance_folder_media = SendMessageW(
+            checkbox_auto_advance_folder_media,
+            BM_GETCHECK,
+            WPARAM(0),
+            LPARAM(0),
+        )
+        .0 as u32
+            == BST_CHECKED.0;
         settings.audio_description_after_tv_recording = settings.language == Language::Italian
             && SendMessageW(
                 checkbox_audio_description_after_tv_recording,
@@ -13231,6 +13277,7 @@ fn apply_options_dialog(hwnd: HWND) {
         let keep_default_copy = false;
 
         save_settings_with_default_copy(settings.clone(), keep_default_copy);
+        crate::sync_local_media_autoplay(parent);
         if settings.spellcheck_enabled != old_spellcheck_enabled
             || settings.spellcheck_language_mode != old_spellcheck_mode
             || settings.spellcheck_fixed_language != old_spellcheck_fixed_language
@@ -14282,6 +14329,11 @@ fn layout_audio_tab(state: &OptionsDialogState, scroll_offset: i32) -> i32 {
         state.checkbox_show_media_save_confirmation,
         y,
     );
+    y = layout_checkbox(
+        "checkbox_auto_advance_folder_media",
+        state.checkbox_auto_advance_folder_media,
+        y,
+    );
     let show_audio_description_after_tv_recording =
         with_state(state.parent, |app| app.settings.language).unwrap_or_default()
             == Language::Italian;
@@ -14988,6 +15040,7 @@ fn set_active_tab(hwnd: HWND, index: i32) {
             state.edit_audiobook_save_folder,
             state.button_audiobook_save_folder_browse,
             state.checkbox_show_media_save_confirmation,
+            state.checkbox_auto_advance_folder_media,
             state.label_audio_split,
             state.combo_audio_split,
             state.label_audio_split_minutes,

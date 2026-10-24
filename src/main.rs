@@ -35,6 +35,8 @@ mod daisy_player;
 mod ebook_formats;
 mod epub_editor;
 mod file_handler;
+#[cfg(test)]
+mod media_folder_tests;
 mod mf_encoder;
 mod panic_guard;
 
@@ -5890,6 +5892,9 @@ pub(crate) fn launch_local_video_in_mpv(hwnd: HWND, path: &Path) -> Result<(), S
     command
         .current_dir(&mpv_dir)
         .arg(path)
+        // Retain the loaded file at EOF so seek and play/pause still work,
+        // independently of whether folder autoplay is enabled.
+        .arg("--keep-open=yes")
         .arg("--no-terminal")
         .arg("--volume-max=300")
         .arg(format!("--volume={initial_mpv_volume:.3}"))
@@ -9554,8 +9559,25 @@ pub(crate) fn handle_player_command(hwnd: HWND, command: PlayerCommand) {
         let language = { with_state(hwnd, |state| state.settings.language) }.unwrap_or_default();
         let result = match command {
             PlayerCommand::TogglePause => {
-                let result =
-                    try_send_command_to_managed_mpv(hwnd, r#"{"command":["cycle","pause"]}"#);
+                let at_local_end = current_folder_media(hwnd).is_some()
+                    && query_managed_mpv_property(hwnd, "eof-reached")
+                        .ok()
+                        .and_then(|value| value.as_bool())
+                        == Some(true);
+                let result = if at_local_end {
+                    try_send_command_to_managed_mpv(
+                        hwnd,
+                        r#"{"command":["seek",0,"absolute+exact"]}"#,
+                    )
+                    .and_then(|()| {
+                        try_send_command_to_managed_mpv(
+                            hwnd,
+                            r#"{"command":["set_property","pause",false]}"#,
+                        )
+                    })
+                } else {
+                    try_send_command_to_managed_mpv(hwnd, r#"{"command":["cycle","pause"]}"#)
+                };
                 if result.is_ok() {
                     stop_mpv_subtitle_speech(hwnd, "pause_toggle");
                     sync_mpv_sleep_prevention(hwnd);
@@ -10260,6 +10282,7 @@ pub(crate) struct AppState {
     selected_audio_track: Option<i32>,
     audio_playlist: Vec<PathBuf>,
     audio_playlist_index: Option<usize>,
+    folder_autoplay_attempted: Option<PathBuf>,
     audio_ffmpeg_retry_for: Option<PathBuf>,
     audio_unexpected_stop_retry_for: Option<PathBuf>,
     transcription_cancel: Option<Arc<AtomicBool>>,
@@ -12416,6 +12439,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     selected_audio_track: None,
                     audio_playlist: Vec::new(),
                     audio_playlist_index: None,
+                    folder_autoplay_attempted: None,
                     audio_ffmpeg_retry_for: None,
                     audio_unexpected_stop_retry_for: None,
                     transcription_cancel: None,
@@ -23624,6 +23648,7 @@ fn play_audio_playlist_item(hwnd: HWND, index: usize) {
             }
             state.audio_playlist_index = Some(index);
             state.audio_ffmpeg_retry_for = None;
+            state.folder_autoplay_attempted = None;
             Some(state.audio_playlist[index].clone())
         })
         .flatten()
@@ -23735,6 +23760,23 @@ pub(crate) fn queue_audio_files_and_play(hwnd: HWND, paths: Vec<PathBuf>) {
 }
 
 fn switch_audio_playlist_relative(hwnd: HWND, delta: i32) -> bool {
+    let local_path = current_folder_media(hwnd);
+    if let Some(path) = local_path.as_ref() {
+        let paths = match media_files_in_folder(path) {
+            Ok(paths) => paths,
+            Err(error) => {
+                log_debug(&format!("Media folder navigation: {error}"));
+                return false;
+            }
+        };
+        let Some(index) = paths.iter().position(|p| p == path) else {
+            return false;
+        };
+        with_state(hwnd, |state| {
+            state.audio_playlist = paths;
+            state.audio_playlist_index = Some(index);
+        });
+    }
     let target = {
         with_state(hwnd, |state| {
             if state.audio_playlist.is_empty() {
@@ -23756,12 +23798,77 @@ fn switch_audio_playlist_relative(hwnd: HWND, delta: i32) -> bool {
     let Some(target) = target else {
         return false;
     };
+    let announce_title = local_path.as_ref().and_then(|_| {
+        with_state(hwnd, |state| {
+            state
+                .audio_playlist
+                .get(target)?
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+        })
+        .flatten()
+    });
+    if let Some(source) = local_path {
+        let reuse = with_state(hwnd, |state| {
+            let destination = state.audio_playlist.get(target)?;
+            // Keep separately opened media tabs intact and avoid duplicate tabs.
+            if state
+                .docs
+                .iter()
+                .any(|doc| doc.path.as_ref() == Some(destination))
+            {
+                return None;
+            }
+            let index = state.docs.iter().position(|doc| {
+                matches!(doc.format, FileFormat::Audiobook)
+                    && !doc.dirty
+                    && doc.path.as_ref() == Some(&source)
+            })?;
+            Some((index, destination.clone()))
+        })
+        .flatten();
+        if let Some((index, destination)) = reuse {
+            editor_manager::select_tab(hwnd, index);
+            let title = destination
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("File");
+            if editor_manager::retarget_current_audiobook_document(hwnd, &destination, title) {
+                editor_manager::mark_current_document_prefer_mpv_playback(
+                    hwnd,
+                    is_video_path(&destination),
+                );
+                log_debug(&format!(
+                    "Media folder navigation: reused player tab {index}"
+                ));
+            }
+        }
+    }
     play_audio_playlist_item(hwnd, target);
+    if let Some(title) = announce_title {
+        let delivered = screen_reader_speak(&title);
+        log_debug(&format!(
+            "Media folder navigation: announced track={title} delivered={delivered}"
+        ));
+    }
     true
 }
 
 fn handle_audio_playlist_timer(hwnd: HWND) {
     if daisy_player::handle_playback_timer(hwnd) {
+        return;
+    }
+    if is_mpv_playback_active(hwnd) {
+        if let Some(path) = current_folder_media(hwnd)
+            && with_state(hwnd, |s| s.settings.auto_advance_folder_media).unwrap_or(false)
+            && let Ok(eof) = query_managed_mpv_property(hwnd, "eof-reached")
+        {
+            if eof.as_bool() == Some(true) {
+                advance_folder_media_once(hwnd, &path);
+            } else {
+                with_state(hwnd, |s| s.folder_autoplay_attempted = None);
+            }
+        }
         return;
     }
     let (is_paused, should_advance, current_seconds, elapsed_since_start, total_seconds) = {
@@ -23799,6 +23906,12 @@ fn handle_audio_playlist_timer(hwnd: HWND) {
         return;
     }
     let output_stopped = audio_player::audiobook_output_stopped(hwnd).unwrap_or(false);
+    if !output_stopped {
+        with_state(hwnd, |s| s.folder_autoplay_attempted = None);
+        if current_folder_media(hwnd).is_some() {
+            return;
+        }
+    }
     if !should_advance && !output_stopped {
         return;
     }
@@ -23859,9 +23972,49 @@ fn handle_audio_playlist_timer(hwnd: HWND) {
             }
         }
     }
-    if !switch_audio_playlist_relative(hwnd, 1) {
+    if let Some(path) = current_folder_media(hwnd) {
+        advance_folder_media_once(hwnd, &path);
+    } else if !switch_audio_playlist_relative(hwnd, 1) {
         // Keep the player instance alive when no next track is available.
         // This matches non-hard-stop behavior (seek back and resume works).
+    }
+}
+
+fn current_folder_media(hwnd: HWND) -> Option<PathBuf> {
+    let path = with_state(hwnd, |state| {
+        if state.active_mpv_session.is_some() {
+            state.active_podcast_episode_url.as_ref().map(PathBuf::from)
+        } else {
+            state.active_audiobook.as_ref().map(|p| p.path.clone())
+        }
+    })
+    .flatten()?;
+    (path.is_file() && is_audio_path(&path) && !is_stream_cache_media(&path)).then_some(path)
+}
+
+pub(crate) fn sync_local_media_autoplay(hwnd: HWND) {
+    with_state(hwnd, |s| s.folder_autoplay_attempted = None);
+    if is_mpv_playback_active(hwnd) && current_folder_media(hwnd).is_some() {
+        let command = r#"{"command":["set_property","keep-open","yes"]}"#;
+        if let Err(error) = try_send_command_to_managed_mpv(hwnd, command) {
+            log_debug(&format!("Local media autoplay option: {error}"));
+        }
+    }
+}
+
+fn advance_folder_media_once(hwnd: HWND, path: &Path) {
+    let advance = with_state(hwnd, |s| {
+        if !s.settings.auto_advance_folder_media
+            || s.folder_autoplay_attempted.as_deref() == Some(path)
+        {
+            return false;
+        }
+        s.folder_autoplay_attempted = Some(path.to_path_buf());
+        true
+    })
+    .unwrap_or(false);
+    if advance {
+        switch_audio_playlist_relative(hwnd, 1);
     }
 }
 

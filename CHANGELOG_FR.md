@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Audiodescriptions : si une phrase ne tient pas dans le créneau disponible, Sonarpad tente de la régénérer avec une vitesse de synthèse augmentée de 10 % ou, si nécessaire, de 15 %, puis vérifie sa durée réelle. Cette vitesse est enregistrée uniquement pour cette description et conservée lors des modifications, des aperçus et des exportations ultérieures ; les autres phrases restent inchangées.
 
 13. Audiodescriptions : la pause minimale requise passe à 1,5 seconde. Sonarpad peut ainsi produire davantage de descriptions, y compris dans les courtes pauses qui n’étaient pas utilisées auparavant.
+14. Lecture des fichiers du même dossier : Piste précédente et Piste suivante, également avec Ctrl+Page précédente et Ctrl+Page suivante, parcourent désormais les fichiers audio et vidéo par nom. Une nouvelle case dans Options → Audio, décochée par défaut, permet de lire automatiquement le fichier multimédia suivant à la fin du fichier actuel. Le choix est mémorisé ; la navigation manuelle fonctionne aussi lorsque la case est décochée.
 
 Version 0.9.17 – 2026-10-15
 

@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Audiodescripciones: si una frase no cabe en el intervalo disponible, Sonarpad intenta regenerarla con la velocidad de síntesis aumentada un 10 % o, si es necesario, un 15 %, comprobando su duración real. La velocidad se guarda solo para esa descripción y se conserva al editarla, previsualizarla y exportarla de nuevo; las demás frases no cambian.
 
 13. Audiodescripciones: la pausa mínima necesaria se reduce a 1,5 segundos. Sonarpad puede generar más descripciones, también en las pausas breves que antes no se aprovechaban.
+14. Reproducción de archivos de la misma carpeta: Pista anterior y Pista siguiente, también con Ctrl+RePág y Ctrl+AvPág, ahora recorren los archivos de audio y vídeo por nombre. Una nueva casilla en Opciones → Audio, desactivada de forma predeterminada, permite reproducir automáticamente el siguiente archivo multimedia al terminar el actual. La preferencia se guarda; los controles manuales también funcionan con la casilla desactivada.
 
 Version 0.9.17 – 2026-10-15
 

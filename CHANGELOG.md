@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Audio descriptions: if a sentence does not fit the available gap, Sonarpad tries regenerating it with the speech engine at 10% or, if needed, 15% higher speed, checking its actual duration. The speed is saved only for that description and retained for edits, previews and later exports; other sentences remain unchanged.
 
 13. Audio descriptions: reduced the minimum required pause to 1.5 seconds. Sonarpad can now produce more descriptions, including in short pauses that were previously left unused.
+14. Playback of files in the same folder: Previous track and Next track, including Ctrl+PageUp and Ctrl+PageDown, now navigate audio and video files in filename order. A new checkbox in Options → Audio, off by default, automatically plays the next media file when the current one ends. The setting is remembered; manual navigation also works when it is off.
 
 Version 0.9.17 – 2026-10-15
 

@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Audiodeskriptionen: Passt ein Satz nicht in die verfügbare Lücke, versucht Sonarpad, ihn mit der Sprachsynthese bei 10 % oder nötigenfalls 15 % höherer Geschwindigkeit neu zu erzeugen, und prüft die tatsächliche Dauer. Die Geschwindigkeit wird nur für diese Beschreibung gespeichert und bei Änderungen, Vorschauen und späteren Exporten beibehalten; andere Sätze bleiben unverändert.
 
 13. Audiodeskriptionen: Die erforderliche Mindestpause wurde auf 1,5 Sekunden verkürzt. Dadurch kann Sonarpad mehr Beschreibungen erzeugen, auch in kurzen Pausen, die zuvor ungenutzt blieben.
+14. Wiedergabe von Dateien im selben Ordner: Vorheriger Titel und Nächster Titel, auch mit Strg+Bild auf und Strg+Bild ab, wechseln jetzt zwischen Audio- und Videodateien in Dateinamenreihenfolge. Ein neues Kontrollkästchen unter Optionen → Audio ist standardmäßig deaktiviert und ermöglicht die automatische Wiedergabe der nächsten Mediendatei nach dem Ende der aktuellen. Die Einstellung wird gespeichert; der manuelle Wechsel funktioniert auch bei deaktivierter Option.
 
 Version 0.9.17 – 2026-10-15
 

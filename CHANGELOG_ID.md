@@ -19,6 +19,7 @@ Version 0.9.18 – 2026-10-24
 12. Deskripsi audio: jika kalimat tidak muat dalam jeda yang tersedia, Sonarpad mencoba menyintesisnya kembali dengan kecepatan suara dinaikkan 10% atau, jika perlu, 15%, lalu memeriksa durasi sebenarnya. Kecepatan disimpan hanya untuk deskripsi tersebut dan dipertahankan saat diedit, dipratinjau, dan diekspor kembali; kalimat lain tidak berubah.
 
 13. Deskripsi audio: jeda minimum yang diperlukan dikurangi menjadi 1,5 detik. Sonarpad kini dapat menghasilkan lebih banyak deskripsi, termasuk pada jeda singkat yang sebelumnya tidak digunakan.
+14. Pemutaran berkas dalam folder yang sama: Trek sebelumnya dan Trek berikutnya, termasuk Ctrl+PageUp dan Ctrl+PageDown, kini menelusuri berkas audio dan video menurut nama berkas. Kotak centang baru di Opsi → Audio, nonaktif secara bawaan, memutar berkas media berikutnya secara otomatis setelah berkas saat ini selesai. Pengaturan diingat; navigasi manual tetap berfungsi saat opsi dinonaktifkan.
 
 Version 0.9.17 – 2026-10-15
 

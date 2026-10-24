@@ -17,6 +17,7 @@ Version 0.9.18 – 2026-10-24
 12. Mô tả âm thanh: nếu một câu không vừa khoảng trống có sẵn, Sonarpad thử tổng hợp lại câu đó với tốc độ giọng nói tăng 10% hoặc, nếu cần, 15%, rồi kiểm tra thời lượng thực tế. Tốc độ chỉ được lưu cho mô tả đó và được giữ khi chỉnh sửa, nghe thử và xuất lại; các câu khác không thay đổi.
 
 13. Mô tả âm thanh: thời gian tạm dừng tối thiểu cần thiết đã giảm xuống còn 1,5 giây. Nhờ đó, Sonarpad có thể tạo thêm mô tả, kể cả trong những khoảng dừng ngắn trước đây chưa được tận dụng.
+14. Phát các tệp trong cùng thư mục: Bài trước và Bài tiếp theo, kể cả Ctrl+PageUp và Ctrl+PageDown, nay chuyển giữa các tệp âm thanh và video theo tên. Hộp kiểm mới trong Tùy chọn → Âm thanh, mặc định tắt, cho phép tự động phát tệp phương tiện tiếp theo khi tệp hiện tại kết thúc. Lựa chọn được ghi nhớ; chuyển tệp thủ công vẫn hoạt động khi tùy chọn bị tắt.
 
 Version 0.9.17 – 2026-10-15
 
