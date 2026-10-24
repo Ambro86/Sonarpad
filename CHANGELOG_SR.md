@@ -14,6 +14,7 @@ Version 0.9.18 – 2026-10-16
 9. Убрзани су претрага и отварање YouTube видео-снимака.
 10. Poboljšana audio-deskripcija: kada je uključeno čitanje teksta na ekranu, sada se čita i završna špica koju Gemini može da prepozna.
 11. Poboljšana sinhronizacija audio-opisa: ispravljen problem zbog kojeg je Gemini, nakon dužih delova bez prostora za naraciju, mogao da nastavi da opisuje prethodne scene umesto trenutne.
+12. Аудио-описи: ако реченица не стаје у доступан временски размак, Sonarpad покушава да је поново синтетизује брзином већом за 10% или, по потреби, 15%, уз проверу стварног трајања. Брзина се чува само за тај опис и задржава при изменама, преслушавању и каснијем извозу; остале реченице остају непромењене.
 
 Version 0.9.17 – 2026-10-15
 

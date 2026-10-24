@@ -14,6 +14,7 @@ Version 0.9.18 – 2026-10-16
 9. Paspartinta „YouTube“ vaizdo įrašų paieška ir atidarymas.
 10. Patobulintas garsinis vaizdavimas: įjungus ekrane rodomo teksto skaitymą, dabar perskaitomi ir baigiamieji titrai, kuriuos „Gemini“ gali atpažinti.
 11. Pagerintas garsinio vaizdavimo sinchronizavimas: ištaisyta problema, dėl kurios po ilgų atkarpų be vietos pasakojimui Gemini galėjo toliau aprašyti ankstesnes scenas, o ne dabartinę.
+12. Garsiniai aprašymai: jei sakinys netelpa į galimą laiko tarpą, Sonarpad bando jį iš naujo sugeneruoti kalbos sintezės greitį padidinęs 10 % arba, jei reikia, 15 % ir patikrina tikrąją trukmę. Greitis išsaugomas tik tam aprašymui ir naudojamas redaguojant, perklausant bei vėliau eksportuojant; kiti sakiniai nekeičiami.
 
 Version 0.9.17 – 2026-10-15
 

@@ -14,6 +14,7 @@ Version 0.9.18 – 2026-10-16
 9. Snabbare sökning och öppning av YouTube-videor.
 10. Förbättrade syntolkningar: när uppläsning av text på skärmen är aktiverad läses nu även de eftertexter som Gemini kan identifiera upp.
 11. Förbättrad synkronisering av syntolkningen: åtgärdat ett problem där Gemini efter långa avsnitt utan utrymme för berättarrösten kunde fortsätta beskriva tidigare scener i stället för den aktuella scenen.
+12. Ljudbeskrivningar: om en mening inte ryms i det tillgängliga utrymmet försöker Sonarpad skapa den på nytt med talsyntesens hastighet ökad med 10 % eller vid behov 15 % och kontrollerar den faktiska längden. Hastigheten sparas endast för den beskrivningen och behålls vid redigering, förhandslyssning och senare export; övriga meningar förblir oförändrade.
 
 Version 0.9.17 – 2026-10-15
 

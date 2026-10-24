@@ -14,6 +14,7 @@ Version 0.9.18 – 2026-10-16
 9. Pesquisa e abertura de vídeos do YouTube mais rápidas.
 10. Melhoradas as audiodescrições: ao ativar a leitura de textos no ecrã, passam também a ser lidos os créditos finais que o Gemini consegue identificar.
 11. Melhorada a sincronização das audiodescrições: corrigido um problema em que, após longos trechos sem espaço para a narração, o Gemini podia continuar a descrever cenas anteriores em vez da cena atual.
+12. Audiodescrições: se uma frase não couber no intervalo disponível, o Sonarpad tenta gerá-la novamente com a velocidade da síntese aumentada em 10% ou, se necessário, 15%, verificando a duração real. A velocidade é guardada apenas para essa descrição e mantida nas alterações, pré-visualizações e exportações seguintes; as outras frases permanecem inalteradas.
 
 Version 0.9.17 – 2026-10-15
 

@@ -14,6 +14,7 @@ Version 0.9.18 – 2026-10-16
 9. Tăng tốc tìm kiếm và mở video YouTube.
 10. Cải thiện mô tả âm thanh: khi bật tính năng đọc văn bản trên màn hình, ứng dụng cũng đọc phần danh đề cuối phim mà Gemini nhận diện được.
 11. Cải thiện đồng bộ mô tả âm thanh: khắc phục lỗi Gemini có thể tiếp tục mô tả các cảnh trước thay vì cảnh hiện tại sau những đoạn dài không có khoảng trống để thuyết minh.
+12. Mô tả âm thanh: nếu một câu không vừa khoảng trống có sẵn, Sonarpad thử tổng hợp lại câu đó với tốc độ giọng nói tăng 10% hoặc, nếu cần, 15%, rồi kiểm tra thời lượng thực tế. Tốc độ chỉ được lưu cho mô tả đó và được giữ khi chỉnh sửa, nghe thử và xuất lại; các câu khác không thay đổi.
 
 Version 0.9.17 – 2026-10-15
 

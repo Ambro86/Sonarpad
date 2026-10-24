@@ -14,6 +14,7 @@ Version 0.9.18 – 2026-10-16
 9. Zrychleno vyhledávání a otevírání videí na YouTube.
 10. Vylepšen zvukový popis: při zapnutém čtení textu na obrazovce se nyní čtou také závěrečné titulky, které Gemini dokáže rozpoznat.
 11. Vylepšeno časování audiopopisu: opraven problém, kdy Gemini po delších úsecích bez prostoru pro komentář mohl nadále popisovat předchozí scény místo aktuální scény.
+12. Zvukové popisy: pokud se věta nevejde do dostupné mezery, Sonarpad ji zkusí znovu vytvořit hlasovou syntézou s rychlostí vyšší o 10 %, případně o 15 %, a ověří skutečnou délku. Rychlost se ukládá pouze pro tento popis a zachová se při úpravách, náhledech i dalších exportech; ostatní věty zůstávají beze změny.
 
 Version 0.9.17 – 2026-10-15
 

@@ -16,6 +16,7 @@ Version 0.9.18 – 2026-10-16
 9. Pencarian dan pembukaan video YouTube kini lebih cepat.
 10. Deskripsi audio ditingkatkan: saat pembacaan teks di layar diaktifkan, kredit penutup yang dapat dikenali Gemini kini juga dibacakan.
 11. Peningkatan sinkronisasi deskripsi audio: memperbaiki masalah ketika Gemini terus mendeskripsikan adegan sebelumnya alih-alih mengikuti adegan saat ini setelah bagian panjang tanpa ruang untuk narasi.
+12. Deskripsi audio: jika kalimat tidak muat dalam jeda yang tersedia, Sonarpad mencoba menyintesisnya kembali dengan kecepatan suara dinaikkan 10% atau, jika perlu, 15%, lalu memeriksa durasi sebenarnya. Kecepatan disimpan hanya untuk deskripsi tersebut dan dipertahankan saat diedit, dipratinjau, dan diekspor kembali; kalimat lain tidak berubah.
 
 Version 0.9.17 – 2026-10-15
 
