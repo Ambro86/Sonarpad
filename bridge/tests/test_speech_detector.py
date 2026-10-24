@@ -306,6 +306,16 @@ class SpeechDetectorIntervalTests(unittest.TestCase):
         )
         self.assertEqual(anchors, [])
 
+    def test_two_point_five_second_slots_keep_existing_word_budget(self):
+        slots = intensive_description_slots(
+            [(2.49, 3.0), (5.5, 6.0), (9.0, 10.0)],
+            duration_sec=10.0, min_duration_sec=2.5,
+        )
+        self.assertEqual(
+            [(slot["start"], slot["end"], slot["max_words"]) for slot in slots],
+            [(3.0, 5.5, 5), (6.0, 9.0, 6)],
+        )
+
     def test_intensive_slots_are_clipped_to_chunk_and_have_word_budget(self):
         slots = intensive_description_slots(
             [(4.0, 8.0), (12.0, 14.0)],
