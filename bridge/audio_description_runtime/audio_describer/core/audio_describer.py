@@ -3486,7 +3486,7 @@ def _build_unified_prompts(user_prompt, model_name_to_use, dialogue_free_windows
     visible words in their original language), "visual_evidence_time_seconds" (the exact visible
     instant, using the same local/absolute timeline requested for descriptions), and
     "narratively_relevant" (a JSON boolean). Exclude decorative text, persistent watermarks,
-    routine credits, and subtitles that only repeat speech. Never guess unreadable words.
+    unselected routine credits, and subtitles that only repeat speech. Never guess unreadable words.
     Return [] if no qualifying text is legible. This array is evidence metadata, not narration.
     For each relevant entry, include its readable content in audio_descriptions when it is
     visible inside an authorized dialogue-free window and fits that window's word budget.
@@ -3501,11 +3501,28 @@ def _build_unified_prompts(user_prompt, model_name_to_use, dialogue_free_windows
     to understanding the scene. Render the meaning naturally in the target language when useful.
     When describing important, legible text, include what it says rather than merely saying
     that a title, sign, or message is visible. Never guess words that you cannot read.
-    Do NOT read decorative text, persistent channel logos/watermarks, routine credits, or subtitles/
+    Do NOT read decorative text, persistent channel logos/watermarks, unselected routine credits, or subtitles/
     closed captions that merely repeat audible dialogue. This rule NEVER overrides dialogue
     protection: the resulting description must still fit completely inside an authorized
     dialogue-free window, and if no such window is available, omit the text rather than speaking
     over dialogue. The text must be visible at the reported `visual_evidence_time_seconds`.
+10. **READ SELECTED END CREDITS:** During visible end credits, include a useful selection of
+    legible roles and names in audio_descriptions, not just in on_screen_text or a generic
+    "credits roll" description. This is an exception to the plot-critical selection rule:
+    prioritize direction, writing/source, cast (with roles when printed), music and production.
+    Translate role labels naturally; preserve the printed names. Reading printed credits is
+    allowed even without a character glossary: it does not identify characters in the story.
+    Never infer missing credits from knowledge of the film, the soundtrack or earlier scenes.
+    Select complete role/name pairs that fit naturally at two words per second while visible;
+    use separate short entries for successive cards or scrolling groups. Continue inspecting
+    the credits through the end of the clip: do not stop after the first production credit
+    when further legible cast or creative credits can fit. Do not rush through
+    every crew member, repeat credits, or read legal boilerplate and technical company lists.
+    Include selected credits in on_screen_text as relevant. Instrumental music alone is not
+    dialogue. All dialogue protection, authorized-window, word-budget and visual-grounding
+    rules still apply. Do not move a credit into a later silence or extend its visible range.
+    Report the actual evidence instant in seconds, not MMSS digits (01:36 means 96 seconds,
+    not 136). If no complete credit can fit safely, omit it rather than guessing or rushing.
 """
 
     # The main system instruction, now asking for a unified JSON object.
@@ -3541,6 +3558,8 @@ Your entire output MUST be a single JSON object with {output_keys}.
             + "the timed audio descriptions. "
             + ("Follow all instructions." if enable_glossary else
                "Set character_glossary to an empty array and do not use character names.")
+            + (" Printed end-credit names may still be read under the selected-credits rule."
+               if bool(config_model.get_setting("recognize_screen_text")) else "")
         ),
         "\n**Current Task Specifications:**",
         (

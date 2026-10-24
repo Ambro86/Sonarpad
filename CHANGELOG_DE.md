@@ -12,6 +12,7 @@ Version 0.9.18 – 2026-10-16
 
 8. SonarMusic unter Multimedia hinzugefügt: Suche nach Titeln, Alben, Künstlern, Playlists und Musikvideos, Vorschläge nach Texteingabe, Navigation und Ergebnisseiten. Titel können mit den bestehenden Medienwerkzeugen abgespielt, gespeichert, transkribiert und mit KI-Audiodeskription versehen werden.
 9. Suche und Öffnen von YouTube-Videos beschleunigt.
+10. Audiodeskriptionen verbessert: Bei aktivierter Vorlesefunktion für Bildschirmtexte werden nun auch die Abspanntexte vorgelesen, die Gemini erkennen kann.
 
 Version 0.9.17 – 2026-10-15
 

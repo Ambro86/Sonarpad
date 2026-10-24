@@ -12,6 +12,7 @@ Version 0.9.18 – 2026-10-16
 
 8. Į Multimediją įtrauktas SonarMusic: dainų, albumų, atlikėjų, grojaraščių ir muzikos vaizdo įrašų paieška, pasiūlymai įvedus tekstą ir rezultatų puslapiai. Įrašus galima leisti, išsaugoti, transkribuoti ir kurti DI garsinį vaizdavimą esamomis priemonėmis.
 9. Paspartinta „YouTube“ vaizdo įrašų paieška ir atidarymas.
+10. Patobulintas garsinis vaizdavimas: įjungus ekrane rodomo teksto skaitymą, dabar perskaitomi ir baigiamieji titrai, kuriuos „Gemini“ gali atpažinti.
 
 Version 0.9.17 – 2026-10-15
 

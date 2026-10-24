@@ -12,6 +12,7 @@ Version 0.9.18 – 2026-10-16
 
 8. Přidán SonarMusic do Multimédií: vyhledávání skladeb, alb, interpretů, playlistů a hudebních videí, návrhy po zadání textu, procházení a stránkování výsledků. Skladby lze přehrát, uložit, přepsat a vytvořit k nim audiopopis pomocí AI se stávajícími multimediálními nástroji.
 9. Zrychleno vyhledávání a otevírání videí na YouTube.
+10. Vylepšen zvukový popis: při zapnutém čtení textu na obrazovce se nyní čtou také závěrečné titulky, které Gemini dokáže rozpoznat.
 
 Version 0.9.17 – 2026-10-15
 

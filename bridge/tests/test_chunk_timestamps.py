@@ -617,6 +617,15 @@ class ChunkTimestampTests(unittest.TestCase):
         self.assertIn('"narratively_relevant"', system)
         self.assertIn("including text visible during dialogue", system)
         self.assertIn("Otherwise keep it only in on_screen_text", system)
+        self.assertIn("READ SELECTED END CREDITS", system)
+        self.assertIn("legible roles and names in audio_descriptions", system)
+        self.assertIn("not just in on_screen_text", system)
+        self.assertIn("allowed even without a character glossary", system)
+        self.assertIn("Never infer missing credits", system)
+        self.assertIn("Instrumental music alone is not", system)
+        self.assertIn("Do not move a credit into a later silence", system)
+        self.assertIn("01:36 means 96 seconds", system)
+        self.assertIn("Printed end-credit names may still be read", prompt)
         example = json.loads(system.split("**EXAMPLE OUTPUT:**", 1)[1])
         self.assertEqual(example["on_screen_text"], [])
 
@@ -634,6 +643,9 @@ class ChunkTimestampTests(unittest.TestCase):
             system, _prompt = _build_unified_prompts(
                 "", "gemini-test", dialogue_free_windows="10.000-13.000"
             )
+
+        self.assertNotIn("READ SELECTED END CREDITS", system)
+        self.assertNotIn("Printed end-credit names", _prompt)
 
         self.assertNotIn("READ NARRATIVELY IMPORTANT ON-SCREEN TEXT", system)
         self.assertNotIn("Three years later", system)
