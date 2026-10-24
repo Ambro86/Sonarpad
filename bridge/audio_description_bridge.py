@@ -248,7 +248,7 @@ def _configure_omni(request: dict) -> None:
             "send_silenced_video_to_ai": False,
             "enable_dialogue_protection": True,
             "description_coverage_mode": "intensive",
-            "intensive_min_silence_seconds": 2.5,
+            "intensive_min_silence_seconds": 2.0,
             "enable_extended_audio_description": bool(
                 request.get("allow_extended_pauses", True)
             ),
@@ -542,10 +542,10 @@ def run(request: dict) -> dict:
     )
     try:
         intensive_min_silence = float(
-            config_model.get_setting("intensive_min_silence_seconds") or 2.5
+            config_model.get_setting("intensive_min_silence_seconds") or 2.0
         )
     except (TypeError, ValueError):
-        intensive_min_silence = 2.5
+        intensive_min_silence = 2.0
     mandatory_slots = []
     for index, chunk in enumerate(prepared_chunks, 1):
         mandatory_slots.extend(

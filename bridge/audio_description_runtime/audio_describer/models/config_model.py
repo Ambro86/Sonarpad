@@ -16,7 +16,7 @@ DEFAULT_SETTINGS = {
     "send_silenced_video_to_ai": False,
     "enable_dialogue_protection": True,
     "description_coverage_mode": "intensive",
-    "intensive_min_silence_seconds": 2.5,
+    "intensive_min_silence_seconds": 2.0,
     "enable_extended_audio_description": True,
     "huggingface_access_token": "",
     "frame_rate_for_ai": 0,

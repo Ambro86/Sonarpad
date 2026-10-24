@@ -1284,7 +1284,7 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
             or extended_mode
         )
         min_intensive_silence = float(
-            config_model.get_setting("intensive_min_silence_seconds") or 2.5
+            config_model.get_setting("intensive_min_silence_seconds") or 2.0
         )
 
         for i, prepared_chunk in enumerate(normalized_chunks):
