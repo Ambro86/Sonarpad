@@ -162,6 +162,7 @@
   "audio_description.progress.export_edit": "Mengekspor MP3 yang diedit...",
   "audio_description.progress.finalize": "Menghapus duplikat dan menyelaraskan deskripsi...",
   "audio_description.progress.gemini_chunk": "Gemini sedang menganalisis potongan {current} dari {total}...",
+  "audio_description.progress.segment": "Segmen {current} dari {total}",
   "audio_description.progress.gemini_contacting": "Mengirim permintaan ke Gemini...",
   "audio_description.progress.gemini_processing": "Analisis Gemini sedang berlangsung...",
   "audio_description.progress.gemini_repair": "Memperbaiki format respons Gemini...",

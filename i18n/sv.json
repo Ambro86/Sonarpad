@@ -162,6 +162,7 @@
   "audio_description.progress.export_edit": "Exporterar redigerad MP3...",
   "audio_description.progress.finalize": "Tar bort dubbletter och justerar beskrivningarna...",
   "audio_description.progress.gemini_chunk": "Gemini analyserar segment {current} av {total}...",
+  "audio_description.progress.segment": "Segment {current} av {total}",
   "audio_description.progress.gemini_contacting": "Skickar begäran till Gemini...",
   "audio_description.progress.gemini_processing": "Gemini-analys pågår...",
   "audio_description.progress.gemini_repair": "Reparerar formatet i Gemini-svaret...",

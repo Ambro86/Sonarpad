@@ -162,6 +162,7 @@
   "audio_description.progress.export_edit": "Eksportuojamas pakeistas MP3...",
   "audio_description.progress.finalize": "Šalinami dublikatai ir lygiuojami aprašai...",
   "audio_description.progress.gemini_chunk": "Gemini analizuoja segmentą {current} iš {total}...",
+  "audio_description.progress.segment": "Segmentas {current} iš {total}",
   "audio_description.progress.gemini_contacting": "Užklausa siunčiama į Gemini...",
   "audio_description.progress.gemini_processing": "Vyksta Gemini analizė...",
   "audio_description.progress.gemini_repair": "Taisomas Gemini atsakymo formatas...",

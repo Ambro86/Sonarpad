@@ -13,6 +13,7 @@ Version 0.9.18 – 2026-10-16
 8. SonarMusic har lagts till i Multimedia: sök låtar, album, artister, spellistor och musikvideor, med förslag efter inmatning och sidindelade resultat. Spåren kan spelas, sparas, transkriberas och få AI-syntolkning med befintliga medieverktyg.
 9. Snabbare sökning och öppning av YouTube-videor.
 10. Förbättrade syntolkningar: när uppläsning av text på skärmen är aktiverad läses nu även de eftertexter som Gemini kan identifiera upp.
+11. Förbättrad synkronisering av syntolkningen: åtgärdat ett problem där Gemini efter långa avsnitt utan utrymme för berättarrösten kunde fortsätta beskriva tidigare scener i stället för den aktuella scenen.
 
 Version 0.9.17 – 2026-10-15
 

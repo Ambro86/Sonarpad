@@ -978,6 +978,38 @@ fn suggested_alternative_model(combo: HWND, current: &str) -> String {
         .unwrap_or_default()
 }
 
+fn segment_progress_text(language: Language, message: &str) -> Option<String> {
+    let data: serde_json::Value = serde_json::from_str(message).ok()?;
+    let current = data.get("current")?.as_u64()?;
+    let total = data.get("total")?.as_u64()?;
+    if current == 0 || current > total {
+        return None;
+    }
+    Some(i18n::tr_f(
+        language,
+        "audio_description.progress.segment",
+        &[
+            ("current", &current.to_string()),
+            ("total", &total.to_string()),
+        ],
+    ))
+}
+
+fn progress_control_name(language: Language, segment: Option<&str>) -> String {
+    let base = format!(
+        "{}: {}",
+        labels(language).title,
+        i18n::tr(language, "batch_audiobooks.progress_label")
+    );
+    segment.map_or_else(|| base.clone(), |segment| format!("{base}. {segment}"))
+}
+
+fn set_progress_segment(state: &WindowState, segment: Option<&str>) {
+    let name = progress_control_name(state.language, segment);
+    set_text(state.progress_label, &name);
+    set_text(state.progress, &name);
+}
+
 fn set_text(hwnd: HWND, text: &str) {
     let wide = to_wide(text);
     crate::log_if_err!(
@@ -1893,7 +1925,7 @@ fn show_audio_description_error_and_focus(
     restore_audio_description_control_focus(hwnd, control);
 }
 
-fn refresh_gemini_models(hwnd: HWND, state: &WindowState) {
+fn refresh_gemini_models(hwnd: HWND, state: &WindowState, user_requested: bool) {
     let labels = labels(state.language);
     let api_key = get_text(state.gemini_api_key_edit).trim().to_string();
     if api_key.is_empty() {
@@ -1912,12 +1944,21 @@ fn refresh_gemini_models(hwnd: HWND, state: &WindowState) {
         &labels.gemini_loading_models,
     );
     unsafe {
+        // Move focus before disabling the button that currently owns it.
+        if user_requested {
+            SetFocus(state.gemini_model_combo);
+        }
         EnableWindow(state.gemini_refresh_models_button, false);
     }
     thread::spawn(move || {
         let result = crate::app_windows::options_window::fetch_gemini_models_for_key(&api_key);
         let payload = Box::new(result);
-        post_boxed_message(hwnd, WM_AD_MODELS_LOADED, WPARAM(0), payload);
+        post_boxed_message(
+            hwnd,
+            WM_AD_MODELS_LOADED,
+            WPARAM(usize::from(user_requested)),
+            payload,
+        );
     });
 }
 
@@ -2399,6 +2440,7 @@ fn launch_audio_description_dialogue_overlap_fallback(
     state.cancel = Some(cancel.clone());
     state.exhausted_gemini_models.clear();
     state.running = true;
+    set_progress_segment(state, None);
     set_controls_enabled(state, false);
     set_text(
         state.status,
@@ -2454,6 +2496,7 @@ fn launch_audio_description_job(
     state.cancel = Some(cancel.clone());
     state.exhausted_gemini_models.clear();
     state.running = true;
+    set_progress_segment(state, None);
     set_controls_enabled(state, false);
     set_text(state.status, &labels.running);
     unsafe { SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0)) };
@@ -3389,11 +3432,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 select_bitrate(bitrate_combo, bitrate);
                 // Give the progress bar its own accessible name rather than letting
                 // screen readers infer it from the preceding audio settings labels.
-                let progress_name = format!(
-                    "{}: {}",
-                    labels.title,
-                    i18n::tr(language, "batch_audiobooks.progress_label")
-                );
+                let progress_name = progress_control_name(language, None);
                 let progress_label = create_label(hwnd, &progress_name, 16, 702, 650, hfont);
                 let progress = CreateWindowExW(
                     Default::default(),
@@ -3716,7 +3755,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     crate::log_debug(
                         "Audio description: refreshing full Gemini model list on window open",
                     );
-                    refresh_gemini_models(hwnd, &*state_pointer);
+                    refresh_gemini_models(hwnd, &*state_pointer, false);
                 }
                 SetFocus(input);
                 LRESULT(0)
@@ -3850,7 +3889,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         crate::app_windows::options_window::open_gemini_api_key_page();
                     }
                     ID_GEMINI_REFRESH_MODELS if !state.running && !using_sonarpad_ai(state) => {
-                        refresh_gemini_models(hwnd, state);
+                        refresh_gemini_models(hwnd, state, true);
                     }
                     ID_VOICE_SETTINGS if !state.running => {
                         state.mix_preview.stop();
@@ -3967,6 +4006,17 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         let model = get_text(state.gemini_model_combo);
                         let api_key = get_text(state.gemini_api_key_edit);
                         persist_gemini_settings(state.parent, &api_key, &model);
+                        if wparam.0 != 0
+                            && !state.running
+                            && !using_sonarpad_ai(state)
+                            && windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow()
+                                == hwnd
+                        {
+                            SetFocus(state.gemini_model_combo);
+                            crate::log_debug(
+                                "Audio description: models refreshed; focus restored to model combo",
+                            );
+                        }
                     }
                     Err(error) => {
                         show_audio_description_error_and_focus(
@@ -4036,6 +4086,14 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
                         as *mut WindowState;
                 if !pointer.is_null() {
+                    if stage == "gemini_chunk" {
+                        if let Some(segment) = segment_progress_text((*pointer).language, &message)
+                        {
+                            set_progress_segment(&*pointer, Some(&segment));
+                        }
+                    } else if !stage.starts_with("gemini") {
+                        set_progress_segment(&*pointer, None);
+                    }
                     let localized = localized_status_text((*pointer).language, &stage, &message);
                     set_text((*pointer).status, &localized);
                 }
@@ -4262,6 +4320,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 }
                 let state = &mut *pointer;
                 state.running = false;
+                set_progress_segment(state, None);
                 state.cancel = None;
                 set_controls_enabled(state, true);
                 if using_sonarpad_ai(state) {
@@ -4895,7 +4954,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
 
 #[cfg(test)]
 mod tests {
-    use super::{localized_status_text, should_move_input_to_recycle_bin};
+    use super::{
+        localized_status_text, progress_control_name, segment_progress_text,
+        should_move_input_to_recycle_bin,
+    };
     use crate::{i18n, settings::Language};
 
     #[test]
@@ -4948,6 +5010,24 @@ mod tests {
         assert!(text.contains('2'));
         assert!(text.contains('5'));
         assert!(text.contains("Segment"));
+    }
+
+    #[test]
+    fn audio_description_progress_segment_uses_real_counts_and_rejects_invalid_events() {
+        let segment =
+            segment_progress_text(Language::Italian, r#"{"current":3,"total":22}"#).unwrap();
+        assert_eq!(segment, "Segmento 3 di 22");
+        let name = progress_control_name(Language::Italian, Some(&segment));
+        assert!(name.ends_with("Segmento 3 di 22"));
+        assert!(!progress_control_name(Language::Italian, None).contains("Segmento"));
+        for message in [
+            "",
+            "{}",
+            r#"{"current":0,"total":22}"#,
+            r#"{"current":23,"total":22}"#,
+        ] {
+            assert!(segment_progress_text(Language::Italian, message).is_none());
+        }
     }
     #[test]
     fn omni_port_audio_description_status_localizes_worker_upload_without_fallback() {

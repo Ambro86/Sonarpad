@@ -162,6 +162,7 @@
   "audio_description.progress.export_edit": "正在导出修改后的 MP3...",
   "audio_description.progress.finalize": "正在删除重复项并对齐描述...",
   "audio_description.progress.gemini_chunk": "Gemini 正在分析第 {current}/{total} 个分段...",
+  "audio_description.progress.segment": "第 {current} 段，共 {total} 段",
   "audio_description.progress.gemini_contacting": "正在向 Gemini 发送请求...",
   "audio_description.progress.gemini_processing": "Gemini 正在分析...",
   "audio_description.progress.gemini_repair": "正在修复 Gemini 响应格式...",

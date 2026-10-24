@@ -13,6 +13,7 @@ Version 0.9.18 – 2026-10-16
 8. Added SonarMusic in Multimedia: search songs, albums, artists, playlists and music videos, with suggestions shown only after typing, result navigation and pagination. Tracks support playback, saving, transcription and AI audio description through the existing media tools.
 9. Faster searching and opening of YouTube videos.
 10. Improved audio descriptions: enabling on-screen text reading now also reads end credits that Gemini can identify.
+11. Improved audio description timing: fixed an issue where, after long stretches without room for narration, Gemini could keep describing earlier scenes instead of following the current scene.
 
 Version 0.9.17 – 2026-10-15
 

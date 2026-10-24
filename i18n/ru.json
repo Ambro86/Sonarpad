@@ -162,6 +162,7 @@
   "audio_description.progress.export_edit": "Экспорт изменённого MP3...",
   "audio_description.progress.finalize": "Удаление дубликатов и выравнивание описаний...",
   "audio_description.progress.gemini_chunk": "Gemini анализирует сегмент {current} из {total}...",
+  "audio_description.progress.segment": "Сегмент {current} из {total}",
   "audio_description.progress.gemini_contacting": "Отправка запроса в Gemini...",
   "audio_description.progress.gemini_processing": "Выполняется анализ Gemini...",
   "audio_description.progress.gemini_repair": "Исправление формата ответа Gemini...",

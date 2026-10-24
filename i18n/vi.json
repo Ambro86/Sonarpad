@@ -162,6 +162,7 @@
   "audio_description.progress.export_edit": "Đang xuất MP3 đã sửa...",
   "audio_description.progress.finalize": "Đang loại bỏ trùng lặp và căn chỉnh mô tả...",
   "audio_description.progress.gemini_chunk": "Gemini đang phân tích đoạn {current} trên {total}...",
+  "audio_description.progress.segment": "Đoạn {current} trên {total}",
   "audio_description.progress.gemini_contacting": "Đang gửi yêu cầu tới Gemini...",
   "audio_description.progress.gemini_processing": "Đang phân tích bằng Gemini...",
   "audio_description.progress.gemini_repair": "Đang sửa định dạng phản hồi của Gemini...",

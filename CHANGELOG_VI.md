@@ -13,6 +13,7 @@ Version 0.9.18 – 2026-10-16
 8. Thêm SonarMusic trong Đa phương tiện: tìm bài hát, album, nghệ sĩ, danh sách phát và video âm nhạc, gợi ý sau khi nhập và phân trang kết quả. Hỗ trợ phát, lưu, phiên âm và mô tả âm thanh bằng AI qua các công cụ hiện có.
 9. Tăng tốc tìm kiếm và mở video YouTube.
 10. Cải thiện mô tả âm thanh: khi bật tính năng đọc văn bản trên màn hình, ứng dụng cũng đọc phần danh đề cuối phim mà Gemini nhận diện được.
+11. Cải thiện đồng bộ mô tả âm thanh: khắc phục lỗi Gemini có thể tiếp tục mô tả các cảnh trước thay vì cảnh hiện tại sau những đoạn dài không có khoảng trống để thuyết minh.
 
 Version 0.9.17 – 2026-10-15
 

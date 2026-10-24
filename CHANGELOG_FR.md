@@ -13,6 +13,7 @@ Version 0.9.18 – 2026-10-16
 8. Ajout de SonarMusic dans Multimédia : recherche de titres, albums, artistes, playlists et clips, suggestions après saisie, navigation et pagination. Les titres permettent la lecture, l’enregistrement, la transcription et l’audiodescription par IA avec les outils multimédias existants.
 9. Recherche et ouverture des vidéos YouTube accélérées.
 10. Amélioration des audiodescriptions : lorsque la lecture des textes à l’écran est activée, les textes du générique de fin que Gemini parvient à identifier sont également lus.
+11. Amélioration de la synchronisation des audiodescriptions : correction d’un problème qui pouvait amener Gemini, après de longs passages sans place pour la narration, à continuer de décrire des scènes précédentes au lieu de suivre la scène actuelle.
 
 Version 0.9.17 – 2026-10-15
 

@@ -162,6 +162,7 @@
   "audio_description.progress.export_edit": "संपादित MP3 निर्यात हो रहा है...",
   "audio_description.progress.finalize": "दोहराव हटाकर वर्णनों को संरेखित किया जा रहा है...",
   "audio_description.progress.gemini_chunk": "Gemini खंड {current}/{total} का विश्लेषण कर रहा है...",
+  "audio_description.progress.segment": "खंड {current}, कुल {total}",
   "audio_description.progress.gemini_contacting": "Gemini को अनुरोध भेजा जा रहा है...",
   "audio_description.progress.gemini_processing": "Gemini विश्लेषण जारी है...",
   "audio_description.progress.gemini_repair": "Gemini उत्तर का प्रारूप सुधारा जा रहा है...",

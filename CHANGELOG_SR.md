@@ -13,6 +13,7 @@ Version 0.9.18 – 2026-10-16
 8. Додат SonarMusic у Мултимедију: претрага песама, албума, извођача, листа и музичких видео-снимака, предлози после уноса текста и странице резултата. Доступни су репродукција, чување, транскрипција и аудио-дескрипција помоћу ВИ кроз постојеће алате.
 9. Убрзани су претрага и отварање YouTube видео-снимака.
 10. Poboljšana audio-deskripcija: kada je uključeno čitanje teksta na ekranu, sada se čita i završna špica koju Gemini može da prepozna.
+11. Poboljšana sinhronizacija audio-opisa: ispravljen problem zbog kojeg je Gemini, nakon dužih delova bez prostora za naraciju, mogao da nastavi da opisuje prethodne scene umesto trenutne.
 
 Version 0.9.17 – 2026-10-15
 
