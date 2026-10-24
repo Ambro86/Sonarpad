@@ -39,6 +39,7 @@
   "media_cutter.set_end": "设置剪切终点 (Alt+2)",
   "media_cutter.apply_cut": "应用剪切 (Alt+4)",
   "media_cutter.listen_cut": "试听待删除片段 (Alt+3)",
+  "media_cutter.listen_part": "试听片段 (Alt+3)",
   "media_cutter.modify_cut": "调整剪裁…",
   "media_cutter.split_here": "在这里分割 (S)",
   "media_cutter.part_selection": "部分 (Alt+↑ / Alt+↓)",

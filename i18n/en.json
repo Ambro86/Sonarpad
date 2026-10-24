@@ -39,6 +39,7 @@
   "media_cutter.set_end": "Set cut end (Alt+2)",
   "media_cutter.apply_cut": "Apply cut (Alt+4)",
   "media_cutter.listen_cut": "Listen to cut (Alt+3)",
+  "media_cutter.listen_part": "Listen to part (Alt+3)",
   "media_cutter.modify_cut": "Adjust cut…",
   "media_cutter.split_here": "Split here (S)",
   "media_cutter.part_selection": "Part (Alt+↑ / Alt+↓)",

@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Added Cut media file under Tools → Multimedia: guided and advanced audio/video editing, cut preview, precise boundary adjustment and restoration of deleted parts. Play skips applied cuts. Includes video rotation and an additional audio track with adjustable volumes and looping. Saving uses bundled FFmpeg libraries, with real progress and cancellation, without external executables; spoken guidance and accessible controls.
 2. Added a command area in Cut media file to use keyboard editing commands without Alt or Ctrl. F1 reads the list of available keys.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Improved audio descriptions: enabling on-screen text reading now also reads end credits that Gemini can identify.
 11. Improved audio description timing: fixed an issue where, after long stretches without room for narration, Gemini could keep describing earlier scenes instead of following the current scene.
 12. Audio descriptions: if a sentence does not fit the available gap, Sonarpad tries regenerating it with the speech engine at 10% or, if needed, 15% higher speed, checking its actual duration. The speed is saved only for that description and retained for edits, previews and later exports; other sentences remain unchanged.
+
+13. Audio descriptions: reduced the minimum required pause to 1.5 seconds. Sonarpad can now produce more descriptions, including in short pauses that were previously left unused.
 
 Version 0.9.17 – 2026-10-15
 

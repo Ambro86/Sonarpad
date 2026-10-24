@@ -5656,6 +5656,101 @@ fn verbosity_from_project(value: &str) -> AudioDescriptionVerbosity {
     }
 }
 
+fn insert_additional_reanalyzed_descriptions(
+    project: &mut AudioDescriptionProject,
+    fresh: &[AudioDescriptionProjectDescription],
+    used_fresh: &std::collections::HashSet<usize>,
+    segment_start: f64,
+    segment_end: f64,
+    scale: f64,
+) -> Result<Vec<usize>, String> {
+    let protected = project
+        .protected_intervals
+        .iter()
+        .map(|interval| BridgeInterval {
+            start_sec: interval.start_sec,
+            end_sec: interval.end_sec,
+        })
+        .collect::<Vec<_>>();
+    let free = speech_free_intervals(
+        &normalize_intervals(&protected, project.source_duration_sec),
+        project.source_duration_sec,
+    )
+    .into_iter()
+    .filter_map(|(start, end)| {
+        let start = start.max(segment_start);
+        let end = end.min(segment_end);
+        (end > start).then_some((start, end))
+    })
+    .collect::<Vec<_>>();
+    let mut reserved = project
+        .descriptions
+        .iter()
+        .map(|description| {
+            (
+                description.source_start_sec,
+                description.source_start_sec
+                    + if description.extended_pause {
+                        MIN_EXTENDED_ANCHOR_SEC
+                    } else {
+                        description.tts_duration_sec
+                    },
+            )
+        })
+        .collect::<Vec<_>>();
+    let mut next_id = project
+        .descriptions
+        .iter()
+        .map(|d| d.id)
+        .chain(project.excluded_descriptions.iter().map(|d| d.id))
+        .max()
+        .unwrap_or(0);
+    let mut inserted = Vec::new();
+    for (index, description) in fresh.iter().enumerate() {
+        let duration = description.tts_duration_sec;
+        let desired = segment_start + description.source_start_sec * scale;
+        let visual = segment_start + description.gemini_start_sec * scale;
+        if used_fresh.contains(&index)
+            || description.extended_pause
+            || description.text.trim().is_empty()
+            || !duration.is_finite()
+            || duration <= 0.0
+            || !desired.is_finite()
+            || !visual.is_finite()
+            || desired < segment_start
+            || desired >= segment_end
+        {
+            continue;
+        }
+        let available = subtract_reserved_intervals(&free, &reserved);
+        let Some(start) = choose_slot(&available, desired, visual, duration, 0.0) else {
+            continue;
+        };
+        next_id = next_id
+            .checked_add(1)
+            .ok_or("Audio description: description ID overflow")?;
+        let mut added = description.clone();
+        added.id = next_id;
+        added.gemini_start_sec = visual;
+        added.visual_evidence_time_sec = description
+            .visual_evidence_time_sec
+            .map(|time| segment_start + time * scale);
+        added.source_start_sec = start;
+        added.output_start_sec = start;
+        added.output_end_sec = start + duration;
+        added.extended_pause_duration_sec = 0.0;
+        added.duck_start_sec = Some(
+            (start - (AUDIO_DESCRIPTION_FADE_MS + AUDIO_DESCRIPTION_PRE_DUCK_MS) as f64 / 1000.0)
+                .max(0.0),
+        );
+        added.duck_end_sec = Some(start + duration + AUDIO_DESCRIPTION_RELEASE_MS as f64 / 1000.0);
+        project.descriptions.push(added);
+        reserved.push((start, start + duration));
+        inserted.push(next_id);
+    }
+    Ok(inserted)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn reanalyze_audio_description_project_segment(
     project: &AudioDescriptionProject,
@@ -5897,10 +5992,8 @@ pub fn reanalyze_audio_description_project_segment(
             );
         }
 
-        // The mini-film timeline is used ONLY to decide which newly generated text
-        // corresponds to which saved description. It is never written back to the
-        // project. Saved source/Gemini times and saved Pyannote intervals are the
-        // immutable authority for segment reanalysis.
+        // Existing cues keep their saved times. New cues use the mini-film's
+        // mapped timing only when they fit the original saved dialogue-free gaps.
         let mini_to_source_scale = segment_span_sec / mini_duration_sec;
         if !mini_to_source_scale.is_finite() || !(0.98..=1.02).contains(&mini_to_source_scale) {
             return Err(format!(
@@ -5944,8 +6037,8 @@ pub fn reanalyze_audio_description_project_segment(
 
         // Sequence alignment is used only to associate fresh text with the nearest
         // existing saved slot. Missing fresh entries leave the old text untouched;
-        // extra fresh entries are ignored. This prevents any structural/timing
-        // change when Gemini returns 9 items for a segment that already has 10.
+        // Extra fresh entries are considered separately for still-empty gaps;
+        // they must never move an existing saved cue.
         let old_count = segment_indices.len();
         let new_count = mini_indices.len();
         let skip_penalty = 4.0_f64;
@@ -6011,7 +6104,9 @@ pub fn reanalyze_audio_description_project_segment(
         let mut accepted = 0_usize;
         let mut changed = 0_usize;
         let mut rejected_too_long = 0_usize;
+        let mut used_fresh = std::collections::HashSet::new();
         for (saved_pos, fresh_pos) in associations {
+            used_fresh.insert(mini_indices[fresh_pos]);
             let project_index = segment_indices[saved_pos];
             let fresh = &mini_project.descriptions[mini_indices[fresh_pos]];
             let available =
@@ -6052,7 +6147,31 @@ pub fn reanalyze_audio_description_project_segment(
             // source_start_sec, extended_pause and all saved timing metadata.
         }
 
-        if accepted == 0 {
+        let inserted_ids = insert_additional_reanalyzed_descriptions(
+            &mut candidate,
+            &mini_project.descriptions,
+            &used_fresh,
+            segment_start_sec,
+            segment_end_sec,
+            mini_to_source_scale,
+        )?;
+        let mut segment_description_ids = segment_indices
+            .iter()
+            .map(|project_index| project.descriptions[*project_index].id)
+            .collect::<Vec<_>>();
+        segment_description_ids.extend(inserted_ids.iter().copied());
+        candidate
+            .descriptions
+            .sort_by(|left, right| left.source_start_sec.total_cmp(&right.source_start_sec));
+        segment_indices = candidate
+            .descriptions
+            .iter()
+            .enumerate()
+            .filter(|(_, description)| segment_description_ids.contains(&description.id))
+            .map(|(index, _)| index)
+            .collect();
+
+        if accepted == 0 && inserted_ids.is_empty() {
             return Err(
                 "Audio description: no fresh description could be matched safely to the saved segment slots; the segment was not changed"
                     .to_string(),
@@ -6221,10 +6340,6 @@ pub fn reanalyze_audio_description_project_segment(
         candidate.gemini_model = mini_project.gemini_model.clone();
         candidate.updated_at_utc = chrono::Utc::now().to_rfc3339();
 
-        let segment_description_ids = segment_indices
-            .iter()
-            .map(|project_index| project.descriptions[*project_index].id)
-            .collect::<Vec<_>>();
         let selected_id = selected.id;
         let focus_index = candidate
             .descriptions
@@ -6233,7 +6348,7 @@ pub fn reanalyze_audio_description_project_segment(
             .unwrap_or_else(|| index.min(candidate.descriptions.len().saturating_sub(1)));
 
         crate::log_debug(&format!(
-            "Audio description segment reanalysis: FIXED SAVED TIMELINE; saved_slots={} fresh_descriptions={} matched={} changed={} kept_old_unmatched={} kept_old_too_long={} source_range={:.3}-{:.3}s; protected_intervals_unchanged={}",
+            "Audio description segment reanalysis: FIXED SAVED TIMELINE; saved_slots={} fresh_descriptions={} matched={} changed={} kept_old_unmatched={} kept_old_too_long={} source_range={:.3}-{:.3}s; protected_intervals_unchanged={} added={}",
             old_count,
             new_count,
             accepted,
@@ -6242,7 +6357,8 @@ pub fn reanalyze_audio_description_project_segment(
             rejected_too_long,
             segment_start_sec,
             segment_end_sec,
-            true
+            true,
+            inserted_ids.len()
         ));
         if let Ok(mut callbacks) = callback_state.lock() {
             notify_progress(&mut callbacks, 100);
@@ -7712,6 +7828,140 @@ pub fn create_audio_description_dialogue_overlap_fallback(
 
 #[cfg(test)]
 mod tests {
+    fn reanalysis_test_project() -> super::AudioDescriptionProject {
+        let job = super::audio_description_preview_job(
+            std::path::PathBuf::new(),
+            super::Language::Italian,
+            &crate::settings::AppSettings::default(),
+        );
+        super::build_audio_description_project(&job, 100.0, 100.0, &[], &[], &[])
+    }
+
+    fn reanalysis_test_description(
+        id: usize,
+        start: f64,
+        duration: f64,
+    ) -> super::AudioDescriptionProjectDescription {
+        super::AudioDescriptionProjectDescription {
+            id,
+            text: format!("Description {id}"),
+            original_text: format!("Description {id}"),
+            rendered_text: format!("Description {id}"),
+            modified: false,
+            tts_rate_override: None,
+            gemini_start_sec: start,
+            visual_evidence_time_sec: Some(start),
+            source_start_sec: start,
+            output_start_sec: start,
+            output_end_sec: start + duration,
+            tts_duration_sec: duration,
+            extended_pause: false,
+            extended_pause_duration_sec: 0.0,
+            duck_start_sec: None,
+            duck_end_sec: None,
+        }
+    }
+
+    #[test]
+    fn reanalysis_adds_missing_cues_without_moving_existing_ones()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut project = reanalysis_test_project();
+        // Reproduce a segment with five existing cues and twelve fresh cues.
+        project.descriptions = (0..5)
+            .map(|id| reanalysis_test_description(id, 40.0 + id as f64 * 3.0, 1.0))
+            .collect();
+        let before = serde_json::to_value(&project.descriptions)?;
+        let mut fresh = (0..7)
+            .map(|id| reanalysis_test_description(id, id as f64 * 3.0, 1.0))
+            .collect::<Vec<_>>();
+        fresh.extend(
+            (0..5).map(|id| reanalysis_test_description(id + 7, 30.0 + id as f64 * 3.0, 1.0)),
+        );
+        fresh[0].tts_rate_override = Some(10);
+        let used = (7..12).collect();
+        let ids = super::insert_additional_reanalyzed_descriptions(
+            &mut project,
+            &fresh,
+            &used,
+            10.0,
+            60.0,
+            1.0,
+        )?;
+        assert_eq!(ids.len(), 7);
+        assert_eq!(project.descriptions.len(), 12);
+        assert_eq!(serde_json::to_value(&project.descriptions[..5])?, before);
+        assert_eq!(project.descriptions[5].source_start_sec, 10.0);
+        assert_eq!(project.descriptions[5].visual_evidence_time_sec, Some(10.0));
+        assert_eq!(project.descriptions[5].tts_rate_override, Some(10));
+        assert_eq!(
+            project
+                .descriptions
+                .iter()
+                .map(|d| d.id)
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            12
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn reanalysis_new_cues_respect_saved_dialogue_and_occupied_gaps()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut project = reanalysis_test_project();
+        project.protected_intervals = vec![super::AudioDescriptionProjectInterval {
+            start_sec: 10.0,
+            end_sec: 30.0,
+        }];
+        project.descriptions = vec![reanalysis_test_description(12, 30.0, 10.0)];
+        let before = serde_json::to_value(&project)?;
+        let fresh = vec![
+            reanalysis_test_description(0, 5.0, 1.0),
+            reanalysis_test_description(1, 25.0, 6.0),
+            reanalysis_test_description(2, 29.0, 12.0),
+        ];
+        let ids = super::insert_additional_reanalyzed_descriptions(
+            &mut project,
+            &fresh,
+            &std::collections::HashSet::new(),
+            10.0,
+            40.0,
+            1.0,
+        )?;
+        assert!(ids.is_empty());
+        assert_eq!(serde_json::to_value(&project)?, before);
+        Ok(())
+    }
+
+    #[test]
+    fn reanalysis_new_cues_use_real_duration_and_reserve_each_insertion()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut project = reanalysis_test_project();
+        let fresh = vec![
+            reanalysis_test_description(0, 0.0, 2.0),
+            reanalysis_test_description(1, 0.0, 2.0),
+            reanalysis_test_description(2, 0.0, 2.0),
+        ];
+        let ids = super::insert_additional_reanalyzed_descriptions(
+            &mut project,
+            &fresh,
+            &std::collections::HashSet::new(),
+            10.0,
+            15.0,
+            1.0,
+        )?;
+        assert_eq!(ids.len(), 2);
+        assert_eq!(project.descriptions[0].source_start_sec, 10.0);
+        assert_eq!(project.descriptions[1].source_start_sec, 12.0);
+        assert!(
+            project
+                .descriptions
+                .iter()
+                .all(|d| d.source_start_sec + d.tts_duration_sec <= 15.0)
+        );
+        Ok(())
+    }
+
     fn native_rate_test_cue(duration_ms: usize) -> super::SynthesizedDescription {
         super::SynthesizedDescription {
             tts_rate_override: None,

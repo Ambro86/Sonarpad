@@ -1,6 +1,6 @@
 # Přehled změn
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Do Nástroje → Multimédia přidáno Oříznout multimediální soubor: řízený a pokročilý střih zvuku i videa, poslech střihu, přesná úprava hranic a obnovení odstraněných částí. Přehrávání přeskakuje použité střihy. Podporuje otočení videa a přidání zvukové stopy s nastavením hlasitosti a opakováním. Ukládání se skutečným průběhem a zrušením používá přiložené knihovny FFmpeg bez externích programů; hlasové pokyny a přístupné ovládání.
 2. Přidána oblast příkazů pro střih mediálních souborů, kde lze používat klávesové příkazy bez Alt nebo Ctrl. F1 přečte seznam dostupných kláves.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Vylepšen zvukový popis: při zapnutém čtení textu na obrazovce se nyní čtou také závěrečné titulky, které Gemini dokáže rozpoznat.
 11. Vylepšeno časování audiopopisu: opraven problém, kdy Gemini po delších úsecích bez prostoru pro komentář mohl nadále popisovat předchozí scény místo aktuální scény.
 12. Zvukové popisy: pokud se věta nevejde do dostupné mezery, Sonarpad ji zkusí znovu vytvořit hlasovou syntézou s rychlostí vyšší o 10 %, případně o 15 %, a ověří skutečnou délku. Rychlost se ukládá pouze pro tento popis a zachová se při úpravách, náhledech i dalších exportech; ostatní věty zůstávají beze změny.
+
+13. Audiopopis: minimální požadovaná pauza byla zkrácena na 1,5 sekundy. Sonarpad tak může vytvářet více popisů, a to i v krátkých pauzách, které dříve zůstávaly nevyužité.
 
 Version 0.9.17 – 2026-10-15
 

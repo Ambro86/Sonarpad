@@ -39,6 +39,7 @@
   "media_cutter.set_end": "Konec střihu (Alt+2)",
   "media_cutter.apply_cut": "Použít střih (Alt+4)",
   "media_cutter.listen_cut": "Poslechnout střih (Alt+3)",
+  "media_cutter.listen_part": "Poslechnout část (Alt+3)",
   "media_cutter.modify_cut": "Upravit střih…",
   "media_cutter.split_here": "Rozdělit zde (S)",
   "media_cutter.part_selection": "Část (Alt+↑ / Alt+↓)",

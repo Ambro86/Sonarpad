@@ -1,6 +1,6 @@
 # Catatan perubahan
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Ditambahkan Potong berkas media di Alat → Multimedia: pemotongan audio dan video terpandu atau lanjutan, pratinjau, pengaturan batas potongan, pemulihan bagian yang dihapus, putaran video, dan trek audio tambahan. Pemutaran melewati bagian yang dihapus. Penyimpanan menampilkan kemajuan dan dapat dibatalkan; menggunakan pustaka FFmpeg bawaan.
 2. Ditambahkan area perintah untuk menjalankan perintah pemotongan tanpa Alt atau Ctrl. F1 membacakan daftar tombol.
@@ -17,6 +17,8 @@ Version 0.9.18 – 2026-10-16
 10. Deskripsi audio ditingkatkan: saat pembacaan teks di layar diaktifkan, kredit penutup yang dapat dikenali Gemini kini juga dibacakan.
 11. Peningkatan sinkronisasi deskripsi audio: memperbaiki masalah ketika Gemini terus mendeskripsikan adegan sebelumnya alih-alih mengikuti adegan saat ini setelah bagian panjang tanpa ruang untuk narasi.
 12. Deskripsi audio: jika kalimat tidak muat dalam jeda yang tersedia, Sonarpad mencoba menyintesisnya kembali dengan kecepatan suara dinaikkan 10% atau, jika perlu, 15%, lalu memeriksa durasi sebenarnya. Kecepatan disimpan hanya untuk deskripsi tersebut dan dipertahankan saat diedit, dipratinjau, dan diekspor kembali; kalimat lain tidak berubah.
+
+13. Deskripsi audio: jeda minimum yang diperlukan dikurangi menjadi 1,5 detik. Sonarpad kini dapat menghasilkan lebih banyak deskripsi, termasuk pada jeda singkat yang sebelumnya tidak digunakan.
 
 Version 0.9.17 – 2026-10-15
 

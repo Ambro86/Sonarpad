@@ -883,7 +883,7 @@ pub struct AppSettings {
     pub audio_description_verbosity: u8,
     #[serde(default)]
     pub audio_description_extended_pauses: bool,
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub audio_description_allow_nonverbal_vocals: bool,
     #[serde(default = "default_true")]
     pub audio_description_recognize_characters: bool,
@@ -1396,7 +1396,7 @@ impl Default for AppSettings {
                 crate::audio_description::default_audio_description_bitrate(),
             audio_description_verbosity: default_audio_description_verbosity(),
             audio_description_extended_pauses: false,
-            audio_description_allow_nonverbal_vocals: false,
+            audio_description_allow_nonverbal_vocals: true,
             audio_description_recognize_characters: true,
             audio_description_recognize_screen_text: true,
             audio_description_keep_character_catalog: false,

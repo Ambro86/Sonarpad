@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Aggiunta Taglia file media in Strumenti → Multimedia: taglio guidato e avanzato di audio e video, anteprima delle parti da eliminare, regolazione precisa dei confini e ripristino delle parti eliminate. Riproduci salta i tagli già applicati. Sono disponibili rotazione video e aggiunta di una traccia audio con volumi regolabili e ripetizione. Salvataggio con avanzamento reale e annullamento tramite le librerie FFmpeg incluse, senza eseguibili esterni; istruzioni vocali e comandi accessibili.
 2. Aggiunta un’area comandi in Taglia file media per usare i comandi di taglio da tastiera senza Alt o Ctrl. F1 legge l’elenco dei tasti disponibili.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Migliorate le audiodescrizioni: attivando la lettura dei testi sullo schermo, vengono letti anche i titoli di coda che Gemini riesce a identificare.
 11. Migliorata la sincronizzazione delle audiodescrizioni: corretto un problema per cui, dopo lunghi tratti senza spazio per la narrazione, Gemini poteva continuare a descrivere scene precedenti anziché seguire quella attuale.
 12. Audiodescrizioni: se una frase non entra nello spazio disponibile, Sonarpad prova a rigenerarla con la velocità della sintesi aumentata del 10% o, se necessario, del 15%, verificando la durata reale. La velocità viene salvata solo per quella descrizione e mantenuta nelle modifiche, nelle anteprime e nelle esportazioni successive; le altre frasi restano invariate.
+
+13. Audiodescrizioni: ridotta a 1,5 secondi la pausa minima richiesta. Sonarpad può così produrre più descrizioni, anche nelle pause brevi che prima non venivano utilizzate.
 
 Version 0.9.17 – 2026-10-15
 

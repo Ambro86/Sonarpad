@@ -1,6 +1,6 @@
 # Dnevnik izmena
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Додато је исецање медијских датотека у Алатке → Мултимедија: вођено и напредно уређивање звука и видеа, преслушавање исечка, прецизно подешавање граница и враћање уклоњених делова. Репродукција прескаче примењене исечке. Подржани су ротација видеа и додатна звучна нумера са подешавањем јачине и понављањем. Чување са стварним напретком и отказивањем користи приложене FFmpeg библиотеке без спољних програма; гласовна упутства и приступачне контроле.
 2. Додата је област команди за сечење медијских датотека, која омогућава команде са тастатуре без Alt или Ctrl. F1 чита списак доступних тастера.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Poboljšana audio-deskripcija: kada je uključeno čitanje teksta na ekranu, sada se čita i završna špica koju Gemini može da prepozna.
 11. Poboljšana sinhronizacija audio-opisa: ispravljen problem zbog kojeg je Gemini, nakon dužih delova bez prostora za naraciju, mogao da nastavi da opisuje prethodne scene umesto trenutne.
 12. Аудио-описи: ако реченица не стаје у доступан временски размак, Sonarpad покушава да је поново синтетизује брзином већом за 10% или, по потреби, 15%, уз проверу стварног трајања. Брзина се чува само за тај опис и задржава при изменама, преслушавању и каснијем извозу; остале реченице остају непромењене.
+
+13. Audio-deskripcija: minimalna potrebna pauza smanjena je na 1,5 sekundi. Sonarpad sada može da napravi više opisa, uključujući i kratke pauze koje ranije nisu bile iskorišćene.
 
 Version 0.9.17 – 2026-10-15
 

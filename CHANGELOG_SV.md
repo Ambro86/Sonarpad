@@ -1,6 +1,6 @@
 # Ändringslogg
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Klipp mediefil har lagts till under Verktyg → Multimedia: guidad och avancerad ljud- och videoredigering, förhandslyssning, exakt justering och återställning av borttagna delar. Uppspelningen hoppar över tillämpade klipp. Videorotation och extra ljudspår med justerbara volymer och upprepning stöds. Sparande med verkligt förlopp och möjlighet att avbryta använder medföljande FFmpeg-bibliotek utan externa program; talade instruktioner och tillgängliga kontroller.
 2. Ett kommandoområde har lagts till för klippning av mediefiler, där tangentbordskommandon kan användas utan Alt eller Ctrl. F1 läser upp listan över tillgängliga tangenter.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Förbättrade syntolkningar: när uppläsning av text på skärmen är aktiverad läses nu även de eftertexter som Gemini kan identifiera upp.
 11. Förbättrad synkronisering av syntolkningen: åtgärdat ett problem där Gemini efter långa avsnitt utan utrymme för berättarrösten kunde fortsätta beskriva tidigare scener i stället för den aktuella scenen.
 12. Ljudbeskrivningar: om en mening inte ryms i det tillgängliga utrymmet försöker Sonarpad skapa den på nytt med talsyntesens hastighet ökad med 10 % eller vid behov 15 % och kontrollerar den faktiska längden. Hastigheten sparas endast för den beskrivningen och behålls vid redigering, förhandslyssning och senare export; övriga meningar förblir oförändrade.
+
+13. Ljudbeskrivningar: den minsta paus som krävs har kortats till 1,5 sekunder. Sonarpad kan därmed skapa fler beskrivningar, även i korta pauser som tidigare inte användes.
 
 Version 0.9.17 – 2026-10-15
 

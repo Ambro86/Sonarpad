@@ -39,6 +39,7 @@
   "media_cutter.set_end": "Nustatyti kirpimo pabaigą (Alt+2)",
   "media_cutter.apply_cut": "Taikyti kirpimą (Alt+4)",
   "media_cutter.listen_cut": "Perklausyti iškerpamą dalį (Alt+3)",
+  "media_cutter.listen_part": "Klausyti dalies (Alt+3)",
   "media_cutter.modify_cut": "Sureguliuoti pjūvį…",
   "media_cutter.split_here": "Pasidalykite čia (S)",
   "media_cutter.part_selection": "dalis (Alt+↑ / Alt+↓)",

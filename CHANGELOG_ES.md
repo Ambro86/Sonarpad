@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Añadido Cortar archivo multimedia en Herramientas → Multimedia: corte guiado y avanzado de audio y vídeo, escucha del corte, ajuste preciso y restauración de partes eliminadas. La reproducción omite los cortes aplicados. Incluye rotación de vídeo y pista de audio adicional con volúmenes ajustables y repetición. Guardado con progreso real y cancelación mediante las bibliotecas FFmpeg incluidas, sin ejecutables externos; instrucciones habladas y controles accesibles.
 2. Añadida un área de comandos en Cortar archivo multimedia para usar órdenes de corte con el teclado sin Alt ni Ctrl. F1 lee la lista de teclas disponibles.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Mejoradas las audiodescripciones: al activar la lectura de textos en pantalla, también se leen los créditos finales que Gemini puede identificar.
 11. Mejorada la sincronización de las audiodescripciones: corregido un problema por el que, tras largos tramos sin espacio para la narración, Gemini podía seguir describiendo escenas anteriores en lugar de la escena actual.
 12. Audiodescripciones: si una frase no cabe en el intervalo disponible, Sonarpad intenta regenerarla con la velocidad de síntesis aumentada un 10 % o, si es necesario, un 15 %, comprobando su duración real. La velocidad se guarda solo para esa descripción y se conserva al editarla, previsualizarla y exportarla de nuevo; las demás frases no cambian.
+
+13. Audiodescripciones: la pausa mínima necesaria se reduce a 1,5 segundos. Sonarpad puede generar más descripciones, también en las pausas breves que antes no se aprovechaban.
 
 Version 0.9.17 – 2026-10-15
 

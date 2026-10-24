@@ -1,6 +1,6 @@
 # Journal des modifications
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Ajout de Découper un fichier multimédia dans Outils → Multimédia : découpe guidée et avancée des fichiers audio et vidéo, écoute des passages à supprimer, réglage précis et restauration des parties supprimées. La lecture saute les coupes appliquées. Rotation vidéo et ajout d’une piste audio avec volumes réglables et répétition. Enregistrement avec progression réelle et annulation via les bibliothèques FFmpeg intégrées, sans exécutable externe ; instructions vocales et commandes accessibles.
 2. Ajout d’une zone de commandes dans Découper un fichier multimédia pour utiliser les commandes de découpe au clavier sans Alt ni Ctrl. F1 lit la liste des touches disponibles.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Amélioration des audiodescriptions : lorsque la lecture des textes à l’écran est activée, les textes du générique de fin que Gemini parvient à identifier sont également lus.
 11. Amélioration de la synchronisation des audiodescriptions : correction d’un problème qui pouvait amener Gemini, après de longs passages sans place pour la narration, à continuer de décrire des scènes précédentes au lieu de suivre la scène actuelle.
 12. Audiodescriptions : si une phrase ne tient pas dans le créneau disponible, Sonarpad tente de la régénérer avec une vitesse de synthèse augmentée de 10 % ou, si nécessaire, de 15 %, puis vérifie sa durée réelle. Cette vitesse est enregistrée uniquement pour cette description et conservée lors des modifications, des aperçus et des exportations ultérieures ; les autres phrases restent inchangées.
+
+13. Audiodescriptions : la pause minimale requise passe à 1,5 seconde. Sonarpad peut ainsi produire davantage de descriptions, y compris dans les courtes pauses qui n’étaient pas utilisées auparavant.
 
 Version 0.9.17 – 2026-10-15
 

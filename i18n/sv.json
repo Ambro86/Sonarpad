@@ -39,6 +39,7 @@
   "media_cutter.set_end": "Ange klippets slut (Alt+2)",
   "media_cutter.apply_cut": "Verkställ klipp (Alt+4)",
   "media_cutter.listen_cut": "Lyssna på klippet (Alt+3)",
+  "media_cutter.listen_part": "Lyssna på del (Alt+3)",
   "media_cutter.modify_cut": "Justera klippet...",
   "media_cutter.split_here": "Dela här (S)",
   "media_cutter.part_selection": "Del (Alt+↑ / Alt+↓)",

@@ -1,6 +1,6 @@
 # Nhật ký thay đổi
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Thêm Cắt tệp đa phương tiện trong Công cụ → Đa phương tiện: chỉnh sửa âm thanh và video theo hướng dẫn hoặc nâng cao, nghe thử đoạn cắt, điều chỉnh chính xác và khôi phục các phần đã xóa. Phát bỏ qua các đoạn đã cắt. Hỗ trợ xoay video và thêm bản âm thanh với âm lượng tùy chỉnh, lặp lại. Lưu với tiến trình thực và khả năng hủy bằng thư viện FFmpeg đi kèm, không dùng chương trình ngoài; hướng dẫn bằng giọng nói và điều khiển trợ năng.
 2. Thêm vùng lệnh trong chức năng cắt tệp đa phương tiện để dùng lệnh bàn phím không cần Alt hay Ctrl. F1 đọc danh sách các phím khả dụng.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Cải thiện mô tả âm thanh: khi bật tính năng đọc văn bản trên màn hình, ứng dụng cũng đọc phần danh đề cuối phim mà Gemini nhận diện được.
 11. Cải thiện đồng bộ mô tả âm thanh: khắc phục lỗi Gemini có thể tiếp tục mô tả các cảnh trước thay vì cảnh hiện tại sau những đoạn dài không có khoảng trống để thuyết minh.
 12. Mô tả âm thanh: nếu một câu không vừa khoảng trống có sẵn, Sonarpad thử tổng hợp lại câu đó với tốc độ giọng nói tăng 10% hoặc, nếu cần, 15%, rồi kiểm tra thời lượng thực tế. Tốc độ chỉ được lưu cho mô tả đó và được giữ khi chỉnh sửa, nghe thử và xuất lại; các câu khác không thay đổi.
+
+13. Mô tả âm thanh: thời gian tạm dừng tối thiểu cần thiết đã giảm xuống còn 1,5 giây. Nhờ đó, Sonarpad có thể tạo thêm mô tả, kể cả trong những khoảng dừng ngắn trước đây chưa được tận dụng.
 
 Version 0.9.17 – 2026-10-15
 

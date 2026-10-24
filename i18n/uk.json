@@ -39,6 +39,7 @@
   "media_cutter.set_end": "Кінець вирізки (Alt+2)",
   "media_cutter.apply_cut": "Застосувати вирізку (Alt+4)",
   "media_cutter.listen_cut": "Прослухати вирізку (Alt+3)",
+  "media_cutter.listen_part": "Прослухати частину (Alt+3)",
   "media_cutter.modify_cut": "Відрегулювати розріз…",
   "media_cutter.split_here": "Розділіть тут (S)",
   "media_cutter.part_selection": "частина (Alt+↑ / Alt+↓)",

@@ -86,6 +86,7 @@ struct Player {
     stop: Arc<AtomicBool>,
     position: Arc<AtomicU64>,
     ranges: Vec<MediaPart>,
+    audition: bool,
 }
 impl Player {
     fn stop(&mut self) {
@@ -137,6 +138,13 @@ struct State {
     close_after_export: bool,
 }
 impl State {
+    fn listen_key(&self) -> &'static str {
+        if self.selected(MODE) == 1 {
+            "listen_part"
+        } else {
+            "listen_cut"
+        }
+    }
     fn remember_focus(&mut self) {
         unsafe {
             let mut focus = GetFocus();
@@ -227,6 +235,7 @@ impl State {
         }
         self.player = None;
         self.set(PLAY, &self.tr("play"));
+        self.set(LISTEN, &self.tr(self.listen_key()));
     }
     fn current(&self) -> f64 {
         self.player
@@ -292,6 +301,9 @@ impl State {
         }
     }
     fn visibility(&self) {
+        if !self.player.as_ref().is_some_and(|p| p.audition) {
+            self.set(LISTEN, &self.tr(self.listen_key()));
+        }
         unsafe {
             for h in &self.track_controls {
                 ShowWindow(
@@ -313,6 +325,21 @@ impl State {
                 ShowWindow(*h, if advanced { SW_SHOW } else { SW_HIDE });
             }
             ShowWindow(self.ctrl(PRIMARY), if advanced { SW_HIDE } else { SW_SHOW });
+            // Match visual and keyboard/screen-reader order in both cut modes.
+            let (after, x, y) = if advanced {
+                (self.ctrl(PARTS), 300, 203)
+            } else {
+                (self.ctrl(PRIMARY), 230, 145)
+            };
+            crate::log_if_err!(SetWindowPos(
+                self.ctrl(LISTEN),
+                after,
+                x,
+                y,
+                180,
+                36,
+                SWP_NOACTIVATE,
+            ));
             EnableWindow(self.ctrl(ROTATE), self.has_video);
             EnableWindow(self.ctrl(VIDEO), self.has_video);
         }
@@ -422,8 +449,16 @@ impl State {
             stop,
             position,
             ranges,
+            audition,
         });
         self.set(PLAY, &self.tr("pause"));
+        if audition {
+            let pause = self.tr("pause");
+            let listen = self.tr("listen_cut");
+            let label = pause.split(" (").next().unwrap_or(&pause);
+            let shortcut = listen.find(" (").map_or("", |at| &listen[at..]);
+            self.set(LISTEN, &format!("{label}{shortcut}"));
+        }
         Ok(())
     }
     fn confirm(&self, key: &str) -> bool {
@@ -689,8 +724,11 @@ impl State {
             }
             COMMAND_HELP => {
                 let delete_keys = format!("D / {}", self.tr("delete_key"));
-                let mut commands =
-                    vec![("←", "back"), ("→", "forward"), ("3 / Enter", "listen_cut")];
+                let mut commands = vec![
+                    ("←", "back"),
+                    ("→", "forward"),
+                    ("3 / Enter", self.listen_key()),
+                ];
                 if self.selected(MODE) == 1 {
                     commands.extend([
                         ("↑ / ↓", "part_singular"),
@@ -734,7 +772,9 @@ impl State {
             }
             COMMAND_AREA => self.command(LISTEN, BN_CLICKED)?,
             LISTEN => {
-                if self.selected(MODE) == 1
+                if self.player.as_ref().is_some_and(|p| p.audition) {
+                    self.stop();
+                } else if self.selected(MODE) == 1
                     && self
                         .parts
                         .get(self.selected(PARTS))
@@ -1003,6 +1043,7 @@ impl State {
                     self.position = player.ranges.last().map_or(self.duration, |p| p.end);
                     self.player = None;
                     self.set(PLAY, &self.tr("play"));
+                    self.set(LISTEN, &self.tr(self.listen_key()));
                 }
                 Err(e) => {
                     crate::log_debug(&format!("Cutter player: {e}"));
@@ -1300,7 +1341,7 @@ fn create(hwnd: HWND, parent: HWND) -> State {
     let first = s.controls.len();
     button(&mut s, "split_here", SPLIT, 12, 145, 200);
     let values: Vec<String> = vec![];
-    combo(&mut s, "part_selection", PARTS, &values, 12, 183, 460);
+    combo(&mut s, "part_selection", PARTS, &values, 12, 183, 270);
     button(&mut s, "delete", DELETE, 490, 203, 105);
     button(&mut s, "restore", RESTORE, 605, 203, 170);
     button(&mut s, "insert_media", INSERT_MEDIA, 12, 240, 760);
@@ -2048,6 +2089,11 @@ mod tests {
             let visible = |h| GetWindowLongPtrW(h, GWL_STYLE) & WS_VISIBLE.0 as isize != 0;
             assert!(visible((*ptr).ctrl(PRIMARY)));
             assert!(!visible((*ptr).ctrl(PARTS)));
+            assert_eq!((*ptr).text(LISTEN), (*ptr).tr("listen_cut"));
+            assert_eq!(
+                GetNextDlgTabItem(hwnd, (*ptr).ctrl(PRIMARY), false),
+                (*ptr).ctrl(LISTEN)
+            );
             assert!(!visible((*ptr).cancel_button));
             assert!(!reserves_letters((*ptr).ctrl(OPEN)));
             assert!(reserves_letters((*ptr).ctrl(START)));
@@ -2156,6 +2202,17 @@ mod tests {
             assert!(!visible((*ptr).ctrl(PRIMARY)));
             assert!(visible((*ptr).ctrl(PARTS)));
             assert!(visible((*ptr).ctrl(INSERT_MEDIA)));
+            assert_eq!((*ptr).text(LISTEN), (*ptr).tr("listen_part"));
+            for (before, after) in [(PARTS, LISTEN), (LISTEN, DELETE), (DELETE, RESTORE)] {
+                assert_eq!(
+                    GetNextDlgTabItem(hwnd, (*ptr).ctrl(before), false),
+                    (*ptr).ctrl(after)
+                );
+                assert_eq!(
+                    GetNextDlgTabItem(hwnd, (*ptr).ctrl(after), true),
+                    (*ptr).ctrl(before)
+                );
+            }
             (*ptr).set(START, "0.25");
             (*ptr).set(END, "5.75");
             assert_eq!(GetDlgItem(hwnd, 9817), HWND(0));

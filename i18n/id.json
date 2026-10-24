@@ -39,6 +39,7 @@
   "media_cutter.set_end": "Tentukan akhir potongan (Alt+2)",
   "media_cutter.apply_cut": "Terapkan potongan (Alt+4)",
   "media_cutter.listen_cut": "Dengarkan potongan (Alt+3)",
+  "media_cutter.listen_part": "Dengarkan bagian (Alt+3)",
   "media_cutter.modify_cut": "Sesuaikan potongan…",
   "media_cutter.split_here": "Pisahkan di sini (S)",
   "media_cutter.part_selection": "Bagian (Alt+↑ / Alt+↓)",

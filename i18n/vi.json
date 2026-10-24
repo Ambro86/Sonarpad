@@ -39,6 +39,7 @@
   "media_cutter.set_end": "Đặt điểm kết thúc cắt (Alt+2)",
   "media_cutter.apply_cut": "Áp dụng cắt (Alt+4)",
   "media_cutter.listen_cut": "Nghe thử đoạn cắt (Alt+3)",
+  "media_cutter.listen_part": "Nghe phần (Alt+3)",
   "media_cutter.modify_cut": "Điều chỉnh cắt…",
   "media_cutter.split_here": "Chia ở đây (S)",
   "media_cutter.part_selection": "phần (Alt+↑ / Alt+↓)",

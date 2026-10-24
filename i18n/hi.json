@@ -39,6 +39,7 @@
   "media_cutter.set_end": "कट का अंत तय करें (Alt+2)",
   "media_cutter.apply_cut": "कट लागू करें (Alt+4)",
   "media_cutter.listen_cut": "कट वाला हिस्सा सुनें (Alt+3)",
+  "media_cutter.listen_part": "भाग सुनें (Alt+3)",
   "media_cutter.modify_cut": "कट समायोजित करें...",
   "media_cutter.split_here": "यहाँ विभाजित करें (S)",
   "media_cutter.part_selection": "भाग (Alt+↑ / Alt+↓)",

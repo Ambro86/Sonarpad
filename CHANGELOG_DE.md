@@ -1,6 +1,6 @@
 # Änderungsprotokoll
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Unter Werkzeuge → Multimedia wurde Mediendatei schneiden hinzugefügt: geführter und erweiterter Audio-/Videoschnitt, Schnittvorschau, genaue Anpassung und Wiederherstellung gelöschter Teile. Die Wiedergabe überspringt angewendete Schnitte. Videodrehung und zusätzliche Audiospur mit Lautstärkeregelung und Wiederholung. Speichern mit echtem Fortschritt und Abbruch über die mitgelieferten FFmpeg-Bibliotheken, ohne externe Programme; gesprochene Anleitung und zugängliche Bedienelemente.
 2. Befehlsbereich zum Schneiden von Mediendateien hinzugefügt: Schnittbefehle lassen sich ohne Alt oder Strg über die Tastatur verwenden. F1 liest die verfügbaren Tasten vor.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Audiodeskriptionen verbessert: Bei aktivierter Vorlesefunktion für Bildschirmtexte werden nun auch die Abspanntexte vorgelesen, die Gemini erkennen kann.
 11. Die zeitliche Zuordnung von Audiodeskriptionen wurde verbessert: Ein Problem wurde behoben, bei dem Gemini nach längeren Passagen ohne Platz für die Beschreibung weiterhin frühere Szenen statt der aktuellen Szene beschreiben konnte.
 12. Audiodeskriptionen: Passt ein Satz nicht in die verfügbare Lücke, versucht Sonarpad, ihn mit der Sprachsynthese bei 10 % oder nötigenfalls 15 % höherer Geschwindigkeit neu zu erzeugen, und prüft die tatsächliche Dauer. Die Geschwindigkeit wird nur für diese Beschreibung gespeichert und bei Änderungen, Vorschauen und späteren Exporten beibehalten; andere Sätze bleiben unverändert.
+
+13. Audiodeskriptionen: Die erforderliche Mindestpause wurde auf 1,5 Sekunden verkürzt. Dadurch kann Sonarpad mehr Beschreibungen erzeugen, auch in kurzen Pausen, die zuvor ungenutzt blieben.
 
 Version 0.9.17 – 2026-10-15
 

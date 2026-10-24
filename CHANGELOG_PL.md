@@ -1,6 +1,6 @@
 # Dziennik zmian
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Dodano Przytnij plik multimedialny w Narzędzia → Multimedia: prowadzone i zaawansowane cięcie dźwięku i wideo, odsłuch cięcia, dokładna regulacja granic i przywracanie usuniętych części. Odtwarzanie pomija zastosowane cięcia. Dostępny jest obrót wideo i dodatkowa ścieżka dźwiękowa z regulacją głośności i zapętlaniem. Zapis z rzeczywistym postępem i anulowaniem korzysta z dołączonych bibliotek FFmpeg bez zewnętrznych programów; wskazówki głosowe i dostępne elementy sterujące.
 2. Dodano obszar poleceń w przycinaniu plików multimedialnych, umożliwiający używanie poleceń klawiaturowych bez Alt i Ctrl. F1 odczytuje listę dostępnych klawiszy.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Ulepszono audiodeskrypcję: po włączeniu odczytywania tekstu na ekranie odczytywane są również napisy końcowe, które Gemini potrafi rozpoznać.
 11. Poprawiono synchronizację audiodeskrypcji: usunięto problem, przez który po dłuższych fragmentach bez miejsca na narrację Gemini mógł nadal opisywać wcześniejsze sceny zamiast bieżącej.
 12. Audiodeskrypcja: jeśli zdanie nie mieści się w dostępnej przerwie, Sonarpad próbuje wygenerować je ponownie z prędkością syntezy zwiększoną o 10% lub, w razie potrzeby, o 15%, sprawdzając rzeczywisty czas trwania. Prędkość jest zapisywana tylko dla tego opisu i zachowywana przy edycji, odsłuchu i kolejnych eksportach; pozostałe zdania pozostają bez zmian.
+
+13. Audiodeskrypcja: minimalna wymagana przerwa została skrócona do 1,5 sekundy. Sonarpad może dzięki temu tworzyć więcej opisów, również w krótkich przerwach, które wcześniej pozostawały niewykorzystane.
 
 Version 0.9.17 – 2026-10-15
 

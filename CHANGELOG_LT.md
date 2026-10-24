@@ -1,6 +1,6 @@
 # Pakeitimų žurnalas
 
-Version 0.9.18 – 2026-10-16
+Version 0.9.18 – 2026-10-24
 
 1. Į Įrankiai → Multimedija įtraukta medijos failų kirpimo funkcija: vedamas ir išplėstinis garso bei vaizdo redagavimas, iškerpamos dalies perklausa, tikslus ribų keitimas ir pašalintų dalių atkūrimas. Atkūrimas praleidžia pritaikytus kirpimus. Galima pasukti vaizdą ir pridėti garso takelį su garsumo reguliavimu bei kartojimu. Įrašymas su tikra eiga ir atšaukimu naudoja pridėtas FFmpeg bibliotekas be išorinių programų; balso nurodymai ir prieinami valdikliai.
 2. Pridėta komandų sritis medijos failų kirpimo lange, leidžianti naudoti klaviatūros komandas be Alt ar Ctrl. F1 perskaito galimų klavišų sąrašą.
@@ -15,6 +15,8 @@ Version 0.9.18 – 2026-10-16
 10. Patobulintas garsinis vaizdavimas: įjungus ekrane rodomo teksto skaitymą, dabar perskaitomi ir baigiamieji titrai, kuriuos „Gemini“ gali atpažinti.
 11. Pagerintas garsinio vaizdavimo sinchronizavimas: ištaisyta problema, dėl kurios po ilgų atkarpų be vietos pasakojimui Gemini galėjo toliau aprašyti ankstesnes scenas, o ne dabartinę.
 12. Garsiniai aprašymai: jei sakinys netelpa į galimą laiko tarpą, Sonarpad bando jį iš naujo sugeneruoti kalbos sintezės greitį padidinęs 10 % arba, jei reikia, 15 % ir patikrina tikrąją trukmę. Greitis išsaugomas tik tam aprašymui ir naudojamas redaguojant, perklausant bei vėliau eksportuojant; kiti sakiniai nekeičiami.
+
+13. Garsiniai aprašymai: mažiausia reikalinga pauzė sutrumpinta iki 1,5 sekundės. Dabar „Sonarpad“ gali pateikti daugiau aprašymų, taip pat per trumpas pauzes, kurios anksčiau nebuvo naudojamos.
 
 Version 0.9.17 – 2026-10-15
 

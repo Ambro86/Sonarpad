@@ -39,6 +39,7 @@
   "media_cutter.set_end": "Конец вырезки (Alt+2)",
   "media_cutter.apply_cut": "Применить вырезку (Alt+4)",
   "media_cutter.listen_cut": "Прослушать вырезку (Alt+3)",
+  "media_cutter.listen_part": "Прослушать часть (Alt+3)",
   "media_cutter.modify_cut": "Отрегулировать обрезку…",
   "media_cutter.split_here": "Разделить здесь (S)",
   "media_cutter.part_selection": "Часть (Alt+↑ / Alt+↓)",
