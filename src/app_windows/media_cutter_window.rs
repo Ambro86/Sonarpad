@@ -218,6 +218,10 @@ impl State {
         unsafe { SendMessageW(self.ctrl(id), BM_GETCHECK, WPARAM(0), LPARAM(0)).0 == 1 }
     }
     fn say(&self, text: &str) {
+        // Native control tests must not send their simulated actions to the user's screen reader.
+        if cfg!(test) {
+            return;
+        }
         screen_reader_speak(text);
     }
     fn number(&self, id: usize) -> Result<f64, String> {
