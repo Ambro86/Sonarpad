@@ -25,11 +25,20 @@ class WindowsYoutubeIsolatedOpeningTests(unittest.TestCase):
 
     def test_mpv_forces_builtin_ytdl_hook_only_inside_player_command(self):
         self.assertIn('format!("ytdl://{url}")', MAIN)
-        self.assertIn('command.arg("--ytdl=yes")', MAIN)
+        compact = "".join(MAIN.split())
+        self.assertIn(
+            'command.arg(ifdirect_input.is_some(){"--ytdl=no"}else{"--ytdl=yes"});',
+            compact,
+        )
         self.assertIn('ytdl_hook-ytdl_path={}', MAIN)
         self.assertIn("youtube:player_client=android", MAIN)
         self.assertNotIn("youtube:player_client=android_vr", MAIN)
-        self.assertIn("Sonarpad continues to store and", MAIN)
+        start = MAIN.index("fn launch_stream_url_in_mpv_with_options(")
+        end = MAIN.index("pub(crate) fn launch_local_tv_recording_in_mpv", start)
+        self.assertIn(
+            "state.active_podcast_episode_url = Some(url.to_string());",
+            MAIN[start:end],
+        )
 
 
     def test_optimized_youtube_starts_unpaused_but_other_streams_keep_old_pause_flow(self):

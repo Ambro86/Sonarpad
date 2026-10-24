@@ -61,7 +61,7 @@ class AudioDescriptionQuotaModelSelectorTests(unittest.TestCase):
         create_end = WINDOW.index("WM_COMMAND =>", create_start)
         create_block = WINDOW[create_start:create_end]
         self.assertIn("refreshing full Gemini model list on window open", create_block)
-        self.assertIn("refresh_gemini_models(hwnd, &*state_pointer);", create_block)
+        self.assertIn("refresh_gemini_models(hwnd, &*state_pointer, false);", create_block)
 
     def test_quota_dialog_suspends_watchdog_while_modal(self):
         quota_start = WINDOW.index("WM_AD_QUOTA =>")
