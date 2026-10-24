@@ -971,7 +971,7 @@ def _generate_blocked_chunk_by_minutes(
         minute_start = minute_end
 
     if clip_ranges is not None:
-        minute_ranges = clip_ranges
+        minute_ranges = list(clip_ranges)
 
     minute_count = len(minute_ranges)
     if minute_count == 0:
@@ -1138,6 +1138,25 @@ def _generate_blocked_chunk_by_minutes(
         except ContentBlockedError as exc:
             if str(getattr(exc, "reason", "")).upper() != "PROHIBITED_CONTENT":
                 raise
+            if clip_ranges is not None and minute_duration > _BLOCKED_CHUNK_FALLBACK_DURATION_SEC:
+                # Retry only this custom segment through the existing minute loop.
+                # Keep the original chunk origin for prepared-file offsets.
+                subranges = []
+                start = minute_start
+                while start < minute_end:
+                    end = min(start + _BLOCKED_CHUNK_FALLBACK_DURATION_SEC, minute_end)
+                    if end - start < _BLOCKED_CHUNK_FALLBACK_MIN_DURATION_SEC:
+                        break
+                    subranges.append((start, end))
+                    start = end
+                minute_ranges[minute_index + 1:minute_index + 1] = subranges
+                minute_count = len(minute_ranges)
+                app_logger.warning(
+                    "Chunk %d custom segment %.3f-%.3fs is PROHIBITED_CONTENT; "
+                    "retrying only this segment in %d one-minute clips.",
+                    chunk_number, minute_start, minute_end, len(subranges),
+                )
+                continue
             app_logger.warning(
                 "Blocked chunk %d fallback minute %d is still prohibited; "
                 "continuing with original audio and no descriptions for "

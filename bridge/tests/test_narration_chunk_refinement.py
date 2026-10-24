@@ -54,6 +54,37 @@ class NarrationRestartTests(unittest.TestCase):
             self.assertEqual(prepare.call_args_list[1].kwargs["end_offset_sec"],180)
             self.assertFalse(any("blocked" in s for s in statuses))
 
+    def test_blocked_custom_segment_uses_minutes_without_repeating_neighbors(self):
+        settings = {"application_language": "it", "enable_character_glossary": False}
+        original_ranges = [(390, 415), (415, 550), (550, 570)]
+        blocked = ad.ContentBlockedError("blocked", reason="PROHIBITED_CONTENT")
+        with ExitStack() as stack:
+            stack.enter_context(mock.patch.object(ad.config_model, "get_setting", side_effect=settings.get))
+            prepare = stack.enter_context(mock.patch.object(ad, "_prepare_video_for_gemini", return_value=("part", None)))
+            generate = stack.enter_context(mock.patch.object(ad.gemini, "generate_content_with_retry",
+                side_effect=[object(), blocked, object(), blocked, object(), object()]))
+            stack.enter_context(mock.patch.object(ad.gemini, "process_gemini_response", return_value=("{}", True)))
+            stack.enter_context(mock.patch.object(ad, "_parse_with_optional_json_repair",
+                return_value=([("00:01", "00:02", "Scena.")], [])))
+            stack.enter_context(mock.patch.object(ad, "_correct_description_language", side_effect=lambda c,m,d,s:(d,None)))
+            stack.enter_context(mock.patch.object(ad, "_correct_glossary_language", side_effect=lambda c,m,d,s:(d,None)))
+            for name in ("build_generation_config", "save_raw_ai_output", "log_token_usage"):
+                stack.enter_context(mock.patch.object(ad.gemini, name, return_value=None))
+            descriptions, _, _ = ad._generate_blocked_chunk_by_minutes(
+                client=object(), model_name="test", video_path="movie.mp4",
+                prepared_chunk_path="existing.mkv", chunk_start=390, chunk_end=570,
+                chunk_number=3, total_chunks=8, clipped_windows=[], intensive_slots=[],
+                extended_anchors=[], intensive_mode=False, extended_mode=False,
+                user_prompt="", character_continuity={}, prior_descriptions=[],
+                status_update_callback=lambda _: None, clip_ranges=original_ranges)
+            self.assertEqual([(c.kwargs["start_offset_sec"], c.kwargs["end_offset_sec"])
+                              for c in prepare.call_args_list],
+                             [(0,25),(25,160),(25,85),(85,145),(145,160),(160,180)])
+            self.assertEqual([d[0] for d in descriptions], [391,416,536,551])
+            self.assertEqual(generate.call_count, 6)
+            self.assertEqual(original_ranges, [(390,415),(415,550),(550,570)])
+            self.assertTrue(all(c.args[1] == "existing.mkv" for c in prepare.call_args_list))
+
     def test_generation_reuses_existing_path_and_preserves_checkpoint_layout(self):
         settings = {"enable_character_glossary":False,
                     "enable_extended_audio_description":False,
