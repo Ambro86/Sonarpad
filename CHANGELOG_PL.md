@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+Version 0.9.19 – 2026-10-24
+
+1. Audiodeskrypcja: podział po długich fragmentach bez miejsca na narrację używa teraz tej samej minimalnej przerwy co opisy i uwzględnia również krótkie przerwy.
+
 Version 0.9.18 – 2026-10-24
 
 1. Dodano Przytnij plik multimedialny w Narzędzia → Multimedia: prowadzone i zaawansowane cięcie dźwięku i wideo, odsłuch cięcia, dokładna regulacja granic i przywracanie usuniętych części. Odtwarzanie pomija zastosowane cięcia. Dostępny jest obrót wideo i dodatkowa ścieżka dźwiękowa z regulacją głośności i zapętlaniem. Zapis z rzeczywistym postępem i anulowaniem korzysta z dołączonych bibliotek FFmpeg bez zewnętrznych programów; wskazówki głosowe i dostępne elementy sterujące.

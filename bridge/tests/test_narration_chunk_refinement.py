@@ -10,17 +10,30 @@ from audio_describer.core import audio_describer as ad
 
 
 class NarrationRestartTests(unittest.TestCase):
+    def test_short_pause_after_long_dialogue_uses_description_threshold(self):
+        # Regression: the two laughter descriptions fit before the old 3s restart.
+        intervals = [(225.335, 311.656), (313.996, 315.284), (317.692, 318.524)]
+        for minimum in (1.5, 2.0):
+            self.assertEqual(
+                ad._narration_restart_ranges(intervals, 360.996, 183.56, 360.996, minimum),
+                [(183.56, 311.656), (311.656, 360.996)],
+            )
+        self.assertEqual(
+            ad._narration_restart_ranges(intervals, 360.996, 183.56, 360.996, 2.5),
+            [(183.56, 318.524), (318.524, 360.996)],
+        )
+
     def test_threshold_and_short_pauses(self):
-        self.assertEqual(ad._narration_restart_ranges([(10,55)], 180, 0, 180), [(0,55),(55,180)])
-        self.assertIsNone(ad._narration_restart_ranges([(10,54.99)], 180, 0, 180))
-        self.assertEqual(ad._narration_restart_ranges([(10,30),(31,50),(52,65)],180,0,180), [(0,65),(65,180)])
+        self.assertEqual(ad._narration_restart_ranges([(10,55)], 180, 0, 180, 3.0), [(0,55),(55,180)])
+        self.assertIsNone(ad._narration_restart_ranges([(10,54.99)], 180, 0, 180, 3.0))
+        self.assertEqual(ad._narration_restart_ranges([(10,30),(31,50),(52,65)],180,0,180,3.0), [(0,65),(65,180)])
 
     def test_normal_chunks_and_existing_boundaries_unchanged(self):
         for intervals, start, end in [([],0,180), ([(0,180)],0,180),
                                       ([(10,30),(34,65)],0,180),
                                       ([(10,55)],55,180), ([(10,55)],40,180),
                                       ([(10,55)],0,57)]:
-            self.assertIsNone(ad._narration_restart_ranges(intervals,180,start,end))
+            self.assertIsNone(ad._narration_restart_ranges(intervals,180,start,end,3.0))
 
     def test_existing_clipping_path_uses_original_file_and_exact_offsets(self):
         settings = {"application_language":"it", "enable_character_glossary":False}

@@ -916,16 +916,16 @@ def _items_for_minute(items, minute_start, minute_end, local_origin):
     return selected
 
 
-def _narration_restart_ranges(dialogue_intervals, duration, chunk_start, chunk_end):
+def _narration_restart_ranges(dialogue_intervals, duration, chunk_start, chunk_end, minimum_pause):
     """Reuse the existing clipped-request path after 45s without a usable pause."""
     cuts = []
     previous_end = 0.0
     for start, end in speech_detector.speech_free_intervals(dialogue_intervals or [], duration):
-        if end - start < 3.0:
+        if end - start < minimum_pause:
             continue
         if (start - previous_end >= 45.0
                 and start - chunk_start >= 45.0
-                and chunk_end - start >= 3.0):
+                and chunk_end - start >= minimum_pause):
             cuts.append(start)
         previous_end = end
     if not cuts:
@@ -1452,7 +1452,7 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
             _update_status(_("Processing chunk %d of %d (%.0fs - %.0fs)...") % (i + 1, num_chunks, chunk_start, chunk_end))
 
             restart_ranges = _narration_restart_ranges(
-                dialogue_intervals, total_duration, chunk_start, chunk_end
+                dialogue_intervals, total_duration, chunk_start, chunk_end, min_intensive_silence
             )
             current_chunk_path = prepared_chunk["path"]
             current_chunk_file_obj = None

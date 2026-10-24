@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+Version 0.9.19 – 2026-10-24
+
+1. Audiodeskription: Die Aufteilung nach langen Abschnitten ohne Platz für Beschreibungen verwendet nun dieselbe Mindestpause wie die Beschreibungen und berücksichtigt auch kurze Pausen.
+
 Version 0.9.18 – 2026-10-24
 
 1. Unter Werkzeuge → Multimedia wurde Mediendatei schneiden hinzugefügt: geführter und erweiterter Audio-/Videoschnitt, Schnittvorschau, genaue Anpassung und Wiederherstellung gelöschter Teile. Die Wiedergabe überspringt angewendete Schnitte. Videodrehung und zusätzliche Audiospur mit Lautstärkeregelung und Wiederholung. Speichern mit echtem Fortschritt und Abbruch über die mitgelieferten FFmpeg-Bibliotheken, ohne externe Programme; gesprochene Anleitung und zugängliche Bedienelemente.

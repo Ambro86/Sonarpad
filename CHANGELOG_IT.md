@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.19 – 2026-10-24
+
+1. Audiodescrizioni: la divisione dopo lunghi tratti senza spazio per la narrazione ora usa la stessa pausa minima delle descrizioni, riconoscendo anche le pause brevi.
+
 Version 0.9.18 – 2026-10-24
 
 1. Aggiunta Taglia file media in Strumenti → Multimedia: taglio guidato e avanzato di audio e video, anteprima delle parti da eliminare, regolazione precisa dei confini e ripristino delle parti eliminate. Riproduci salta i tagli già applicati. Sono disponibili rotazione video e aggiunta di una traccia audio con volumi regolabili e ripetizione. Salvataggio con avanzamento reale e annullamento tramite le librerie FFmpeg incluse, senza eseguibili esterni; istruzioni vocali e comandi accessibili.

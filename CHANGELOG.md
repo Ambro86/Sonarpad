@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.19 – 2026-10-24
+
+1. Audio descriptions: splitting after long stretches without narration space now uses the same minimum pause as descriptions, also recognizing short pauses.
+
 Version 0.9.18 – 2026-10-24
 
 1. Added Cut media file under Tools → Multimedia: guided and advanced audio/video editing, cut preview, precise boundary adjustment and restoration of deleted parts. Play skips applied cuts. Includes video rotation and an additional audio track with adjustable volumes and looping. Saving uses bundled FFmpeg libraries, with real progress and cancellation, without external executables; spoken guidance and accessible controls.

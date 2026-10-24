@@ -1,5 +1,9 @@
 # Pakeitimų žurnalas
 
+Version 0.9.19 – 2026-10-24
+
+1. Garsinis vaizdavimas: skaidant po ilgų atkarpų be vietos pasakojimui dabar naudojama tokia pati minimali pauzė kaip aprašymams, todėl atpažįstamos ir trumpos pauzės.
+
 Version 0.9.18 – 2026-10-24
 
 1. Į Įrankiai → Multimedija įtraukta medijos failų kirpimo funkcija: vedamas ir išplėstinis garso bei vaizdo redagavimas, iškerpamos dalies perklausa, tikslus ribų keitimas ir pašalintų dalių atkūrimas. Atkūrimas praleidžia pritaikytus kirpimus. Galima pasukti vaizdą ir pridėti garso takelį su garsumo reguliavimu bei kartojimu. Įrašymas su tikra eiga ir atšaukimu naudoja pridėtas FFmpeg bibliotekas be išorinių programų; balso nurodymai ir prieinami valdikliai.

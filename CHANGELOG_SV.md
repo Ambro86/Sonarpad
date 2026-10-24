@@ -1,5 +1,9 @@
 # Ändringslogg
 
+Version 0.9.19 – 2026-10-24
+
+1. Syntolkning: uppdelning efter långa avsnitt utan utrymme för berättande använder nu samma minsta paus som beskrivningarna och känner även igen korta pauser.
+
 Version 0.9.18 – 2026-10-24
 
 1. Klipp mediefil har lagts till under Verktyg → Multimedia: guidad och avancerad ljud- och videoredigering, förhandslyssning, exakt justering och återställning av borttagna delar. Uppspelningen hoppar över tillämpade klipp. Videorotation och extra ljudspår med justerbara volymer och upprepning stöds. Sparande med verkligt förlopp och möjlighet att avbryta använder medföljande FFmpeg-bibliotek utan externa program; talade instruktioner och tillgängliga kontroller.

@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+Version 0.9.19 – 2026-10-24
+
+1. Deskripsi audio: pembagian setelah bagian panjang tanpa ruang narasi kini memakai jeda minimum yang sama dengan deskripsi, termasuk jeda singkat.
+
 Version 0.9.18 – 2026-10-24
 
 1. Ditambahkan Potong berkas media di Alat → Multimedia: pemotongan audio dan video terpandu atau lanjutan, pratinjau, pengaturan batas potongan, pemulihan bagian yang dihapus, putaran video, dan trek audio tambahan. Pemutaran melewati bagian yang dihapus. Penyimpanan menampilkan kemajuan dan dapat dibatalkan; menggunakan pustaka FFmpeg bawaan.

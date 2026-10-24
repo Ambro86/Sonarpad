@@ -1,5 +1,9 @@
 # Nhật ký thay đổi
 
+Version 0.9.19 – 2026-10-24
+
+1. Mô tả âm thanh: việc chia đoạn sau khoảng dài không có chỗ cho lời mô tả nay dùng cùng ngưỡng khoảng nghỉ tối thiểu với mô tả, nhận diện cả khoảng nghỉ ngắn.
+
 Version 0.9.18 – 2026-10-24
 
 1. Thêm Cắt tệp đa phương tiện trong Công cụ → Đa phương tiện: chỉnh sửa âm thanh và video theo hướng dẫn hoặc nâng cao, nghe thử đoạn cắt, điều chỉnh chính xác và khôi phục các phần đã xóa. Phát bỏ qua các đoạn đã cắt. Hỗ trợ xoay video và thêm bản âm thanh với âm lượng tùy chỉnh, lặp lại. Lưu với tiến trình thực và khả năng hủy bằng thư viện FFmpeg đi kèm, không dùng chương trình ngoài; hướng dẫn bằng giọng nói và điều khiển trợ năng.

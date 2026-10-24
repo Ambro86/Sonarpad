@@ -1,5 +1,9 @@
 # Přehled změn
 
+Version 0.9.19 – 2026-10-24
+
+1. Audiopopis: dělení po dlouhých úsecích bez prostoru pro komentář nyní používá stejnou minimální pauzu jako popisy a rozpozná i krátké pauzy.
+
 Version 0.9.18 – 2026-10-24
 
 1. Do Nástroje → Multimédia přidáno Oříznout multimediální soubor: řízený a pokročilý střih zvuku i videa, poslech střihu, přesná úprava hranic a obnovení odstraněných částí. Přehrávání přeskakuje použité střihy. Podporuje otočení videa a přidání zvukové stopy s nastavením hlasitosti a opakováním. Ukládání se skutečným průběhem a zrušením používá přiložené knihovny FFmpeg bez externích programů; hlasové pokyny a přístupné ovládání.

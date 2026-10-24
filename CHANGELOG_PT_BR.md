@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.19 – 2026-10-24
+
+1. Audiodescrição: a divisão após longos trechos sem espaço para narração agora usa a mesma pausa mínima das descrições, reconhecendo também pausas curtas.
+
 Version 0.9.18 – 2026-10-24
 
 1. Adicionado Cortar arquivo de mídia em Ferramentas → Multimídia: corte guiado e avançado de áudio e vídeo, prévia, ajuste preciso e restauração das partes excluídas. A reprodução pula os cortes aplicados. Inclui rotação de vídeo e faixa de áudio adicional com volumes ajustáveis e repetição. Salvamento com progresso real e cancelamento usando as bibliotecas FFmpeg incluídas, sem executáveis externos; instruções faladas e controles acessíveis.

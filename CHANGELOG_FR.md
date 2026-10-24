@@ -1,5 +1,9 @@
 # Journal des modifications
 
+Version 0.9.19 – 2026-10-24
+
+1. Audiodescription : le découpage après de longs passages sans place pour la narration utilise désormais la même pause minimale que les descriptions et reconnaît aussi les pauses courtes.
+
 Version 0.9.18 – 2026-10-24
 
 1. Ajout de Découper un fichier multimédia dans Outils → Multimédia : découpe guidée et avancée des fichiers audio et vidéo, écoute des passages à supprimer, réglage précis et restauration des parties supprimées. La lecture saute les coupes appliquées. Rotation vidéo et ajout d’une piste audio avec volumes réglables et répétition. Enregistrement avec progression réelle et annulation via les bibliothèques FFmpeg intégrées, sans exécutable externe ; instructions vocales et commandes accessibles.
