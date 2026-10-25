@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Mở dự án Sonarpad…",
   "media_cutter.save_project": "Lưu dự án…",
+  "media_cutter.overwrite_original": "Ghi đè tệp gốc (tạo bản sao lưu)",
+  "media_cutter.overwrite_confirm": "Bạn có muốn thay thế tệp gốc không? Sonarpad sẽ tạo bản sao lưu trước khi thay thế.",
+  "media_cutter.overwrite_unavailable": "Chỉ có thể ghi đè tệp gốc có định dạng được hỗ trợ khi không có phương tiện chèn thêm hoặc dự án .sonarcut đang mở.",
+  "media_cutter.overwrite_reopen_required": "Không thể mở lại tệp đã cập nhật. Hãy mở tệp một lần nữa để tiếp tục.",
+  "media_cutter.clear_markers": "Xóa điểm đánh dấu (Alt+0)",
+  "media_cutter.markers_cleared": "Đã xóa điểm đánh dấu. Bạn có thể đặt điểm bắt đầu mới.",
+  "media_cutter.markers_empty": "Không có điểm đánh dấu nào để xóa.",
   "media_cutter.goldwave_keys": "Dùng phím kiểu GoldWave ([, ] và Delete)",
   "media_cutter.goldwave_enabled": "Đã bật phím GoldWave",
   "media_cutter.goldwave_disabled": "Đã tắt phím GoldWave",

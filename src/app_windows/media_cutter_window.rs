@@ -81,6 +81,8 @@ const GOLDWAVE: usize = 9849;
 const GOLDWAVE_START: usize = 9850;
 const GOLDWAVE_END: usize = 9851;
 const GOLDWAVE_DELETE: usize = 9852;
+const OVERWRITE_ORIGINAL: usize = 9853;
+const CLEAR_MARKERS: usize = 9854;
 const TICK: usize = 1;
 const WM_RESTORE_CUTTER_FOCUS: u32 = WM_APP + 212;
 #[derive(Default)]
@@ -144,6 +146,7 @@ struct State {
     cancel: Arc<AtomicBool>,
     last_percent: u32,
     close_after_export: bool,
+    overwrite_pending: bool,
 }
 impl State {
     fn listen_key(&self) -> &'static str {
@@ -314,11 +317,42 @@ impl State {
             self.set(END, &format!("{b:.3}"));
         }
     }
+    fn can_overwrite_original(&self) -> bool {
+        self.input.as_ref().is_some_and(|input| {
+            let extension = input
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            self.project_path.is_none()
+                && self.sources.is_empty()
+                && (media_cutter_export::AUDIO_EXTENSIONS.contains(&extension.as_str())
+                    || media_cutter_export::VIDEO_EXTENSIONS.contains(&extension.as_str()))
+                && self
+                    .track
+                    .as_ref()
+                    .is_none_or(|track| !crate::media_conversion::same_file(track, input))
+        })
+    }
     fn visibility(&self) {
         if !self.player.as_ref().is_some_and(|p| p.audition) {
             self.set(LISTEN, &self.tr(self.listen_key()));
         }
         unsafe {
+            let overwrite_available = self.can_overwrite_original();
+            if !overwrite_available {
+                SendMessageW(
+                    self.ctrl(OVERWRITE_ORIGINAL),
+                    BM_SETCHECK,
+                    WPARAM(0),
+                    LPARAM(0),
+                );
+            }
+            EnableWindow(self.ctrl(OVERWRITE_ORIGINAL), overwrite_available);
+            EnableWindow(
+                self.ctrl(CLEAR_MARKERS),
+                self.job.is_none() && (self.start.is_some() || self.end.is_some()),
+            );
             for h in &self.track_controls {
                 ShowWindow(
                     *h,
@@ -539,6 +573,7 @@ impl State {
             media_cutter_project::save(&path, &project)?;
             self.project_path = Some(path);
             self.dirty = false;
+            self.visibility();
             self.say(&self.tr("project_saved"));
             crate::show_info(self.hwnd, self.language, &self.tr("project_saved"));
         }
@@ -575,6 +610,14 @@ impl State {
         self.stop();
         self.input = Some(project.input);
         self.project_path = Some(path);
+        unsafe {
+            SendMessageW(
+                self.ctrl(OVERWRITE_ORIGINAL),
+                BM_SETCHECK,
+                WPARAM(0),
+                LPARAM(0),
+            );
+        }
         self.duration = project.duration;
         self.has_video = project.has_video;
         self.parts = project.parts;
@@ -760,6 +803,12 @@ impl State {
                     self.dirty = false;
                     unsafe {
                         SendMessageW(self.ctrl(GOLDWAVE), BM_SETCHECK, WPARAM(0), LPARAM(0));
+                        SendMessageW(
+                            self.ctrl(OVERWRITE_ORIGINAL),
+                            BM_SETCHECK,
+                            WPARAM(0),
+                            LPARAM(0),
+                        );
                     }
                     self.set(PRIMARY, &self.tr("set_start"));
                     self.set(TRACK, &self.tr("choose_track"));
@@ -787,6 +836,35 @@ impl State {
             }
             OPEN_PROJECT => self.open_project()?,
             SAVE_PROJECT => self.save_project()?,
+            CLEAR_MARKERS => {
+                if self.start.is_none() && self.end.is_none() {
+                    self.say(&self.tr("markers_empty"));
+                } else {
+                    self.start = None;
+                    self.end = None;
+                    self.set(PRIMARY, &self.tr("set_start"));
+                    if self.selected(MODE) == 0 {
+                        self.set(START, "0.000");
+                        self.set(END, "0.000");
+                    } else {
+                        self.show_bounds();
+                    }
+                    // Move focus before disabling the control that was just activated.
+                    // A pending selection is not an applied cut: preserve the timeline,
+                    // current listening position, playback and unsaved-project state.
+                    unsafe {
+                        if GetFocus() == self.ctrl(CLEAR_MARKERS) {
+                            SetFocus(self.ctrl(if self.selected(MODE) == 0 {
+                                PRIMARY
+                            } else {
+                                PARTS
+                            }));
+                        }
+                    }
+                    self.visibility();
+                    self.say(&self.tr("markers_cleared"));
+                }
+            }
             GOLDWAVE_START => {
                 if self.input.is_none() {
                     return Err(self.tr("no_file"));
@@ -989,6 +1067,7 @@ impl State {
                 if self.checked(GOLDWAVE) {
                     lines.push(self.tr("goldwave_help"));
                 }
+                lines.push(format!("Alt+0: {}", self.tr("clear_markers")));
                 lines.push(self.tr("home_end_help"));
                 lines.push(self.tr("save"));
                 self.say(&lines.join(". "));
@@ -1194,16 +1273,28 @@ impl State {
                 } else {
                     None
                 };
-                let stem = input.file_stem().unwrap_or_default().to_string_lossy();
-                let suggested =
-                    input.with_file_name(format!("{stem} {}", self.tr("output_suffix")));
-                if let Some(output) = choose(
-                    self.hwnd,
-                    true,
-                    self.has_video,
-                    &self.tr("save"),
-                    Some(&suggested),
-                ) {
+                let overwrite_original = self.checked(OVERWRITE_ORIGINAL);
+                if overwrite_original && !self.can_overwrite_original() {
+                    return Err(self.tr("overwrite_unavailable"));
+                }
+                if overwrite_original && !self.confirm("overwrite_confirm") {
+                    return Ok(());
+                }
+                let output = if overwrite_original {
+                    Some(input.clone())
+                } else {
+                    let stem = input.file_stem().unwrap_or_default().to_string_lossy();
+                    let suggested =
+                        input.with_file_name(format!("{stem} {}", self.tr("output_suffix")));
+                    choose(
+                        self.hwnd,
+                        true,
+                        self.has_video,
+                        &self.tr("save"),
+                        Some(&suggested),
+                    )
+                };
+                if let Some(output) = output {
                     let plan = ExportPlan {
                         input,
                         output,
@@ -1216,6 +1307,7 @@ impl State {
                     let cancel = self.cancel.clone();
                     let job = Arc::new(Mutex::new(Job::default()));
                     self.job = Some(job.clone());
+                    self.overwrite_pending = overwrite_original;
                     self.last_percent = u32::MAX;
                     unsafe {
                         // Transfer focus before hiding the focused Save button, so Windows
@@ -1238,15 +1330,24 @@ impl State {
                     self.say(&self.tr("processing_started"));
                     std::thread::spawn(move || {
                         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                            media_cutter_project::export_with_safe_replacement(
-                                &plan,
-                                cancel,
-                                &mut |p| {
-                                    if let Ok(mut state) = job.lock() {
-                                        state.percent = p;
-                                    }
-                                },
-                            )
+                            let mut progress = |p| {
+                                if let Ok(mut state) = job.lock() {
+                                    state.percent = p;
+                                }
+                            };
+                            if overwrite_original {
+                                media_cutter_project::export_overwriting_original(
+                                    &plan,
+                                    cancel,
+                                    &mut progress,
+                                )
+                            } else {
+                                media_cutter_project::export_with_safe_replacement(
+                                    &plan,
+                                    cancel,
+                                    &mut progress,
+                                )
+                            }
                         }))
                         .unwrap_or_else(|_| Err("Media cutter export panicked".into()));
                         crate::log_debug(&format!("Media cutter export finished: {result:?}"));
@@ -1319,6 +1420,54 @@ impl State {
                     }
                     SetFocus(self.ctrl(SAVE));
                 }
+                let overwrote_original = self.overwrite_pending;
+                self.overwrite_pending = false;
+                unsafe {
+                    SendMessageW(
+                        self.ctrl(OVERWRITE_ORIGINAL),
+                        BM_SETCHECK,
+                        WPARAM(0),
+                        LPARAM(0),
+                    );
+                }
+                if result.is_ok() && overwrote_original {
+                    let new_duration = self.input.as_ref().and_then(|input| {
+                        crate::ffmpeg_export::media_duration_seconds(input)
+                            .filter(|duration| duration.is_finite() && *duration > 0.0)
+                    });
+                    self.project_path = None;
+                    self.sources.clear();
+                    self.start = None;
+                    self.end = None;
+                    self.position = 0.0;
+                    self.track = None;
+                    self.dirty = false;
+                    unsafe {
+                        SendMessageW(self.ctrl(ROTATE), CB_SETCURSEL, WPARAM(0), LPARAM(0));
+                        SendMessageW(self.ctrl(LOOP), BM_SETCHECK, WPARAM(0), LPARAM(0));
+                    }
+                    self.set(TRACK, &self.tr("choose_track"));
+                    self.set(ORIGINAL_GAIN, "100");
+                    self.set(ADDED_GAIN, "100");
+                    self.set(POSITION, "0.000");
+                    self.set(START, "0.000");
+                    self.set(END, "0.000");
+                    self.set(PRIMARY, &self.tr("set_start"));
+                    if let Some(duration) = new_duration {
+                        self.duration = duration;
+                        self.parts = vec![MediaPart {
+                            start: 0.0,
+                            end: duration,
+                            keep: true,
+                        }];
+                    } else {
+                        // Never keep stale timeline boundaries after replacing the source.
+                        self.input = None;
+                        self.duration = 0.0;
+                        self.parts.clear();
+                    }
+                    self.refresh_parts();
+                }
                 self.visibility();
                 match result {
                     Ok(backup) => {
@@ -1334,6 +1483,11 @@ impl State {
                             )
                         } else {
                             self.tr("saved")
+                        };
+                        let message = if overwrote_original && self.input.is_none() {
+                            format!("{message}\n{}", self.tr("overwrite_reopen_required"))
+                        } else {
+                            message
                         };
                         self.say(&message);
                         crate::show_info(self.hwnd, self.language, &message);
@@ -1593,6 +1747,7 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         cancel: Arc::new(AtomicBool::new(false)),
         last_percent: 0,
         close_after_export: false,
+        overwrite_pending: false,
     };
     button(&mut s, "open_file", OPEN, 12, 12, 230);
     button(&mut s, "open_project", OPEN_PROJECT, 252, 12, 242);
@@ -1648,6 +1803,15 @@ fn create(hwnd: HWND, parent: HWND) -> State {
     s.advanced_controls = s.controls[first..].to_vec();
     edit(&mut s, "start_value", START, "0.000", 12, 282, 180);
     edit(&mut s, "end_value", END, "0.000", 205, 282, 180);
+    let label = s.tr("clear_markers");
+    control(
+        &mut s,
+        "BUTTON",
+        &label,
+        CLEAR_MARKERS,
+        [399, 287, 212, 42],
+        WS_TABSTOP | WINDOW_STYLE(BS_MULTILINE as u32),
+    );
     combo(
         &mut s,
         "precision",
@@ -1717,16 +1881,25 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
     );
     s.track_controls = s.controls[track_start..].to_vec();
-    button(&mut s, "save", SAVE, 12, 580, 200);
-    button(&mut s, "save_project", SAVE_PROJECT, 230, 580, 245);
-    button(&mut s, "close", CLOSE, 492, 580, 180);
+    let label = s.tr("overwrite_original");
+    control(
+        &mut s,
+        "BUTTON",
+        &label,
+        OVERWRITE_ORIGINAL,
+        [12, 560, 750, 26],
+        WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
+    );
+    button(&mut s, "save", SAVE, 12, 593, 200);
+    button(&mut s, "save_project", SAVE_PROJECT, 230, 593, 245);
+    button(&mut s, "close", CLOSE, 492, 593, 180);
     let label = s.tr("ready");
     s.status = control(
         &mut s,
         "STATIC",
         &label,
         0,
-        [12, 625, 750, 24],
+        [12, 636, 750, 24],
         WINDOW_STYLE(0),
     );
     s.controls.pop();
@@ -1848,6 +2021,7 @@ fn shortcut_command(
             0x32 => Some(SHORTCUT_END),
             0x33 => Some(LISTEN),
             0x34 => Some(SHORTCUT_APPLY),
+            0x30 => Some(CLEAR_MARKERS),
             0x44 => Some(DELETE),
             0x52 => Some(RESTORE),
             key if key == VK_UP.0 as u32 => Some(PART_PREVIOUS),
@@ -2320,6 +2494,12 @@ mod tests {
                 modified_area_command(0x09, advanced, false, false, true),
                 None
             );
+            assert_eq!(
+                shortcut_command(0x30, false, true, false, false),
+                Some(CLEAR_MARKERS)
+            );
+            assert_eq!(shortcut_command(0x30, false, false, false, false), None);
+            assert_eq!(shortcut_command(0x30, false, true, true, false), None);
             assert_eq!(area_command(0x24, advanced), Some(FILE_HOME));
             assert_eq!(area_command(0x23, advanced), Some(FILE_END));
             for key in [0x24, 0x23] {
@@ -2512,6 +2692,99 @@ mod tests {
         }
     }
     #[test]
+    fn clearing_markers_preserves_applied_cuts_position_and_dirty_state() {
+        unsafe {
+            let class = to_wide("SonarpadCutterMarkerResetTest");
+            let instance = HINSTANCE(crate::get_module_handle_raw_default());
+            crate::register_class_w_safe(&WNDCLASSW {
+                hInstance: instance,
+                lpszClassName: PCWSTR(class.as_ptr()),
+                lpfnWndProc: Some(wndproc),
+                ..Default::default()
+            });
+            let hwnd = CreateWindowExW(
+                WS_EX_CONTROLPARENT,
+                PCWSTR(class.as_ptr()),
+                PCWSTR::null(),
+                WS_CAPTION,
+                0,
+                0,
+                805,
+                700,
+                HWND(0),
+                HMENU(0),
+                instance,
+                None,
+            );
+            assert_ne!(hwnd.0, 0);
+            let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
+            assert!(!ptr.is_null());
+            (*ptr).input = Some(PathBuf::from("podcast.mp3"));
+            (*ptr).duration = 12.0;
+            (*ptr).parts = vec![
+                MediaPart {
+                    start: 0.0,
+                    end: 3.0,
+                    keep: true,
+                },
+                MediaPart {
+                    start: 3.0,
+                    end: 4.0,
+                    keep: false,
+                },
+                MediaPart {
+                    start: 4.0,
+                    end: 12.0,
+                    keep: true,
+                },
+            ];
+            (*ptr).dirty = true;
+            (*ptr).refresh_parts();
+            assert!(!IsWindowEnabled((*ptr).ctrl(CLEAR_MARKERS)).as_bool());
+            (*ptr).position = 5.0;
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(PRIMARY), LPARAM(0));
+            assert_eq!((*ptr).start, Some(5.0));
+            assert!(IsWindowEnabled((*ptr).ctrl(CLEAR_MARKERS)).as_bool());
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(CLEAR_MARKERS), LPARAM(0));
+            assert!((*ptr).start.is_none() && (*ptr).end.is_none());
+            assert_eq!((*ptr).position, 5.0);
+            assert_eq!((*ptr).text(PRIMARY), (*ptr).tr("set_start"));
+            assert_eq!((*ptr).text(START), "0.000");
+            assert_eq!((*ptr).text(END), "0.000");
+            assert!(!IsWindowEnabled((*ptr).ctrl(CLEAR_MARKERS)).as_bool());
+            (*ptr).position = 6.0;
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(PRIMARY), LPARAM(0));
+            (*ptr).position = 8.0;
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(PRIMARY), LPARAM(0));
+            assert_eq!(((*ptr).start, (*ptr).end), (Some(6.0), Some(8.0)));
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(CLEAR_MARKERS), LPARAM(0));
+            assert!((*ptr).start.is_none() && (*ptr).end.is_none());
+            assert_eq!((*ptr).position, 8.0);
+            SendMessageW((*ptr).ctrl(MODE), CB_SETCURSEL, WPARAM(1), LPARAM(0));
+            SendMessageW(
+                hwnd,
+                WM_COMMAND,
+                WPARAM(MODE | ((CBN_SELCHANGE as usize) << 16)),
+                LPARAM(0),
+            );
+            (*ptr).position = 9.0;
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(GOLDWAVE_START), LPARAM(0));
+            (*ptr).position = 10.0;
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(GOLDWAVE_END), LPARAM(0));
+            assert!(IsWindowEnabled((*ptr).ctrl(CLEAR_MARKERS)).as_bool());
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(CLEAR_MARKERS), LPARAM(0));
+            assert!((*ptr).start.is_none() && (*ptr).end.is_none());
+            assert_eq!((*ptr).position, 10.0);
+            assert_eq!((*ptr).parts.len(), 3);
+            assert!(!(&(*ptr).parts)[1].keep);
+            assert_eq!(kept_duration(&(*ptr).parts), 11.0);
+            assert!((*ptr).dirty);
+            assert!(!IsWindowEnabled((*ptr).ctrl(CLEAR_MARKERS)).as_bool());
+            (*ptr).dirty = false;
+            DestroyWindow(hwnd).unwrap();
+        }
+    }
+    #[test]
     fn native_controls_modes_tab_and_progress() {
         unsafe {
             let class = to_wide("SonarpadCutterWindowTest");
@@ -2570,7 +2843,11 @@ mod tests {
             assert_ne!(after_area, area);
             assert_eq!(GetNextDlgTabItem(hwnd, after_area, true), area);
             assert!(seen.contains(&(*ptr).ctrl(SAVE)));
+            // Disabled checkboxes are deliberately skipped by Windows tab navigation.
+            assert!(!seen.contains(&(*ptr).ctrl(OVERWRITE_ORIGINAL)));
             assert!(seen.contains(&(*ptr).ctrl(CLOSE)));
+            assert!(!IsWindowEnabled((*ptr).ctrl(OVERWRITE_ORIGINAL)).as_bool());
+            assert!(!(*ptr).checked(OVERWRITE_ORIGINAL));
             assert!((*ptr).track_controls.iter().all(|h| !visible(*h)));
             for id in [REMOVE_TRACK, ORIGINAL_GAIN, ADDED_GAIN, LOOP] {
                 assert!(!seen.contains(&(*ptr).ctrl(id)));
@@ -2592,6 +2869,37 @@ mod tests {
                     .all(|id| !seen.contains(&(*ptr).ctrl(*id)))
             );
             (*ptr).input = Some(PathBuf::from("selected-media.wav"));
+            (*ptr).visibility();
+            assert!(IsWindowEnabled((*ptr).ctrl(OVERWRITE_ORIGINAL)).as_bool());
+            assert_eq!(
+                GetNextDlgTabItem(hwnd, (*ptr).ctrl(OVERWRITE_ORIGINAL), false),
+                (*ptr).ctrl(SAVE)
+            );
+            SendMessageW(
+                (*ptr).ctrl(OVERWRITE_ORIGINAL),
+                BM_SETCHECK,
+                WPARAM(1),
+                LPARAM(0),
+            );
+            assert!((*ptr).checked(OVERWRITE_ORIGINAL));
+            (*ptr).project_path = Some(PathBuf::from("editing.sonarcut"));
+            (*ptr).visibility();
+            assert!(!IsWindowEnabled((*ptr).ctrl(OVERWRITE_ORIGINAL)).as_bool());
+            assert!(!(*ptr).checked(OVERWRITE_ORIGINAL));
+            (*ptr).project_path = None;
+            (*ptr)
+                .sources
+                .push(crate::media_cutter_timeline::MediaSpan {
+                    path: PathBuf::from("inserted.wav"),
+                    start: 0.0,
+                    end: 1.0,
+                    source_start: 0.0,
+                });
+            (*ptr).visibility();
+            assert!(!IsWindowEnabled((*ptr).ctrl(OVERWRITE_ORIGINAL)).as_bool());
+            (*ptr).sources.clear();
+            (*ptr).visibility();
+            assert!(IsWindowEnabled((*ptr).ctrl(OVERWRITE_ORIGINAL)).as_bool());
             (*ptr).duration = 6.0;
             (*ptr).parts = vec![MediaPart {
                 start: 0.0,

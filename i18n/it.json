@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Apri progetto Sonarpad…",
   "media_cutter.save_project": "Salva progetto…",
+  "media_cutter.overwrite_original": "Sovrascrivi il file originale (crea una copia di sicurezza)",
+  "media_cutter.overwrite_confirm": "Vuoi sostituire il file originale? Sonarpad salverà una copia di sicurezza prima della sostituzione.",
+  "media_cutter.overwrite_unavailable": "La sovrascrittura è disponibile soltanto per un file originale con formato supportato, senza media inseriti e senza un progetto .sonarcut aperto.",
+  "media_cutter.overwrite_reopen_required": "Non è stato possibile rileggere il file aggiornato. Aprilo nuovamente per continuare.",
+  "media_cutter.clear_markers": "Azzera marcatori (Alt+0)",
+  "media_cutter.markers_cleared": "Marcatori cancellati. Puoi impostare un nuovo inizio.",
+  "media_cutter.markers_empty": "Non ci sono marcatori da cancellare.",
   "media_cutter.goldwave_keys": "Usa comandi stile GoldWave ([, ] e Canc)",
   "media_cutter.goldwave_enabled": "Comandi GoldWave attivati",
   "media_cutter.goldwave_disabled": "Comandi GoldWave disattivati",

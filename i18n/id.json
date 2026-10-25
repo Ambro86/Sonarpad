@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Buka proyek Sonarpad…",
   "media_cutter.save_project": "Simpan proyek…",
+  "media_cutter.overwrite_original": "Timpa berkas asli (buat cadangan)",
+  "media_cutter.overwrite_confirm": "Ganti berkas asli? Sonarpad akan membuat salinan cadangan sebelum menggantinya.",
+  "media_cutter.overwrite_unavailable": "Penimpaan hanya tersedia untuk berkas asli dengan format yang didukung, tanpa media sisipan atau proyek .sonarcut yang sedang dibuka.",
+  "media_cutter.overwrite_reopen_required": "Berkas yang diperbarui tidak dapat dibuka kembali. Buka lagi untuk melanjutkan.",
+  "media_cutter.clear_markers": "Hapus penanda (Alt+0)",
+  "media_cutter.markers_cleared": "Penanda dihapus. Anda dapat menetapkan awal yang baru.",
+  "media_cutter.markers_empty": "Tidak ada penanda untuk dihapus.",
   "media_cutter.goldwave_keys": "Gunakan tombol seperti GoldWave ([, ] dan Delete)",
   "media_cutter.goldwave_enabled": "Tombol GoldWave diaktifkan",
   "media_cutter.goldwave_disabled": "Tombol GoldWave dinonaktifkan",

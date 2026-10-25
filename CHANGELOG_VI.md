@@ -5,6 +5,8 @@ Version 0.9.20 – 2026-10-25
 1. Thời tiết: cải thiện nhãn vị trí trong kết quả tìm kiếm và danh sách thành phố gần đây. Khi có dữ liệu, chương trình hiển thị thêm quận hoặc huyện, vùng và quốc gia để phân biệt những địa điểm trùng tên. Tên địa danh lặp lại được loại bỏ và các thành phố đã lưu trước đây vẫn tương thích.
 2. Đã cập nhật hướng dẫn sử dụng với chỉ dẫn chi tiết về Cắt tệp đa phương tiện và SonarMusic, gồm phím tắt, điều hướng bằng trình đọc màn hình, chỉnh sửa nâng cao, tìm kiếm và mục yêu thích.
 3. Cắt tệp đa phương tiện: thêm phím tắt kiểu GoldWave với dấu ngoặc vuông và Delete, dự án .sonarcut để chỉnh sửa tiếp mà không cần nén lại âm thanh và bản sao lưu trước khi thay thế tệp xuất.
+4. Cắt phương tiện: thêm tùy chọn ghi đè tệp gốc sau khi xác nhận, xuất an toàn sang tệp tạm, tạo bản sao lưu tự động và cập nhật dòng thời gian sau khi lưu.
+5. Cắt phương tiện: thêm Xóa điểm đánh dấu (Alt+0) để đặt lại vùng chọn sai mà không thay đổi vị trí phát hay các đoạn đã cắt.
 
 Version 0.9.19 – 2026-10-24
 

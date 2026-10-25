@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Otwórz projekt Sonarpad…",
   "media_cutter.save_project": "Zapisz projekt…",
+  "media_cutter.overwrite_original": "Nadpisz oryginalny plik (utwórz kopię zapasową)",
+  "media_cutter.overwrite_confirm": "Czy zastąpić oryginalny plik? Sonarpad utworzy kopię zapasową przed zastąpieniem.",
+  "media_cutter.overwrite_unavailable": "Nadpisywanie jest dostępne tylko dla obsługiwanego pliku oryginalnego, bez wstawionych mediów i otwartego projektu .sonarcut.",
+  "media_cutter.overwrite_reopen_required": "Nie udało się ponownie otworzyć zmodyfikowanego pliku. Otwórz go ponownie, aby kontynuować.",
+  "media_cutter.clear_markers": "Wyczyść znaczniki (Alt+0)",
+  "media_cutter.markers_cleared": "Znaczniki wyczyszczone. Możesz ustawić nowy początek.",
+  "media_cutter.markers_empty": "Brak znaczników do wyczyszczenia.",
   "media_cutter.goldwave_keys": "Używaj klawiszy jak w GoldWave ([, ] i Delete)",
   "media_cutter.goldwave_enabled": "Klawisze GoldWave włączone",
   "media_cutter.goldwave_disabled": "Klawisze GoldWave wyłączone",

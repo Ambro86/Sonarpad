@@ -251,7 +251,9 @@ Vùng lệnh được thiết kế để dùng với trình đọc màn hình. N
 
 Nhấn Lưu hoặc Ctrl+S, chọn định dạng và nơi lưu, đặt tên khác tệp gốc. Khi xuất tệp có tiến trình và nút Hủy. Hãy hoàn tất thao tác cắt có hướng dẫn còn dang dở trước khi lưu; đóng khi chưa lưu sẽ hỏi xác nhận.
 
-Hộp chọn Dùng phím kiểu GoldWave bật các lệnh thay thế: khi đang nghe, [ đánh dấu điểm bắt đầu, ] đánh dấu điểm kết thúc và Delete xóa đoạn đã chọn, kể cả ở chế độ nâng cao. Nhấn F1 trong khu vực lệnh để nghe danh sách phím. Với bàn phím quốc tế, hãy dùng tổ hợp phím tạo dấu ngoặc vuông. Lưu dự án tạo tệp .sonarcut ghi nhớ các đoạn cắt, vị trí và thiết lập để tiếp tục sau mà không phải nén lại âm thanh. Mở dự án khôi phục công việc nếu các tệp gốc vẫn còn. Lưu hoặc Ctrl+S vẫn xuất âm thanh hay video. Nếu tệp đích đã có, Sonarpad tạo bản sao lưu trước khi thay thế và không ghi đè tệp nguồn.
+Hộp chọn Dùng phím kiểu GoldWave bật các lệnh thay thế: khi đang nghe, [ đánh dấu điểm bắt đầu, ] đánh dấu điểm kết thúc và Delete xóa đoạn đã chọn, kể cả ở chế độ nâng cao. Nhấn F1 trong khu vực lệnh để nghe danh sách phím. Với bàn phím quốc tế, hãy dùng tổ hợp phím tạo dấu ngoặc vuông. Lưu dự án tạo tệp .sonarcut ghi nhớ các đoạn cắt, vị trí và thiết lập để tiếp tục sau mà không phải nén lại âm thanh. Mở dự án khôi phục công việc nếu các tệp gốc vẫn còn. Lưu hoặc Ctrl+S vẫn xuất âm thanh hay video. Nếu tệp đích đã có, Sonarpad tạo bản sao lưu trước khi thay thế và không ghi đè tệp nguồn khi xuất thông thường. Hộp chọn Ghi đè tệp gốc phía trên nút Lưu cho phép lưu trực tiếp lên tệp đang mở sau khi xác nhận, đồng thời tạo bản sao lưu trước đó. Tùy chọn tắt theo mặc định, không dùng được với dự án .sonarcut hoặc phương tiện chèn thêm và tự đặt lại sau khi lưu.
+
+Nút Xóa điểm đánh dấu (Alt+0) xóa điểm bắt đầu và kết thúc của vùng chọn hiện tại, ngay cả khi bạn mới đặt nhầm điểm đầu tiên. Vị trí phát và các đoạn cắt đã áp dụng không thay đổi, không cần xác nhận. Hoạt động ở cả chế độ hướng dẫn và nâng cao, kể cả với phím GoldWave; nút bị vô hiệu hóa nếu chưa có điểm đánh dấu.
 
 SONARMUSIC — HƯỚNG DẪN ĐẦY ĐỦ
 

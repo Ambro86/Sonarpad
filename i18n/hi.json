@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Sonarpad प्रोजेक्ट खोलें…",
   "media_cutter.save_project": "प्रोजेक्ट सहेजें…",
+  "media_cutter.overwrite_original": "मूल फ़ाइल अधिलेखित करें (बैकअप बनाएँ)",
+  "media_cutter.overwrite_confirm": "क्या आप मूल फ़ाइल को बदलना चाहते हैं? बदलने से पहले Sonarpad उसका बैकअप बनाएगा।",
+  "media_cutter.overwrite_unavailable": ".sonarcut प्रोजेक्ट खुले होने या अतिरिक्त मीडिया जोड़े जाने पर मूल फ़ाइल को अधिलेखित नहीं किया जा सकता। केवल समर्थित फ़ाइल प्रारूपों पर यह विकल्प उपलब्ध है।",
+  "media_cutter.overwrite_reopen_required": "बदली गई फ़ाइल फिर से नहीं खोली जा सकी। आगे बढ़ने के लिए उसे दोबारा खोलें।",
+  "media_cutter.clear_markers": "मार्कर साफ़ करें (Alt+0)",
+  "media_cutter.markers_cleared": "मार्कर साफ़ हो गए। अब नया प्रारंभ तय कर सकते हैं।",
+  "media_cutter.markers_empty": "साफ़ करने के लिए कोई मार्कर नहीं है।",
   "media_cutter.goldwave_keys": "GoldWave जैसे कीबोर्ड शॉर्टकट ([, ] और Delete)",
   "media_cutter.goldwave_enabled": "GoldWave शॉर्टकट चालू हैं",
   "media_cutter.goldwave_disabled": "GoldWave शॉर्टकट बंद हैं",

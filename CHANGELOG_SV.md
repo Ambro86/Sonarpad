@@ -5,6 +5,8 @@ Version 0.9.20 – 2026-10-25
 1. Väder: platsangivelserna har förbättrats i sökresultat och listan över senast använda städer. När uppgifterna finns visas även län eller distrikt, region och land för att skilja orter med samma namn åt. Upprepade platsnamn tas bort och tidigare sparade städer fungerar fortfarande.
 2. Guiderna har uppdaterats med detaljerade instruktioner för att klippa mediefiler och använda SonarMusic, inklusive kortkommandon, skärmläsarnavigering, avancerad redigering, sökning och favoriter.
 3. Klipp mediefil: valfria GoldWave-liknande tangentkommandon med hakparenteser och Delete, .sonarcut-projekt för fortsatt redigering utan omkomprimering samt säkerhetskopior innan exporterade filer ersätts.
+4. Klipp media: nytt alternativ för att skriva över originalfilen efter bekräftelse med säker export till en temporär fil, automatisk säkerhetskopia och uppdaterad tidslinje.
+5. Klipp media: Rensa markörer (Alt+0) gör det möjligt att börja om med en felaktig markering utan att ändra uppspelningsposition eller tidigare klipp.
 
 Version 0.9.19 – 2026-10-24
 

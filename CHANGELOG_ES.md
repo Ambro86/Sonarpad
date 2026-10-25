@@ -5,6 +5,8 @@ Version 0.9.20 – 2026-10-25
 1. Tiempo: mejoradas las etiquetas de ubicación en los resultados de búsqueda y las ciudades recientes. Cuando están disponibles, se muestran también el condado o distrito, la región y el país para distinguir localidades con el mismo nombre. Se evitan nombres repetidos y se mantiene la compatibilidad con las ciudades guardadas anteriormente.
 2. Actualizadas las guías con instrucciones detalladas para Cortar archivo multimedia y SonarMusic, incluidos atajos de teclado, navegación con lectores de pantalla, edición avanzada, búsquedas y favoritos.
 3. Cortar archivos multimedia: atajos opcionales al estilo GoldWave con corchetes y Supr, proyectos .sonarcut para reanudar sin recomprimir audio y copias de seguridad antes de reemplazar archivos exportados.
+4. Cortar archivo multimedia: nueva opción para sobrescribir el original tras confirmación, con exportación temporal segura, copia de seguridad automática y actualización de la línea de tiempo.
+5. Cortar archivo multimedia: añadido Borrar marcadores (Alt+0) para reiniciar una selección equivocada sin mover la reproducción ni deshacer cortes aplicados.
 
 Version 0.9.19 – 2026-10-24
 

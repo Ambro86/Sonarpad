@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Отвори Sonarpad пројекат…",
   "media_cutter.save_project": "Сачувај пројекат…",
+  "media_cutter.overwrite_original": "Препиши оригиналну датотеку (направи резервну копију)",
+  "media_cutter.overwrite_confirm": "Желите ли да замените оригиналну датотеку? Sonarpad ће прво направити резервну копију.",
+  "media_cutter.overwrite_unavailable": "Преписивање је доступно само за подржан оригинални формат, без уметнутих медија и отвореног .sonarcut пројекта.",
+  "media_cutter.overwrite_reopen_required": "Није могуће поново отворити измењену датотеку. Отворите је поново да наставите.",
+  "media_cutter.clear_markers": "Обриши маркере (Alt+0)",
+  "media_cutter.markers_cleared": "Маркери су обрисани. Можеш да поставиш нови почетак.",
+  "media_cutter.markers_empty": "Нема маркера за брисање.",
   "media_cutter.goldwave_keys": "Користи GoldWave тастере ([, ] и Delete)",
   "media_cutter.goldwave_enabled": "GoldWave тастери укључени",
   "media_cutter.goldwave_disabled": "GoldWave тастери искључени",

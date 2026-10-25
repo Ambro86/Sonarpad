@@ -5,6 +5,8 @@ Version 0.9.20 – 2026-10-25
 1. Meteo: migliorate le indicazioni geografiche nei risultati di ricerca e nelle città recenti. Quando disponibili, vengono mostrati anche contea o distretto, regione e Paese, così da distinguere località con lo stesso nome. Eliminati i nomi ripetuti e mantenuta la compatibilità con le città già salvate.
 2. Aggiornate le guide con istruzioni dettagliate per Taglia file media e SonarMusic, inclusi i comandi da tastiera, la navigazione con lettori di schermo, il taglio avanzato, la ricerca e i preferiti.
 3. Taglia file media: aggiunti i tasti opzionali stile GoldWave con parentesi quadre e Canc, i progetti .sonarcut per riprendere i tagli senza ricompressione e le copie di sicurezza prima di sostituire file esportati.
+4. Taglia file media: aggiunta la casella per sovrascrivere il file originale con conferma, esportazione sicura su file temporaneo e copia di sicurezza automatica; la sequenza di tagli si aggiorna dopo il salvataggio.
+5. Taglia file media: aggiunto Azzera marcatori (Alt+0) per ricominciare una selezione errata senza spostare il cursore e senza annullare tagli già applicati, in modalità guidata e avanzata.
 
 Version 0.9.19 – 2026-10-24
 

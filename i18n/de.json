@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Sonarpad-Projekt öffnen…",
   "media_cutter.save_project": "Projekt speichern…",
+  "media_cutter.overwrite_original": "Originaldatei überschreiben (Sicherungskopie erstellen)",
+  "media_cutter.overwrite_confirm": "Originaldatei wirklich ersetzen? Sonarpad erstellt vor dem Ersetzen eine Sicherungskopie.",
+  "media_cutter.overwrite_unavailable": "Das Überschreiben ist nur für unterstützte Originaldateien ohne eingefügte Medien und ohne geöffnetes .sonarcut-Projekt verfügbar.",
+  "media_cutter.overwrite_reopen_required": "Die aktualisierte Datei konnte nicht erneut geladen werden. Öffnen Sie sie erneut, um fortzufahren.",
+  "media_cutter.clear_markers": "Markierungen löschen (Alt+0)",
+  "media_cutter.markers_cleared": "Markierungen gelöscht. Sie können einen neuen Anfang setzen.",
+  "media_cutter.markers_empty": "Es sind keine Markierungen zum Löschen vorhanden.",
   "media_cutter.goldwave_keys": "GoldWave-Tasten verwenden ([, ] und Entf)",
   "media_cutter.goldwave_enabled": "GoldWave-Tasten aktiviert",
   "media_cutter.goldwave_disabled": "GoldWave-Tasten deaktiviert",

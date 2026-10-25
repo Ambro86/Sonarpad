@@ -213,16 +213,59 @@ pub fn export_with_safe_replacement(
     cancel: std::sync::Arc<std::sync::atomic::AtomicBool>,
     progress: &mut dyn FnMut(u32),
 ) -> Result<Option<PathBuf>, String> {
-    let source_paths = std::iter::once(&plan.input)
-        .chain(plan.sources.iter().map(|span| &span.path))
-        .chain(plan.track.iter().map(|track| &track.path));
-    if source_paths
-        .into_iter()
-        .any(|source| crate::media_conversion::same_file(source, &plan.output))
+    export_with_replacement_policy(plan, cancel, progress, false)
+}
+
+/// Explicitly requested in-place editing: encode beside the original, validate,
+/// and preserve the entire previous file as a backup before replacing it.
+pub fn export_overwriting_original(
+    plan: &crate::media_cutter_export::ExportPlan,
+    cancel: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    progress: &mut dyn FnMut(u32),
+) -> Result<Option<PathBuf>, String> {
+    if !crate::media_conversion::same_file(&plan.input, &plan.output)
+        || !plan.sources.is_empty()
+        || !plan.input.is_file()
+    {
+        return Err("Original replacement requires the unmodified source timeline".into());
+    }
+    let extension = plan
+        .input
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if !crate::media_cutter_export::AUDIO_EXTENSIONS.contains(&extension.as_str())
+        && !crate::media_cutter_export::VIDEO_EXTENSIONS.contains(&extension.as_str())
+    {
+        return Err("The original format does not support safe in-place export".into());
+    }
+    export_with_replacement_policy(plan, cancel, progress, true)
+}
+
+fn export_with_replacement_policy(
+    plan: &crate::media_cutter_export::ExportPlan,
+    cancel: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    progress: &mut dyn FnMut(u32),
+    allow_original: bool,
+) -> Result<Option<PathBuf>, String> {
+    let is_original = crate::media_conversion::same_file(&plan.input, &plan.output);
+    if (is_original && !allow_original)
+        || plan
+            .sources
+            .iter()
+            .any(|span| crate::media_conversion::same_file(&span.path, &plan.output))
+        || plan
+            .track
+            .as_ref()
+            .is_some_and(|track| crate::media_conversion::same_file(&track.path, &plan.output))
     {
         return Err("Cannot overwrite source media during export".into());
     }
     if !plan.output.exists() {
+        if allow_original {
+            return Err("Original file is no longer available; replacement cancelled".into());
+        }
         crate::media_cutter_export::export(plan, cancel, progress)?;
         return Ok(None);
     }

@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Öppna Sonarpad-projekt…",
   "media_cutter.save_project": "Spara projekt…",
+  "media_cutter.overwrite_original": "Skriv över originalfilen (skapa säkerhetskopia)",
+  "media_cutter.overwrite_confirm": "Vill du ersätta originalfilen? Sonarpad skapar en säkerhetskopia innan filen ersätts.",
+  "media_cutter.overwrite_unavailable": "Överskrivning är endast tillgänglig för originalfiler i format som stöds, utan infogade medier eller öppet .sonarcut-projekt.",
+  "media_cutter.overwrite_reopen_required": "Den uppdaterade filen kunde inte öppnas igen. Öppna den på nytt för att fortsätta.",
+  "media_cutter.clear_markers": "Rensa markörer (Alt+0)",
+  "media_cutter.markers_cleared": "Markörerna har rensats. Du kan ange en ny start.",
+  "media_cutter.markers_empty": "Det finns inga markörer att rensa.",
   "media_cutter.goldwave_keys": "Använd GoldWave-tangenter ([, ] och Delete)",
   "media_cutter.goldwave_enabled": "GoldWave-tangenter aktiverade",
   "media_cutter.goldwave_disabled": "GoldWave-tangenter inaktiverade",

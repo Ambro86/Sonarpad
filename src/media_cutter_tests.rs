@@ -168,6 +168,90 @@ fn safe_reexport_preserves_backup_and_source() -> Result<(), String> {
     Ok(())
 }
 #[test]
+fn overwrite_original_preserves_backup_and_refreshes_media() -> Result<(), String> {
+    let (dir, input, _) = fixtures();
+    let original_bytes = std::fs::read(&input).map_err(|e| e.to_string())?;
+    let mut p = plan(&input, &input);
+    let cancelled = Arc::new(AtomicBool::new(true));
+    assert!(
+        crate::media_cutter_project::export_overwriting_original(&p, cancelled, &mut |_| {},)
+            .is_err()
+    );
+    assert_eq!(
+        std::fs::read(&input).map_err(|e| e.to_string())?,
+        original_bytes
+    );
+    let cancel = Arc::new(AtomicBool::new(false));
+    let backup =
+        crate::media_cutter_project::export_overwriting_original(&p, cancel.clone(), &mut |_| {})?
+            .ok_or("Missing backup for original replacement")?;
+    assert_eq!(
+        std::fs::read(&backup).map_err(|e| e.to_string())?,
+        original_bytes
+    );
+    assert_ne!(
+        std::fs::read(&input).map_err(|e| e.to_string())?,
+        original_bytes
+    );
+    tones(&input);
+    assert!(
+        crate::media_cutter_project::export_with_safe_replacement(&p, cancel.clone(), &mut |_| {},)
+            .is_err()
+    );
+    let saved = std::fs::read(&input).map_err(|e| e.to_string())?;
+    p.sources.push(crate::media_cutter_timeline::MediaSpan {
+        path: input.clone(),
+        start: 0.0,
+        end: 1.0,
+        source_start: 0.0,
+    });
+    assert!(
+        crate::media_cutter_project::export_overwriting_original(&p, cancel.clone(), &mut |_| {},)
+            .is_err()
+    );
+    p.sources.clear();
+    p.output = dir.join("separate.wav");
+    assert!(
+        crate::media_cutter_project::export_overwriting_original(&p, cancel, &mut |_| {},).is_err()
+    );
+    assert_eq!(std::fs::read(&input).map_err(|e| e.to_string())?, saved);
+    std::fs::remove_dir_all(dir).map_err(|e| e.to_string())?;
+    Ok(())
+}
+#[test]
+fn overwrite_original_mp3_and_mp4_preserves_previous_versions() -> Result<(), String> {
+    let (dir, audio, video) = fixtures();
+    let mp3 = dir.join("source.mp3");
+    crate::ffmpeg_export::convert_audio_file(
+        &audio,
+        &mp3,
+        &ConvertAudioSettings {
+            format: ConvertAudioFormat::Mp3,
+            quality: ConvertAudioQuality::BitrateKbps(192),
+        },
+        None,
+        None,
+    )?;
+    for input in [&mp3, &video] {
+        let before = std::fs::read(input).map_err(|e| e.to_string())?;
+        let backup = crate::media_cutter_project::export_overwriting_original(
+            &plan(input, input),
+            Arc::new(AtomicBool::new(false)),
+            &mut |_| {},
+        )?
+        .ok_or("Missing backup")?;
+        assert_eq!(std::fs::read(backup).map_err(|e| e.to_string())?, before);
+        assert_ne!(std::fs::read(input).map_err(|e| e.to_string())?, before);
+        tones(input);
+        if input == &video {
+            assert!(crate::ffmpeg_source::has_real_video_stream(input)?);
+            assert!(!super::video::test_frames(input)?.is_empty());
+        }
+    }
+    std::fs::remove_dir_all(dir).map_err(|e| e.to_string())?;
+    Ok(())
+}
+#[test]
 fn native_cutter_real_exports_and_playback() -> Result<(), String> {
     let (dir, audio, av) = fixtures();
     for (input, ext) in [(&audio, "m4a"), (&av, "mp4")] {

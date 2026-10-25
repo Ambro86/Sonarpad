@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Открыть проект Sonarpad…",
   "media_cutter.save_project": "Сохранить проект…",
+  "media_cutter.overwrite_original": "Перезаписать исходный файл (создать резервную копию)",
+  "media_cutter.overwrite_confirm": "Заменить исходный файл? Sonarpad сначала создаст резервную копию.",
+  "media_cutter.overwrite_unavailable": "Перезапись доступна только для поддерживаемого исходного файла без вставленных медиа и открытого проекта .sonarcut.",
+  "media_cutter.overwrite_reopen_required": "Не удалось повторно открыть обновлённый файл. Откройте его снова, чтобы продолжить.",
+  "media_cutter.clear_markers": "Сбросить маркеры (Alt+0)",
+  "media_cutter.markers_cleared": "Маркеры сброшены. Можно задать новое начало.",
+  "media_cutter.markers_empty": "Нет маркеров для сброса.",
   "media_cutter.goldwave_keys": "Клавиши как в GoldWave ([, ] и Delete)",
   "media_cutter.goldwave_enabled": "Клавиши GoldWave включены",
   "media_cutter.goldwave_disabled": "Клавиши GoldWave выключены",

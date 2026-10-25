@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "打开 Sonarpad 项目…",
   "media_cutter.save_project": "保存项目…",
+  "media_cutter.overwrite_original": "覆盖原始文件（创建备份）",
+  "media_cutter.overwrite_confirm": "确定要替换原始文件吗？Sonarpad 会先创建备份，再执行替换。",
+  "media_cutter.overwrite_unavailable": "仅当原始文件格式受支持、未插入其他媒体且未打开 .sonarcut 项目时，才能覆盖原始文件。",
+  "media_cutter.overwrite_reopen_required": "无法重新打开修改后的文件。请再次打开以继续编辑。",
+  "media_cutter.clear_markers": "清除标记点（Alt+0）",
+  "media_cutter.markers_cleared": "标记点已清除。现在可以重新设置起点。",
+  "media_cutter.markers_empty": "没有需要清除的标记点。",
   "media_cutter.goldwave_keys": "使用 GoldWave 风格快捷键（[、] 和 Delete）",
   "media_cutter.goldwave_enabled": "已启用 GoldWave 快捷键",
   "media_cutter.goldwave_disabled": "已关闭 GoldWave 快捷键",

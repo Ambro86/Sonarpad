@@ -5,6 +5,8 @@ Version 0.9.20 – 2026-10-25
 1. Météo : amélioration des indications géographiques dans les résultats de recherche et les villes récentes. Le comté ou district, la région et le pays s’affichent lorsqu’ils sont disponibles afin de distinguer les lieux portant le même nom. Les informations répétées sont supprimées et les villes déjà enregistrées restent compatibles.
 2. Guides mises à jour avec des instructions détaillées pour Découper un fichier multimédia et SonarMusic : raccourcis clavier, navigation avec lecteur d’écran, découpe avancée, recherche et favoris.
 3. Découpe multimédia : raccourcis facultatifs comme dans GoldWave avec crochets et Suppr, projets .sonarcut pour reprendre le montage sans recompresser l'audio et sauvegarde avant remplacement des fichiers exportés.
+4. Découpage multimédia : possibilité d’écraser le fichier original après confirmation, avec export temporaire sécurisé, sauvegarde automatique et actualisation de la chronologie.
+5. Découpage multimédia : ajout d’Effacer les marqueurs (Alt+0) pour recommencer une sélection erronée sans déplacer la lecture ni annuler les coupes précédentes.
 
 Version 0.9.19 – 2026-10-24
 

@@ -5,6 +5,8 @@ Version 0.9.20 – 2026-10-25
 1. Meteorologia: melhoradas as indicações de localização nos resultados de pesquisa e nas cidades recentes. Quando disponíveis, são apresentados também o distrito ou concelho, a região e o país para distinguir localidades com o mesmo nome. Evitam-se nomes repetidos e mantém-se a compatibilidade com as cidades já guardadas.
 2. Guias atualizados com instruções detalhadas para Cortar ficheiro multimédia e SonarMusic, incluindo atalhos de teclado, navegação com leitores de ecrã, edição avançada, pesquisa e favoritos.
 3. Cortar ficheiros multimédia: atalhos opcionais ao estilo GoldWave com parênteses retos e Delete, projetos .sonarcut para continuar sem recompressão e cópias de segurança antes de substituir ficheiros exportados.
+4. Cortar multimédia: nova opção para substituir o ficheiro original após confirmação, com exportação temporária segura, cópia de segurança automática e atualização da linha temporal.
+5. Cortar multimédia: adicionada a opção Limpar marcadores (Alt+0) para refazer uma seleção incorreta sem alterar a posição de reprodução ou os cortes anteriores.
 
 Version 0.9.19 – 2026-10-24
 

@@ -1,6 +1,13 @@
 {
   "media_cutter.open_project": "Atverti Sonarpad projektą…",
   "media_cutter.save_project": "Išsaugoti projektą…",
+  "media_cutter.overwrite_original": "Perrašyti pradinį failą (sukurti atsarginę kopiją)",
+  "media_cutter.overwrite_confirm": "Ar pakeisti pradinį failą? Prieš jį pakeisdama „Sonarpad“ sukurs atsarginę kopiją.",
+  "media_cutter.overwrite_unavailable": "Perrašyti galima tik palaikomo formato pradinį failą, kai nėra įterptos medijos ir atidaryto .sonarcut projekto.",
+  "media_cutter.overwrite_reopen_required": "Nepavyko iš naujo atverti atnaujinto failo. Atverkite jį dar kartą.",
+  "media_cutter.clear_markers": "Išvalyti žymeklius (Alt+0)",
+  "media_cutter.markers_cleared": "Žymekliai išvalyti. Galite pažymėti naują pradžią.",
+  "media_cutter.markers_empty": "Nėra žymeklių, kuriuos būtų galima išvalyti.",
   "media_cutter.goldwave_keys": "Naudoti GoldWave klavišus ([, ] ir Delete)",
   "media_cutter.goldwave_enabled": "GoldWave klavišai įjungti",
   "media_cutter.goldwave_disabled": "GoldWave klavišai išjungti",
