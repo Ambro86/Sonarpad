@@ -853,6 +853,9 @@ fn normalize_recent_cities(cities: &mut Vec<WeatherCity>) {
     for mut city in cities.drain(..) {
         city.name = city.name.trim().to_string();
         city.admin1 = city.admin1.trim().to_string();
+        city.admin2 = city.admin2.trim().to_string();
+        city.admin3 = city.admin3.trim().to_string();
+        city.admin4 = city.admin4.trim().to_string();
         city.country = city.country.trim().to_string();
         if city.name.is_empty() || normalized.iter().any(|existing| same_city(existing, &city)) {
             continue;
@@ -1020,11 +1023,25 @@ fn city_display_label(city: &WeatherCity) -> String {
 }
 
 fn city_location(city: &WeatherCity) -> String {
-    [city.admin1.trim(), city.country.trim()]
+    // Same county/district fallback and duplicate suppression as Mobile.
+    let district = [&city.admin2, &city.admin3, &city.admin4]
         .into_iter()
-        .filter(|part| !part.is_empty())
-        .collect::<Vec<_>>()
-        .join(", ")
+        .map(|value| value.trim())
+        .find(|value| !value.is_empty())
+        .unwrap_or_default();
+    let mut parts: Vec<&str> = Vec::new();
+    let name = city.name.trim().to_lowercase();
+    for part in [district, city.admin1.trim(), city.country.trim()] {
+        if !part.is_empty()
+            && part.to_lowercase() != name
+            && !parts
+                .iter()
+                .any(|existing| existing.to_lowercase() == part.to_lowercase())
+        {
+            parts.push(part);
+        }
+    }
+    parts.join(", ")
 }
 
 fn selected_index(combo: HWND) -> Option<usize> {
@@ -1283,5 +1300,73 @@ fn tr(language: Language, key: &str) -> String {
         }
     } else {
         value
+    }
+}
+
+#[cfg(test)]
+mod weather_location_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn weather_abbotsbury_counties_distinguish_all_three_results() {
+        for (region, district, country, expected) in [
+            (
+                "England",
+                "Dorset",
+                "United Kingdom",
+                "Abbotsbury - Dorset, England, United Kingdom",
+            ),
+            (
+                "England",
+                "Devon",
+                "United Kingdom",
+                "Abbotsbury - Devon, England, United Kingdom",
+            ),
+            (
+                "New South Wales",
+                "Fairfield",
+                "Australia",
+                "Abbotsbury - Fairfield, New South Wales, Australia",
+            ),
+        ] {
+            let city: WeatherCity = serde_json::from_value(json!({
+                "name": "Abbotsbury", "admin1": region, "admin2": district, "country": country,
+            }))
+            .unwrap();
+            assert_eq!(city_display_label(&city), expected);
+            let saved = serde_json::to_string(&city).unwrap();
+            let restored: WeatherCity = serde_json::from_str(&saved).unwrap();
+            assert_eq!(city_display_label(&restored), expected);
+        }
+    }
+
+    #[test]
+    fn weather_old_saved_cities_remain_readable() {
+        let city: WeatherCity = serde_json::from_value(json!({
+            "name": "Abbotsbury", "admin1": "England", "country": "United Kingdom",
+            "latitude": 50.66667, "longitude": -2.6,
+        }))
+        .unwrap();
+        assert_eq!(
+            city_display_label(&city),
+            "Abbotsbury - England, United Kingdom"
+        );
+        assert_eq!(city.latitude, 50.66667);
+        assert_eq!(city.longitude, -2.6);
+    }
+
+    #[test]
+    fn weather_district_fallback_skips_blanks_and_repeated_labels() {
+        let mut city: WeatherCity = serde_json::from_value(json!({
+            "name": "Example", "admin1": " Region ", "admin2": "  ",
+            "admin3": " County ", "admin4": "Township", "country": "region",
+        }))
+        .unwrap();
+        assert_eq!(city_location(&city), "County, Region");
+        city.admin3.clear();
+        assert_eq!(city_location(&city), "Township, Region");
+        city.admin4 = "EXAMPLE".to_string();
+        assert_eq!(city_location(&city), "Region");
     }
 }

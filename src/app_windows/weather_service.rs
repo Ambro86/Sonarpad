@@ -101,6 +101,24 @@ impl WeatherClient {
                         .unwrap_or_default()
                         .trim()
                         .to_string(),
+                    admin2: item
+                        .get("admin2")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string(),
+                    admin3: item
+                        .get("admin3")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string(),
+                    admin4: item
+                        .get("admin4")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string(),
                     country: item
                         .get("country")
                         .and_then(Value::as_str)

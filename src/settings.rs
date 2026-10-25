@@ -658,6 +658,12 @@ pub struct WeatherCity {
     #[serde(default)]
     pub admin1: String,
     #[serde(default)]
+    pub admin2: String,
+    #[serde(default)]
+    pub admin3: String,
+    #[serde(default)]
+    pub admin4: String,
+    #[serde(default)]
     pub country: String,
     #[serde(default)]
     pub latitude: f64,
