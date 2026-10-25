@@ -1,4 +1,5 @@
 {
+  "stream_audio.playlist_label": "播放列表",
   "media_cutter.open_project": "打开 Sonarpad 项目…",
   "media_cutter.save_project": "保存项目…",
   "media_cutter.overwrite_original": "覆盖原始文件（创建备份）",

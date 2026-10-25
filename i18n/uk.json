@@ -1,4 +1,5 @@
 {
+  "stream_audio.playlist_label": "Список відтворення",
   "media_cutter.open_project": "Відкрити проєкт Sonarpad…",
   "media_cutter.save_project": "Зберегти проєкт…",
   "media_cutter.overwrite_original": "Перезаписати вихідний файл (створити резервну копію)",

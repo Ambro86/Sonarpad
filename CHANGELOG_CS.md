@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Střih médií: přidána možnost po potvrzení přepsat původní soubor s bezpečným dočasným exportem a automatickou zálohou; po uložení se aktualizuje časová osa.
 5. Střih médií: přidáno Vymazat značky (Alt+0) pro nové označení chybného výběru bez změny pozice přehrávání či předchozích střihů.
 6. Střih médií: nastavení kláves GoldWave a přepisování originálu se nyní uchovává i po restartu; potvrzení a zálohy zůstávají.
+7. YouTube a SonarMusic: přehlednější popisky výsledků rozlišují kanály, seznamy skladeb, alba a interprety. Počty zhlédnutí se opět zobrazují, jsou-li dostupné, a délka je vyjádřena v hodinách, minutách a sekundách bez opakování metadat.
+8. Přehrát streamované audio: opraven počet odběratelů kanálů v nových výsledcích YouTube a odlišen od uživatelského označení. Ověřeny také dostupné údaje o odběratelích interpretů v SonarMusic.
+9. Uložit média: obnoveno stahování WEBM přes yt-dlp v nejlepší dostupné kvalitě. Oddělené zvukové a obrazové stopy se spojují bez překódování pomocí přiložených knihoven FFmpeg, bez externího ffmpeg.exe.
 
 Version 0.9.19 – 2026-10-24
 

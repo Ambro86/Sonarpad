@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Cut media file: added an option to overwrite the original after confirmation, exporting safely to a temporary file and automatically backing up the previous version; the timeline updates after saving.
 5. Cut media file: added Clear markers (Alt+0) to restart an accidental selection without moving the listening position or undoing applied cuts, in both guided and advanced modes.
 6. Cut media file: GoldWave-style keys and Overwrite original file preferences are now remembered across restarts, while overwrite confirmation and backups remain in place.
+7. YouTube and SonarMusic: clearer result labels identify channels, playlists, albums and artists. View counts are shown again when available, and durations are expressed in hours, minutes and seconds, without repeated metadata.
+8. Play streaming audio: corrected channel subscriber counts in newer YouTube results by distinguishing them from handles. Also verified subscriber information for SonarMusic artists when available.
+9. Save media: restored WEBM downloads through yt-dlp at the best available quality. Separate audio and video tracks are joined without re-encoding using the included FFmpeg libraries, without an external ffmpeg.exe.
 
 Version 0.9.19 – 2026-10-24
 

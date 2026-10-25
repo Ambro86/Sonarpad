@@ -1,4 +1,5 @@
 {
+  "stream_audio.playlist_label": "Листа за репродукцију",
   "media_cutter.open_project": "Отвори Sonarpad пројекат…",
   "media_cutter.save_project": "Сачувај пројекат…",
   "media_cutter.overwrite_original": "Препиши оригиналну датотеку (направи резервну копију)",

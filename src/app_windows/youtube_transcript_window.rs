@@ -2974,9 +2974,10 @@ fn youtube_context_menu_label(language: Language, key: &str) -> String {
         .to_string()
 }
 
-fn youtube_save_media_formats() -> [StreamOutputFormat; 7] {
+fn youtube_save_media_formats() -> [StreamOutputFormat; 8] {
     [
         StreamOutputFormat::Mp4,
+        StreamOutputFormat::Webm,
         StreamOutputFormat::Mp3,
         StreamOutputFormat::M4a,
         StreamOutputFormat::Opus,
@@ -7123,6 +7124,7 @@ pub(crate) fn can_create_audio_description_from_active_stream(active_url: &str) 
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum StreamOutputFormat {
+    Webm,
     Auto,
     Mp3,
     M4a,
@@ -7289,7 +7291,7 @@ impl StreamOutputFormat {
                 format: F::Wav,
                 quality: Q::None,
             }),
-            StreamOutputFormat::Auto | StreamOutputFormat::Mp4 => None,
+            StreamOutputFormat::Auto | StreamOutputFormat::Mp4 | StreamOutputFormat::Webm => None,
         }
     }
 
@@ -7302,6 +7304,7 @@ impl StreamOutputFormat {
             StreamOutputFormat::Wav => Some("wav"),
             StreamOutputFormat::Flac => Some("flac"),
             StreamOutputFormat::Mp4 => Some("mp4"),
+            StreamOutputFormat::Webm => Some("webm"),
             StreamOutputFormat::Auto => None,
         }
     }
@@ -7309,6 +7312,7 @@ impl StreamOutputFormat {
     fn from_settings_value(value: &str) -> Self {
         match value.trim().to_ascii_lowercase().as_str() {
             "mp4" => StreamOutputFormat::Mp4,
+            "webm" => StreamOutputFormat::Webm,
             "mp3" => StreamOutputFormat::Mp3,
             "m4a" => StreamOutputFormat::M4a,
             "opus" => StreamOutputFormat::Opus,
@@ -7323,6 +7327,7 @@ impl StreamOutputFormat {
         match self {
             StreamOutputFormat::Auto => "auto",
             StreamOutputFormat::Mp4 => "mp4",
+            StreamOutputFormat::Webm => "webm",
             StreamOutputFormat::Mp3 => "mp3",
             StreamOutputFormat::M4a => "m4a",
             StreamOutputFormat::Opus => "opus",
@@ -7387,7 +7392,7 @@ fn normalized_stream_save_format(
     format: StreamOutputFormat,
     prefer_video: bool,
 ) -> StreamOutputFormat {
-    if !prefer_video && format == StreamOutputFormat::Mp4 {
+    if !prefer_video && matches!(format, StreamOutputFormat::Mp4 | StreamOutputFormat::Webm) {
         return StreamOutputFormat::Mp3;
     }
     if youtube_save_media_formats().contains(&format) {
@@ -9640,7 +9645,9 @@ fn remux_stream_media_responsive(
     input: &Path,
     output: &Path,
     language: Language,
+    external_audio: Option<&Path>,
 ) -> Result<(), String> {
+    let external_audio = external_audio.map(Path::to_path_buf);
     let input = input.to_path_buf();
     let output = output.to_path_buf();
     let worker_output = output.clone();
@@ -9656,13 +9663,23 @@ fn remux_stream_media_responsive(
             let mut progress_cb = |pct: u32| {
                 worker_progress_for_thread.store((pct / 100).min(100), Ordering::Relaxed);
             };
-            crate::ffmpeg_export::remux_media_file_to_mp4_with_preferred_audio_stream(
-                &input,
-                &worker_output,
-                None,
-                Some(worker_cancel),
-                Some(&mut progress_cb),
-            )
+            if let Some(audio) = external_audio {
+                crate::ffmpeg_export::remux_media_file_to_mp4_with_external_audio_stream(
+                    &input,
+                    &audio,
+                    &worker_output,
+                    Some(worker_cancel),
+                    Some(&mut progress_cb),
+                )
+            } else {
+                crate::ffmpeg_export::remux_media_file_to_mp4_with_preferred_audio_stream(
+                    &input,
+                    &worker_output,
+                    None,
+                    Some(worker_cancel),
+                    Some(&mut progress_cb),
+                )
+            }
         })
         .map_err(|err| {
             let error_text = err.to_string();
@@ -9954,7 +9971,10 @@ fn configure_ytdlp_stream_download_command(
     prefer_video: bool,
     credentials: Option<&YtdlpAuthCredentials>,
 ) {
-    configure_ytdlp_standard_youtube_client(cmd, url);
+    // The Android playback profile may omit high-resolution WEBM downloads.
+    if dialog_data.format != StreamOutputFormat::Webm {
+        configure_ytdlp_standard_youtube_client(cmd, url);
+    }
     cmd.arg("--no-playlist")
         .arg("--socket-timeout")
         .arg(YTDLP_SOCKET_TIMEOUT_SECS)
@@ -9974,7 +9994,14 @@ fn configure_ytdlp_stream_download_command(
             .arg(&credentials.password);
     }
 
-    if let Some(format_id) = selected_audio_format {
+    if dialog_data.format == StreamOutputFormat::Webm {
+        // Comma downloads individual streams; Sonarpad's existing DLL muxer
+        // joins them without launching ffmpeg.exe or re-encoding either track.
+        let selector = selected_audio_format
+            .map(|id| format!("bestvideo[ext=webm],{id}[ext=webm]"))
+            .unwrap_or_else(|| "(bestvideo[ext=webm],bestaudio[ext=webm])/best[ext=webm]".into());
+        cmd.arg("--fixup").arg("never").arg("-f").arg(selector);
+    } else if let Some(format_id) = selected_audio_format {
         match (dialog_data.format, prefer_video) {
             (StreamOutputFormat::Mp4, _) => {
                 cmd.arg("--merge-output-format").arg("mp4");
@@ -10038,6 +10065,11 @@ fn configure_ytdlp_stream_download_command(
         }
     }
 
+    let output_template = if dialog_data.format == StreamOutputFormat::Webm {
+        output_template.with_extension("f%(format_id)s.%(ext)s")
+    } else {
+        output_template.to_path_buf()
+    };
     cmd.arg("-o")
         .arg(output_template.to_string_lossy().to_string())
         .arg("--")
@@ -10150,6 +10182,7 @@ fn run_ytdlp_stream_download_attempt(
                 StreamOutputFormat::Wav => "wav".to_string(),
                 StreamOutputFormat::Flac => "flac".to_string(),
                 StreamOutputFormat::Mp4 => "mp4".to_string(),
+                StreamOutputFormat::Webm => "webm".to_string(),
             },
             |f| f.to_string(),
         );
@@ -10210,7 +10243,7 @@ fn run_ytdlp_stream_download_attempt(
 
     let allow_early_finalize = !matches!(
         req.dialog_data.format,
-        StreamOutputFormat::Auto | StreamOutputFormat::Mp4
+        StreamOutputFormat::Auto | StreamOutputFormat::Mp4 | StreamOutputFormat::Webm
     );
     let mut last_pct = 0u32;
     let mut ui_pct = 0u32;
@@ -10315,7 +10348,38 @@ fn run_ytdlp_stream_download_attempt(
         .map(|s| s.clone())
         .unwrap_or_else(|_| String::new());
 
-    let primary_path = find_latest_downloaded_stream_file(req.cache_dir, req.prefix);
+    let primary_path = if req.dialog_data.format == StreamOutputFormat::Webm {
+        if status.is_some_and(|s| s.success()) && !stalled {
+            let (video, audio) = webm_download_tracks(req.cache_dir, req.prefix)?;
+            let output = req.cache_dir.join(format!("{}.webm", req.prefix));
+            if video == audio {
+                std::fs::rename(&video, &output).map_err(|e| e.to_string())?;
+            } else {
+                report_progress_status(
+                    req.progress,
+                    &i18n::tr(req.language, "stream_audio.progress_converting"),
+                );
+                if let Err(error) = remux_stream_media_responsive(
+                    req.parent,
+                    req.progress,
+                    &video,
+                    &output,
+                    req.language,
+                    Some(&audio),
+                ) {
+                    crate::log_if_err!(std::fs::remove_file(&output));
+                    return Err(error);
+                }
+                crate::log_if_err!(std::fs::remove_file(video));
+                crate::log_if_err!(std::fs::remove_file(audio));
+            }
+            Some(output)
+        } else {
+            None
+        }
+    } else {
+        find_latest_downloaded_stream_file(req.cache_dir, req.prefix)
+    };
     let file_bytes = primary_path
         .as_ref()
         .and_then(|path| std::fs::metadata(path).ok())
@@ -10465,12 +10529,23 @@ fn plain_label(text: &str) -> String {
 }
 
 fn format_stream_entry_view_count(entry: &serde_json::Value, language: Language) -> Option<String> {
-    let count = entry.get("view_count")?.as_u64()?;
-    let formatted = format_stream_count(count);
+    let value = entry.get("view_count")?;
+    if let Some(raw) = value.as_str().map(str::trim).filter(|s| !s.is_empty()) {
+        // Native/PHP counts are already localized, often abbreviated (e.g. 1,2 M).
+        if let Ok(count) = raw.parse::<u64>() {
+            return Some(format!(
+                "{} {}",
+                i18n::tr(language, "stream_audio.views_label"),
+                format_stream_count(count)
+            ));
+        }
+        return Some(raw.to_owned());
+    }
+    let count = value.as_u64()?;
     Some(format!(
         "{} {}",
         i18n::tr(language, "stream_audio.views_label"),
-        formatted
+        format_stream_count(count)
     ))
 }
 
@@ -10490,6 +10565,21 @@ fn format_stream_entry_subscriber_count(
     entry: &serde_json::Value,
     language: Language,
 ) -> Option<String> {
+    if let Some(raw) = entry
+        .get("subscriber_count")
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+    {
+        if raw.parse::<u64>().is_err() {
+            return Some(raw.to_owned());
+        }
+        return Some(format!(
+            "{} {}",
+            i18n::tr(language, "stream_audio.subscribers_label"),
+            format_stream_count(raw.parse().ok()?)
+        ));
+    }
     let count = entry
         .get("channel_follower_count")
         .and_then(|value| {
@@ -10522,28 +10612,21 @@ fn format_stream_entry_channel(entry: &serde_json::Value) -> Option<String> {
         .map(plain_label)
 }
 
-fn format_stream_entry_duration(entry: &serde_json::Value) -> Option<String> {
+fn format_stream_entry_duration(entry: &serde_json::Value, language: Language) -> Option<String> {
     if let Some(text) = entry
         .get("duration_string")
         .and_then(|value| value.as_str())
         .map(str::trim)
         .filter(|value| !value.is_empty())
     {
-        return Some(text.to_string());
+        return Some(crate::result_labels::media_duration(text, language));
     }
     let seconds = entry.get("duration").and_then(|value| {
         value
             .as_u64()
             .or_else(|| value.as_f64().map(|v| v.round() as u64))
     })?;
-    let hours = seconds / 3600;
-    let minutes = (seconds % 3600) / 60;
-    let secs = seconds % 60;
-    if hours > 0 {
-        Some(format!("{hours}:{minutes:02}:{secs:02}"))
-    } else {
-        Some(format!("{minutes}:{secs:02}"))
-    }
+    Some(crate::result_labels::spoken_time(seconds as f64, language))
 }
 fn format_stream_entry_label(entry: &serde_json::Value, language: Language) -> String {
     let title = entry
@@ -10553,24 +10636,30 @@ fn format_stream_entry_label(entry: &serde_json::Value, language: Language) -> S
         .filter(|value| !value.is_empty())
         .unwrap_or("Untitled");
     let mut parts = vec![plain_label(title)];
-    if let Some(duration) = format_stream_entry_duration(entry) {
+    let url = stream_entry_url(entry).unwrap_or_default();
+    let is_channel = entry["kind"] == "channel" || is_youtube_channel_url(&url);
+    let is_playlist =
+        entry["kind"] == "playlist" || (!is_channel && is_youtube_collection_url(&url));
+    if is_channel {
+        parts.push(i18n::tr(language, "stream_audio.channel_label"));
+    } else if is_playlist {
+        parts.push(i18n::tr(language, "stream_audio.playlist_label"));
+    }
+    if let Some(duration) = format_stream_entry_duration(entry, language) {
         parts.push(format!(
             "{} {}",
             i18n::tr(language, "stream_audio.duration_label"),
             duration
         ));
     }
-    if let Some(channel) = format_stream_entry_channel(entry) {
+    if !is_channel && let Some(channel) = format_stream_entry_channel(entry) {
         parts.push(format!(
             "{} {}",
             i18n::tr(language, "stream_audio.channel_label"),
             channel
         ));
     }
-    if stream_entry_url(entry)
-        .as_deref()
-        .map(is_youtube_channel_url)
-        .unwrap_or(false)
+    if is_channel
         && let Some(subscriber_count) = format_stream_entry_subscriber_count(entry, language)
     {
         parts.push(subscriber_count);
@@ -11323,7 +11412,7 @@ fn finalize_playlist_downloaded_file(
     let base_name = playlist_download_file_base_name(entry, position_width, language);
 
     let target = match options.format {
-        StreamOutputFormat::Auto => {
+        StreamOutputFormat::Auto | StreamOutputFormat::Webm => {
             let target = unique_stream_named_path(target_dir, &base_name, downloaded_ext);
             if let Err(err) = std::fs::copy(downloaded_path, &target) {
                 crate::log_if_err!(std::fs::remove_file(&target));
@@ -11349,6 +11438,7 @@ fn finalize_playlist_downloaded_file(
                     downloaded_path,
                     &target,
                     language,
+                    None,
                 ) {
                     crate::log_if_err!(std::fs::remove_file(&target));
                     return Err(err);
@@ -11518,7 +11608,10 @@ fn download_playlist_entry_with_retries(
             output_template,
             dialog_data,
             selected_audio_format: None,
-            prefer_video: matches!(dialog_data.format, StreamOutputFormat::Mp4),
+            prefer_video: matches!(
+                dialog_data.format,
+                StreamOutputFormat::Mp4 | StreamOutputFormat::Webm
+            ),
             ytdlp_debug: ytdlp_debug_enabled(),
             credentials,
         });
@@ -15058,5 +15151,204 @@ mod stream_search_return_tests {
         let mut s = selection(None);
         s.remember_search_page("query", 0, "First video".into());
         assert_eq!(s.collection_page, Some(0));
+    }
+}
+
+#[cfg(test)]
+mod media_result_tests {
+    use super::*;
+    use serde_json::json;
+    #[test]
+    fn native_video_keeps_text_views_and_expands_duration() {
+        let label = format_stream_entry_label(
+            &json!({"title":"Example", "kind":"video", "url":"https://www.youtube.com/watch?v=4K6cvc27_CE", "duration_string":"1:02:03", "view_count":"1,2 M di visualizzazioni"}),
+            Language::Italian,
+        );
+        assert!(label.contains("1 ora, 2 minuti e 3 secondi"));
+        assert!(label.contains("1,2 M di visualizzazioni"));
+    }
+    #[test]
+    fn ytdlp_numeric_metadata_is_preserved() {
+        let label = format_stream_entry_label(
+            &json!({"title":"Example", "duration":65, "view_count":12345}),
+            Language::Italian,
+        );
+        assert!(label.contains("1 minuto e 5 secondi"));
+        assert!(label.contains("12.345"));
+        assert_eq!(
+            format_stream_entry_view_count(&json!({"view_count":"0"}), Language::English).unwrap(),
+            "Views 0"
+        );
+    }
+    #[test]
+    fn collections_have_explicit_types_even_without_author_metadata() {
+        let channel = format_stream_entry_label(
+            &json!({"title":"Example", "url":"https://www.youtube.com/channel/UCabc", "subscriber_count":"10 mila iscritti"}),
+            Language::Italian,
+        );
+        assert!(channel.contains("Canale"));
+        assert!(channel.contains("10 mila iscritti"));
+        let playlist = format_stream_entry_label(
+            &json!({"title":"Mix", "kind":"playlist", "url":"https://www.youtube.com/watch?v=4K6cvc27_CE&list=RD4K6cvc27_CE"}),
+            Language::Italian,
+        );
+        assert!(playlist.contains("Playlist"));
+        let old_playlist = format_stream_entry_label(
+            &json!({"title":"Mix", "url":"https://www.youtube.com/playlist?list=PLabc"}),
+            Language::English,
+        );
+        assert!(old_playlist.contains("Playlist"));
+    }
+}
+
+/// Inspect only completed WEBM downloads, never .part fragments or other jobs.
+fn webm_download_tracks(directory: &Path, prefix: &str) -> Result<(PathBuf, PathBuf), String> {
+    let mut video = None;
+    let mut audio = None;
+    for entry in std::fs::read_dir(directory).map_err(|e| e.to_string())? {
+        let path = entry.map_err(|e| e.to_string())?.path();
+        if !path.is_file()
+            || path.extension().and_then(|e| e.to_str()) != Some("webm")
+            || !path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.starts_with(&format!("{prefix}.f")))
+        {
+            continue;
+        }
+        if crate::ffmpeg_source::has_real_video_stream(&path)? {
+            video = Some(path.clone());
+        }
+        if !crate::ffmpeg_source::list_audio_streams(&path)?.is_empty() {
+            audio = Some(path);
+        }
+    }
+    video
+        .zip(audio)
+        .ok_or_else(|| "WEBM download is missing a complete video or audio track".into())
+}
+
+#[cfg(test)]
+mod webm_download_tests {
+    use super::*;
+    fn options() -> StreamDialogResult {
+        StreamDialogResult {
+            url: String::new(),
+            format: StreamOutputFormat::Webm,
+            quality: StreamQualitySelection::Original,
+            direct_play: false,
+            reopen_collection_page: None,
+            reopen_selected_label: None,
+            previous_input: None,
+            previous_collection_page: None,
+            previous_selected_label: None,
+        }
+    }
+    #[test]
+    fn webm_is_offered_persisted_and_not_audio_converted() {
+        assert!(youtube_save_media_formats().contains(&StreamOutputFormat::Webm));
+        assert_eq!(
+            StreamOutputFormat::from_settings_value("webm"),
+            StreamOutputFormat::Webm
+        );
+        assert_eq!(StreamOutputFormat::Webm.settings_value(), "webm");
+        assert_eq!(stream_save_target_ext(StreamOutputFormat::Webm), "webm");
+        assert!(
+            StreamOutputFormat::Webm
+                .as_audio_convert_settings(StreamQualitySelection::Original)
+                .is_none()
+        );
+        assert_eq!(
+            normalized_stream_save_format(StreamOutputFormat::Webm, true),
+            StreamOutputFormat::Webm
+        );
+    }
+    #[test]
+    fn webm_download_keeps_full_resolution_and_avoids_external_merging() {
+        let mut cmd = Command::new("yt-dlp.exe");
+        configure_ytdlp_stream_download_command(
+            &mut cmd,
+            "https://www.youtube.com/watch?v=svx3cRL0TiQ",
+            Path::new("test.%(ext)s"),
+            &options(),
+            None,
+            true,
+            None,
+        );
+        let args: Vec<_> = cmd
+            .get_args()
+            .map(|s| s.to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            args.iter()
+                .any(|s| s == "(bestvideo[ext=webm],bestaudio[ext=webm])/best[ext=webm]")
+        );
+        assert!(args.iter().any(|s| s == "test.f%(format_id)s.%(ext)s"));
+        assert!(!args.iter().any(|s| s.contains("height<=")
+            || s == "--merge-output-format"
+            || s == YOUTUBE_STANDARD_PLAYER_EXTRACTOR_ARGS));
+    }
+    #[test]
+    fn selected_audio_is_not_silently_replaced_and_parts_are_not_complete() {
+        let mut cmd = Command::new("yt-dlp.exe");
+        configure_ytdlp_stream_download_command(
+            &mut cmd,
+            "https://www.youtube.com/watch?v=svx3cRL0TiQ",
+            Path::new("test.%(ext)s"),
+            &options(),
+            Some("251-1"),
+            true,
+            None,
+        );
+        assert!(
+            cmd.get_args()
+                .any(|s| s == "bestvideo[ext=webm],251-1[ext=webm]")
+        );
+        let dir = std::env::temp_dir().join(format!("webm-incomplete-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir(&dir).unwrap();
+        std::fs::write(dir.join("test.f248.webm.part"), b"partial").unwrap();
+        std::fs::write(dir.join("other.f248.webm"), b"other job").unwrap();
+        assert!(webm_download_tracks(&dir, "test").is_err());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+    #[test]
+    #[ignore = "Downloads the user-provided video and uses the installed Sonarpad FFmpeg DLLs"]
+    fn real_webm_download_and_library_mux() {
+        let dir =
+            PathBuf::from(std::env::var("SONARPAD_WEBM_TEST_DIR").expect("test output directory"));
+        std::fs::create_dir_all(&dir).unwrap();
+        let ytdlp = PathBuf::from(std::env::var("SONARPAD_WEBM_TEST_YTDLP").unwrap());
+        let url = std::env::var("SONARPAD_WEBM_TEST_URL").unwrap();
+        let mut cmd = ytdlp_command(&ytdlp);
+        configure_ytdlp_stream_download_command(
+            &mut cmd,
+            &url,
+            &dir.join("test.%(ext)s"),
+            &options(),
+            None,
+            true,
+            None,
+        );
+        let output = cmd.output().unwrap();
+        std::fs::write(dir.join("download.log"), &output.stderr).unwrap();
+        assert!(
+            output.status.success(),
+            "yt-dlp failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let (video, audio) = webm_download_tracks(&dir, "test").unwrap();
+        let target = dir.join("result.webm");
+        crate::ffmpeg_export::remux_media_file_to_mp4_with_external_audio_stream(
+            &video, &audio, &target, None, None,
+        )
+        .unwrap();
+        assert!(crate::ffmpeg_source::has_real_video_stream(&target).unwrap());
+        assert_eq!(
+            crate::ffmpeg_source::list_audio_streams(&target)
+                .unwrap()
+                .len(),
+            1
+        );
+        println!("WEBM saved without re-encoding: {}", target.display());
     }
 }

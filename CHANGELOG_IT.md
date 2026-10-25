@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Taglia file media: aggiunta la casella per sovrascrivere il file originale con conferma, esportazione sicura su file temporaneo e copia di sicurezza automatica; la sequenza di tagli si aggiorna dopo il salvataggio.
 5. Taglia file media: aggiunto Azzera marcatori (Alt+0) per ricominciare una selezione errata senza spostare il cursore e senza annullare tagli già applicati, in modalità guidata e avanzata.
 6. Taglia file media: le preferenze Usa comandi stile GoldWave e Sovrascrivi il file originale vengono ricordate anche dopo il riavvio; la sovrascrittura mantiene conferma e copia di sicurezza.
+7. YouTube e SonarMusic: migliorate le etichette dei risultati per riconoscere canali, playlist, album e artisti. Ripristinate le visualizzazioni quando disponibili e durata espressa in ore, minuti e secondi, evitando ripetizioni nei metadati.
+8. Riproduci audio da streaming: corretto il numero di iscritti dei canali nei nuovi risultati YouTube, distinguendolo dall’handle. Verificata anche la visualizzazione degli iscritti negli artisti di SonarMusic, quando disponibili.
+9. Salva media: ripristinato il formato WEBM per i download tramite yt-dlp alla migliore qualità disponibile. Audio e video separati vengono uniti senza ricompressione con le librerie FFmpeg incluse, senza ffmpeg.exe esterno.
 
 Version 0.9.19 – 2026-10-24
 

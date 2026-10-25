@@ -35,6 +35,8 @@ pub struct Item {
     pub params: String,
     pub artist: String,
     pub duration: String,
+    pub subtitle: String,
+    pub views: String,
     pub available: bool,
 }
 impl Item {
@@ -55,6 +57,17 @@ impl Item {
             params: string(v, "browse_params"),
             artist: string(v, "artist"),
             duration: string(v, "duration"),
+            subtitle: string(v, "subtitle"),
+            views: v
+                .get("views")
+                .or_else(|| v.get("view_count"))
+                .map(|v| {
+                    v.as_str()
+                        .map(str::to_owned)
+                        .or_else(|| v.as_u64().map(|n| n.to_string()))
+                        .unwrap_or_default()
+                })
+                .unwrap_or_default(),
             available: v["available"] != false,
         })
     }
@@ -96,21 +109,69 @@ impl Item {
         }
     }
     pub fn display(&self, locale: &str) -> String {
-        [
-            self.title.clone(),
-            self.artist.clone(),
-            if TYPES.contains(&self.kind.as_str()) {
-                label(locale, &self.kind)
+        let language =
+            serde_json::from_value::<crate::settings::Language>(serde_json::json!(locale))
+                .unwrap_or(crate::settings::Language::English);
+        let kind = label(locale, &self.kind);
+        let metadata: Vec<_> = self
+            .subtitle
+            .split(['•', '·'])
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .collect();
+        let clock = if !self.duration.is_empty() {
+            self.duration.as_str()
+        } else {
+            metadata
+                .iter()
+                .copied()
+                .find(|s| crate::result_labels::media_duration(s, language) != *s)
+                .unwrap_or_default()
+        };
+        let mut parts = Vec::new();
+        let mut seen = HashSet::new();
+        let mut append = |value: String| {
+            let value = value.trim();
+            if !value.is_empty() && seen.insert(value.to_lowercase()) {
+                parts.push(value.to_owned());
+            }
+        };
+        append(self.title.clone());
+        if TYPES.contains(&self.kind.as_str()) {
+            append(kind.clone());
+        }
+        append(self.artist.clone());
+        if !clock.is_empty() {
+            append(format!(
+                "{} {}",
+                crate::i18n::tr(language, "stream_audio.duration_label"),
+                crate::result_labels::media_duration(clock, language)
+            ));
+        }
+        for piece in metadata {
+            if piece == clock
+                || piece.eq_ignore_ascii_case(&kind)
+                || music_kind_descriptor(&self.kind, piece)
+            {
+                continue;
+            }
+            append(piece.into());
+        }
+        if !self.views.trim().is_empty() {
+            let views = if self.views.parse::<u64>().is_ok() {
+                format!(
+                    "{} {}",
+                    crate::i18n::tr(language, "stream_audio.views_label"),
+                    self.views
+                )
             } else {
-                String::new()
-            },
-            self.duration.clone(),
-        ]
-        .into_iter()
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join(" — ")
+                self.views.clone()
+            };
+            append(views);
+        }
+        parts.join(" — ")
     }
+
     fn key(&self) -> String {
         format!("{}:{}:{}", self.kind, self.id, self.params)
     }
@@ -743,7 +804,7 @@ mod tests {
     fn display_includes_artist_and_duration() {
         let label = item().display("it");
         assert!(label.contains("Pink Floyd"));
-        assert!(label.contains("5:35"));
+        assert!(label.contains("5 minuti e 35 secondi"));
         assert!(label.contains("Brani"));
     }
     #[test]
@@ -1029,7 +1090,7 @@ mod catalog_fallback_tests {
 pub fn favorite_value(item: &Item) -> Value {
     serde_json::json!({"kind":item.kind,"id":item.id,"title":item.title,
         "video_id":item.video_id,"browse_id":item.browse_id,"browse_params":item.params,
-        "artist":item.artist,"duration":item.duration,"available":item.available})
+        "artist":item.artist,"duration":item.duration,"subtitle":item.subtitle,"views":item.views,"available":item.available})
 }
 pub fn favorite_items(values: &[Value]) -> Vec<Item> {
     values
@@ -1123,5 +1184,116 @@ mod favorite_tests {
             ])
             .is_empty()
         );
+    }
+}
+
+fn music_kind_descriptor(kind: &str, text: &str) -> bool {
+    let values: &[&str] = match kind {
+        "song" => &[
+            "brano",
+            "brani",
+            "canzone",
+            "canzoni",
+            "song",
+            "songs",
+            "track",
+            "tracks",
+            "titre",
+            "titres",
+            "canción",
+            "canciones",
+            "música",
+            "musica",
+            "músicas",
+            "utwór",
+            "utwory",
+            "skladba",
+            "skladby",
+            "пісня",
+            "пісні",
+            "melodie",
+            "melodii",
+            "歌曲",
+        ],
+        "video" => &[
+            "video",
+            "videos",
+            "vídeo",
+            "vídeos",
+            "video musicali",
+            "music video",
+            "music videos",
+            "videoclip",
+            "videoclipuri",
+            "musikvideo",
+            "musikvideos",
+            "clip",
+            "clips",
+        ],
+        "artist" => &[
+            "artista",
+            "artisti",
+            "artist",
+            "artists",
+            "artiste",
+            "artistes",
+            "artistas",
+            "künstler",
+            "umělec",
+            "umělci",
+            "виконавець",
+            "виконавці",
+            "艺人",
+        ],
+        "album" => &[
+            "album",
+            "albums",
+            "álbum",
+            "álbumes",
+            "alben",
+            "álbuns",
+            "albumy",
+            "alba",
+            "альбом",
+            "альбоми",
+            "专辑",
+        ],
+        "playlist" => &[
+            "playlist",
+            "playlists",
+            "playlisty",
+            "liste",
+            "список відтворення",
+            "плейлисти",
+            "播放列表",
+        ],
+        _ => &[],
+    };
+    values.contains(&text.to_lowercase().as_str())
+}
+
+#[cfg(test)]
+mod media_result_tests {
+    use super::*;
+    use serde_json::json;
+    #[test]
+    fn metadata_duration_views_and_kind_are_not_repeated() {
+        let item = Item::parse(&json!({"id":"4K6cvc27_CE", "kind":"video", "title":"Example", "artist":"Singer", "subtitle":"Video • Singer • 5:34 • 12 mila visualizzazioni"})).unwrap();
+        let text = item.display("it");
+        assert_eq!(text.matches("Singer").count(), 1);
+        assert_eq!(text.matches("Video").count(), 1);
+        assert!(text.contains("5 minuti e 34 secondi"));
+        assert!(!text.contains("5:34"));
+        assert!(text.contains("12 mila visualizzazioni"));
+        assert_eq!(Item::parse(&favorite_value(&item)).unwrap(), item);
+    }
+    #[test]
+    fn album_playlist_artist_have_types_without_fake_durations() {
+        for kind in ["album", "playlist", "artist"] {
+            let item =
+                Item::parse(&json!({"id":"collection", "kind":kind, "title":"Example"})).unwrap();
+            assert!(item.display("it").contains(&label("it", kind)));
+            assert!(!item.display("it").contains("0 secondi"));
+        }
     }
 }

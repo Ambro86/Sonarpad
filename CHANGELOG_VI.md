@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Cắt phương tiện: thêm tùy chọn ghi đè tệp gốc sau khi xác nhận, xuất an toàn sang tệp tạm, tạo bản sao lưu tự động và cập nhật dòng thời gian sau khi lưu.
 5. Cắt phương tiện: thêm Xóa điểm đánh dấu (Alt+0) để đặt lại vùng chọn sai mà không thay đổi vị trí phát hay các đoạn đã cắt.
 6. Cắt phương tiện: thiết lập phím GoldWave và ghi đè tệp gốc được ghi nhớ sau khi khởi động lại, đồng thời giữ xác nhận và bản sao lưu.
+7. YouTube và SonarMusic: nhãn kết quả rõ ràng hơn giúp nhận biết kênh, danh sách phát, album và nghệ sĩ. Số lượt xem được hiển thị trở lại khi có sẵn, thời lượng được diễn đạt bằng giờ, phút và giây, không lặp lại siêu dữ liệu.
+8. Phát âm thanh trực tuyến: sửa số người đăng ký kênh trong kết quả YouTube mới, phân biệt với tên định danh. Đồng thời kiểm tra thông tin người đăng ký của nghệ sĩ SonarMusic khi có sẵn.
+9. Lưu nội dung đa phương tiện: khôi phục tải WEBM qua yt-dlp với chất lượng tốt nhất hiện có. Các luồng âm thanh và video riêng được ghép không mã hóa lại bằng thư viện FFmpeg tích hợp, không dùng ffmpeg.exe bên ngoài.
 
 Version 0.9.19 – 2026-10-24
 

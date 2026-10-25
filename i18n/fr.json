@@ -1,4 +1,5 @@
 {
+  "stream_audio.playlist_label": "Liste de lecture",
   "media_cutter.open_project": "Ouvrir un projet Sonarpad…",
   "media_cutter.save_project": "Enregistrer le projet…",
   "media_cutter.overwrite_original": "Écraser le fichier original (créer une sauvegarde)",

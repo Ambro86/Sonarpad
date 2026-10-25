@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Medijos kirpimas: pridėta galimybė patvirtinus perrašyti pradinį failą, saugiai eksportuojant į laikiną failą ir automatiškai kuriant atsarginę kopiją; po įrašymo laiko juosta atnaujinama.
 5. Medijos kirpimas: pridėtas Išvalyti žymeklius (Alt+0), kad būtų galima iš naujo pažymėti atranką nekeičiant klausymo vietos ir ankstesnių kirpimų.
 6. Medijos kirpimas: GoldWave klavišų ir pradinio failo perrašymo parinktys įsimenamos ir iš naujo paleidus programą; patvirtinimas ir atsarginės kopijos išlieka.
+7. YouTube ir SonarMusic: aiškesnės rezultatų žymos leidžia atpažinti kanalus, grojaraščius, albumus ir atlikėjus. Vėl rodomas peržiūrų skaičius, kai jis prieinamas, o trukmė išreiškiama valandomis, minutėmis ir sekundėmis, nekartojant metaduomenų.
+8. Srautinio garso atkūrimas: pataisytas kanalų prenumeratorių skaičius naujuose YouTube rezultatuose, atskiriant jį nuo naudotojo identifikatoriaus. Taip pat patikrinta prieinama SonarMusic atlikėjų prenumeratorių informacija.
+9. Medijos išsaugojimas: grąžintas WEBM atsisiuntimas per yt-dlp geriausia prieinama kokybe. Atskiros garso ir vaizdo takelių dalys sujungiamos be perkodavimo naudojant įtrauktas FFmpeg bibliotekas, be išorinio ffmpeg.exe.
 
 Version 0.9.19 – 2026-10-24
 

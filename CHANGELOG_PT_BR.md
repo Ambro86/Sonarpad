@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Cortar mídia: nova opção para sobrescrever o arquivo original após confirmação, com exportação segura para arquivo temporário, backup automático e atualização da linha do tempo.
 5. Cortar mídia: adicionado Limpar marcadores (Alt+0) para recomeçar uma seleção incorreta sem mudar a posição de reprodução nem desfazer os cortes realizados.
 6. Cortar mídia: as opções de teclas GoldWave e sobrescrita do arquivo original agora ficam salvas entre sessões, mantendo a confirmação e o backup.
+7. YouTube e SonarMusic: rótulos mais claros para identificar canais, playlists, álbuns e artistas. As visualizações voltam a ser exibidas quando disponíveis e a duração é expressa em horas, minutos e segundos, sem repetir metadados.
+8. Reproduzir áudio em streaming: corrigido o número de inscritos dos canais nos novos resultados do YouTube, distinguindo-o do identificador. Verificadas também as informações de inscritos dos artistas do SonarMusic quando disponíveis.
+9. Salvar mídia: restaurados os downloads WEBM pelo yt-dlp com a melhor qualidade disponível. As faixas de áudio e vídeo separadas são unidas sem recodificação com as bibliotecas FFmpeg incluídas, sem ffmpeg.exe externo.
 
 Version 0.9.19 – 2026-10-24
 

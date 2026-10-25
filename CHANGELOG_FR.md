@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Découpage multimédia : possibilité d’écraser le fichier original après confirmation, avec export temporaire sécurisé, sauvegarde automatique et actualisation de la chronologie.
 5. Découpage multimédia : ajout d’Effacer les marqueurs (Alt+0) pour recommencer une sélection erronée sans déplacer la lecture ni annuler les coupes précédentes.
 6. Découpage multimédia : les préférences des touches GoldWave et de l’écrasement du fichier original sont mémorisées après redémarrage, sans supprimer la confirmation ni la sauvegarde.
+7. YouTube et SonarMusic : libellés plus clairs pour identifier les chaînes, listes de lecture, albums et artistes. Le nombre de vues est de nouveau affiché lorsqu’il est disponible et la durée est exprimée en heures, minutes et secondes, sans répétition des métadonnées.
+8. Lire un flux audio : correction du nombre d’abonnés des chaînes dans les nouveaux résultats YouTube, en le distinguant de l’identifiant. Vérification également des abonnés des artistes SonarMusic lorsque cette information est disponible.
+9. Enregistrer un média : rétablissement des téléchargements WEBM via yt-dlp dans la meilleure qualité disponible. Les pistes audio et vidéo séparées sont réunies sans réencodage avec les bibliothèques FFmpeg incluses, sans ffmpeg.exe externe.
 
 Version 0.9.19 – 2026-10-24
 

@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Wycinanie multimediów: dodano możliwość nadpisania oryginalnego pliku po potwierdzeniu, z bezpiecznym eksportem do pliku tymczasowego, automatyczną kopią zapasową i aktualizacją osi czasu.
 5. Wycinanie multimediów: dodano Wyczyść znaczniki (Alt+0), aby ponownie ustawić błędne zaznaczenie bez zmiany pozycji odtwarzania i wcześniejszych cięć.
 6. Wycinanie multimediów: preferencje klawiszy GoldWave i nadpisywania oryginalnego pliku są zapamiętywane po ponownym uruchomieniu; zachowano potwierdzenie i kopie zapasowe.
+7. YouTube i SonarMusic: czytelniejsze opisy wyników pozwalają rozpoznać kanały, listy odtwarzania, albumy i wykonawców. Liczba wyświetleń jest ponownie pokazywana, gdy jest dostępna, a czas trwania podawany w godzinach, minutach i sekundach, bez powtarzania metadanych.
+8. Odtwarzanie strumieniowego audio: poprawiono liczbę subskrybentów kanałów w nowych wynikach YouTube, odróżniając ją od identyfikatora. Sprawdzono też dostępne informacje o subskrybentach wykonawców w SonarMusic.
+9. Zapisz multimedia: przywrócono pobieranie WEBM przez yt-dlp w najlepszej dostępnej jakości. Oddzielne ścieżki audio i wideo są łączone bez ponownego kodowania przez dołączone biblioteki FFmpeg, bez zewnętrznego ffmpeg.exe.
 
 Version 0.9.19 – 2026-10-24
 

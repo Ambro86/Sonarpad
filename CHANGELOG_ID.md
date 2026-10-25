@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Potong media: opsi untuk menimpa berkas asli setelah konfirmasi, dengan ekspor aman ke berkas sementara, pencadangan otomatis, dan pembaruan linimasa setelah penyimpanan.
 5. Potong media: tombol Hapus penanda (Alt+0) memungkinkan mengulang pilihan yang keliru tanpa mengubah posisi pemutaran atau potongan yang sudah diterapkan.
 6. Potong media: pilihan tombol GoldWave dan penimpaan berkas asli kini diingat setelah memulai ulang, dengan konfirmasi dan pencadangan tetap aktif.
+7. YouTube dan SonarMusic: label hasil yang lebih jelas membedakan kanal, daftar putar, album, dan artis. Jumlah penayangan kembali ditampilkan jika tersedia, dan durasi dinyatakan dalam jam, menit, serta detik tanpa pengulangan metadata.
+8. Pemutaran audio streaming: memperbaiki jumlah pelanggan kanal pada hasil YouTube terbaru dengan membedakannya dari nama pengguna. Informasi pelanggan artis SonarMusic juga telah diperiksa jika tersedia.
+9. Simpan media: memulihkan unduhan WEBM melalui yt-dlp dengan kualitas terbaik yang tersedia. Trek audio dan video terpisah digabungkan tanpa pengodean ulang menggunakan pustaka FFmpeg bawaan, tanpa ffmpeg.exe eksternal.
 
 Version 0.9.19 – 2026-10-24
 

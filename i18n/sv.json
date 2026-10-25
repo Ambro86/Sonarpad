@@ -1,4 +1,5 @@
 {
+  "stream_audio.playlist_label": "Spellista",
   "media_cutter.open_project": "Öppna Sonarpad-projekt…",
   "media_cutter.save_project": "Spara projekt…",
   "media_cutter.overwrite_original": "Skriv över originalfilen (skapa säkerhetskopia)",

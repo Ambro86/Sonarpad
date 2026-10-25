@@ -84,7 +84,7 @@ fn parse_page(data: &Value, collection: bool) -> Result<Page, String> {
         if !seen.insert(url.clone()) {
             continue;
         }
-        entries.push(json!({"id":id,"url":url,"title":text(item,"title"),"channel":text(item,"channel"),
+        entries.push(json!({"id":id,"kind":kind,"url":url,"title":text(item,"title"),"channel":text(item,"channel"),
             "duration_string":text(item,"duration"),"view_count":text(item,"views"),"subscriber_count":text(item,"subscribers")}));
     }
     let next = data["next_token"]
@@ -580,5 +580,16 @@ mod tests {
                     .unwrap();
             assert_eq!(p.entries, previous.entries);
         }
+    }
+}
+
+#[cfg(test)]
+mod subscriber_tests {
+    use super::*;
+    #[test]
+    fn subscriber_text_reaches_windows_result_metadata() {
+        let page = parse_page(&json!({"ok":true,"items":[{"kind":"channel","id":"UCexample","title":"Example","subscribers":"15 mila iscritti"}]}), false).unwrap();
+        assert_eq!(page.entries[0]["subscriber_count"], "15 mila iscritti");
+        assert_eq!(page.entries[0]["kind"], "channel");
     }
 }

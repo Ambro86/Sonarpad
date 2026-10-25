@@ -159,7 +159,7 @@ pub fn youtube(
             if !r.is_object() {
                 continue;
             }
-            items.push(json!({"kind":kind,"id":r[idkey],"title":text(&r["title"]),"views":text(&r["viewCountText"]),"duration":text(&r["lengthText"]),"channel":text(&r["ownerText"]),"subscribers":text(&r["subscriberCountText"])}));
+            items.push(json!({"kind":kind,"id":r[idkey],"title":text(&r["title"]),"views":text(&r["viewCountText"]),"duration":text(&r["lengthText"]),"channel":text(&r["ownerText"]),"subscribers":if kind == "channel" { youtube_channel_subscribers(r) } else { String::new() }}));
             return false;
         }
         let r = &n["lockupViewModel"];
@@ -181,6 +181,17 @@ pub fn youtube(
     });
     checked(items, continuation(&data))
 }
+// Same channelRenderer distinction as Mobile: the modern search layout puts
+// the handle in subscriberCountText and the subscribers in videoCountText.
+fn youtube_channel_subscribers(renderer: &Value) -> String {
+    let subscribers = text(&renderer["subscriberCountText"]);
+    if subscribers.trim_start().starts_with('@') {
+        text(&renderer["videoCountText"])
+    } else {
+        subscribers
+    }
+}
+
 // Match Mobile's metadata layout. Never mistake a publication age, duration
 // or channel name containing digits for the video's view count.
 fn lockup_views(metadata: &serde_json::Value, collection: bool) -> &str {
@@ -343,11 +354,31 @@ fn row(r: &Value, card: bool) -> Option<Value> {
         }
     }
     metadata_walk(&metadata, &mut artist, &mut duration, 0);
+    let subtitle = if card {
+        text(&r["subtitle"])
+    } else {
+        ["flexColumns", "fixedColumns"]
+            .iter()
+            .flat_map(|key| {
+                r[*key]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .skip(if *key == "flexColumns" { 1 } else { 0 })
+            })
+            .map(|column| {
+                text(&column["musicResponsiveListItemFlexColumnRenderer"]["text"]).to_owned()
+                    + &text(&column["musicResponsiveListItemFixedColumnRenderer"]["text"])
+            })
+            .filter(|part| !part.trim().is_empty())
+            .collect::<Vec<_>>()
+            .join(" • ")
+    };
     if kind == "artist" {
         artist = title.clone();
     }
     Some(
-        json!({"kind":kind,"id":id,"title":title,"video_id":if is_collection{""}else{video},"browse_id":browse["browseId"],"browse_params":browse["params"],"artist":artist,"duration":duration,"available":r["musicItemRendererDisplayPolicy"]!="MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT"}),
+        json!({"kind":kind,"id":id,"title":title,"video_id":if is_collection{""}else{video},"browse_id":browse["browseId"],"browse_params":browse["params"],"artist":artist,"duration":duration,"subtitle":subtitle,"available":r["musicItemRendererDisplayPolicy"]!="MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT"}),
     )
 }
 fn music_items(data: &Value) -> Vec<Value> {
@@ -747,6 +778,7 @@ mod tests {
         let i = row(&r, true).unwrap();
         assert_eq!(i["artist"], "Artist");
         assert_eq!(i["duration"], "5:34");
+        assert_eq!(i["subtitle"], "Artist • 5:34");
     }
     #[test]
     fn unavailable_item_stays_unavailable() {
@@ -883,5 +915,59 @@ mod channel_badge_tests {
                 "32K visualizzazioni"
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod subscriber_tests {
+    use super::*;
+    #[test]
+    fn youtube_modern_search_reads_subscribers_instead_of_handle() {
+        assert_eq!(
+            youtube_channel_subscribers(&json!({
+                "subscriberCountText":{"simpleText":" @PinkFloyd"},
+                "videoCountText":{"runs":[{"text":"4,12 M di iscritti"}]}
+            })),
+            "4,12 M di iscritti"
+        );
+    }
+    #[test]
+    fn youtube_legacy_layout_never_confuses_videos_with_subscribers() {
+        assert_eq!(
+            youtube_channel_subscribers(&json!({
+                "subscriberCountText":{"simpleText":"10 mila iscritti"},
+                "videoCountText":{"simpleText":"200 video"}
+            })),
+            "10 mila iscritti"
+        );
+        assert_eq!(
+            youtube_channel_subscribers(&json!({"videoCountText":{"simpleText":"200 video"}})),
+            ""
+        );
+        assert_eq!(
+            youtube_channel_subscribers(&json!({"subscriberCountText":{"simpleText":"@example"}})),
+            ""
+        );
+    }
+    #[test]
+    fn sonarmusic_artist_subscribers_survive_both_native_layouts_and_favorites() {
+        let endpoint = json!({"browseEndpoint":{"browseId":"UCexample"}});
+        let card = json!({"title":{"simpleText":"Artist"},"subtitle":{"runs":[{"text":"Artista • 15 mila iscritti"}]},"navigationEndpoint":endpoint});
+        let list = json!({"flexColumns":[
+            {"musicResponsiveListItemFlexColumnRenderer":{"text":{"simpleText":"Artist"}}},
+            {"musicResponsiveListItemFlexColumnRenderer":{"text":{"simpleText":"Artista • 15 mila iscritti"}}}
+        ],"navigationEndpoint":endpoint});
+        for (source, is_card) in [(card, true), (list, false)] {
+            let value = row(&source, is_card).unwrap();
+            let item = crate::sonarmusic::Item::parse(&value).unwrap();
+            let label = item.display("it");
+            assert_eq!(label.matches("15 mila iscritti").count(), 1);
+            assert_eq!(
+                crate::sonarmusic::Item::parse(&crate::sonarmusic::favorite_value(&item))
+                    .unwrap()
+                    .display("it"),
+                label
+            );
+        }
     }
 }

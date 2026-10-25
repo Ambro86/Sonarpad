@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Medien schneiden: optionale Überschreibung der Originaldatei nach Bestätigung mit sicherem Export in eine temporäre Datei und automatischer Sicherungskopie; die Zeitleiste wird danach aktualisiert.
 5. Medien schneiden: Markierungen löschen (Alt+0) setzt eine versehentliche Auswahl zurück, ohne Wiedergabeposition oder bereits ausgeführte Schnitte zu verändern.
 6. Medien schneiden: GoldWave-Tasten und Überschreiben der Originaldatei werden nun über Neustarts hinweg gespeichert; Bestätigung und Sicherungskopie bleiben aktiv.
+7. YouTube und SonarMusic: übersichtlichere Ergebnisbeschriftungen kennzeichnen Kanäle, Playlists, Alben und Künstler. Verfügbare Aufrufzahlen werden wieder angezeigt, die Dauer wird in Stunden, Minuten und Sekunden angegeben und doppelte Metadaten werden vermieden.
+8. Streaming-Audio abspielen: Abonnentenzahlen in neueren YouTube-Kanalergebnissen werden korrekt von Handles unterschieden. Auch verfügbare Abonnentenangaben für SonarMusic-Künstler wurden überprüft.
+9. Medien speichern: WEBM-Downloads über yt-dlp in der besten verfügbaren Qualität wiederhergestellt. Getrennte Audio- und Videospuren werden ohne Neukodierung mit den enthaltenen FFmpeg-Bibliotheken zusammengeführt, ohne externe ffmpeg.exe.
 
 Version 0.9.19 – 2026-10-24
 

@@ -8,6 +8,9 @@ Version 0.9.20 – 2026-10-25
 4. Klipp media: nytt alternativ för att skriva över originalfilen efter bekräftelse med säker export till en temporär fil, automatisk säkerhetskopia och uppdaterad tidslinje.
 5. Klipp media: Rensa markörer (Alt+0) gör det möjligt att börja om med en felaktig markering utan att ändra uppspelningsposition eller tidigare klipp.
 6. Klipp media: inställningarna för GoldWave-tangenter och överskrivning av originalfilen sparas mellan omstarter, med fortsatt bekräftelse och säkerhetskopiering.
+7. YouTube och SonarMusic: tydligare resultatetiketter identifierar kanaler, spellistor, album och artister. Antalet visningar visas åter när det finns tillgängligt, och längden anges i timmar, minuter och sekunder utan upprepade metadata.
+8. Spela strömmande ljud: korrigerat kanalernas prenumerantantal i nyare YouTube-resultat genom att skilja det från användaridentifieraren. Även tillgängliga prenumerantuppgifter för SonarMusic-artister har kontrollerats.
+9. Spara media: återinfört WEBM-hämtning via yt-dlp med bästa tillgängliga kvalitet. Separata ljud- och videospår sammanfogas utan omkodning med de inkluderade FFmpeg-biblioteken, utan extern ffmpeg.exe.
 
 Version 0.9.19 – 2026-10-24
 
