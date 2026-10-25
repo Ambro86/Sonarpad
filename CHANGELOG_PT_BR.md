@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Cortar arquivos de mídia: atalhos opcionais no estilo GoldWave com colchetes e Delete, projetos .sonarcut para continuar sem recomprimir áudio e backups antes de substituir arquivos exportados.
 4. Cortar mídia: nova opção para sobrescrever o arquivo original após confirmação, com exportação segura para arquivo temporário, backup automático e atualização da linha do tempo.
 5. Cortar mídia: adicionado Limpar marcadores (Alt+0) para recomeçar uma seleção incorreta sem mudar a posição de reprodução nem desfazer os cortes realizados.
+6. Cortar mídia: as opções de teclas GoldWave e sobrescrita do arquivo original agora ficam salvas entre sessões, mantendo a confirmação e o backup.
 
 Version 0.9.19 – 2026-10-24
 

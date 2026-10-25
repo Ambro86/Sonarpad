@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Mediendatei schneiden: optionale GoldWave-Tastenkombinationen mit eckigen Klammern und Entf, .sonarcut-Projekte zum Fortsetzen ohne erneute Komprimierung sowie Sicherheitskopien vor dem Ersetzen exportierter Dateien.
 4. Medien schneiden: optionale Überschreibung der Originaldatei nach Bestätigung mit sicherem Export in eine temporäre Datei und automatischer Sicherungskopie; die Zeitleiste wird danach aktualisiert.
 5. Medien schneiden: Markierungen löschen (Alt+0) setzt eine versehentliche Auswahl zurück, ohne Wiedergabeposition oder bereits ausgeführte Schnitte zu verändern.
+6. Medien schneiden: GoldWave-Tasten und Überschreiben der Originaldatei werden nun über Neustarts hinweg gespeichert; Bestätigung und Sicherungskopie bleiben aktiv.
 
 Version 0.9.19 – 2026-10-24
 

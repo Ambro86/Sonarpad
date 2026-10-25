@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Medijos kirpimas: pasirinktiniai GoldWave tipo klavišai su laužtiniais skliaustais ir Delete, .sonarcut projektai darbui tęsti be pakartotinio glaudinimo bei atsarginės kopijos prieš pakeičiant eksportuotą failą.
 4. Medijos kirpimas: pridėta galimybė patvirtinus perrašyti pradinį failą, saugiai eksportuojant į laikiną failą ir automatiškai kuriant atsarginę kopiją; po įrašymo laiko juosta atnaujinama.
 5. Medijos kirpimas: pridėtas Išvalyti žymeklius (Alt+0), kad būtų galima iš naujo pažymėti atranką nekeičiant klausymo vietos ir ankstesnių kirpimų.
+6. Medijos kirpimas: GoldWave klavišų ir pradinio failo perrašymo parinktys įsimenamos ir iš naujo paleidus programą; patvirtinimas ir atsarginės kopijos išlieka.
 
 Version 0.9.19 – 2026-10-24
 

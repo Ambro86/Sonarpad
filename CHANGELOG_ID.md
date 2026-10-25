@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Pemotong media: tombol pintas opsional seperti GoldWave dengan tanda kurung siku dan Delete, proyek .sonarcut untuk melanjutkan tanpa kompresi ulang serta cadangan sebelum mengganti berkas hasil ekspor.
 4. Potong media: opsi untuk menimpa berkas asli setelah konfirmasi, dengan ekspor aman ke berkas sementara, pencadangan otomatis, dan pembaruan linimasa setelah penyimpanan.
 5. Potong media: tombol Hapus penanda (Alt+0) memungkinkan mengulang pilihan yang keliru tanpa mengubah posisi pemutaran atau potongan yang sudah diterapkan.
+6. Potong media: pilihan tombol GoldWave dan penimpaan berkas asli kini diingat setelah memulai ulang, dengan konfirmasi dan pencadangan tetap aktif.
 
 Version 0.9.19 – 2026-10-24
 

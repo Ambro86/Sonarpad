@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Klipp mediefil: valfria GoldWave-liknande tangentkommandon med hakparenteser och Delete, .sonarcut-projekt för fortsatt redigering utan omkomprimering samt säkerhetskopior innan exporterade filer ersätts.
 4. Klipp media: nytt alternativ för att skriva över originalfilen efter bekräftelse med säker export till en temporär fil, automatisk säkerhetskopia och uppdaterad tidslinje.
 5. Klipp media: Rensa markörer (Alt+0) gör det möjligt att börja om med en felaktig markering utan att ändra uppspelningsposition eller tidigare klipp.
+6. Klipp media: inställningarna för GoldWave-tangenter och överskrivning av originalfilen sparas mellan omstarter, med fortsatt bekräftelse och säkerhetskopiering.
 
 Version 0.9.19 – 2026-10-24
 

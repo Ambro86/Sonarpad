@@ -911,6 +911,10 @@ pub struct AppSettings {
     pub audio_description_after_tv_recording: bool,
     pub youtube_include_timestamps: bool,
     #[serde(default)]
+    pub media_cutter_goldwave_keys: bool,
+    #[serde(default)]
+    pub media_cutter_overwrite_original: bool,
+    #[serde(default)]
     pub sonarmusic_search_type: String,
     #[serde(default)]
     pub sonarmusic_favorites: Vec<serde_json::Value>,
@@ -1415,6 +1419,8 @@ impl Default for AppSettings {
             audio_description_delete_video_after: false,
             audio_description_after_tv_recording: false,
             youtube_include_timestamps: true,
+            media_cutter_goldwave_keys: false,
+            media_cutter_overwrite_original: false,
             sonarmusic_search_type: String::new(),
             sonarmusic_favorites: Vec::new(),
             stream_audio_default_format: default_stream_audio_output_format(),
@@ -3865,6 +3871,22 @@ mod audio_description_save_folder_tests {
     use std::path::PathBuf;
 
     use super::{AppSettings, default_audio_description_save_folder, normalize_settings};
+
+    #[test]
+    fn media_cutter_preferences_remember_both_options_with_legacy_defaults() {
+        let defaults: AppSettings = serde_json::from_str("{}").unwrap();
+        assert!(!defaults.media_cutter_goldwave_keys);
+        assert!(!defaults.media_cutter_overwrite_original);
+        let settings = AppSettings {
+            media_cutter_goldwave_keys: true,
+            media_cutter_overwrite_original: true,
+            ..Default::default()
+        };
+        let restored: AppSettings =
+            serde_json::from_value(serde_json::to_value(settings).unwrap()).unwrap();
+        assert!(restored.media_cutter_goldwave_keys);
+        assert!(restored.media_cutter_overwrite_original);
+    }
 
     #[test]
     fn omni_port_audio_description_default_folder_is_under_sonarpad_documents() {

@@ -228,6 +228,39 @@ impl State {
     fn checked(&self, id: usize) -> bool {
         unsafe { SendMessageW(self.ctrl(id), BM_GETCHECK, WPARAM(0), LPARAM(0)).0 == 1 }
     }
+    fn saved_checkbox(&self, id: usize) -> bool {
+        crate::with_state(self.parent, |state| match id {
+            GOLDWAVE => state.settings.media_cutter_goldwave_keys,
+            OVERWRITE_ORIGINAL => state.settings.media_cutter_overwrite_original,
+            _ => false,
+        })
+        .unwrap_or(false)
+    }
+    fn restore_checkbox(&self, id: usize) {
+        unsafe {
+            SendMessageW(
+                self.ctrl(id),
+                BM_SETCHECK,
+                WPARAM(usize::from(self.saved_checkbox(id))),
+                LPARAM(0),
+            );
+        }
+    }
+    fn remember_checkbox(&self, id: usize) {
+        let checked = self.checked(id);
+        if let Some(settings) = crate::with_state(self.parent, |state| {
+            match id {
+                GOLDWAVE => state.settings.media_cutter_goldwave_keys = checked,
+                OVERWRITE_ORIGINAL => state.settings.media_cutter_overwrite_original = checked,
+                _ => return None,
+            }
+            Some(state.settings.clone())
+        })
+        .flatten()
+        {
+            crate::settings::save_settings(settings);
+        }
+    }
     fn say(&self, text: &str) {
         // Native control tests must not send their simulated actions to the user's screen reader.
         if cfg!(test) {
@@ -340,14 +373,14 @@ impl State {
         }
         unsafe {
             let overwrite_available = self.can_overwrite_original();
-            if !overwrite_available {
-                SendMessageW(
-                    self.ctrl(OVERWRITE_ORIGINAL),
-                    BM_SETCHECK,
-                    WPARAM(0),
-                    LPARAM(0),
-                );
-            }
+            SendMessageW(
+                self.ctrl(OVERWRITE_ORIGINAL),
+                BM_SETCHECK,
+                WPARAM(usize::from(
+                    overwrite_available && self.saved_checkbox(OVERWRITE_ORIGINAL),
+                )),
+                LPARAM(0),
+            );
             EnableWindow(self.ctrl(OVERWRITE_ORIGINAL), overwrite_available);
             EnableWindow(
                 self.ctrl(CLEAR_MARKERS),
@@ -801,15 +834,8 @@ impl State {
                     self.end = None;
                     self.track = None;
                     self.dirty = false;
-                    unsafe {
-                        SendMessageW(self.ctrl(GOLDWAVE), BM_SETCHECK, WPARAM(0), LPARAM(0));
-                        SendMessageW(
-                            self.ctrl(OVERWRITE_ORIGINAL),
-                            BM_SETCHECK,
-                            WPARAM(0),
-                            LPARAM(0),
-                        );
-                    }
+                    self.restore_checkbox(GOLDWAVE);
+                    self.restore_checkbox(OVERWRITE_ORIGINAL);
                     self.set(PRIMARY, &self.tr("set_start"));
                     self.set(TRACK, &self.tr("choose_track"));
                     self.refresh_parts();
@@ -827,12 +853,17 @@ impl State {
                 }
             }
             GOLDWAVE if notification == BN_CLICKED => {
+                self.remember_checkbox(GOLDWAVE);
+                // Keep the unsaved-project warning because projects also store this option.
                 self.dirty |= self.input.is_some();
                 self.say(&self.tr(if self.checked(GOLDWAVE) {
                     "goldwave_enabled"
                 } else {
                     "goldwave_disabled"
                 }));
+            }
+            OVERWRITE_ORIGINAL if notification == BN_CLICKED => {
+                self.remember_checkbox(OVERWRITE_ORIGINAL);
             }
             OPEN_PROJECT => self.open_project()?,
             SAVE_PROJECT => self.save_project()?,
@@ -1067,10 +1098,16 @@ impl State {
                 if self.checked(GOLDWAVE) {
                     lines.push(self.tr("goldwave_help"));
                 }
-                lines.push(format!("Alt+0: {}", self.tr("clear_markers")));
+                let clear_markers = self.tr("clear_markers");
+                let clear_label = clear_markers
+                    .split(['(', '（'])
+                    .next()
+                    .unwrap_or(&clear_markers)
+                    .trim();
+                lines.push(format!("Alt+0: {clear_label}"));
                 lines.push(self.tr("home_end_help"));
                 lines.push(self.tr("save"));
-                self.say(&lines.join(". "));
+                self.say(&format_command_help(&lines));
             }
             COMMAND_AREA => self.command(LISTEN, BN_CLICKED)?,
             LISTEN => {
@@ -1422,14 +1459,6 @@ impl State {
                 }
                 let overwrote_original = self.overwrite_pending;
                 self.overwrite_pending = false;
-                unsafe {
-                    SendMessageW(
-                        self.ctrl(OVERWRITE_ORIGINAL),
-                        BM_SETCHECK,
-                        WPARAM(0),
-                        LPARAM(0),
-                    );
-                }
                 if result.is_ok() && overwrote_original {
                     let new_duration = self.input.as_ref().and_then(|input| {
                         crate::ffmpeg_export::media_duration_seconds(input)
@@ -1760,6 +1789,7 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         [508, 4, 272, 42],
         WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32 | BS_MULTILINE as u32),
     );
+    s.restore_checkbox(GOLDWAVE);
     let modes = [s.tr("guided"), s.tr("advanced")];
     combo(&mut s, "mode", MODE, &modes, 12, 48, 250);
     combo(
@@ -2003,6 +2033,15 @@ fn spoken_time(seconds: f64, language: Language) -> String {
         units.join(", "),
         crate::i18n::tr(language, "media_cutter.duration_and")
     )
+}
+
+fn format_command_help(lines: &[String]) -> String {
+    lines
+        .iter()
+        .map(|line| line.trim().trim_end_matches(['.', '。']))
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join(". ")
 }
 
 fn shortcut_command(
@@ -2463,6 +2502,27 @@ fn inner(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn spoken_command_help_has_clean_punctuation_and_no_duplicate_shortcuts() {
+        let clear = crate::i18n::tr(Language::Italian, "media_cutter.clear_markers");
+        let clear_label = clear.split(['(', '（']).next().unwrap_or(&clear).trim();
+        let lines = vec![
+            crate::i18n::tr(Language::Italian, "media_cutter.goldwave_help"),
+            format!("Alt+0: {clear_label}"),
+            crate::i18n::tr(Language::Italian, "media_cutter.home_end_help"),
+            crate::i18n::tr(Language::Italian, "media_cutter.save"),
+        ];
+        let spoken = format_command_help(&lines);
+        assert!(!spoken.contains(".."));
+        assert!(!spoken.contains("Alt+0: Azzera marcatori (Alt+0)"));
+        assert!(spoken.contains("Alt+0: Azzera marcatori. Home:"));
+        assert!(spoken.contains("End: fine del file. Salva"));
+        let chinese = crate::i18n::tr(Language::Chinese, "media_cutter.clear_markers");
+        assert_eq!(
+            chinese.split(['(', '（']).next().unwrap_or(&chinese).trim(),
+            "清除标记点"
+        );
+    }
     #[test]
     fn command_area_keys_keep_navigation_and_modes_separate() {
         for advanced in [false, true] {

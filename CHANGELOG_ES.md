@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Cortar archivos multimedia: atajos opcionales al estilo GoldWave con corchetes y Supr, proyectos .sonarcut para reanudar sin recomprimir audio y copias de seguridad antes de reemplazar archivos exportados.
 4. Cortar archivo multimedia: nueva opción para sobrescribir el original tras confirmación, con exportación temporal segura, copia de seguridad automática y actualización de la línea de tiempo.
 5. Cortar archivo multimedia: añadido Borrar marcadores (Alt+0) para reiniciar una selección equivocada sin mover la reproducción ni deshacer cortes aplicados.
+6. Cortar archivo multimedia: se recuerdan las preferencias de teclas GoldWave y sobrescritura del original después de reiniciar, manteniendo confirmación y copias de seguridad.
 
 Version 0.9.19 – 2026-10-24
 

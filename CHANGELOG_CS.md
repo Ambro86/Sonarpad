@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Střih multimédií: volitelné klávesy jako v GoldWave se závorkami a Delete, projekty .sonarcut pro pokračování bez další komprese a zálohování před nahrazením exportovaného souboru.
 4. Střih médií: přidána možnost po potvrzení přepsat původní soubor s bezpečným dočasným exportem a automatickou zálohou; po uložení se aktualizuje časová osa.
 5. Střih médií: přidáno Vymazat značky (Alt+0) pro nové označení chybného výběru bez změny pozice přehrávání či předchozích střihů.
+6. Střih médií: nastavení kláves GoldWave a přepisování originálu se nyní uchovává i po restartu; potvrzení a zálohy zůstávají.
 
 Version 0.9.19 – 2026-10-24
 

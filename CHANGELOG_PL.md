@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Przycinanie multimediów: opcjonalne skróty jak w GoldWave z nawiasami kwadratowymi i Delete, projekty .sonarcut do kontynuowania bez ponownej kompresji oraz kopie zapasowe przed zastąpieniem wyeksportowanego pliku.
 4. Wycinanie multimediów: dodano możliwość nadpisania oryginalnego pliku po potwierdzeniu, z bezpiecznym eksportem do pliku tymczasowego, automatyczną kopią zapasową i aktualizacją osi czasu.
 5. Wycinanie multimediów: dodano Wyczyść znaczniki (Alt+0), aby ponownie ustawić błędne zaznaczenie bez zmiany pozycji odtwarzania i wcześniejszych cięć.
+6. Wycinanie multimediów: preferencje klawiszy GoldWave i nadpisywania oryginalnego pliku są zapamiętywane po ponownym uruchomieniu; zachowano potwierdzenie i kopie zapasowe.
 
 Version 0.9.19 – 2026-10-24
 

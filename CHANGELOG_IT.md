@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Taglia file media: aggiunti i tasti opzionali stile GoldWave con parentesi quadre e Canc, i progetti .sonarcut per riprendere i tagli senza ricompressione e le copie di sicurezza prima di sostituire file esportati.
 4. Taglia file media: aggiunta la casella per sovrascrivere il file originale con conferma, esportazione sicura su file temporaneo e copia di sicurezza automatica; la sequenza di tagli si aggiorna dopo il salvataggio.
 5. Taglia file media: aggiunto Azzera marcatori (Alt+0) per ricominciare una selezione errata senza spostare il cursore e senza annullare tagli già applicati, in modalità guidata e avanzata.
+6. Taglia file media: le preferenze Usa comandi stile GoldWave e Sovrascrivi il file originale vengono ricordate anche dopo il riavvio; la sovrascrittura mantiene conferma e copia di sicurezza.
 
 Version 0.9.19 – 2026-10-24
 

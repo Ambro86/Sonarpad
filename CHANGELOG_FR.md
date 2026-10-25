@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Découpe multimédia : raccourcis facultatifs comme dans GoldWave avec crochets et Suppr, projets .sonarcut pour reprendre le montage sans recompresser l'audio et sauvegarde avant remplacement des fichiers exportés.
 4. Découpage multimédia : possibilité d’écraser le fichier original après confirmation, avec export temporaire sécurisé, sauvegarde automatique et actualisation de la chronologie.
 5. Découpage multimédia : ajout d’Effacer les marqueurs (Alt+0) pour recommencer une sélection erronée sans déplacer la lecture ni annuler les coupes précédentes.
+6. Découpage multimédia : les préférences des touches GoldWave et de l’écrasement du fichier original sont mémorisées après redémarrage, sans supprimer la confirmation ni la sauvegarde.
 
 Version 0.9.19 – 2026-10-24
 

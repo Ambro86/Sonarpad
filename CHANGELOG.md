@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Cut media file: added optional GoldWave-style bracket and Delete shortcuts, .sonarcut projects to resume editing without recompression and backup copies before replacing exported files.
 4. Cut media file: added an option to overwrite the original after confirmation, exporting safely to a temporary file and automatically backing up the previous version; the timeline updates after saving.
 5. Cut media file: added Clear markers (Alt+0) to restart an accidental selection without moving the listening position or undoing applied cuts, in both guided and advanced modes.
+6. Cut media file: GoldWave-style keys and Overwrite original file preferences are now remembered across restarts, while overwrite confirmation and backups remain in place.
 
 Version 0.9.19 – 2026-10-24
 

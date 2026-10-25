@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Cortar ficheiros multimédia: atalhos opcionais ao estilo GoldWave com parênteses retos e Delete, projetos .sonarcut para continuar sem recompressão e cópias de segurança antes de substituir ficheiros exportados.
 4. Cortar multimédia: nova opção para substituir o ficheiro original após confirmação, com exportação temporária segura, cópia de segurança automática e atualização da linha temporal.
 5. Cortar multimédia: adicionada a opção Limpar marcadores (Alt+0) para refazer uma seleção incorreta sem alterar a posição de reprodução ou os cortes anteriores.
+6. Cortar multimédia: as preferências das teclas GoldWave e de substituição do ficheiro original são memorizadas entre sessões, mantendo confirmação e cópia de segurança.
 
 Version 0.9.19 – 2026-10-24
 

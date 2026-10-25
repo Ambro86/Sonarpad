@@ -7,6 +7,7 @@ Version 0.9.20 – 2026-10-25
 3. Cắt tệp đa phương tiện: thêm phím tắt kiểu GoldWave với dấu ngoặc vuông và Delete, dự án .sonarcut để chỉnh sửa tiếp mà không cần nén lại âm thanh và bản sao lưu trước khi thay thế tệp xuất.
 4. Cắt phương tiện: thêm tùy chọn ghi đè tệp gốc sau khi xác nhận, xuất an toàn sang tệp tạm, tạo bản sao lưu tự động và cập nhật dòng thời gian sau khi lưu.
 5. Cắt phương tiện: thêm Xóa điểm đánh dấu (Alt+0) để đặt lại vùng chọn sai mà không thay đổi vị trí phát hay các đoạn đã cắt.
+6. Cắt phương tiện: thiết lập phím GoldWave và ghi đè tệp gốc được ghi nhớ sau khi khởi động lại, đồng thời giữ xác nhận và bản sao lưu.
 
 Version 0.9.19 – 2026-10-24
 
