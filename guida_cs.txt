@@ -237,6 +237,26 @@ Zkontrolovat aktualizace: Zkontroluje, zda jsou k dispozici aktualizace (F2).
 Seznam změn: Otevře okno se seznamem změn.
 O programu: Zobrazí informace o programu.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+STŘIH MULTIMEDIÁLNÍHO SOUBORU — PODROBNÝ NÁVOD
 
+Otevřete Nástroje, Multimédia, Střih multimediálního souboru nebo stiskněte Alt+Shift+X. Tlačítkem Otevřít multimediální soubor vyberte místní zvukový soubor či video. Funkce odstraní nežádoucí úseky a uloží nový soubor se zachovaným obsahem. Nejde o rozdělení na několik samostatných souborů.
 
+V režimu průvodce nastavte krok posunu na 1, 5, 10, 30 nebo 60 sekund. Ctrl+Mezerník spouští a pozastavuje přehrávání, Alt+šipka vlevo/vpravo posouvá. Na začátku úseku určeného k odstranění použijte Alt+1, na jeho konci Alt+2. Pomocí Alt+3 si poslechněte označený úsek a Alt+4 jej odstraňte. Postup lze opakovat.
+
+Pro práci s odečítačem obrazovky přejděte klávesou Tab do oblasti příkazů. Zde šipky vlevo/vpravo posouvají, 1 označuje začátek, 2 konec, 3 nebo Enter spustí poslech, 4 provede střih, mezerník přehrává či pozastavuje a Home/End přecházejí na začátek/konec souboru. Shift+šipky posouvají o 5 sekund, Ctrl+šipky o 10 sekund. F1 přečte dostupné příkazy; Tab oblast opustí.
+
+V pokročilém režimu lze klávesou S rozdělit úsek, šipkami nahoru/dolů vybírat části, klávesou D nebo Delete část odstranit a R ji obnovit. Je možné vložit další médium před vybranou část, přesně upravit časy začátku a konce po 0,01 až 1 sekundě, u videa změnit otočení a zobrazit náhled. Lze také přidat zvukovou stopu, nastavit hlasitost obou stop a opakování přidané stopy.
+
+Uložte výsledek tlačítkem Uložit nebo Ctrl+S. Vyberte jiný název než u původního souboru. Export zobrazuje průběh a nabízí zrušení; před uložením dokončete rozpracovaný střih. Při zavírání neuložených změn se zobrazí potvrzení.
+
+SONARMUSIC — PODROBNÝ NÁVOD
+
+V nabídce Nástroje, Multimédia otevřete SonarMusic nebo použijte Ctrl+Alt+Shift+M. Zadejte skladbu, interpreta či album. Filtr vyhledávání nabízí Vše, Skladby, Alba, Umělce, Playlisty a Hudební videa. Stiskněte Enter v poli vyhledávání nebo tlačítko Hledat. Volba filtru se ukládá a mohou se nabídnout návrhy hledání.
+
+V seznamu výsledků se pohybujte šipkami a potvrďte Enterem. Skladba či video se otevře v přehrávači; album, interpret nebo playlist zobrazí obsah. Položky pro předchozí a další výsledky jsou součástí seznamu. Po načtení se kurzor vrací do výsledků a po přehrávání se pokud možno obnoví výběr.
+
+Klávesou kontextové nabídky nebo Shift+F10 otevřete akce vybrané položky: Otevřít, Uložit médium, Přepsat, Vytvořit audiopopis pomocí AI nebo Přidat/Odebrat z oblíbených. Nabídka závisí na druhu výsledku; ukládání podléhá dostupným možnostem a omezením služby.
+
+Uložené položky najdete v seznamu Oblíbené: Enter je otevře, kontextová nabídka je umožní odebrat. Zpět se vrací na předchozí stránku, Escape se vrací nebo zavírá okno. Tab, Shift+Tab a šipky umožňují ovládání s NVDA nebo JAWS. Vyhledávání vyžaduje internet.

@@ -238,6 +238,26 @@ Pomoc:
  Dziennik zmian: Otwórz okno dziennika zmian.
  O programie: Pokaż informacje o programie.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+PRZYCINANIE PLIKU MULTIMEDIALNEGO — PEŁNY PORADNIK
 
+Otwórz Narzędzia, Multimedia, Przytnij plik multimedialny lub naciśnij Alt+Shift+X. Wybierz Otwórz plik multimedialny i wskaż lokalny plik audio albo wideo. Funkcja usuwa niechciane fragmenty i zapisuje nowy plik z zachowanymi częściami; nie jest tym samym co dzielenie pliku na kilka osobnych plików.
 
+W trybie cięcia prowadzonego wybierz krok przewijania 1, 5, 10, 30 lub 60 sekund. Ctrl+Spacja uruchamia lub wstrzymuje odtwarzanie, Alt+strzałka w lewo/prawo przewija. Na początku usuwanego fragmentu naciśnij Alt+1, a na jego końcu Alt+2. Alt+3 odtwarza zaznaczony fragment do kontroli, Alt+4 wykonuje cięcie. Kolejne fragmenty można wycinać tak samo.
+
+Obszar poleceń ułatwia obsługę czytnikiem ekranu. Przejdź do niego klawiszem Tab. Strzałki lewo/prawo przewijają, 1 ustawia początek, 2 koniec, 3 lub Enter odsłuchuje, 4 stosuje cięcie, Spacja odtwarza/pauzuje, Home/End przechodzą na początek/koniec pliku. Shift+strzałki przewijają o 5 sekund, Ctrl+strzałki o 10 sekund. F1 odczytuje polecenia, Tab opuszcza ten obszar. Skróty z Alt działają również poza nim.
+
+W trybie zaawansowanym S dzieli fragment w bieżącym miejscu, strzałki góra/dół wybierają części, D lub Delete usuwa część, a R ją przywraca. Można wstawić inny plik przed wybraną częścią, poprawić czasy początku i końca krokami 0,01–1 sekundy, obrócić wideo i wyświetlić podgląd. Możliwe jest też dodanie ścieżki audio, osobne ustawienie głośności oraz zapętlenie dodanej ścieżki.
+
+Wybierz Zapisz lub Ctrl+S, format i miejsce docelowe; podaj nazwę różną od pliku źródłowego. Podczas eksportu pokazywany jest postęp i przycisk Anuluj. Przed zapisem dokończ rozpoczęte cięcie prowadzone; przy zamykaniu niezapisanych zmian pojawia się pytanie o potwierdzenie.
+
+SONARMUSIC — PEŁNY PORADNIK
+
+Otwórz Narzędzia, Multimedia, SonarMusic albo Ctrl+Alt+Shift+M. Wpisz tytuł utworu, wykonawcę lub album. Filtr wyszukiwania: Wszystko, Utwory, Albumy, Wykonawcy, Playlisty albo Teledyski. Naciśnij Enter w polu wyszukiwania lub przycisk Szukaj. Filtr jest zapamiętywany, a program może podpowiadać zapytania.
+
+Po wynikach przechodź strzałkami i naciśnij Enter. Odtwarzalne utwory i wideo otwierają się w odtwarzaczu, a albumy, wykonawcy i playlisty otwierają swoją zawartość. Lista zawiera także elementy do poprzednich i dalszych wyników. Po wczytaniu fokus wraca do wyników; po odtwarzaniu w miarę możliwości przywracane są wyszukiwanie i wybór.
+
+Na wybranym wyniku naciśnij klawisz menu kontekstowego lub Shift+F10. Zależnie od elementu dostępne są: Otwórz, Zapisz/pobierz, Transkrybuj, Utwórz audiodeskrypcję AI oraz Dodaj/Usuń z ulubionych. Nie wszystkie działania są dostępne dla każdego rodzaju wyniku; pobieranie zależy od ograniczeń usługi.
+
+Lista Ulubione umożliwia otwarcie zapisanego elementu Enterem albo usunięcie go z menu kontekstowego. Wstecz cofa do poprzedniego widoku, Escape cofa lub zamyka okno. Tab, Shift+Tab i strzałki wspierają NVDA oraz JAWS. Wyszukiwanie wymaga internetu.

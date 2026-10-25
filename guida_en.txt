@@ -221,7 +221,26 @@ Check for updates: Check if updates are available (F2).
 Changelog: Opens the changelog window.
 About: Shows program information.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+CUT MEDIA FILE — COMPLETE GUIDE
 
+Open Tools, Multimedia, Cut media file, or press Alt+Shift+X. Choose Open media file and select a local audio or video. This feature removes unwanted passages and exports a new file containing the retained material. It differs from Split media, which produces several separate files.
 
+In Guided cut mode, select a movement step of 1, 5, 10, 30 or 60 seconds. Use Ctrl+Space to play or pause and Alt+Left/Right to seek. Move to the beginning of the unwanted passage and select Start cut (Alt+1); move to its end and select End cut (Alt+2). Use Listen to cut (Alt+3) to review what will be removed, then Apply cut (Alt+4). Repeat for additional cuts.
 
+The Command area is designed for keyboard and screen-reader use. Tab to it and use Left/Right to seek, 1 for start, 2 for end, 3 or Enter to listen, 4 to apply, Space to play/pause, and Home/End for the start/end of the file. Shift+Left/Right seeks five seconds and Ctrl+Left/Right ten seconds. F1 announces the commands available in the current mode. Tab leaves the area; Alt shortcuts also work outside it.
+
+In Advanced cut mode, press S to split at the current point, Up/Down in the Command area to select a segment, 3 or Enter to listen, D or Delete to remove, and R to restore. You may insert another media file before the selected segment and precisely adjust start/end values in steps of 0.01, 0.1, 0.5 or 1 second. Video options include rotation and preview. You may also add an audio track, set separate original and added-track volumes and loop the added track if needed.
+
+Press Save or Ctrl+S, choose an output format and location, and use a filename different from the original. Export has progress feedback and a Cancel button. Complete a pending guided cut before saving; closing unsaved changes prompts for confirmation.
+
+SONARMUSIC — COMPLETE GUIDE
+
+Open Tools, Multimedia, SonarMusic, or press Ctrl+Alt+Shift+M. Enter a song title, artist or album in the search field. Choose a Search type: All, Songs, Albums, Artists, Playlists or Music videos. Press Enter in the search field or choose Search. The selected filter is remembered. Suggestions may be offered while entering text.
+
+Use the arrow keys in Search results and press Enter on an item. Playable songs and videos open in the player; albums, artists and playlists open their contents. The results list also includes entries for previous or additional results. On loading, focus returns to the results; after playback, the search and selection are restored where possible.
+
+Select an item and press the Applications key or Shift+F10 to open its context menu. Depending on the item, actions include Open, Save/download media, Transcribe, Create AI audio description and Add to or Remove from favorites. Playback-specific actions are offered only for playable items. Follow the available dialogs and service restrictions when saving media.
+
+Use the Favorites list to find saved items. Choose a favorite and press Enter to open it; use the Applications key or Shift+F10 to remove it. Back returns to a previous search or page; Escape goes back when possible or closes the window. Tab, Shift+Tab and arrow keys support NVDA and JAWS navigation. Music searches require an Internet connection.

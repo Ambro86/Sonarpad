@@ -1,5 +1,10 @@
 # Dnevnik izmena
 
+Version 0.9.20 – 2026-10-25
+
+1. Vremenska prognoza: poboljšane su oznake lokacija u rezultatima pretrage i listi nedavno korišćenih gradova. Kada su dostupni, prikazuju se i okrug ili distrikt, region i država radi razlikovanja mesta sa istim imenom. Duplirani nazivi se uklanjaju, a ranije sačuvani gradovi ostaju kompatibilni.
+2. Ažurirana su uputstva sa detaljnim opisom sečenja medijskih datoteka i funkcije SonarMusic, uključujući prečice na tastaturi, navigaciju čitačem ekrana, napredno uređivanje, pretragu i omiljene stavke.
+
 Version 0.9.19 – 2026-10-24
 
 1. Аудио-опис: подела после дугих делова без простора за нарацију сада користи исту минималну паузу као описи и препознаје и кратке паузе.

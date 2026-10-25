@@ -227,3 +227,27 @@ Panduan: Membuka panduan ini (F1).
 Periksa pembaruan: Memeriksa pembaruan yang tersedia (F2).
 Catatan Perubahan: Membuka jendela catatan perubahan.
 Tentang Program: Menampilkan informasi program.
+
+========== MEDIA CUTTER / SONARMUSIC ==========
+
+POTONG FILE MEDIA — PANDUAN LENGKAP
+
+Buka Alat, Multimedia, Potong file media, atau tekan Alt+Shift+X. Pilih Buka file media dan tentukan berkas audio atau video lokal. Fitur ini menghapus bagian yang tidak diinginkan dan menyimpan berkas baru yang berisi bagian yang dipertahankan. Ini berbeda dari membagi satu berkas menjadi beberapa berkas.
+
+Dalam mode Potong terpandu, pilih langkah perpindahan 1, 5, 10, 30, atau 60 detik. Ctrl+Spasi memutar atau menjeda dan Alt+Panah kiri/kanan menggeser posisi. Pada awal bagian yang akan dibuang tekan Alt+1, lalu pada akhirnya Alt+2. Alt+3 mendengarkan bagian yang dipilih, dan Alt+4 menerapkan pemotongan. Ulangi jika diperlukan.
+
+Area perintah dirancang untuk pengguna pembaca layar. Masuk dengan Tab. Panah kiri/kanan menggeser waktu, 1 menandai awal, 2 akhir, 3 atau Enter mendengarkan, 4 memotong, Spasi memutar/menjeda, sedangkan Home/End menuju awal/akhir berkas. Shift+Panah menggeser 5 detik dan Ctrl+Panah 10 detik. F1 membacakan perintah yang tersedia; Tab keluar dari area. Pintasan Alt juga dapat digunakan di luar area.
+
+Dalam mode lanjutan, S membagi bagian pada posisi aktif, Panah atas/bawah memilih bagian, D atau Delete menghapus, dan R memulihkan. Anda dapat menyisipkan media lain sebelum bagian terpilih dan mengatur awal/akhir dengan ketelitian 0,01 hingga 1 detik. Video dapat diputar orientasinya atau ditampilkan pratinjaunya. Trek audio tambahan juga dapat ditambahkan dengan volume masing-masing dan opsi pengulangan.
+
+Tekan Simpan atau Ctrl+S, pilih lokasi serta format keluaran, lalu gunakan nama berbeda dari berkas asli. Kemajuan ekspor dan tombol Batal tersedia. Selesaikan potongan terpandu yang masih tertunda sebelum menyimpan. Program meminta konfirmasi jika ditutup dengan perubahan yang belum disimpan.
+
+SONARMUSIC — PANDUAN LENGKAP
+
+Buka Alat, Multimedia, SonarMusic, atau tekan Ctrl+Alt+Shift+M. Masukkan judul lagu, nama artis, atau album. Pilih jenis pencarian: Semua, Lagu, Album, Artis, Daftar putar, atau Video musik. Tekan Enter di kotak pencarian atau tombol Cari. Filter pilihan disimpan dan saran pencarian dapat muncul.
+
+Jelajahi hasil dengan tombol panah dan tekan Enter. Lagu dan video yang dapat diputar terbuka dalam pemutar; album, artis, atau daftar putar membuka isinya. Daftar hasil juga berisi pilihan hasil sebelumnya atau memuat lebih banyak. Fokus kembali ke hasil setelah dimuat dan pilihan sebelumnya dapat dipulihkan seusai pemutaran.
+
+Tekan tombol Aplikasi atau Shift+F10 pada hasil untuk membuka menu konteks. Tergantung item, tersedia Buka, Simpan/unduh media, Transkripsi, Buat deskripsi audio AI, serta Tambah atau Hapus dari favorit. Beberapa tindakan hanya tersedia untuk media yang dapat diputar dan pengunduhan mengikuti batas layanan.
+
+Gunakan daftar Favorit untuk menemukan item tersimpan, Enter untuk membukanya, dan menu konteks untuk menghapusnya. Kembali menuju halaman sebelumnya; Escape kembali bila memungkinkan atau menutup jendela. Tab, Shift+Tab dan panah mendukung NVDA serta JAWS. Pencarian memerlukan internet.

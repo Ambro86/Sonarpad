@@ -1,5 +1,10 @@
 # Ändringslogg
 
+Version 0.9.20 – 2026-10-25
+
+1. Väder: platsangivelserna har förbättrats i sökresultat och listan över senast använda städer. När uppgifterna finns visas även län eller distrikt, region och land för att skilja orter med samma namn åt. Upprepade platsnamn tas bort och tidigare sparade städer fungerar fortfarande.
+2. Guiderna har uppdaterats med detaljerade instruktioner för att klippa mediefiler och använda SonarMusic, inklusive kortkommandon, skärmläsarnavigering, avancerad redigering, sökning och favoriter.
+
 Version 0.9.19 – 2026-10-24
 
 1. Syntolkning: uppdelning efter långa avsnitt utan utrymme för berättande använder nu samma minsta paus som beskrivningarna och känner även igen korta pauser.

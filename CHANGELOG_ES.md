@@ -1,5 +1,10 @@
 # Changelog
 
+Version 0.9.20 – 2026-10-25
+
+1. Tiempo: mejoradas las etiquetas de ubicación en los resultados de búsqueda y las ciudades recientes. Cuando están disponibles, se muestran también el condado o distrito, la región y el país para distinguir localidades con el mismo nombre. Se evitan nombres repetidos y se mantiene la compatibilidad con las ciudades guardadas anteriormente.
+2. Actualizadas las guías con instrucciones detalladas para Cortar archivo multimedia y SonarMusic, incluidos atajos de teclado, navegación con lectores de pantalla, edición avanzada, búsquedas y favoritos.
+
 Version 0.9.19 – 2026-10-24
 
 1. Audiodescripciones: la división tras largos intervalos sin espacio para narrar ahora usa la misma pausa mínima que las descripciones y reconoce también las pausas breves.

@@ -237,8 +237,26 @@ Kiểm tra bản cập nhật: Kiểm tra xem có bản cập nhật mới khôn
 Nhật ký thay đổi: Mở cửa sổ nhật ký thay đổi.
 Giới thiệu: Hiển thị thông tin chương trình.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+CẮT TỆP ĐA PHƯƠNG TIỆN — HƯỚNG DẪN ĐẦY ĐỦ
 
+Mở Công cụ, Đa phương tiện, Cắt tệp đa phương tiện hoặc nhấn Alt+Shift+X. Chọn Mở tệp đa phương tiện rồi chọn tệp âm thanh hay video trên máy. Tính năng này loại bỏ các đoạn không mong muốn và lưu tệp mới chỉ chứa phần được giữ lại; không giống việc chia tệp thành nhiều tệp riêng biệt.
 
+Ở chế độ Cắt có hướng dẫn, chọn bước di chuyển 1, 5, 10, 30 hoặc 60 giây. Ctrl+Phím cách phát/tạm dừng; Alt+Mũi tên trái/phải di chuyển vị trí. Đến đầu đoạn cần xóa, nhấn Alt+1; đến cuối đoạn, nhấn Alt+2. Alt+3 nghe thử đoạn đã chọn và Alt+4 áp dụng cắt. Có thể lặp lại cho các đoạn khác.
 
+Vùng lệnh được thiết kế để dùng với trình đọc màn hình. Nhấn Tab để đến vùng này. Tại đây, mũi tên trái/phải tua, phím 1 đánh dấu đầu, 2 đánh dấu cuối, 3 hoặc Enter nghe thử, 4 cắt, Phím cách phát/tạm dừng, Home/End đến đầu/cuối tệp. Shift+Mũi tên tua 5 giây, Ctrl+Mũi tên tua 10 giây. F1 đọc các lệnh khả dụng; Tab rời vùng lệnh. Phím tắt Alt cũng hoạt động bên ngoài vùng này.
 
+Ở chế độ nâng cao, S chia đoạn tại vị trí hiện tại, mũi tên lên/xuống chọn đoạn, D hoặc Delete xóa đoạn và R khôi phục. Có thể chèn tệp khác trước đoạn được chọn, chỉnh điểm đầu/cuối theo bước 0,01 đến 1 giây, xoay video và bật xem trước. Ngoài ra có thể thêm bản âm thanh, điều chỉnh âm lượng riêng và lặp bản mới khi cần.
+
+Nhấn Lưu hoặc Ctrl+S, chọn định dạng và nơi lưu, đặt tên khác tệp gốc. Khi xuất tệp có tiến trình và nút Hủy. Hãy hoàn tất thao tác cắt có hướng dẫn còn dang dở trước khi lưu; đóng khi chưa lưu sẽ hỏi xác nhận.
+
+SONARMUSIC — HƯỚNG DẪN ĐẦY ĐỦ
+
+Mở Công cụ, Đa phương tiện, SonarMusic hoặc nhấn Ctrl+Alt+Shift+M. Nhập tên bài hát, nghệ sĩ hoặc album vào ô tìm kiếm. Chọn loại tìm kiếm: Tất cả, Bài hát, Album, Nghệ sĩ, Danh sách phát hoặc Video âm nhạc. Nhấn Enter trong ô hoặc nút Tìm kiếm. Bộ lọc được ghi nhớ và có thể có gợi ý.
+
+Dùng phím mũi tên để duyệt kết quả và nhấn Enter. Bài hát và video phát được mở trong trình phát; album, nghệ sĩ và danh sách phát mở nội dung bên trong. Danh sách cũng có mục kết quả trước và tải thêm. Sau khi tải, tiêu điểm quay lại kết quả; sau phát, chương trình cố gắng khôi phục tìm kiếm và lựa chọn trước đó.
+
+Nhấn phím Ứng dụng hoặc Shift+F10 trên kết quả đã chọn để mở menu ngữ cảnh. Tùy loại mục có thể có Mở, Lưu/tải phương tiện, Phiên âm, Tạo mô tả âm thanh bằng AI và Thêm/Xóa khỏi yêu thích. Một số tác vụ chỉ khả dụng cho nội dung phát được; việc tải xuống chịu giới hạn của dịch vụ.
+
+Trong danh sách Yêu thích, chọn mục rồi nhấn Enter để mở hoặc dùng menu ngữ cảnh để xóa. Quay lại trở về trang trước; Escape quay lại khi có thể hoặc đóng cửa sổ. Tab, Shift+Tab và phím mũi tên hỗ trợ NVDA và JAWS. Tìm kiếm cần Internet.

@@ -377,4 +377,28 @@ Ctrl+Ponto – inserir reticências
 Alt – abrir a barra de menus
 Esc – fechar janela, menu ou interromper a ação atual
 
+========== MEDIA CUTTER / SONARMUSIC ==========
+
+CORTAR ARQUIVO DE MÍDIA — GUIA COMPLETO
+
+Abra Ferramentas, Multimídia, Cortar arquivo de mídia ou pressione Alt+Shift+X. Selecione Abrir arquivo de mídia e escolha um áudio ou vídeo local. A função remove trechos indesejados e salva um novo arquivo com as partes mantidas; é diferente de dividir um arquivo em vários arquivos separados.
+
+No Corte guiado, escolha o passo de 1, 5, 10, 30 ou 60 segundos. Ctrl+Espaço reproduz ou pausa, e Alt+Seta esquerda/direita muda a posição. No começo do trecho a remover pressione Alt+1 e no final Alt+2. Alt+3 permite ouvir o trecho marcado e Alt+4 aplica o corte. Repita para outros trechos.
+
+A Área de comandos facilita a utilização com leitores de tela. Chegue até ela com Tab. Dentro da área, as setas esquerda/direita avançam ou retrocedem; 1 marca o início, 2 o fim, 3 ou Enter ouve, 4 aplica o corte, Espaço reproduz/pausa, e Home/End vão ao começo/fim do arquivo. Shift+Setas muda 5 segundos e Ctrl+Setas 10 segundos. F1 anuncia os comandos disponíveis; Tab sai da área. Os atalhos Alt também funcionam fora dela.
+
+No Corte avançado, S divide na posição atual, as setas para cima/baixo selecionam partes, D ou Delete remove uma parte e R a restaura. Você pode inserir outro arquivo antes da parte selecionada, ajustar início e fim em passos de 0,01 a 1 segundo, girar o vídeo e visualizar uma prévia. Também é possível adicionar uma faixa de áudio, regular separadamente os volumes e repetir a faixa adicionada.
+
+Pressione Salvar ou Ctrl+S, escolha o formato e o destino e dê ao novo arquivo um nome diferente do original. A exportação informa o progresso e oferece Cancelar. Finalize o corte guiado pendente antes de salvar; alterações não salvas exigem confirmação ao fechar.
+
+SONARMUSIC — GUIA COMPLETO
+
+Abra Ferramentas, Multimídia, SonarMusic ou pressione Ctrl+Alt+Shift+M. Digite uma música, artista ou álbum na busca. Escolha o Tipo de pesquisa: Tudo, Músicas, Álbuns, Artistas, Playlists ou Vídeos musicais. Pressione Enter no campo ou clique em Pesquisar. O filtro escolhido é lembrado e podem aparecer sugestões.
+
+Navegue pelos resultados com as setas e pressione Enter. Músicas e vídeos reproduzíveis abrem no player; álbuns, artistas e playlists mostram seu conteúdo. A lista também possui opções para resultados anteriores ou para carregar mais. Depois do carregamento, o foco volta aos resultados e, quando possível, a pesquisa é restaurada após a reprodução.
+
+Pressione a tecla Aplicativos ou Shift+F10 em um resultado para abrir seu menu de contexto. Dependendo do item, aparecem Abrir, Salvar/baixar mídia, Transcrever, Criar audiodescrição com IA e Adicionar ou Remover dos favoritos. Algumas ações só estão disponíveis para mídia reproduzível; downloads seguem as limitações do serviço.
+
+Na lista Favoritos, selecione e pressione Enter para abrir ou utilize o menu de contexto para remover. Voltar retorna à página anterior; Escape volta quando possível ou fecha a janela. Tab, Shift+Tab e as setas funcionam com NVDA e JAWS. A busca requer conexão com a Internet.
+
 FIM DO GUIA

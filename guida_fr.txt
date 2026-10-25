@@ -232,8 +232,26 @@ Menu Aide :
  Journal des modifications : Ouvre la fenêtre avec la liste des changements.
  À propos du programme : Affiche des informations sur le programme.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+DÉCOUPER UN FICHIER MULTIMÉDIA — GUIDE COMPLET
 
+Ouvrez Outils, Multimédia, Découper un fichier multimédia, ou appuyez sur Alt+Maj+X. Choisissez Ouvrir un fichier multimédia puis un fichier audio ou vidéo local. La fonction supprime les passages indésirables et exporte un nouveau fichier contenant les passages conservés. Elle est distincte du partage d'un fichier en plusieurs fichiers.
 
+En découpage guidé, choisissez un déplacement de 1, 5, 10, 30 ou 60 secondes. Ctrl+Espace lance ou met la lecture en pause et Alt+Flèche gauche/droite déplace la position. Au début du passage à supprimer, appuyez sur Alt+1 ; à la fin, sur Alt+2. Alt+3 permet d'écouter la portion sélectionnée et Alt+4 applique la coupe. Vous pouvez recommencer pour d'autres passages.
 
+La Zone de commandes est adaptée aux lecteurs d'écran. Rejoignez-la avec Tab. Les flèches gauche/droite naviguent, 1 marque le début, 2 la fin, 3 ou Entrée écoute, 4 applique la coupe, Espace lance/met en pause, Origine/Fin rejoignent les extrémités du fichier. Maj+Flèches avance ou recule de 5 secondes et Ctrl+Flèches de 10 secondes. F1 annonce les commandes disponibles ; Tab quitte la zone. Les raccourcis Alt fonctionnent aussi en dehors.
 
+En découpage avancé, S coupe à la position actuelle, Haut/Bas sélectionnent les segments, D ou Suppr supprime un segment et R le restaure. Vous pouvez insérer un autre média avant le segment choisi, ajuster précisément les bornes par pas de 0,01 à 1 seconde, tourner une vidéo et afficher un aperçu. Vous pouvez aussi ajouter une piste audio, régler séparément les volumes et mettre la piste ajoutée en boucle.
+
+Cliquez sur Enregistrer ou Ctrl+S, choisissez le format et l'emplacement et donnez au nouveau fichier un nom différent de l'original. Une barre de progression et un bouton Annuler sont disponibles pendant l'exportation. Terminez toute coupe guidée en attente avant d'enregistrer ; la fermeture avec des modifications non enregistrées demande confirmation.
+
+SONARMUSIC — GUIDE COMPLET
+
+Ouvrez Outils, Multimédia, SonarMusic ou appuyez sur Ctrl+Alt+Maj+M. Saisissez une chanson, un artiste ou un album. Le filtre Type de recherche propose Tout, Titres, Albums, Artistes, Playlists et Vidéos musicales. Validez avec Entrée dans la recherche ou le bouton Rechercher. Le filtre est mémorisé ; des suggestions peuvent apparaître.
+
+Parcourez les résultats avec les flèches puis Entrée. Un titre ou une vidéo lisible s'ouvre dans le lecteur ; un album, un artiste ou une playlist affiche son contenu. La liste contient aussi les commandes pour les résultats précédents ou suivants. Après chargement, le focus revient aux résultats ; la recherche et la sélection sont rétablies après lecture lorsque c'est possible.
+
+La touche Applications ou Maj+F10 ouvre le menu contextuel : Ouvrir, Enregistrer/télécharger, Transcrire, Créer une audiodescription par IA, Ajouter ou Retirer des favoris, selon le type d'élément. Certaines actions sont réservées aux médias lisibles. Respectez les options disponibles et les restrictions du service lors de l'enregistrement.
+
+La liste Favoris permet de retrouver les éléments enregistrés : Entrée ouvre un élément, le menu contextuel permet de le retirer. Retour revient à la page précédente ; Échap revient en arrière ou ferme la fenêtre. Tab, Maj+Tab et les flèches facilitent la navigation avec NVDA ou JAWS. La recherche nécessite Internet.

@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+Version 0.9.20 – 2026-10-25
+
+1. Pogoda: ulepszono opisy lokalizacji w wynikach wyszukiwania i na liście ostatnich miast. Gdy dane są dostępne, pokazywane są również powiat lub okręg, region i kraj, co pozwala odróżnić miejscowości o tej samej nazwie. Usunięto powtarzające się nazwy, zachowując zgodność z wcześniej zapisanymi miastami.
+2. Zaktualizowano instrukcje obsługi: szczegółowe opisy przycinania plików multimedialnych i SonarMusic, w tym skróty klawiaturowe, nawigację z czytnikiem ekranu, zaawansowaną edycję, wyszukiwanie i ulubione.
+
 Version 0.9.19 – 2026-10-24
 
 1. Audiodeskrypcja: podział po długich fragmentach bez miejsca na narrację używa teraz tej samej minimalnej przerwy co opisy i uwzględnia również krótkie przerwy.

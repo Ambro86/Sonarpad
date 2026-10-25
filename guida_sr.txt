@@ -222,7 +222,26 @@ Proveri ažuriranja: Proverava dostupna ažuriranja (F2).
 Lista izmena: Otvara prozor sa izmenama. 
 O programu: Prikazuje informacije o programu.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+SEČENJE MEDIJSKE DATOTEKE — DETALJNO UPUTSTVO
 
+Otvorite Alati, Multimedija, Sečenje medijske datoteke ili pritisnite Alt+Shift+X. Izaberite Otvori medijsku datoteku i lokalni audio ili video fajl. Ova funkcija uklanja neželjene delove i čuva novi fajl sa preostalim sadržajem; razlikuje se od deljenja fajla na više zasebnih fajlova.
 
+U vođenom režimu izaberite korak pomeranja od 1, 5, 10, 30 ili 60 sekundi. Ctrl+Razmak pokreće ili pauzira reprodukciju, a Alt+strelica levo/desno menja poziciju. Na početku dela koji treba ukloniti pritisnite Alt+1, na kraju Alt+2. Alt+3 preslušava označeni deo, a Alt+4 primenjuje rez. Postupak možete ponavljati.
 
+Komandna oblast je pogodna za čitače ekrana. Do nje dolazite tasterom Tab. Unutra strelice levo/desno pomeraju poziciju, 1 obeležava početak, 2 kraj, 3 ili Enter preslušava, 4 seče, Razmak reprodukuje/pauzira, Home/End idu na početak/kraj datoteke. Shift+strelice pomeraju 5 sekundi, Ctrl+strelice 10 sekundi. F1 izgovara dostupne komande; Tab izlazi iz oblasti. Alt prečice rade i van nje.
+
+U naprednom režimu S deli deo na trenutnoj poziciji, strelice gore/dole biraju delove, D ili Delete uklanja deo, a R ga vraća. Možete ubaciti još jedan medijski fajl pre izabranog dela, podesiti granice u koracima od 0,01 do 1 sekunde, rotirati video i prikazati pregled. Moguće je dodati audio zapis, zasebno podesiti jačinu zvuka i ponavljati dodati zapis.
+
+Pritisnite Sačuvaj ili Ctrl+S, odaberite format i odredište i koristite naziv različit od originala. Tokom izvoza prikazuju se napredak i dugme Otkaži. Pre čuvanja završite započeti vođeni rez; pri zatvaranju nesačuvanih izmena traži se potvrda.
+
+SONARMUSIC — DETALJNO UPUTSTVO
+
+Otvorite Alati, Multimedija, SonarMusic ili pritisnite Ctrl+Alt+Shift+M. Unesite pesmu, izvođača ili album u polje pretrage. Izaberite tip pretrage: Sve, Pesme, Albumi, Izvođači, Plejliste ili Muzički video snimci. Pritisnite Enter u polju ili dugme Pretraži. Izabrani filter se pamti i mogu se ponuditi predlozi.
+
+Kroz rezultate se krećite strelicama i pritisnite Enter. Pesme i video snimci koji se mogu pustiti otvaraju se u plejeru, a albumi, izvođači i plejliste otvaraju svoj sadržaj. Lista sadrži i stavke za prethodne i dodatne rezultate. Posle učitavanja fokus se vraća na rezultate; po završetku reprodukcije pretraga se po mogućstvu obnavlja.
+
+Na stavci pritisnite taster Aplikacije ili Shift+F10 za kontekstni meni. U zavisnosti od vrste dostupni su Otvori, Sačuvaj/preuzmi medij, Transkribuj, Napravi audio-opis uz AI i Dodaj ili Ukloni iz omiljenih. Neke radnje rade samo sa sadržajem za reprodukciju i podležu ograničenjima usluge.
+
+U listi Omiljeno odaberite stavku i pritisnite Enter za otvaranje ili je uklonite kroz kontekstni meni. Nazad vraća na prethodnu stranicu; Escape se vraća ili zatvara prozor. Tab, Shift+Tab i strelice omogućavaju rad sa NVDA i JAWS. Za pretragu je potreban internet.

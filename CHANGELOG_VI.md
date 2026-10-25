@@ -1,5 +1,10 @@
 # Nhật ký thay đổi
 
+Version 0.9.20 – 2026-10-25
+
+1. Thời tiết: cải thiện nhãn vị trí trong kết quả tìm kiếm và danh sách thành phố gần đây. Khi có dữ liệu, chương trình hiển thị thêm quận hoặc huyện, vùng và quốc gia để phân biệt những địa điểm trùng tên. Tên địa danh lặp lại được loại bỏ và các thành phố đã lưu trước đây vẫn tương thích.
+2. Đã cập nhật hướng dẫn sử dụng với chỉ dẫn chi tiết về Cắt tệp đa phương tiện và SonarMusic, gồm phím tắt, điều hướng bằng trình đọc màn hình, chỉnh sửa nâng cao, tìm kiếm và mục yêu thích.
+
 Version 0.9.19 – 2026-10-24
 
 1. Mô tả âm thanh: việc chia đoạn sau khoảng dài không có chỗ cho lời mô tả nay dùng cùng ngưỡng khoảng nghỉ tối thiểu với mô tả, nhận diện cả khoảng nghỉ ngắn.

@@ -1,5 +1,10 @@
 # Přehled změn
 
+Version 0.9.20 – 2026-10-25
+
+1. Počasí: zpřesněny názvy lokalit ve výsledcích hledání a seznamu nedávno použitých měst. Jsou-li dostupné, zobrazují se také okres nebo správní obvod, region a země, aby bylo možné rozlišit stejnojmenná místa. Duplicitní názvy se vynechávají a dříve uložená města zůstávají kompatibilní.
+2. Aktualizovány uživatelské příručky: podrobné návody ke střihu multimediálních souborů a SonarMusic, včetně klávesových zkratek, ovládání odečítačem obrazovky, pokročilých úprav, vyhledávání a oblíbených položek.
+
 Version 0.9.19 – 2026-10-24
 
 1. Audiopopis: dělení po dlouhých úsecích bez prostoru pro komentář nyní používá stejnou minimální pauzu jako popisy a rozpozná i krátké pauzy.

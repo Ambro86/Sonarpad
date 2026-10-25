@@ -1,5 +1,10 @@
 # Catatan perubahan
 
+Version 0.9.20 – 2026-10-25
+
+1. Cuaca: label lokasi pada hasil pencarian kota dan daftar kota terbaru diperjelas. Jika tersedia, kabupaten atau distrik, wilayah, dan negara kini ditampilkan agar lokasi bernama sama dapat dibedakan. Nama lokasi yang berulang dihilangkan dan kota yang sudah tersimpan tetap kompatibel.
+2. Panduan pengguna diperbarui dengan petunjuk terperinci untuk Potong file media dan SonarMusic, termasuk pintasan keyboard, navigasi pembaca layar, penyuntingan lanjutan, pencarian, dan favorit.
+
 Version 0.9.19 – 2026-10-24
 
 1. Deskripsi audio: pembagian setelah bagian panjang tanpa ruang narasi kini memakai jeda minimum yang sama dengan deskripsi, termasuk jeda singkat.

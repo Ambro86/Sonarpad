@@ -854,4 +854,28 @@ Alt+Umschalt+L – Kapitelliste
 F1 – Handbuch
 F2 – Nach Aktualisierungen suchen
 
+========== MEDIA CUTTER / SONARMUSIC ==========
+
+MEDIENDATEI SCHNEIDEN — AUSFÜHRLICHE ANLEITUNG
+
+Öffnen Sie Werkzeuge, Multimedia, Mediendatei schneiden oder drücken Sie Alt+Umschalt+X. Wählen Sie Mediendatei öffnen und anschließend eine lokale Audio- oder Videodatei. Die Funktion entfernt unerwünschte Abschnitte und speichert die verbleibenden Teile als neue Datei. Sie unterscheidet sich von der Aufteilung einer Datei in mehrere Dateien.
+
+Im geführten Schnitt wählen Sie eine Schrittweite von 1, 5, 10, 30 oder 60 Sekunden. Mit Strg+Leertaste starten oder pausieren Sie die Wiedergabe, mit Alt+Pfeil links/rechts bewegen Sie sich. Markieren Sie den Beginn des zu entfernenden Abschnitts mit Alt+1 und sein Ende mit Alt+2. Alt+3 spielt den markierten Abschnitt zur Kontrolle ab; Alt+4 wendet den Schnitt an. Weitere Abschnitte können anschließend bearbeitet werden.
+
+Für Screenreader gibt es den Befehlsbereich, den Sie mit Tab erreichen. Darin bewegen die Pfeiltasten links/rechts die Position; 1 setzt den Anfang, 2 das Ende, 3 oder Eingabe spielt den Abschnitt ab, 4 wendet den Schnitt an, Leertaste startet/pausiert und Pos1/Ende springen zu Dateianfang/-ende. Umschalt+Pfeil springt 5 Sekunden, Strg+Pfeil 10 Sekunden. F1 liest die verfügbaren Befehle vor; mit Tab verlassen Sie den Bereich. Die Alt-Kombinationen funktionieren auch außerhalb.
+
+Im erweiterten Modus teilen Sie mit S an der aktuellen Position, wechseln im Befehlsbereich mit Pfeil hoch/runter zwischen Teilen, löschen mit D oder Entf und stellen mit R wieder her. Sie können vor einem ausgewählten Teil eine weitere Mediendatei einfügen, Anfangs- und Endzeit in Schritten von 0,01 bis 1 Sekunde einstellen, Videos drehen und eine Vorschau anzeigen. Eine zusätzliche Audiospur mit getrennten Lautstärken und optionaler Wiederholung wird ebenfalls unterstützt.
+
+Mit Speichern oder Strg+S wählen Sie Speicherort und Ausgabeformat. Verwenden Sie einen anderen Dateinamen als beim Original. Beim Export gibt es eine Fortschrittsanzeige und Abbrechen. Beenden Sie einen begonnenen geführten Schnitt vor dem Speichern; ungespeicherte Änderungen werden beim Schließen bestätigt.
+
+SONARMUSIC — AUSFÜHRLICHE ANLEITUNG
+
+Öffnen Sie Werkzeuge, Multimedia, SonarMusic oder drücken Sie Strg+Alt+Umschalt+M. Geben Sie einen Songtitel, Interpreten oder ein Album ein. Als Suchtyp stehen Alles, Songs, Alben, Künstler, Playlists und Musikvideos zur Auswahl. Drücken Sie im Suchfeld Eingabe oder wählen Sie Suchen. Der gewählte Filter wird gespeichert; Suchvorschläge können eingeblendet werden.
+
+Navigieren Sie mit den Pfeiltasten durch die Suchergebnisse und drücken Sie Eingabe. Abspielbare Titel und Videos öffnen sich im Player, Alben, Künstler und Playlists zeigen ihre Inhalte. Im Ergebnisfeld gibt es auch Einträge für vorherige oder weitere Ergebnisse. Nach dem Laden wird der Fokus auf die Ergebnisse gesetzt; nach der Wiedergabe werden Suche und Auswahl möglichst wiederhergestellt.
+
+Über die Anwendungstaste oder Umschalt+F10 öffnen Sie das Kontextmenü. Je nach Eintrag stehen Öffnen, Medium speichern/herunterladen, Transkribieren, KI-Audiodeskription erstellen sowie Zu Favoriten hinzufügen/Aus Favoriten entfernen bereit. Nicht jede Aktion ist für jeden Eintrag verfügbar. Beim Speichern gelten die verfügbaren Dialoge und Einschränkungen des Dienstes.
+
+Über die Favoritenliste öffnen Sie gespeicherte Elemente mit Eingabe und entfernen sie über das Kontextmenü. Zurück führt zur vorherigen Ansicht, Escape geht zurück oder schließt das Fenster. Tab, Umschalt+Tab und Pfeiltasten erleichtern die Bedienung mit NVDA und JAWS. Für die Suche ist Internet erforderlich.
+
 ENDE DES HANDBUCHS

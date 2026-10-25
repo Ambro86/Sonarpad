@@ -223,6 +223,26 @@ Sök efter uppdateringar: kontrollerar om det finns uppdateringar (F2).
 Ändringslogg: visar ändringsloggen.
 Om programmet: visar information om programmet.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+KLIPP MEDIEFIL — FULLSTÄNDIG GUIDE
 
+Öppna Verktyg, Multimedia, Klipp mediefil, eller tryck Alt+Skift+X. Välj Öppna mediefil och en lokal ljud- eller videofil. Funktionen tar bort oönskade avsnitt och sparar en ny fil med det material som behålls. Det är inte samma sak som att dela en fil i flera separata filer.
 
+I guidat klippläge väljer du ett förflyttningssteg på 1, 5, 10, 30 eller 60 sekunder. Ctrl+Mellanslag startar/pausar uppspelningen; Alt+vänster-/högerpil flyttar positionen. Tryck Alt+1 i början av avsnittet som ska bort och Alt+2 i slutet. Alt+3 spelar upp det markerade avsnittet för kontroll och Alt+4 tillämpar klippet. Upprepa vid behov.
+
+Kommandofältet är anpassat för skärmläsare. Gå dit med Tab. Där flyttar vänster-/högerpilarna positionen, 1 markerar början, 2 slutet, 3 eller Retur lyssnar, 4 klipper, Mellanslag startar/pausar och Home/End går till filens början/slut. Skift+pilar flyttar 5 sekunder och Ctrl+pilar 10 sekunder. F1 läser upp tillgängliga kommandon; Tab lämnar fältet. Alt-genvägarna fungerar även utanför det.
+
+I avancerat läge delar S vid aktuell position, upp-/nedpilar väljer delar, D eller Delete tar bort en del och R återställer den. Du kan infoga en annan mediefil före den valda delen, justera start och slut i steg på 0,01–1 sekund, rotera video och visa förhandsgranskning. Du kan också lägga till ett ljudspår, justera volymer separat och upprepa det tillagda spåret.
+
+Tryck Spara eller Ctrl+S, välj format och plats och ge den nya filen ett annat namn än originalet. Exporten visar förlopp och har en Avbryt-knapp. Slutför ett påbörjat guidat klipp innan du sparar; vid stängning av osparade ändringar krävs bekräftelse.
+
+SONARMUSIC — FULLSTÄNDIG GUIDE
+
+Öppna Verktyg, Multimedia, SonarMusic eller tryck Ctrl+Alt+Skift+M. Skriv en låt, artist eller ett album i sökrutan. Välj söktyp: Alla, Låtar, Album, Artister, Spellistor eller Musikvideor. Tryck Retur i sökrutan eller knappen Sök. Vald filtrering sparas och sökförslag kan visas.
+
+Bläddra med piltangenterna bland sökresultaten och tryck Retur. Spelbara låtar och videor öppnas i spelaren; album, artister och spellistor visar sitt innehåll. Listan har även poster för föregående eller fler resultat. Efter inläsning återgår fokus till resultaten och efter uppspelning återställs om möjligt tidigare sökning.
+
+Tryck Programtangenten eller Skift+F10 på ett valt resultat för snabbmenyn. Beroende på innehåll finns Öppna, Spara/ladda ned media, Transkribera, Skapa AI-ljudbeskrivning samt Lägg till/Ta bort favorit. Vissa åtgärder finns bara för spelbara objekt och nedladdning påverkas av tjänstens begränsningar.
+
+I Favoriter väljer du ett sparat objekt och trycker Retur för att öppna eller tar bort det via snabbmenyn. Tillbaka återgår till föregående sida; Escape går tillbaka eller stänger fönstret. Tab, Skift+Tab och pilar stöder NVDA och JAWS. Sökningen kräver internet.

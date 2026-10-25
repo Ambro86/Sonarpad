@@ -241,5 +241,26 @@ Buscar actualizaciones: Comprobar si hay actualizaciones (F2).
 Registro de cambios: Abrir la ventana de cambios.
 Acerca de: Mostrar la información del programa.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+CORTAR ARCHIVO MULTIMEDIA — GUÍA COMPLETA
 
+Abre Herramientas, Multimedia, Cortar archivo multimedia, o pulsa Alt+Mayús+X. Selecciona Abrir archivo multimedia y elige un audio o vídeo local. Esta función elimina fragmentos no deseados y guarda un archivo nuevo con las partes conservadas; no es lo mismo que dividir un archivo en varios archivos separados.
+
+En Corte guiado, elige un salto de 1, 5, 10, 30 o 60 segundos. Ctrl+Espacio inicia o pausa la reproducción; Alt+Flecha izquierda/derecha permite desplazarse. Sitúate al principio del fragmento que quieres quitar y pulsa Alt+1; ve al final y pulsa Alt+2. Usa Alt+3 para escuchar el fragmento marcado y Alt+4 para aplicar el corte. Repite los pasos para otros fragmentos.
+
+El Área de comandos está pensada para lectores de pantalla. Llega con Tab; dentro, Izquierda/Derecha desplazan, 1 marca el inicio, 2 el final, 3 o Intro escucha, 4 aplica, Espacio reproduce/pausa e Inicio/Fin saltan a los extremos del archivo. Mayús+Flechas salta 5 segundos y Ctrl+Flechas 10 segundos. F1 anuncia los comandos disponibles; Tab sale del área. Los atajos con Alt también funcionan fuera del área.
+
+En Corte avanzado, S divide en la posición actual; Arriba/Abajo seleccionan partes, D o Supr elimina una parte y R la restaura. Puedes insertar otro archivo multimedia antes de la parte seleccionada, ajustar inicio y fin con pasos de 0,01, 0,1, 0,5 o 1 segundo, girar vídeos y mostrar su vista previa. También puedes añadir una pista de audio, ajustar el volumen de ambas pistas y repetir la nueva pista si se acaba antes.
+
+Pulsa Guardar o Ctrl+S, elige formato y destino y utiliza un nombre diferente del original. La exportación muestra el progreso y ofrece Cancelar. Termina cualquier corte guiado pendiente antes de guardar; al cerrar con cambios sin guardar se solicita confirmación.
+
+SONARMUSIC — GUÍA COMPLETA
+
+Abre Herramientas, Multimedia, SonarMusic, o pulsa Ctrl+Alt+Mayús+M. Escribe una canción, un artista o un álbum en el campo de búsqueda. El filtro Tipo de búsqueda permite elegir Todo, Canciones, Álbumes, Artistas, Listas y Vídeos musicales. Pulsa Intro en el campo o el botón Buscar. Se recuerda el filtro seleccionado y pueden aparecer sugerencias.
+
+Usa las flechas en Resultados de búsqueda y pulsa Intro sobre un elemento. Las canciones y los vídeos reproducibles se abren en el reproductor; los álbumes, artistas y listas muestran su contenido. El listado incluye opciones para ir a resultados anteriores o cargar más. El foco vuelve a los resultados después de cargarlos y, cuando es posible, se restaura la búsqueda tras la reproducción.
+
+Con la tecla Aplicaciones o Mayús+F10 abre el menú contextual del elemento elegido. Según el tipo, ofrece Abrir, Guardar/descargar, Transcribir, Crear audiodescripción con IA y Añadir o Quitar de favoritos. Algunas acciones solo están disponibles para medios reproducibles. Para guardar sigue los diálogos y restricciones del servicio.
+
+En Favoritos, selecciona un elemento y pulsa Intro para abrirlo; desde el menú contextual puedes quitarlo. Atrás vuelve a páginas anteriores; Escape vuelve atrás cuando es posible o cierra la ventana. Tab, Mayús+Tab y las flechas permiten utilizar la función con NVDA o JAWS. La búsqueda necesita Internet.

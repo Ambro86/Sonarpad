@@ -1,5 +1,10 @@
 # Changelog
 
+Version 0.9.20 – 2026-10-25
+
+1. Meteo: migliorate le indicazioni geografiche nei risultati di ricerca e nelle città recenti. Quando disponibili, vengono mostrati anche contea o distretto, regione e Paese, così da distinguere località con lo stesso nome. Eliminati i nomi ripetuti e mantenuta la compatibilità con le città già salvate.
+2. Aggiornate le guide con istruzioni dettagliate per Taglia file media e SonarMusic, inclusi i comandi da tastiera, la navigazione con lettori di schermo, il taglio avanzato, la ricerca e i preferiti.
+
 Version 0.9.19 – 2026-10-24
 
 1. Audiodescrizioni: la divisione dopo lunghi tratti senza spazio per la narrazione ora usa la stessa pausa minima delle descrizioni, riconoscendo anche le pause brevi.

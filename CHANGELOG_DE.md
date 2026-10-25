@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+Version 0.9.20 – 2026-10-25
+
+1. Wetter: Ortsangaben in den Suchergebnissen und zuletzt verwendeten Städten verbessert. Sofern verfügbar, werden auch Landkreis oder Bezirk, Region und Land angezeigt, damit gleichnamige Orte unterschieden werden können. Doppelte Ortsangaben werden vermieden; bereits gespeicherte Städte bleiben kompatibel.
+2. Die Handbücher wurden mit ausführlichen Anleitungen zu Mediendatei schneiden und SonarMusic aktualisiert, einschließlich Tastenkombinationen, Screenreader-Bedienung, erweitertem Schnitt, Suche und Favoriten.
+
 Version 0.9.19 – 2026-10-24
 
 1. Audiodeskription: Die Aufteilung nach langen Abschnitten ohne Platz für Beschreibungen verwendet nun dieselbe Mindestpause wie die Beschreibungen und berücksichtigt auch kurze Pausen.

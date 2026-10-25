@@ -221,7 +221,26 @@ Patikrinti atnaujinimus: Patikrinkite, ar yra naujų atnaujinimų (F2).
 Changelog: Atidarykite changelog langą.
 Apie: Rodyti programos informaciją.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+MEDIJOS FAILO KIRPIMAS — IŠSAMUS VADOVAS
 
+Atverkite Įrankiai, Multimedija, Kirpti medijos failą arba spauskite Alt+Shift+X. Pasirinkite Atverti medijos failą ir nurodykite vietinį garso ar vaizdo įrašą. Ši funkcija pašalina nereikalingas atkarpas ir išsaugo naują failą su likusia medžiaga; ji skiriasi nuo failo padalijimo į kelis atskirus failus.
 
+Vadovaujamo kirpimo režimu pasirinkite 1, 5, 10, 30 ar 60 sekundžių žingsnį. Ctrl+Tarpas pradeda ar sustabdo atkūrimą, Alt+rodyklė kairėn/dešinėn keičia poziciją. Norimos pašalinti atkarpos pradžioje spauskite Alt+1, pabaigoje Alt+2. Alt+3 perklauso pažymėtą atkarpą, o Alt+4 ją iškerpa. Veiksmus galima kartoti.
 
+Komandų sritis pritaikyta ekrano skaitytuvams. Pasiekite ją klavišu Tab. Rodyklės kairėn/dešinėn perkelia poziciją; 1 žymi pradžią, 2 pabaigą, 3 arba Enter perklauso, 4 iškerpa, Tarpas pradeda/stabdo, Home/End pereina į failo pradžią/pabaigą. Shift+rodyklės perkelia 5 sekundes, Ctrl+rodyklės 10 sekundžių. F1 paskelbia galimas komandas, o Tab leidžia išeiti iš srities. Alt deriniai veikia ir kitur.
+
+Išplėstiniame režime S padalija atkarpą, rodyklės aukštyn/žemyn parenka dalį, D arba Delete ją pašalina, R atkuria. Galite įterpti kitą medijos failą prieš pasirinktą dalį, koreguoti pradžios ir pabaigos laikus 0,01–1 sekundės žingsniais, pasukti vaizdą ir įjungti peržiūrą. Taip pat galima pridėti garso takelį, atskirai reguliuoti garsumą ir kartoti papildomą takelį.
+
+Pasirinkite Išsaugoti arba Ctrl+S, nurodykite formatą bei vietą ir įveskite kitokį pavadinimą nei originalo. Eksporto metu rodoma eiga ir atšaukimo mygtukas. Prieš išsaugodami užbaikite pradėtą kirpimą; uždarant neišsaugotus pakeitimus prašoma patvirtinimo.
+
+SONARMUSIC — IŠSAMUS VADOVAS
+
+Atverkite Įrankiai, Multimedija, SonarMusic arba spauskite Ctrl+Alt+Shift+M. Įrašykite dainos pavadinimą, atlikėją arba albumą. Paieškos tipai: Viskas, Dainos, Albumai, Atlikėjai, Grojaraščiai ir Muzikiniai vaizdo įrašai. Paieškos lauke spauskite Enter arba mygtuką Ieškoti. Pasirinktas filtras įsimenamas; gali būti rodomi pasiūlymai.
+
+Rezultatus naršykite rodyklėmis ir spauskite Enter. Atkuriamos dainos ir vaizdo įrašai atveriami grotuve, o albumai, atlikėjai ir grojaraščiai atveria savo turinį. Sąraše yra perėjimo prie ankstesnių ar papildomų rezultatų įrašų. Įkėlus rezultatus fokusas grįžta į sąrašą; po atkūrimo, jei įmanoma, atkuriama ankstesnė paieška.
+
+Paspauskite kontekstinio meniu klavišą arba Shift+F10 ant pasirinkto elemento. Pagal jo tipą siūloma Atverti, Išsaugoti/atsisiųsti, Transkribuoti, Sukurti DI garsinį aprašymą bei Pridėti prie mėgstamų ar pašalinti. Ne visos funkcijos tinka kiekvienam elementui, o atsisiuntimui taikomi paslaugos apribojimai.
+
+Mėgstamų sąraše Enter atveria išsaugotą elementą, kontekstinis meniu leidžia jį pašalinti. Atgal grąžina į ankstesnį puslapį, Escape grįžta atgal arba uždaro langą. Tab, Shift+Tab ir rodyklės leidžia naudotis su NVDA ar JAWS. Paieškai reikalingas internetas.

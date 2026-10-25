@@ -234,10 +234,26 @@ Controllo aggiornamenti: controlla se ci sono aggiornamenti (F2).
 Registro modifiche: mostra il changelog.
 Informazioni sul programma: mostra informazioni sul programma.
 
+========== MEDIA CUTTER / SONARMUSIC ==========
 
+TAGLIA FILE MEDIA — GUIDA COMPLETA
 
+Per aprire la funzione, vai in Strumenti, Multimedia, Taglia file media oppure premi Alt+Maiusc+X. Seleziona Apri file media e scegli un file audio o video locale. Questa funzione serve a eliminare intervalli indesiderati e salvare un nuovo file con le parti conservate; è diversa da Dividi media, che spezza un file in più file.
 
+In Taglio guidato scegli quanto spostarti con i comandi Indietro e Avanti: 1, 5, 10, 30 o 60 secondi. Puoi ascoltare con Ctrl+Spazio e spostarti con Alt+Freccia sinistra/destra. Raggiungi l'inizio del tratto da togliere e premi Inizio taglio (Alt+1). Vai alla fine del tratto e premi Fine taglio (Alt+2). Premi Ascolta taglio (Alt+3) per verificare la parte che verrà rimossa, poi Applica taglio (Alt+4). Ripeti per altri intervalli. Non è necessario conoscere il video visivamente: il programma comunica posizioni e azioni tramite messaggi accessibili.
 
+L'Area comandi è pensata per NVDA e JAWS: spostati su questo controllo con Tab. Al suo interno funzionano direttamente Freccia sinistra/destra, 1 (inizio), 2 (fine), 3 o Invio (ascolta), 4 (applica), Spazio (riproduci/pausa), Home e Fine. Maiusc+Frecce orizzontali salta di 5 secondi, Ctrl+Frecce orizzontali di 10. F1 legge i comandi disponibili per la modalità corrente; Tab esce dall'area. Le combinazioni Alt restano utilizzabili anche fuori dall'Area comandi.
 
+In Taglio avanzato puoi suddividere il file in parti con S (Dividi qui), muoverti tra le parti con Freccia su/giù nell'Area comandi, ascoltare la parte selezionata con 3 o Invio, eliminarla con D o Canc, ripristinarla con R e inserire un altro file media prima della parte selezionata. Puoi correggere gli estremi usando i campi Inizio e Fine e la precisione di 0,01, 0,1, 0,5 o 1 secondo. Se il file contiene video puoi anche scegliere la rotazione e mostrare un'anteprima. È possibile aggiungere una traccia audio, regolare separatamente i volumi dell'originale e della traccia aggiunta e ripetere quest'ultima se è troppo corta.
 
+Alla fine premi Salva o Ctrl+S, scegli percorso e formato di uscita e assegna al nuovo file un nome diverso da quello originale. Durante l'esportazione sono visualizzati avanzamento e pulsante Interrompi. Se c'è un taglio guidato ancora in sospeso, completalo prima di salvare. Quando chiudi con modifiche non salvate, Sonarpad chiede conferma.
 
+SONARMUSIC — GUIDA COMPLETA
+
+Apri SonarMusic da Strumenti, Multimedia, SonarMusic oppure con Ctrl+Alt+Maiusc+M. Inserisci il titolo di una canzone, il nome di un artista o un album nel campo di ricerca. Seleziona Tipo ricerca: Tutto, Brani, Album, Artisti, Playlist o Video musicali. Premi Invio nel campo di ricerca o il pulsante Cerca. Il filtro scelto viene ricordato. Il pulsante Suggerimenti, quando disponibile, aiuta a completare la ricerca.
+
+Esplora la casella Risultati ricerca con le frecce. Premi Invio sull'elemento scelto: un brano o video riproducibile viene aperto nel lettore; un album, artista o playlist apre i relativi contenuti. Le voci per passare ai risultati precedenti o caricarne altri sono presenti direttamente nell'elenco. Dopo il caricamento il focus torna ai risultati; quando si termina la riproduzione vengono recuperati, ove possibile, ricerca e selezione precedenti.
+
+Per le altre azioni seleziona un risultato e premi il tasto Applicazioni o Maiusc+F10 per aprire il menu contestuale. A seconda del tipo di elemento troverai Apri, Salva media, Trascrivi, Crea audiodescrizione con IA e Aggiungi o Rimuovi dai preferiti. Alcune azioni compaiono solo per brani o video riproducibili; album, artisti e playlist possono essere aperti per esplorarli. Per salvare un media segui le finestre e le opzioni disponibili, rispettando eventuali limitazioni del servizio.
+
+La casella Preferiti permette di recuperare gli elementi memorizzati: scegli un elemento e premi Invio per aprirlo. Con il tasto Applicazioni o Maiusc+F10 puoi anche rimuoverlo. Il pulsante Indietro torna alla ricerca o alla pagina precedente; Esc torna indietro quando possibile, oppure chiude SonarMusic. Tutta la finestra può essere percorsa con Tab, Maiusc+Tab e le frecce, usando NVDA o JAWS. Le ricerche musicali richiedono una connessione Internet.
