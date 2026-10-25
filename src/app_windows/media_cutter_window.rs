@@ -2,6 +2,7 @@ use crate::{
     accessibility::{screen_reader_speak, to_wide},
     media_cutter_export::{self, AddedTrack, ExportPlan},
     media_cutter_model::*,
+    media_cutter_project::{self, CutterProject, ProjectTrack},
     settings::Language,
 };
 use std::{
@@ -74,12 +75,18 @@ const NEXT_TEN: usize = 9843;
 const FILE_HOME: usize = 9844;
 const FILE_END: usize = 9845;
 const INSERT_MEDIA: usize = 9846;
+const OPEN_PROJECT: usize = 9847;
+const SAVE_PROJECT: usize = 9848;
+const GOLDWAVE: usize = 9849;
+const GOLDWAVE_START: usize = 9850;
+const GOLDWAVE_END: usize = 9851;
+const GOLDWAVE_DELETE: usize = 9852;
 const TICK: usize = 1;
 const WM_RESTORE_CUTTER_FOCUS: u32 = WM_APP + 212;
 #[derive(Default)]
 struct Job {
     percent: u32,
-    result: Option<Result<(), String>>,
+    result: Option<Result<Option<PathBuf>, String>>,
 }
 struct Player {
     child: Child,
@@ -122,6 +129,7 @@ struct State {
     progress: HWND,
     cancel_button: HWND,
     input: Option<PathBuf>,
+    project_path: Option<PathBuf>,
     duration: f64,
     has_video: bool,
     parts: Vec<MediaPart>,
@@ -292,7 +300,9 @@ impl State {
         self.show_bounds();
     }
     fn show_bounds(&self) {
-        let bounds = if self.selected(MODE) == 0 {
+        let bounds = if self.selected(MODE) == 0
+            || (self.checked(GOLDWAVE) && self.start.is_some() && self.end.is_some())
+        {
             self.start.zip(self.end)
         } else {
             self.parts
@@ -493,6 +503,147 @@ impl State {
         }
         true
     }
+    fn save_project(&mut self) -> Result<(), String> {
+        let input = self.input.clone().ok_or_else(|| self.tr("no_file"))?;
+        if self.start.is_some() {
+            return Err(self.tr("pending_cut_save"));
+        }
+        let mut project = CutterProject::new(
+            input.clone(),
+            self.duration,
+            self.has_video,
+            self.parts.clone(),
+        );
+        project.sources = self.sources.clone();
+        project.position = self.current();
+        project.rotation = self.selected(ROTATE);
+        project.mode = self.selected(MODE);
+        project.movement = self.selected(MOVE);
+        project.goldwave_keys = self.checked(GOLDWAVE);
+        if let Some(path) = self.track.clone() {
+            project.track = Some(ProjectTrack {
+                path,
+                original_volume: self.number(ORIGINAL_GAIN)?,
+                new_volume: self.number(ADDED_GAIN)?,
+                loop_track: self.checked(LOOP),
+            });
+        }
+        project.validate()?;
+        let suggested = self
+            .project_path
+            .clone()
+            .unwrap_or_else(|| input.with_extension("sonarcut"));
+        if let Some(path) =
+            choose_project(self.hwnd, true, &self.tr("save_project"), Some(&suggested))
+        {
+            media_cutter_project::save(&path, &project)?;
+            self.project_path = Some(path);
+            self.dirty = false;
+            self.say(&self.tr("project_saved"));
+            crate::show_info(self.hwnd, self.language, &self.tr("project_saved"));
+        }
+        Ok(())
+    }
+    fn open_project(&mut self) -> Result<(), String> {
+        if (self.dirty || self.start.is_some()) && !self.confirm("unsaved_message") {
+            return Ok(());
+        }
+        let Some(path) = choose_project(
+            self.hwnd,
+            false,
+            &self.tr("open_project"),
+            self.project_path.as_deref(),
+        ) else {
+            return Ok(());
+        };
+        let project = media_cutter_project::load(&path)?;
+        if project.sources.is_empty() {
+            let duration = crate::ffmpeg_export::media_duration_seconds(&project.input)
+                .ok_or_else(|| self.tr("invalid_media"))?;
+            if (duration - project.duration).abs() > 0.25 {
+                return Err(self.tr("project_source_changed"));
+            }
+        } else {
+            for span in &project.sources {
+                let duration = crate::ffmpeg_export::media_duration_seconds(&span.path)
+                    .ok_or_else(|| self.tr("invalid_media"))?;
+                if span.source_start + span.end - span.start > duration + 0.1 {
+                    return Err(self.tr("project_source_changed"));
+                }
+            }
+        }
+        self.stop();
+        self.input = Some(project.input);
+        self.project_path = Some(path);
+        self.duration = project.duration;
+        self.has_video = project.has_video;
+        self.parts = project.parts;
+        self.sources = project.sources;
+        self.position = project.position;
+        self.track = project.track.as_ref().map(|t| t.path.clone());
+        self.start = None;
+        self.end = None;
+        self.dirty = false;
+        unsafe {
+            SendMessageW(
+                self.ctrl(MODE),
+                CB_SETCURSEL,
+                WPARAM(project.mode),
+                LPARAM(0),
+            );
+            SendMessageW(
+                self.ctrl(MOVE),
+                CB_SETCURSEL,
+                WPARAM(project.movement),
+                LPARAM(0),
+            );
+            SendMessageW(
+                self.ctrl(ROTATE),
+                CB_SETCURSEL,
+                WPARAM(project.rotation),
+                LPARAM(0),
+            );
+            SendMessageW(
+                self.ctrl(GOLDWAVE),
+                BM_SETCHECK,
+                WPARAM(usize::from(project.goldwave_keys)),
+                LPARAM(0),
+            );
+            SendMessageW(
+                self.ctrl(LOOP),
+                BM_SETCHECK,
+                WPARAM(usize::from(
+                    project.track.as_ref().is_some_and(|t| t.loop_track),
+                )),
+                LPARAM(0),
+            );
+        }
+        self.set(
+            ORIGINAL_GAIN,
+            &project
+                .track
+                .as_ref()
+                .map_or(100.0, |t| t.original_volume)
+                .to_string(),
+        );
+        self.set(
+            ADDED_GAIN,
+            &project
+                .track
+                .as_ref()
+                .map_or(100.0, |t| t.new_volume)
+                .to_string(),
+        );
+        self.set(TRACK, &self.tr("choose_track"));
+        self.set(PRIMARY, &self.tr("set_start"));
+        self.set(POSITION, &format!("{:.3}", self.position));
+        self.set(START, "0.000");
+        self.set(END, "0.000");
+        self.refresh_parts();
+        self.visibility();
+        self.say(&self.tr("project_loaded"));
+        Ok(())
+    }
     fn insert_media(&mut self, path: PathBuf) -> Result<(), String> {
         let input = self.input.clone().ok_or_else(|| self.tr("no_file"))?;
         let index = self.selected(PARTS);
@@ -589,6 +740,7 @@ impl State {
                         path.file_name().unwrap_or_default().to_string_lossy()
                     );
                     self.sources.clear();
+                    self.project_path = None;
                     self.input = Some(path);
                     self.duration = duration;
                     self.has_video = has_video;
@@ -606,6 +758,9 @@ impl State {
                     self.end = None;
                     self.track = None;
                     self.dirty = false;
+                    unsafe {
+                        SendMessageW(self.ctrl(GOLDWAVE), BM_SETCHECK, WPARAM(0), LPARAM(0));
+                    }
                     self.set(PRIMARY, &self.tr("set_start"));
                     self.set(TRACK, &self.tr("choose_track"));
                     self.refresh_parts();
@@ -621,6 +776,67 @@ impl State {
                     }
                     self.say(&format!("{loaded}. {}", self.tr("guide_start")));
                 }
+            }
+            GOLDWAVE if notification == BN_CLICKED => {
+                self.dirty |= self.input.is_some();
+                self.say(&self.tr(if self.checked(GOLDWAVE) {
+                    "goldwave_enabled"
+                } else {
+                    "goldwave_disabled"
+                }));
+            }
+            OPEN_PROJECT => self.open_project()?,
+            SAVE_PROJECT => self.save_project()?,
+            GOLDWAVE_START => {
+                if self.input.is_none() {
+                    return Err(self.tr("no_file"));
+                }
+                self.start = Some(self.current());
+                self.end = None;
+                self.set(PRIMARY, &self.tr("set_end"));
+                self.say(&format!(
+                    "{}: {}",
+                    self.tr("goldwave_start_set"),
+                    spoken_time(self.current(), self.language)
+                ));
+                self.visibility();
+            }
+            GOLDWAVE_END => {
+                let first = self.start.ok_or_else(|| self.tr("goldwave_start_first"))?;
+                let current = self.current();
+                if (first - current).abs() < MIN_PART_SECONDS {
+                    return Err(self.tr("invalid_cut"));
+                }
+                self.stop();
+                self.start = Some(first.min(current));
+                self.end = Some(first.max(current));
+                self.set(PRIMARY, &self.tr("apply_cut"));
+                self.show_bounds();
+                self.visibility();
+                self.say(&format!(
+                    "{}: {} - {}",
+                    self.tr("goldwave_end_set"),
+                    spoken_time(first.min(current), self.language),
+                    spoken_time(first.max(current), self.language)
+                ));
+            }
+            GOLDWAVE_DELETE => {
+                let (a, b) = self
+                    .start
+                    .zip(self.end)
+                    .ok_or_else(|| self.tr("goldwave_mark_first"))?;
+                self.stop();
+                let removed = delete_range(&mut self.parts, a, b, self.duration);
+                if removed.is_empty() {
+                    return Err(self.tr("invalid_cut"));
+                }
+                self.start = None;
+                self.end = None;
+                self.dirty = true;
+                self.set(PRIMARY, &self.tr("set_start"));
+                self.refresh_parts();
+                self.visibility();
+                self.say(&self.tr("cut_applied"));
             }
             MODE if notification == CBN_SELCHANGE => {
                 if self.start.is_some() && !self.confirm("discard_pending_cut") {
@@ -769,6 +985,9 @@ impl State {
                             spoken_time(seconds, self.language)
                         ));
                     }
+                }
+                if self.checked(GOLDWAVE) {
+                    lines.push(self.tr("goldwave_help"));
                 }
                 lines.push(self.tr("home_end_help"));
                 lines.push(self.tr("save"));
@@ -1019,11 +1238,15 @@ impl State {
                     self.say(&self.tr("processing_started"));
                     std::thread::spawn(move || {
                         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                            media_cutter_export::export(&plan, cancel, &mut |p| {
-                                if let Ok(mut state) = job.lock() {
-                                    state.percent = p;
-                                }
-                            })
+                            media_cutter_project::export_with_safe_replacement(
+                                &plan,
+                                cancel,
+                                &mut |p| {
+                                    if let Ok(mut state) = job.lock() {
+                                        state.percent = p;
+                                    }
+                                },
+                            )
                         }))
                         .unwrap_or_else(|_| Err("Media cutter export panicked".into()));
                         crate::log_debug(&format!("Media cutter export finished: {result:?}"));
@@ -1098,10 +1321,22 @@ impl State {
                 }
                 self.visibility();
                 match result {
-                    Ok(()) => {
-                        self.dirty = false;
-                        self.say(&self.tr("saved"));
-                        crate::show_info(self.hwnd, self.language, &self.tr("saved"));
+                    Ok(backup) => {
+                        if self.project_path.is_none() {
+                            self.dirty = false;
+                        }
+                        let message = if let Some(path) = backup {
+                            format!(
+                                "{}\n{}: {}",
+                                self.tr("saved"),
+                                self.tr("backup_created"),
+                                path.display()
+                            )
+                        } else {
+                            self.tr("saved")
+                        };
+                        self.say(&message);
+                        crate::show_info(self.hwnd, self.language, &message);
                     }
                     Err(e) if self.cancel.load(Ordering::Relaxed) => {
                         crate::log_debug(&e);
@@ -1121,6 +1356,56 @@ impl State {
                 }
             }
         }
+    }
+}
+fn choose_project(
+    hwnd: HWND,
+    save: bool,
+    title: &str,
+    suggested: Option<&std::path::Path>,
+) -> Option<PathBuf> {
+    unsafe {
+        let mut path = vec![0u16; 32768];
+        if let Some(suggested) = suggested {
+            let initial = to_wide(&suggested.to_string_lossy());
+            let count = initial.len().saturating_sub(1).min(path.len() - 1);
+            path[..count].copy_from_slice(&initial[..count]);
+        }
+        let filter = to_wide("Sonarpad project (*.sonarcut)\0*.sonarcut\0\0");
+        let extension = to_wide("sonarcut");
+        let title = to_wide(title);
+        let mut ofn = OPENFILENAMEW {
+            lStructSize: std::mem::size_of::<OPENFILENAMEW>() as u32,
+            hwndOwner: hwnd,
+            lpstrFilter: PCWSTR(filter.as_ptr()),
+            nFilterIndex: 1,
+            lpstrFile: PWSTR(path.as_mut_ptr()),
+            nMaxFile: path.len() as u32,
+            lpstrTitle: PCWSTR(title.as_ptr()),
+            lpstrDefExt: PCWSTR(extension.as_ptr()),
+            Flags: OFN_EXPLORER
+                | OFN_PATHMUSTEXIST
+                | OFN_NOCHANGEDIR
+                | if save {
+                    OFN_OVERWRITEPROMPT
+                } else {
+                    OFN_FILEMUSTEXIST
+                },
+            ..Default::default()
+        };
+        crate::watchdog::enter_modal_dialog();
+        let accepted = if save {
+            GetSaveFileNameW(&mut ofn)
+        } else {
+            GetOpenFileNameW(&mut ofn)
+        }
+        .as_bool();
+        crate::watchdog::exit_modal_dialog();
+        accepted.then(|| {
+            PathBuf::from(String::from_utf16_lossy(
+                &path[..path.iter().position(|&value| value == 0).unwrap_or(0)],
+            ))
+        })
     }
 }
 fn choose(
@@ -1293,6 +1578,7 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         progress: HWND(0),
         cancel_button: HWND(0),
         input: None,
+        project_path: None,
         duration: 0.0,
         has_video: false,
         parts: vec![],
@@ -1309,6 +1595,16 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         close_after_export: false,
     };
     button(&mut s, "open_file", OPEN, 12, 12, 230);
+    button(&mut s, "open_project", OPEN_PROJECT, 252, 12, 242);
+    let label = s.tr("goldwave_keys");
+    control(
+        &mut s,
+        "BUTTON",
+        &label,
+        GOLDWAVE,
+        [508, 4, 272, 42],
+        WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32 | BS_MULTILINE as u32),
+    );
     let modes = [s.tr("guided"), s.tr("advanced")];
     combo(&mut s, "mode", MODE, &modes, 12, 48, 250);
     combo(
@@ -1422,7 +1718,8 @@ fn create(hwnd: HWND, parent: HWND) -> State {
     );
     s.track_controls = s.controls[track_start..].to_vec();
     button(&mut s, "save", SAVE, 12, 580, 200);
-    button(&mut s, "close", CLOSE, 230, 580, 180);
+    button(&mut s, "save_project", SAVE_PROJECT, 230, 580, 245);
+    button(&mut s, "close", CLOSE, 492, 580, 180);
     let label = s.tr("ready");
     s.status = control(
         &mut s,
@@ -1615,6 +1912,16 @@ fn area_command(key: u32, advanced: bool) -> Option<usize> {
     }
 }
 
+fn goldwave_command(key: u32, ctrl: bool, alt: bool, shift: bool, enabled: bool) -> Option<usize> {
+    if !enabled || ctrl || alt || shift {
+        return None;
+    }
+    match key {
+        0x2E => Some(GOLDWAVE_DELETE),
+        _ => None,
+    }
+}
+
 fn reserves_letters(target: HWND) -> bool {
     let mut name = [0_u16; 128];
     let count = unsafe { GetClassNameW(target, &mut name) };
@@ -1626,9 +1933,59 @@ pub fn handle_navigation(hwnd: HWND, msg: &MSG) -> bool {
     if msg.hwnd != hwnd && !crate::is_child_safe(hwnd, msg.hwnd) {
         return false;
     }
+    // Use characters, rather than virtual key codes, for keyboard-layout-independent brackets.
+    if msg.message == WM_CHAR || msg.message == WM_SYSCHAR {
+        let command = match msg.wParam.0 as u32 {
+            0x5B => Some(GOLDWAVE_START),
+            0x5D => Some(GOLDWAVE_END),
+            _ => None,
+        };
+        if let Some(command) = command {
+            let area = msg.hwnd == unsafe { GetDlgItem(hwnd, COMMAND_AREA as i32) };
+            let enabled = unsafe {
+                SendMessageW(
+                    GetDlgItem(hwnd, GOLDWAVE as i32),
+                    BM_GETCHECK,
+                    WPARAM(0),
+                    LPARAM(0),
+                )
+                .0 == 1
+            };
+            if enabled && (area || !reserves_letters(msg.hwnd)) {
+                if msg.lParam.0 & (1_isize << 30) == 0 {
+                    unsafe {
+                        crate::log_if_err!(PostMessageW(
+                            hwnd,
+                            WM_COMMAND,
+                            WPARAM(command),
+                            LPARAM(0)
+                        ));
+                    }
+                }
+                return true;
+            }
+        }
+    }
     if msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN {
         let down = |key: u16| crate::get_key_state_safe(key as i32) & (0x8000_u16 as i16) != 0;
-        let area = if msg.hwnd == unsafe { GetDlgItem(hwnd, COMMAND_AREA as i32) } {
+        let in_command_area = msg.hwnd == unsafe { GetDlgItem(hwnd, COMMAND_AREA as i32) };
+        let goldwave_enabled = unsafe {
+            SendMessageW(
+                GetDlgItem(hwnd, GOLDWAVE as i32),
+                BM_GETCHECK,
+                WPARAM(0),
+                LPARAM(0),
+            )
+            .0 == 1
+        };
+        let goldwave = goldwave_command(
+            msg.wParam.0 as u32,
+            down(VK_CONTROL.0),
+            down(VK_MENU.0),
+            down(VK_SHIFT.0),
+            goldwave_enabled && (in_command_area || !reserves_letters(msg.hwnd)),
+        );
+        let area = if in_command_area {
             modified_area_command(
                 msg.wParam.0 as u32,
                 unsafe {
@@ -1647,7 +2004,7 @@ pub fn handle_navigation(hwnd: HWND, msg: &MSG) -> bool {
         } else {
             None
         };
-        if let Some(command) = area.or_else(|| {
+        if let Some(command) = goldwave.or(area).or_else(|| {
             shortcut_command(
                 msg.wParam.0 as u32,
                 down(VK_CONTROL.0),
@@ -1977,6 +2334,15 @@ mod tests {
             assert_eq!(area_command(0x0d, advanced), Some(LISTEN));
             assert_eq!(area_command(0x09, advanced), None); // Tab must leave the area.
             assert_eq!(area_command(0x70, advanced), Some(COMMAND_HELP));
+            assert_eq!(goldwave_command(0xDB, false, false, false, true), None);
+            assert_eq!(goldwave_command(0xDD, false, false, false, true), None);
+            assert_eq!(
+                goldwave_command(0x2E, false, false, false, true),
+                Some(GOLDWAVE_DELETE)
+            );
+            assert_eq!(goldwave_command(0x2E, false, false, false, false), None);
+            assert_eq!(goldwave_command(0xDB, true, false, false, true), None);
+            assert_eq!(goldwave_command(0xDD, false, false, true, true), None);
         }
         assert_eq!(area_command(0x52, true), Some(RESTORE));
         assert_eq!(area_command(0x52, false), None);
@@ -2060,6 +2426,89 @@ mod tests {
         );
         for key in [VK_LEFT.0 as u32, VK_RIGHT.0 as u32, '1' as u32, 'S' as u32] {
             assert_eq!(shortcut_command(key, false, false, false, true), None);
+        }
+    }
+    #[test]
+    fn goldwave_selection_removes_only_marked_audio_in_advanced_mode() {
+        unsafe {
+            let class = to_wide("SonarpadCutterGoldwaveTest");
+            let instance = HINSTANCE(crate::get_module_handle_raw_default());
+            crate::register_class_w_safe(&WNDCLASSW {
+                hInstance: instance,
+                lpszClassName: PCWSTR(class.as_ptr()),
+                lpfnWndProc: Some(wndproc),
+                ..Default::default()
+            });
+            let hwnd = CreateWindowExW(
+                WS_EX_CONTROLPARENT,
+                PCWSTR(class.as_ptr()),
+                PCWSTR::null(),
+                WS_CAPTION,
+                0,
+                0,
+                805,
+                700,
+                HWND(0),
+                HMENU(0),
+                instance,
+                None,
+            );
+            assert_ne!(hwnd.0, 0);
+            let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
+            assert!(!ptr.is_null());
+            (*ptr).input = Some(PathBuf::from("test-podcast.mp3"));
+            (*ptr).duration = 10.0;
+            (*ptr).parts = vec![MediaPart {
+                start: 0.0,
+                end: 10.0,
+                keep: true,
+            }];
+            (*ptr).refresh_parts();
+            SendMessageW((*ptr).ctrl(MODE), CB_SETCURSEL, WPARAM(1), LPARAM(0));
+            SendMessageW(
+                hwnd,
+                WM_COMMAND,
+                WPARAM(MODE | ((CBN_SELCHANGE as usize) << 16)),
+                LPARAM(0),
+            );
+            SendMessageW((*ptr).ctrl(GOLDWAVE), BM_SETCHECK, WPARAM(1), LPARAM(0));
+            (*ptr).position = 2.0;
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(GOLDWAVE_START), LPARAM(0));
+            assert_eq!((*ptr).start, Some(2.0));
+            (*ptr).position = 5.0;
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(GOLDWAVE_END), LPARAM(0));
+            assert_eq!((*ptr).end, Some(5.0));
+            SendMessageW(hwnd, WM_COMMAND, WPARAM(GOLDWAVE_DELETE), LPARAM(0));
+            assert_eq!((*ptr).parts.len(), 3);
+            assert_eq!(
+                (
+                    (&(*ptr).parts)[0].start,
+                    (&(*ptr).parts)[0].end,
+                    (&(*ptr).parts)[0].keep
+                ),
+                (0.0, 2.0, true)
+            );
+            assert_eq!(
+                (
+                    (&(*ptr).parts)[1].start,
+                    (&(*ptr).parts)[1].end,
+                    (&(*ptr).parts)[1].keep
+                ),
+                (2.0, 5.0, false)
+            );
+            assert_eq!(
+                (
+                    (&(*ptr).parts)[2].start,
+                    (&(*ptr).parts)[2].end,
+                    (&(*ptr).parts)[2].keep
+                ),
+                (5.0, 10.0, true)
+            );
+            assert!((*ptr).dirty);
+            assert!((*ptr).start.is_none() && (*ptr).end.is_none());
+            assert_eq!(kept_duration(&(*ptr).parts), 7.0);
+            (*ptr).dirty = false;
+            DestroyWindow(hwnd).unwrap();
         }
     }
     #[test]

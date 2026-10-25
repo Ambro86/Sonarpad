@@ -235,6 +235,8 @@ Išplėstiniame režime S padalija atkarpą, rodyklės aukštyn/žemyn parenka d
 
 Pasirinkite Išsaugoti arba Ctrl+S, nurodykite formatą bei vietą ir įveskite kitokį pavadinimą nei originalo. Eksporto metu rodoma eiga ir atšaukimo mygtukas. Prieš išsaugodami užbaikite pradėtą kirpimą; uždarant neišsaugotus pakeitimus prašoma patvirtinimo.
 
+Žymimasis langelis Naudoti GoldWave klavišus įjungia alternatyvias komandas: klausantis [ žymi pradžią, ] pabaigą, o Delete pašalina pažymėtą dalį, taip pat išplėstiniu režimu. Komandų srityje F1 perskaito klavišų sąrašą. Tarptautinėse klaviatūrose naudokite derinius, kuriais įvedami laužtiniai skliaustai. Išsaugoti projektą sukuria .sonarcut failą su kirpimais, dalimis, pozicija ir nuostatomis, kad vėliau galėtumėte tęsti nesuspaudžiant garso iš naujo. Atverti projektą atkuria darbą, jei originalūs failai vis dar pasiekiami. Išsaugoti arba Ctrl+S vis dar eksportuoja garsą ar vaizdą. Jei paskirties failas jau yra, Sonarpad prieš pakeisdamas sukuria atsarginę kopiją ir neperrašo šaltinio failų.
+
 SONARMUSIC — IŠSAMUS VADOVAS
 
 Atverkite Įrankiai, Multimedija, SonarMusic arba spauskite Ctrl+Alt+Shift+M. Įrašykite dainos pavadinimą, atlikėją arba albumą. Paieškos tipai: Viskas, Dainos, Albumai, Atlikėjai, Grojaraščiai ir Muzikiniai vaizdo įrašai. Paieškos lauke spauskite Enter arba mygtuką Ieškoti. Pasirinktas filtras įsimenamas; gali būti rodomi pasiūlymai.

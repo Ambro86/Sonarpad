@@ -4,6 +4,7 @@ Version 0.9.20 – 2026-10-25
 
 1. Pogoda: ulepszono opisy lokalizacji w wynikach wyszukiwania i na liście ostatnich miast. Gdy dane są dostępne, pokazywane są również powiat lub okręg, region i kraj, co pozwala odróżnić miejscowości o tej samej nazwie. Usunięto powtarzające się nazwy, zachowując zgodność z wcześniej zapisanymi miastami.
 2. Zaktualizowano instrukcje obsługi: szczegółowe opisy przycinania plików multimedialnych i SonarMusic, w tym skróty klawiaturowe, nawigację z czytnikiem ekranu, zaawansowaną edycję, wyszukiwanie i ulubione.
+3. Przycinanie multimediów: opcjonalne skróty jak w GoldWave z nawiasami kwadratowymi i Delete, projekty .sonarcut do kontynuowania bez ponownej kompresji oraz kopie zapasowe przed zastąpieniem wyeksportowanego pliku.
 
 Version 0.9.19 – 2026-10-24
 

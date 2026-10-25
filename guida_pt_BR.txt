@@ -391,6 +391,8 @@ No Corte avançado, S divide na posição atual, as setas para cima/baixo seleci
 
 Pressione Salvar ou Ctrl+S, escolha o formato e o destino e dê ao novo arquivo um nome diferente do original. A exportação informa o progresso e oferece Cancelar. Finalize o corte guiado pendente antes de salvar; alterações não salvas exigem confirmação ao fechar.
 
+A opção Usar teclas do GoldWave ativa comandos alternativos: durante a reprodução, [ marca o início, ] marca o fim e Delete exclui o trecho selecionado, também no corte avançado. Na área de comandos, F1 informa os atalhos. Em teclados internacionais, use as combinações que produzem colchetes. Salvar projeto cria um arquivo .sonarcut com cortes, trechos, posição e configurações para continuar depois sem recomprimir o áudio. Abrir projeto recupera a sessão enquanto os arquivos originais estiverem disponíveis. Salvar ou Ctrl+S continua exportando áudio ou vídeo. Se o destino já existir, o Sonarpad cria um backup antes de substituí-lo e nunca sobrescreve os arquivos de origem.
+
 SONARMUSIC — GUIA COMPLETO
 
 Abra Ferramentas, Multimídia, SonarMusic ou pressione Ctrl+Alt+Shift+M. Digite uma música, artista ou álbum na busca. Escolha o Tipo de pesquisa: Tudo, Músicas, Álbuns, Artistas, Playlists ou Vídeos musicais. Pressione Enter no campo ou clique em Pesquisar. O filtro escolhido é lembrado e podem aparecer sugestões.

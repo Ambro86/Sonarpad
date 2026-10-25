@@ -237,6 +237,8 @@ I avancerat läge delar S vid aktuell position, upp-/nedpilar väljer delar, D e
 
 Tryck Spara eller Ctrl+S, välj format och plats och ge den nya filen ett annat namn än originalet. Exporten visar förlopp och har en Avbryt-knapp. Slutför ett påbörjat guidat klipp innan du sparar; vid stängning av osparade ändringar krävs bekräftelse.
 
+Kryssrutan Använd GoldWave-tangenter aktiverar alternativa kommandon: under uppspelning markerar [ början, ] slutet och Delete tar bort det valda avsnittet, även i avancerat läge. Tryck F1 i kommandoområdet för att höra tangentlistan. På internationella tangentbord använder du kombinationerna som skriver hakparenteser. Spara projekt skapar en .sonarcut-fil med klipp, segment, position och inställningar, så att du kan fortsätta senare utan att komprimera om ljudet. Öppna projekt återställer arbetet om originalfilerna finns kvar. Spara eller Ctrl+S exporterar fortfarande ljud eller video. Om målfilen redan finns skapar Sonarpad en säkerhetskopia innan den ersätts och skriver aldrig över källfilerna.
+
 SONARMUSIC — FULLSTÄNDIG GUIDE
 
 Öppna Verktyg, Multimedia, SonarMusic eller tryck Ctrl+Alt+Skift+M. Skriv en låt, artist eller ett album i sökrutan. Välj söktyp: Alla, Låtar, Album, Artister, Spellistor eller Musikvideor. Tryck Retur i sökrutan eller knappen Sök. Vald filtrering sparas och sökförslag kan visas.

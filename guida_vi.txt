@@ -251,6 +251,8 @@ Vùng lệnh được thiết kế để dùng với trình đọc màn hình. N
 
 Nhấn Lưu hoặc Ctrl+S, chọn định dạng và nơi lưu, đặt tên khác tệp gốc. Khi xuất tệp có tiến trình và nút Hủy. Hãy hoàn tất thao tác cắt có hướng dẫn còn dang dở trước khi lưu; đóng khi chưa lưu sẽ hỏi xác nhận.
 
+Hộp chọn Dùng phím kiểu GoldWave bật các lệnh thay thế: khi đang nghe, [ đánh dấu điểm bắt đầu, ] đánh dấu điểm kết thúc và Delete xóa đoạn đã chọn, kể cả ở chế độ nâng cao. Nhấn F1 trong khu vực lệnh để nghe danh sách phím. Với bàn phím quốc tế, hãy dùng tổ hợp phím tạo dấu ngoặc vuông. Lưu dự án tạo tệp .sonarcut ghi nhớ các đoạn cắt, vị trí và thiết lập để tiếp tục sau mà không phải nén lại âm thanh. Mở dự án khôi phục công việc nếu các tệp gốc vẫn còn. Lưu hoặc Ctrl+S vẫn xuất âm thanh hay video. Nếu tệp đích đã có, Sonarpad tạo bản sao lưu trước khi thay thế và không ghi đè tệp nguồn.
+
 SONARMUSIC — HƯỚNG DẪN ĐẦY ĐỦ
 
 Mở Công cụ, Đa phương tiện, SonarMusic hoặc nhấn Ctrl+Alt+Shift+M. Nhập tên bài hát, nghệ sĩ hoặc album vào ô tìm kiếm. Chọn loại tìm kiếm: Tất cả, Bài hát, Album, Nghệ sĩ, Danh sách phát hoặc Video âm nhạc. Nhấn Enter trong ô hoặc nút Tìm kiếm. Bộ lọc được ghi nhớ và có thể có gợi ý.

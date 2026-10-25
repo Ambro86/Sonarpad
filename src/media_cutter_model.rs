@@ -1,7 +1,8 @@
 //! Source-time editing and MPV playback plans, shared by preview and DLL export.
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 pub const MIN_PART_SECONDS: f64 = 0.01;
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MediaPart {
     pub start: f64,
     pub end: f64,

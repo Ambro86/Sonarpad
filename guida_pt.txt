@@ -230,6 +230,8 @@ No Corte avançado, S divide na posição atual, as setas cima/baixo selecionam 
 
 Prima Guardar ou Ctrl+S, escolha o formato e destino e dê ao novo ficheiro um nome diferente do original. A exportação mostra o progresso e permite cancelar. Termine o corte guiado pendente antes de guardar; ao fechar alterações não guardadas é pedida confirmação.
 
+A opção Usar teclas do GoldWave ativa comandos alternativos: durante a reprodução, [ marca o início, ] o fim e Delete elimina a seleção, também no modo avançado. Na área de comandos, F1 apresenta os atalhos. Num teclado internacional, use as combinações que produzem os parênteses retos. Guardar projeto cria um ficheiro .sonarcut com os cortes, segmentos, posição e definições para continuar mais tarde sem voltar a comprimir o áudio. Abrir projeto recupera a sessão se os ficheiros originais continuarem disponíveis. Guardar ou Ctrl+S continua a exportar áudio ou vídeo. Quando o destino já existe, o Sonarpad cria uma cópia de segurança antes de o substituir, sem sobrescrever os ficheiros de origem.
+
 SONARMUSIC — GUIA COMPLETO
 
 Abra Ferramentas, Multimédia, SonarMusic ou prima Ctrl+Alt+Shift+M. Introduza o título de uma música, artista ou álbum. Escolha o tipo de pesquisa: Tudo, Músicas, Álbuns, Artistas, Listas de reprodução ou Vídeos musicais. Prima Enter no campo de pesquisa ou o botão Pesquisar. O filtro é memorizado e podem surgir sugestões.

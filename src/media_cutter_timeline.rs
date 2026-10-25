@@ -1,8 +1,9 @@
 //! A continuous editing clock mapped onto one or more original media files.
 use crate::media_cutter_model::MediaPart;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MediaSpan {
     pub path: PathBuf,
     pub start: f64,

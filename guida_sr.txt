@@ -236,6 +236,8 @@ U naprednom režimu S deli deo na trenutnoj poziciji, strelice gore/dole biraju 
 
 Pritisnite Sačuvaj ili Ctrl+S, odaberite format i odredište i koristite naziv različit od originala. Tokom izvoza prikazuju se napredak i dugme Otkaži. Pre čuvanja završite započeti vođeni rez; pri zatvaranju nesačuvanih izmena traži se potvrda.
 
+Поље Користи GoldWave тастере укључује алтернативне команде: током репродукције [ означава почетак, ] крај, а Delete брише одабрани део, и у напредном режиму. У области команди притисни F1 за списак тастера. На међународној тастатури користи комбинације које исписују угласте заграде. Сачувај пројекат прави .sonarcut датотеку са резовима, деловима, позицијом и подешавањима, како би могао касније да наставиш без поновне компресије звука. Отвори пројекат враћа измене ако су оригиналне датотеке још доступне. Сачувај или Ctrl+S и даље извози аудио или видео. Ако одредишна датотека постоји, Sonarpad прави резервну копију пре замене и не преписује изворне датотеке.
+
 SONARMUSIC — DETALJNO UPUTSTVO
 
 Otvorite Alati, Multimedija, SonarMusic ili pritisnite Ctrl+Alt+Shift+M. Unesite pesmu, izvođača ili album u polje pretrage. Izaberite tip pretrage: Sve, Pesme, Albumi, Izvođači, Plejliste ili Muzički video snimci. Pritisnite Enter u polju ili dugme Pretraži. Izabrani filter se pamti i mogu se ponuditi predlozi.

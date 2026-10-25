@@ -4,6 +4,7 @@ Version 0.9.20 – 2026-10-25
 
 1. Cuaca: label lokasi pada hasil pencarian kota dan daftar kota terbaru diperjelas. Jika tersedia, kabupaten atau distrik, wilayah, dan negara kini ditampilkan agar lokasi bernama sama dapat dibedakan. Nama lokasi yang berulang dihilangkan dan kota yang sudah tersimpan tetap kompatibel.
 2. Panduan pengguna diperbarui dengan petunjuk terperinci untuk Potong file media dan SonarMusic, termasuk pintasan keyboard, navigasi pembaca layar, penyuntingan lanjutan, pencarian, dan favorit.
+3. Pemotong media: tombol pintas opsional seperti GoldWave dengan tanda kurung siku dan Delete, proyek .sonarcut untuk melanjutkan tanpa kompresi ulang serta cadangan sebelum mengganti berkas hasil ekspor.
 
 Version 0.9.19 – 2026-10-24
 

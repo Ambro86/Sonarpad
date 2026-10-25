@@ -242,6 +242,8 @@ Dalam mode lanjutan, S membagi bagian pada posisi aktif, Panah atas/bawah memili
 
 Tekan Simpan atau Ctrl+S, pilih lokasi serta format keluaran, lalu gunakan nama berbeda dari berkas asli. Kemajuan ekspor dan tombol Batal tersedia. Selesaikan potongan terpandu yang masih tertunda sebelum menyimpan. Program meminta konfirmasi jika ditutup dengan perubahan yang belum disimpan.
 
+Kotak Gunakan tombol seperti GoldWave mengaktifkan perintah alternatif: saat memutar audio, [ menandai awal, ] menandai akhir, dan Delete menghapus bagian terpilih, termasuk dalam mode lanjutan. Tekan F1 di area perintah untuk mendengar daftar tombol. Pada papan ketik internasional, gunakan kombinasi yang menghasilkan tanda kurung siku. Simpan proyek membuat berkas .sonarcut yang menyimpan potongan, bagian, posisi, dan pengaturan supaya dapat dilanjutkan nanti tanpa mengompresi ulang audio. Buka proyek memulihkan pekerjaan selama berkas aslinya masih tersedia. Simpan atau Ctrl+S tetap mengekspor audio atau video. Jika berkas tujuan sudah ada, Sonarpad membuat cadangan sebelum menggantinya dan tidak menimpa berkas sumber.
+
 SONARMUSIC — PANDUAN LENGKAP
 
 Buka Alat, Multimedia, SonarMusic, atau tekan Ctrl+Alt+Shift+M. Masukkan judul lagu, nama artis, atau album. Pilih jenis pencarian: Semua, Lagu, Album, Artis, Daftar putar, atau Video musik. Tekan Enter di kotak pencarian atau tombol Cari. Filter pilihan disimpan dan saran pencarian dapat muncul.

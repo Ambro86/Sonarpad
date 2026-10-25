@@ -124,6 +124,50 @@ fn tones(path: &Path) {
     }
 }
 #[test]
+fn safe_reexport_preserves_backup_and_source() -> Result<(), String> {
+    let (dir, input, _video) = fixtures();
+    let output = dir.join("previously-edited.m4a");
+    let plan = plan(&input, &output);
+    let cancelled = Arc::new(AtomicBool::new(false));
+    assert!(
+        crate::media_cutter_project::export_with_safe_replacement(
+            &plan,
+            cancelled.clone(),
+            &mut |_| {}
+        )?
+        .is_none()
+    );
+    let original_output = std::fs::read(&output).map_err(|e| e.to_string())?;
+    let original_source = std::fs::read(&input).map_err(|e| e.to_string())?;
+    let backup = crate::media_cutter_project::export_with_safe_replacement(
+        &plan,
+        cancelled.clone(),
+        &mut |_| {},
+    )?
+    .ok_or("Missing backup for existing output")?;
+    assert_eq!(
+        std::fs::read(&backup).map_err(|e| e.to_string())?,
+        original_output
+    );
+    tones(&output);
+    assert_eq!(
+        std::fs::read(&input).map_err(|e| e.to_string())?,
+        original_source
+    );
+    let mut invalid = plan.clone();
+    invalid.output = input.clone();
+    assert!(
+        crate::media_cutter_project::export_with_safe_replacement(&invalid, cancelled, &mut |_| {})
+            .is_err()
+    );
+    assert_eq!(
+        std::fs::read(&input).map_err(|e| e.to_string())?,
+        original_source
+    );
+    std::fs::remove_dir_all(dir).map_err(|e| e.to_string())?;
+    Ok(())
+}
+#[test]
 fn native_cutter_real_exports_and_playback() -> Result<(), String> {
     let (dir, audio, av) = fixtures();
     for (input, ext) in [(&audio, "m4a"), (&av, "mp4")] {

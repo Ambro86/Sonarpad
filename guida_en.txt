@@ -235,6 +235,8 @@ In Advanced cut mode, press S to split at the current point, Up/Down in the Comm
 
 Press Save or Ctrl+S, choose an output format and location, and use a filename different from the original. Export has progress feedback and a Cancel button. Complete a pending guided cut before saving; closing unsaved changes prompts for confirmation.
 
+The Use GoldWave-style keys checkbox enables an alternative editing workflow: while listening, [ marks the start, ] marks the end, and Delete removes the selected range, even in Advanced cut mode. Press F1 in the Command area for the key list. On international keyboards use the keys that produce square brackets on your layout. Save project creates a .sonarcut project containing your cuts, segments, position and settings so you can continue later without recompressing the audio. Open project restores this work while the original media files remain available. Save or Ctrl+S still exports audio or video. When replacing an existing output file, Sonarpad keeps a backup and never overwrites source files.
+
 SONARMUSIC — COMPLETE GUIDE
 
 Open Tools, Multimedia, SonarMusic, or press Ctrl+Alt+Shift+M. Enter a song title, artist or album in the search field. Choose a Search type: All, Songs, Albums, Artists, Playlists or Music videos. Press Enter in the search field or choose Search. The selected filter is remembered. Suggestions may be offered while entering text.

@@ -4,6 +4,7 @@ Version 0.9.20 – 2026-10-25
 
 1. Weather: improved location labels in city search results and recently used cities. Where available, county or district, region and country are now shown to distinguish places with the same name. Repeated location names are omitted, and previously saved cities remain compatible.
 2. Updated the user guides with detailed instructions for Cut media file and SonarMusic, including keyboard shortcuts, screen-reader navigation, advanced editing, search and favorites.
+3. Cut media file: added optional GoldWave-style bracket and Delete shortcuts, .sonarcut projects to resume editing without recompression and backup copies before replacing exported files.
 
 Version 0.9.19 – 2026-10-24
 

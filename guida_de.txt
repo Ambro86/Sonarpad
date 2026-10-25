@@ -868,6 +868,8 @@ Im erweiterten Modus teilen Sie mit S an der aktuellen Position, wechseln im Bef
 
 Mit Speichern oder Strg+S wählen Sie Speicherort und Ausgabeformat. Verwenden Sie einen anderen Dateinamen als beim Original. Beim Export gibt es eine Fortschrittsanzeige und Abbrechen. Beenden Sie einen begonnenen geführten Schnitt vor dem Speichern; ungespeicherte Änderungen werden beim Schließen bestätigt.
 
+Das Kontrollkästchen GoldWave-Tasten verwenden aktiviert eine alternative Bedienung: Während der Wiedergabe markiert [ den Anfang, ] das Ende und Entf löscht den gewählten Abschnitt, auch im erweiterten Schnittmodus. Im Befehlsbereich liest F1 die Tastenliste vor. Bei internationalen Tastaturen verwenden Sie die Ihrem Layout entsprechenden Tasten für eckige Klammern. Mit Projekt speichern wird eine .sonarcut-Datei angelegt, die Schnitte, Abschnitte, Position und Einstellungen für die spätere Bearbeitung ohne erneute Audiokomprimierung bewahrt. Projekt öffnen stellt die Arbeit wieder her, sofern die Originaldateien noch vorhanden sind. Speichern beziehungsweise Strg+S exportiert weiterhin Audio oder Video. Bei einer bereits vorhandenen Zieldatei wird vor dem Ersetzen eine Sicherheitskopie angelegt; Quelldateien werden nicht überschrieben.
+
 SONARMUSIC — AUSFÜHRLICHE ANLEITUNG
 
 Öffnen Sie Werkzeuge, Multimedia, SonarMusic oder drücken Sie Strg+Alt+Umschalt+M. Geben Sie einen Songtitel, Interpreten oder ein Album ein. Als Suchtyp stehen Alles, Songs, Alben, Künstler, Playlists und Musikvideos zur Auswahl. Drücken Sie im Suchfeld Eingabe oder wählen Sie Suchen. Der gewählte Filter wird gespeichert; Suchvorschläge können eingeblendet werden.

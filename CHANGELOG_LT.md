@@ -4,6 +4,7 @@ Version 0.9.20 – 2026-10-25
 
 1. Orų prognozė: patikslintos vietovių žymos miestų paieškos rezultatuose ir neseniai naudotų miestų sąraše. Kai yra duomenų, rodomi rajonas ar apygarda, regionas ir šalis, kad būtų galima atskirti vienodai pavadintas vietoves. Pasikartojantys pavadinimai pašalinti, o anksčiau išsaugoti miestai išlieka suderinami.
 2. Atnaujinti naudotojo vadovai su išsamiomis medijos failų kirpimo ir SonarMusic instrukcijomis, įskaitant sparčiuosius klavišus, ekrano skaitytuvo valdymą, išplėstinį redagavimą, paiešką ir mėgstamus elementus.
+3. Medijos kirpimas: pasirinktiniai GoldWave tipo klavišai su laužtiniais skliaustais ir Delete, .sonarcut projektai darbui tęsti be pakartotinio glaudinimo bei atsarginės kopijos prieš pakeičiant eksportuotą failą.
 
 Version 0.9.19 – 2026-10-24
 

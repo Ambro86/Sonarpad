@@ -251,6 +251,8 @@ V pokročilém režimu lze klávesou S rozdělit úsek, šipkami nahoru/dolů vy
 
 Uložte výsledek tlačítkem Uložit nebo Ctrl+S. Vyberte jiný název než u původního souboru. Export zobrazuje průběh a nabízí zrušení; před uložením dokončete rozpracovaný střih. Při zavírání neuložených změn se zobrazí potvrzení.
 
+Zaškrtávací políčko Používat klávesy jako v GoldWave zapíná alternativní ovládání: při přehrávání [ označí začátek, ] konec a Delete odstraní vybraný úsek, také v pokročilém režimu. V oblasti příkazů stiskněte F1 pro přečtení kláves. Na mezinárodní klávesnici použijte kombinace pro hranaté závorky. Uložit projekt vytvoří soubor .sonarcut s úpravami, částmi, pozicí a nastavením, takže lze pokračovat později bez opětovné komprese zvuku. Otevřít projekt obnoví práci, pokud jsou původní soubory stále k dispozici. Uložit nebo Ctrl+S nadále exportuje audio či video. Pokud cílový soubor existuje, Sonarpad jej před nahrazením zálohuje a nepřepíše zdrojové soubory.
+
 SONARMUSIC — PODROBNÝ NÁVOD
 
 V nabídce Nástroje, Multimédia otevřete SonarMusic nebo použijte Ctrl+Alt+Shift+M. Zadejte skladbu, interpreta či album. Filtr vyhledávání nabízí Vše, Skladby, Alba, Umělce, Playlisty a Hudební videa. Stiskněte Enter v poli vyhledávání nebo tlačítko Hledat. Volba filtru se ukládá a mohou se nabídnout návrhy hledání.

@@ -246,6 +246,8 @@ En découpage avancé, S coupe à la position actuelle, Haut/Bas sélectionnent 
 
 Cliquez sur Enregistrer ou Ctrl+S, choisissez le format et l'emplacement et donnez au nouveau fichier un nom différent de l'original. Une barre de progression et un bouton Annuler sont disponibles pendant l'exportation. Terminez toute coupe guidée en attente avant d'enregistrer ; la fermeture avec des modifications non enregistrées demande confirmation.
 
+La case Utiliser les touches GoldWave active des commandes alternatives : pendant la lecture, [ marque le début, ] la fin et Suppr efface la sélection, même en mode avancé. Dans la zone de commandes, F1 énonce les raccourcis. Sur un clavier international, utilisez les combinaisons qui produisent les crochets. Enregistrer le projet crée un fichier .sonarcut conservant les coupes, segments, position et réglages pour reprendre le travail sans recompresser l'audio. Ouvrir un projet restaure votre session si les fichiers d'origine sont toujours présents. Enregistrer ou Ctrl+S exporte toujours un fichier audio ou vidéo. Si le fichier de destination existe déjà, Sonarpad conserve une copie de sauvegarde avant de le remplacer, sans écraser les fichiers sources.
+
 SONARMUSIC — GUIDE COMPLET
 
 Ouvrez Outils, Multimédia, SonarMusic ou appuyez sur Ctrl+Alt+Maj+M. Saisissez une chanson, un artiste ou un album. Le filtre Type de recherche propose Tout, Titres, Albums, Artistes, Playlists et Vidéos musicales. Validez avec Entrée dans la recherche ou le bouton Rechercher. Le filtre est mémorisé ; des suggestions peuvent apparaître.

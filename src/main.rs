@@ -61,6 +61,7 @@ mod media_conversion;
 mod media_conversion_batch;
 mod media_cutter_export;
 mod media_cutter_model;
+mod media_cutter_project;
 mod media_cutter_timeline;
 mod media_join;
 mod stream_recording;

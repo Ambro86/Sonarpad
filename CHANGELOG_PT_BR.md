@@ -4,6 +4,7 @@ Version 0.9.20 – 2026-10-25
 
 1. Previsão do tempo: melhoradas as informações de localização nos resultados de busca e nas cidades recentes. Quando disponíveis, são exibidos também condado ou distrito, região e país para diferenciar localidades com o mesmo nome. Nomes repetidos são eliminados e as cidades salvas anteriormente continuam compatíveis.
 2. Guias atualizados com instruções detalhadas para Cortar arquivo de mídia e SonarMusic, incluindo atalhos de teclado, navegação com leitores de tela, edição avançada, pesquisa e favoritos.
+3. Cortar arquivos de mídia: atalhos opcionais no estilo GoldWave com colchetes e Delete, projetos .sonarcut para continuar sem recomprimir áudio e backups antes de substituir arquivos exportados.
 
 Version 0.9.19 – 2026-10-24
 

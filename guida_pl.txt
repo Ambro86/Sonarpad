@@ -252,6 +252,8 @@ W trybie zaawansowanym S dzieli fragment w bieżącym miejscu, strzałki góra/d
 
 Wybierz Zapisz lub Ctrl+S, format i miejsce docelowe; podaj nazwę różną od pliku źródłowego. Podczas eksportu pokazywany jest postęp i przycisk Anuluj. Przed zapisem dokończ rozpoczęte cięcie prowadzone; przy zamykaniu niezapisanych zmian pojawia się pytanie o potwierdzenie.
 
+Pole wyboru Używaj klawiszy jak w GoldWave włącza alternatywną obsługę: podczas odtwarzania [ oznacza początek, ] koniec, a Delete usuwa zaznaczony fragment, również w trybie zaawansowanym. W obszarze poleceń naciśnij F1, aby usłyszeć listę klawiszy. Na klawiaturach międzynarodowych użyj kombinacji wpisujących nawiasy kwadratowe. Zapisz projekt tworzy plik .sonarcut z cięciami, fragmentami, pozycją i ustawieniami, aby można było kontynuować bez ponownej kompresji dźwięku. Otwórz projekt przywraca edycję, jeżeli pliki oryginalne nadal istnieją. Zapisz lub Ctrl+S nadal eksportuje audio lub wideo. Jeśli plik docelowy istnieje, Sonarpad tworzy kopię zapasową przed zastąpieniem, nie nadpisując plików źródłowych.
+
 SONARMUSIC — PEŁNY PORADNIK
 
 Otwórz Narzędzia, Multimedia, SonarMusic albo Ctrl+Alt+Shift+M. Wpisz tytuł utworu, wykonawcę lub album. Filtr wyszukiwania: Wszystko, Utwory, Albumy, Wykonawcy, Playlisty albo Teledyski. Naciśnij Enter w polu wyszukiwania lub przycisk Szukaj. Filtr jest zapamiętywany, a program może podpowiadać zapytania.

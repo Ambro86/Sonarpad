@@ -248,6 +248,8 @@ In Taglio avanzato puoi suddividere il file in parti con S (Dividi qui), muovert
 
 Alla fine premi Salva o Ctrl+S, scegli percorso e formato di uscita e assegna al nuovo file un nome diverso da quello originale. Durante l'esportazione sono visualizzati avanzamento e pulsante Interrompi. Se c'è un taglio guidato ancora in sospeso, completalo prima di salvare. Quando chiudi con modifiche non salvate, Sonarpad chiede conferma.
 
+La casella Usa comandi stile GoldWave attiva un metodo alternativo di taglio: durante l'ascolto, [ segna l'inizio, ] segna la fine e Canc elimina la selezione, anche nel Taglio avanzato. Nell'Area comandi puoi premere F1 per conoscere i tasti disponibili. Se usi una tastiera internazionale, inserisci le parentesi quadre con i tasti previsti dal tuo layout. Con Salva progetto crei un file .sonarcut che conserva tagli, parti, posizione e impostazioni per riprendere il lavoro senza ricomprimere l'audio. Apri progetto ripristina la sessione, purché i file originali siano ancora disponibili. Salva o Ctrl+S continua a esportare il file audio o video. Se sostituisci un file di destinazione già esistente, Sonarpad crea una copia di sicurezza; non sovrascrive mai i file sorgente.
+
 SONARMUSIC — GUIDA COMPLETA
 
 Apri SonarMusic da Strumenti, Multimedia, SonarMusic oppure con Ctrl+Alt+Maiusc+M. Inserisci il titolo di una canzone, il nome di un artista o un album nel campo di ricerca. Seleziona Tipo ricerca: Tutto, Brani, Album, Artisti, Playlist o Video musicali. Premi Invio nel campo di ricerca o il pulsante Cerca. Il filtro scelto viene ricordato. Il pulsante Suggerimenti, quando disponibile, aiuta a completare la ricerca.
