@@ -7,6 +7,8 @@ Version 0.9.21 – 2026-10-26
 
 3. Globalni upravljač obeleživačima u meniju Umetni: svi fajlovi, pretraga, sortiranje, filteri starosti i nedostajućih datoteka, otvaranje sačuvane pozicije, potvrđeno višestruko brisanje i rezervne kopije. Odvojeni datumi otvaranja i ažuriranja; podrška za stariji bookmarks.json i NVDA/JAWS.
 
+4. YouTube: после дуге паузе Sonarpad освежава везу ка видеу и покушава да настави репродукцију са претходне позиције. Праћење напретка репродукције омогућава ограничен број покушаја опоравка заустављеног стрима. Странице резултата претраге чувају се у кешу како би се по повратку из плејера задржали редослед, избор и фокус. Резултати задржавају изворни редослед који враћа сервис, па канали могу поново да се појаве на почетку листе. Побољшан је опоравак од грешака HTTP 403/500 и привремено недоступних формата, без заобилажења ограничења приватног садржаја или DRM заштите.
+
 Version 0.9.20 – 2026-10-25
 
 1. Vremenska prognoza: poboljšane su oznake lokacija u rezultatima pretrage i listi nedavno korišćenih gradova. Kada su dostupni, prikazuju se i okrug ili distrikt, region i država radi razlikovanja mesta sa istim imenom. Duplirani nazivi se uklanjaju, a ranije sačuvani gradovi ostaju kompatibilni.

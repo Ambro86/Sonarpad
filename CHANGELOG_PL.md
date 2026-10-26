@@ -7,6 +7,8 @@ Version 0.9.21 – 2026-10-26
 
 3. Globalny menedżer zakładek w menu Wstaw: wszystkie pliki, wyszukiwanie, sortowanie i filtry wieku lub brakujących plików, otwieranie zapisanej pozycji, potwierdzone usuwanie wielu pozycji i kopie zapasowe. Osobne daty otwarcia i aktualizacji, zgodność ze starym bookmarks.json, dostępność NVDA/JAWS.
 
+4. YouTube: po dłuższej pauzie Sonarpad odświeża adres filmu i próbuje wznowić odtwarzanie od poprzedniej pozycji. Monitorowanie postępu odtwarzania umożliwia ograniczoną liczbę prób przywrócenia zatrzymanego strumienia. Strony wyników wyszukiwania są przechowywane w pamięci podręcznej, aby po powrocie z odtwarzacza zachować kolejność, zaznaczenie i fokus. Wyniki zachowują oryginalną kolejność zwróconą przez dostawcę, więc kanały mogą ponownie pojawiać się na początku listy. Rozszerzono odzyskiwanie po błędach HTTP 403/500 i przy czasowo niedostępnych formatach; ograniczenia treści prywatnych i chronionych DRM nie są obchodzone.
+
 Version 0.9.20 – 2026-10-25
 
 1. Pogoda: ulepszono opisy lokalizacji w wynikach wyszukiwania i na liście ostatnich miast. Gdy dane są dostępne, pokazywane są również powiat lub okręg, region i kraj, co pozwala odróżnić miejscowości o tej samej nazwie. Usunięto powtarzające się nazwy, zachowując zgodność z wcześniej zapisanymi miastami.

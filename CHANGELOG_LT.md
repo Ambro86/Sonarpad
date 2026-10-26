@@ -7,6 +7,8 @@ Version 0.9.21 – 2026-10-26
 
 3. Visų žymių tvarkymas Įterpimo meniu: paieška, rikiavimas, senumo ir trūkstamų failų filtrai, atidarymas išsaugotoje vietoje, patvirtintas kelių žymių trynimas ir atsarginės kopijos. Atskiros atidarymo ir atnaujinimo datos; suderinama su senais bookmarks.json ir NVDA/JAWS.
 
+4. YouTube: po ilgesnės pauzės Sonarpad iš naujo gauna vaizdo įrašo nuorodą ir bando tęsti atkūrimą nuo ankstesnės vietos. Atkūrimo eigos stebėjimas leidžia ribotą skaičių kartų bandyti atkurti sustojusį srautą. Paieškos rezultatų puslapiai saugomi podėlyje, kad grįžus iš grotuvo išliktų tvarka, pasirinkimas ir fokusas. Rezultatai išlaiko pradinę paslaugos pateiktą tvarką, todėl kanalai gali būti rodomi pirmieji, jei taip juos išrikiavo paslauga. Išplėstas atkūrimas įvykus HTTP 403/500 klaidoms arba laikinai nepasiekiant formatų; privatumo ir DRM apsaugos apribojimai neapeinami.
+
 Version 0.9.20 – 2026-10-25
 
 1. Orų prognozė: patikslintos vietovių žymos miestų paieškos rezultatuose ir neseniai naudotų miestų sąraše. Kai yra duomenų, rodomi rajonas ar apygarda, regionas ir šalis, kad būtų galima atskirti vienodai pavadintas vietoves. Pasikartojantys pavadinimai pašalinti, o anksčiau išsaugoti miestai išlieka suderinami.

@@ -5,7 +5,7 @@ use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU32, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use encoding_rs::WINDOWS_1252;
 use windows::Win32::Foundation::{BOOL, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM};
@@ -732,6 +732,34 @@ mod ytdlp_command_tests {
                 "YouTube transcript test cleanup folder failed: {error}"
             ));
         }
+    }
+
+    #[test]
+    fn youtube_download_retry_distinguishes_temporary_errors_from_restrictions() {
+        assert!(super::should_retry_youtube_download_failure(
+            "HTTP Error 403",
+            false
+        ));
+        assert!(super::should_retry_youtube_download_failure(
+            "HTTP Error 500",
+            false
+        ));
+        assert!(super::should_retry_youtube_download_failure(
+            "requested format is not available",
+            false
+        ));
+        assert!(super::should_retry_youtube_download_failure(
+            "network stalled",
+            true
+        ));
+        assert!(!super::should_retry_youtube_download_failure(
+            "members-only content",
+            true
+        ));
+        assert!(!super::should_retry_youtube_download_failure(
+            "private video",
+            true
+        ));
     }
 
     #[test]
@@ -2891,7 +2919,101 @@ fn probe_youtube_playlist_all_entries(
     Ok((playlist_title, entries))
 }
 
+// Search pages are cached below in the original order returned by the provider.
+// No signed playback URLs are cached: entries contain canonical YouTube links.
+
+#[cfg(test)]
+mod youtube_search_stability_tests {
+    use super::*;
+
+    #[test]
+    fn youtube_search_keeps_channels_videos_and_playlists_in_provider_order() {
+        let items = vec![
+            StreamCollectionEntry {
+                label: "Channel".into(),
+                title: "Channel".into(),
+                url: "https://www.youtube.com/channel/UCabcd".into(),
+                position: 1,
+            },
+            StreamCollectionEntry {
+                label: "Playlist A".into(),
+                title: "Playlist A".into(),
+                url: "https://www.youtube.com/playlist?list=PLA".into(),
+                position: 2,
+            },
+            StreamCollectionEntry {
+                label: "Video A".into(),
+                title: "Video A".into(),
+                url: "https://www.youtube.com/watch?v=abcdefghijk".into(),
+                position: 3,
+            },
+            StreamCollectionEntry {
+                label: "Playlist B".into(),
+                title: "Playlist B".into(),
+                url: "https://www.youtube.com/playlist?list=PLB".into(),
+                position: 4,
+            },
+            StreamCollectionEntry {
+                label: "Video B".into(),
+                title: "Video B".into(),
+                url: "https://www.youtube.com/watch?v=123456789ab".into(),
+                position: 5,
+            },
+        ];
+        // The ordering is established by the provider, not by the entry type.
+        let results = serde_json::json!([
+            {"title":"Channel", "kind":"channel", "webpage_url":items[0].url},
+            {"title":"Playlist A", "kind":"playlist", "webpage_url":items[1].url},
+            {"title":"Video A", "kind":"video", "webpage_url":items[2].url, "view_count":123},
+            {"title":"Playlist B", "kind":"playlist", "webpage_url":items[3].url},
+            {"title":"Video B", "kind":"video", "webpage_url":items[4].url, "view_count":234}
+        ]);
+        let collected = collect_stream_collection_entries(
+            results.as_array().expect("test results array"),
+            Language::English,
+            true,
+        );
+        let names: Vec<&str> = collected.iter().map(|entry| entry.title.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["Channel", "Playlist A", "Video A", "Playlist B", "Video B"]
+        );
+        assert_eq!(collected[0].position, 1);
+    }
+}
+
 fn probe_youtube_search_entries(
+    ytdlp_path: &Path,
+    query: &str,
+    language: Language,
+    page: usize,
+) -> Result<(Vec<StreamCollectionEntry>, bool), String> {
+    type SearchCache = HashMap<String, (std::time::Instant, Vec<StreamCollectionEntry>, bool)>;
+    static CACHE: OnceLock<Mutex<SearchCache>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let key = format!("{language:?}:{page}:{query}");
+    {
+        let mut guard = cache.lock().unwrap_or_else(|error| error.into_inner());
+        guard
+            .retain(|_, (created, _, _)| created.elapsed() < std::time::Duration::from_secs(21600));
+        if let Some((_, entries, has_more)) = guard.get(&key) {
+            crate::log_debug(&format!(
+                "YouTube search: restoring cached page={page} entries={}",
+                entries.len()
+            ));
+            return Ok((entries.clone(), *has_more));
+        }
+    }
+    let result = probe_youtube_search_entries_uncached(ytdlp_path, query, language, page)?;
+    let mut guard = cache.lock().unwrap_or_else(|error| error.into_inner());
+    if guard.len() >= 96 {
+        guard.clear();
+    }
+    guard.insert(key, (std::time::Instant::now(), result.0.clone(), result.1));
+    Ok(result)
+}
+
+fn probe_youtube_search_entries_uncached(
     ytdlp_path: &Path,
     query: &str,
     language: Language,
@@ -2907,10 +3029,8 @@ fn probe_youtube_search_entries(
             page,
             page_data.entries.len()
         ));
-        return Ok((
-            collect_stream_collection_entries(&page_data.entries, language, true),
-            page_data.next.is_some(),
-        ));
+        let entries = collect_stream_collection_entries(&page_data.entries, language, true);
+        return Ok((entries, page_data.next.is_some()));
     }
     crate::log_debug("SonarTube navigation fallback: yt-dlp");
     let limit = (page + 1) * STREAM_SELECTION_PAGE_SIZE + 1;
@@ -2959,8 +3079,7 @@ fn probe_youtube_search_entries(
         .take(STREAM_SELECTION_PAGE_SIZE)
         .cloned()
         .collect();
-    let mut collected = collect_stream_collection_entries(&page_entries, language, true);
-    collected.sort_by_key(|entry| !is_youtube_collection_url(&entry.url));
+    let collected = collect_stream_collection_entries(&page_entries, language, true);
     Ok((collected, has_more))
 }
 
@@ -11643,6 +11762,26 @@ fn find_completed_playlist_download_file(cache_dir: &Path, prefix: &str) -> Opti
     latest.map(|(_, path)| path)
 }
 
+fn should_retry_youtube_download_failure(error: &str, stalled: bool) -> bool {
+    if playlist_download_error_is_permanent(error) {
+        return false;
+    }
+    let lower = error.to_ascii_lowercase();
+    stalled
+        || [
+            "downloaded file is empty",
+            "http error 403",
+            "http error 404",
+            "http error 500",
+            "unable to download video data",
+            "requested format is not available",
+            "no video formats found",
+            "unable to extract",
+        ]
+        .iter()
+        .any(|needle| lower.contains(needle))
+}
+
 fn playlist_download_error_is_permanent(error: &str) -> bool {
     if is_drm_not_supported_stream_error(error) || is_login_required_stream_error(error) {
         return true;
@@ -13490,12 +13629,7 @@ pub fn play_streaming_audio_from_url(parent: HWND) {
                 );
                 return;
             }
-            let err_lc = err.to_ascii_lowercase();
-            let should_retry = stalled
-                || err_lc.contains("downloaded file is empty")
-                || err_lc.contains("http error 404")
-                || err_lc.contains("unable to download video data")
-                || err_lc.contains("requested format is not available");
+            let should_retry = should_retry_youtube_download_failure(&err, stalled);
             if ytdlp_debug {
                 crate::log_debug(&format!(
                     "yt-dlp primary output missing: stalled={} should_retry={} err={}",
@@ -13519,7 +13653,13 @@ pub fn play_streaming_audio_from_url(parent: HWND) {
                         let retry_prefix = format!("{prefix}_retry{}_{}", round + 1, idx + 1);
                         let retry_template = cache_dir.join(format!("{retry_prefix}.%(ext)s"));
                         let mut retry = ytdlp_command(&ytdlp_path);
-                        configure_ytdlp_standard_youtube_client(&mut retry, &url);
+                        // First retry keeps the standard Android client; the
+                        // second lets yt-dlp choose alternate supported clients.
+                        // This also helps public videos which work in browsers
+                        // but return HTTP 403 through a specific extractor client.
+                        if round == 0 {
+                            configure_ytdlp_standard_youtube_client(&mut retry, &url);
+                        }
                         retry
                             .arg("--no-playlist")
                             .arg("--socket-timeout")

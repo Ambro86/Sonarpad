@@ -306,6 +306,7 @@ const WM_EDITOR_TRANSLATION_DONE: u32 = WM_APP + 42;
 const WM_EDITOR_SUMMARY_DONE: u32 = WM_APP + 43;
 const WM_REACTIVATE_MODAL_AFTER_EXTERNAL_OPEN: u32 = WM_APP + 44;
 const WM_YOUTUBE_MPV_PLAYBACK_FAILED: u32 = WM_APP + 45;
+const WM_YOUTUBE_MPV_STALLED: u32 = WM_APP + 53;
 const WM_OPEN_AUDIO_DESCRIPTION_FOR_TV_RECORDING: u32 = WM_APP + 46;
 const WM_START_CONTEXT_WHISPER_TRANSCRIPTION: u32 = WM_APP + 47;
 const WM_START_YOUTUBE_CONTEXT_AUDIO_DESCRIPTION: u32 = WM_APP + 48;
@@ -1700,6 +1701,12 @@ struct MpvPlaybackStatus {
 struct YoutubeMpvPlaybackFailure {
     process_id: u32,
     detail: String,
+}
+
+struct YoutubeMpvStall {
+    process_id: u32,
+    generation: u64,
+    position_secs: f64,
 }
 
 fn media_playback_volume_from_settings(hwnd: HWND) -> f32 {
@@ -3784,6 +3791,94 @@ fn monitor_youtube_mpv_startup(hwnd: HWND, process_id: u32, log_path: PathBuf) {
     });
 }
 
+const YOUTUBE_PLAYBACK_STALL_SECS: u64 = 20;
+const YOUTUBE_MAX_STALL_RECOVERIES: u8 = 2;
+
+fn youtube_position_advanced(previous: f64, current: f64) -> bool {
+    previous.is_finite() && current.is_finite() && (current - previous).abs() >= 0.5
+}
+
+fn monitor_youtube_mpv_progress(hwnd: HWND, process_id: u32, generation: u64) {
+    let hwnd_raw = hwnd.0;
+    std::thread::spawn(move || {
+        let hwnd = HWND(hwnd_raw);
+        let mut last_position: Option<f64> = None;
+        let mut last_progress = Instant::now();
+        let mut has_played = false;
+        loop {
+            std::thread::sleep(Duration::from_secs(3));
+            let is_current = with_state(hwnd, |state| {
+                state.active_mpv_playback_generation == generation
+                    && state
+                        .active_mpv_session
+                        .as_ref()
+                        .is_some_and(|session| session.process_id == process_id)
+            })
+            .unwrap_or(false);
+            if !is_current {
+                return;
+            }
+            let Some(false) = query_managed_mpv_property_transient(hwnd, "pause")
+                .ok()
+                .and_then(|value| value.as_bool())
+            else {
+                last_progress = Instant::now();
+                continue;
+            };
+            let Some(position) = query_managed_mpv_property_transient(hwnd, "time-pos")
+                .ok()
+                .and_then(|value| value.as_f64())
+                .filter(|value| value.is_finite() && *value >= 0.0)
+            else {
+                last_progress = Instant::now();
+                continue;
+            };
+            let advanced =
+                last_position.is_some_and(|previous| youtube_position_advanced(previous, position));
+            if advanced {
+                has_played = true;
+                last_progress = Instant::now();
+            }
+            last_position = Some(position);
+            if !has_played
+                || last_progress.elapsed() < Duration::from_secs(YOUTUBE_PLAYBACK_STALL_SECS)
+            {
+                continue;
+            }
+            // The end of a normal video is not a network stall. Never retry a paused video.
+            if query_managed_mpv_property_transient(hwnd, "eof-reached")
+                .ok()
+                .and_then(|value| value.as_bool())
+                != Some(false)
+            {
+                return;
+            }
+            let payload = Box::new(YoutubeMpvStall {
+                process_id,
+                generation,
+                position_secs: position,
+            });
+            let raw = Box::into_raw(payload);
+            log_debug(&format!(
+                "YouTube playback stalled: pid={process_id} position={position:.1}s"
+            ));
+            unsafe {
+                if PostMessageW(
+                    hwnd,
+                    WM_YOUTUBE_MPV_STALLED,
+                    WPARAM(0),
+                    LPARAM(raw as isize),
+                )
+                .is_err()
+                {
+                    let _reclaimed = Box::from_raw(raw);
+                }
+            }
+            return;
+        }
+    });
+}
+
 fn wait_for_youtube_mpv_file_loaded(
     child: &mut std::process::Child,
     ipc_path: &Path,
@@ -4548,6 +4643,9 @@ fn saved_audio_bookmark_position_secs(hwnd: HWND, path: &Path, title: Option<&st
 fn next_mpv_playback_generation(hwnd: HWND, reason: &str) -> u64 {
     with_state(hwnd, |state| {
         state.active_mpv_playback_generation = state.active_mpv_playback_generation.wrapping_add(1);
+        state.youtube_paused_at = None;
+        state.youtube_pause_position_secs = None;
+        state.youtube_stall_recovery_attempts = 0;
         let generation = state.active_mpv_playback_generation;
         log_debug(&format!(
             "Managed mpv: playback generation {} ({})",
@@ -4608,6 +4706,84 @@ fn sync_mpv_sleep_prevention(hwnd: HWND) {
         .and_then(|value| value.as_bool());
     if let Some(paused) = paused {
         crate::power_awake::set_required("mpv-playback", !paused);
+    }
+}
+
+const YOUTUBE_LONG_PAUSE_REFRESH_SECS: u64 = 10 * 60;
+
+fn youtube_long_pause_needs_refresh(started: Option<Instant>, now: Instant) -> bool {
+    started.is_some_and(|started| {
+        now.saturating_duration_since(started)
+            >= Duration::from_secs(YOUTUBE_LONG_PAUSE_REFRESH_SECS)
+    })
+}
+
+fn youtube_reload_command(url: &str, position_secs: f64) -> String {
+    let position_secs = if position_secs.is_finite() {
+        position_secs.max(0.0)
+    } else {
+        0.0
+    };
+    serde_json::json!({
+        "command": ["loadfile", format!("ytdl://{url}"), "replace", -1,
+            format!("start={position_secs:.3},pause=no")]
+    })
+    .to_string()
+}
+
+fn refresh_youtube_mpv_after_long_pause(
+    hwnd: HWND,
+    position_secs: Option<f64>,
+) -> Result<(), String> {
+    let url = with_state(hwnd, |state| state.active_podcast_episode_url.clone())
+        .flatten()
+        .ok_or_else(|| "YouTube player URL unavailable".to_string())?;
+    if !app_windows::youtube_transcript_window::is_youtube_stream_url(&url) {
+        return Err("Current stream is not a YouTube video".to_string());
+    }
+    // mpv loadfile re-runs yt-dlp to obtain fresh signed media URLs, preserving
+    // the process, player window, selection list and approximate play position.
+    let command = youtube_reload_command(&url, position_secs.unwrap_or(0.0));
+    log_debug(&format!(
+        "YouTube long-pause refresh: re-resolving video from position {:.1}s",
+        position_secs.unwrap_or(0.0)
+    ));
+    try_send_command_to_managed_mpv(hwnd, &command)
+}
+
+#[cfg(test)]
+mod youtube_long_pause_tests {
+    use super::*;
+
+    #[test]
+    fn refresh_command_reloads_canonical_url_and_preserves_position() {
+        let command: serde_json::Value = serde_json::from_str(&youtube_reload_command(
+            "https://www.youtube.com/watch?v=abcdefghijk",
+            2525.25,
+        ))
+        .unwrap_or_default();
+        assert_eq!(command["command"][0], "loadfile");
+        assert_eq!(
+            command["command"][1],
+            "ytdl://https://www.youtube.com/watch?v=abcdefghijk"
+        );
+        assert_eq!(command["command"][2], "replace");
+        assert_eq!(command["command"][3], -1);
+        assert_eq!(command["command"][4], "start=2525.250,pause=no");
+    }
+
+    #[test]
+    fn refresh_is_needed_only_after_long_pause() {
+        let now = Instant::now();
+        assert!(!youtube_long_pause_needs_refresh(None, now));
+        assert!(!youtube_long_pause_needs_refresh(
+            Some(now - Duration::from_secs(30)),
+            now
+        ));
+        assert!(youtube_long_pause_needs_refresh(
+            Some(now - Duration::from_secs(601)),
+            now
+        ));
     }
 }
 
@@ -5515,8 +5691,13 @@ const YOUTUBE_HTTP_500_HLS_FORMAT: &str =
     "bestvideo[protocol^=m3u8][height<=360]+bestaudio[protocol^=m3u8]/best[protocol^=m3u8]";
 
 fn should_retry_youtube_http500(url: &str, options: StreamMpvOptions<'_>, error: &str) -> bool {
-    error == "HTTP 500"
-        && options.ytdlp_path.is_some()
+    matches!(
+        error,
+        "HTTP 500"
+            | "http error 403"
+            | "no video formats found"
+            | "requested format is not available"
+    ) && options.ytdlp_path.is_some()
         && options.ytdlp_credentials.is_none()
         && sonartube::direct_watch_url(url, false).is_some()
 }
@@ -5532,9 +5713,11 @@ fn launch_stream_url_in_mpv_with_options(
         .err()
         .is_some_and(|error| should_retry_youtube_http500(url, options, error))
     {
-        log_debug("Managed mpv YouTube HTTP 500: retrying HLS with automatic yt-dlp clients");
-        // This is one additional attempt, only after the normal route returned
-        // HTTP 500. Reuse the same player, UI wait, bookmarks and video settings.
+        log_debug(
+            "Managed mpv YouTube transport error: retrying HLS with automatic yt-dlp clients",
+        );
+        // Retry eligible HTTP 403/500 and unavailable-format failures once,
+        // preserving the player, UI, bookmarks and video settings.
         let retry = launch_stream_url_in_mpv_with_input(
             hwnd,
             url,
@@ -5546,9 +5729,9 @@ fn launch_stream_url_in_mpv_with_options(
             true,
         );
         log_debug(if retry.is_ok() {
-            "Managed mpv YouTube HTTP 500 HLS recovery succeeded"
+            "Managed mpv YouTube transport HLS recovery succeeded"
         } else {
-            "Managed mpv YouTube HTTP 500 HLS recovery failed"
+            "Managed mpv YouTube transport HLS recovery failed"
         });
         return retry;
     }
@@ -5873,6 +6056,9 @@ fn launch_stream_url_in_mpv_with_input(
             }
             if let Some(log_path) = youtube_log_path.clone() {
                 monitor_youtube_mpv_startup(hwnd, child.id(), log_path);
+            }
+            if is_youtube {
+                monitor_youtube_mpv_progress(hwnd, child.id(), mpv_generation);
             }
             if prefer_audio_description {
                 select_raiplay_mpv_audio_track(hwnd);
@@ -9656,6 +9842,28 @@ pub(crate) fn handle_player_command(hwnd: HWND, command: PlayerCommand) {
         let language = { with_state(hwnd, |state| state.settings.language) }.unwrap_or_default();
         let result = match command {
             PlayerCommand::TogglePause => {
+                let was_paused = query_managed_mpv_property(hwnd, "pause")
+                    .ok()
+                    .and_then(|value| value.as_bool())
+                    .unwrap_or(false);
+                let youtube_url =
+                    with_state(hwnd, |state| state.active_podcast_episode_url.clone())
+                        .flatten()
+                        .filter(|url| {
+                            app_windows::youtube_transcript_window::is_youtube_stream_url(url)
+                        });
+                let pause_started = with_state(hwnd, |state| state.youtube_paused_at).flatten();
+                let needs_refresh = was_paused
+                    && youtube_url.is_some()
+                    && youtube_long_pause_needs_refresh(pause_started, Instant::now());
+                let position = if youtube_url.is_some() {
+                    query_managed_mpv_property(hwnd, "time-pos")
+                        .ok()
+                        .and_then(|value| value.as_f64())
+                        .filter(|value| value.is_finite() && *value >= 0.0)
+                } else {
+                    None
+                };
                 let at_local_end = current_folder_media(hwnd).is_some()
                     && query_managed_mpv_property(hwnd, "eof-reached")
                         .ok()
@@ -9672,10 +9880,29 @@ pub(crate) fn handle_player_command(hwnd: HWND, command: PlayerCommand) {
                             r#"{"command":["set_property","pause",false]}"#,
                         )
                     })
+                } else if needs_refresh {
+                    let saved_position = position.or_else(|| {
+                        with_state(hwnd, |state| state.youtube_pause_position_secs).flatten()
+                    });
+                    refresh_youtube_mpv_after_long_pause(hwnd, saved_position).or_else(|error| {
+                        log_debug(&format!(
+                            "YouTube long-pause refresh failed, trying ordinary resume: {error}"
+                        ));
+                        try_send_command_to_managed_mpv(hwnd, r#"{"command":["cycle","pause"]}"#)
+                    })
                 } else {
                     try_send_command_to_managed_mpv(hwnd, r#"{"command":["cycle","pause"]}"#)
                 };
                 if result.is_ok() {
+                    with_state(hwnd, |state| {
+                        state.youtube_paused_at = if !was_paused && youtube_url.is_some() {
+                            Some(Instant::now())
+                        } else {
+                            None
+                        };
+                        state.youtube_pause_position_secs =
+                            if !was_paused { position } else { None };
+                    });
                     stop_mpv_subtitle_speech(hwnd, "pause_toggle");
                     sync_mpv_sleep_prevention(hwnd);
                 }
@@ -10353,6 +10580,9 @@ pub(crate) struct AppState {
     active_mpv_session: Option<MpvPlaybackSession>,
     active_mpv_is_live_tv: bool,
     active_mpv_playback_generation: u64,
+    youtube_paused_at: Option<Instant>,
+    youtube_pause_position_secs: Option<f64>,
+    youtube_stall_recovery_attempts: u8,
     active_mpv_ipc: Option<std::fs::File>,
     active_mpv_subtitle_generation: u64,
     next_mpv_request_id: u64,
@@ -12522,6 +12752,9 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     active_mpv_session: None,
                     active_mpv_is_live_tv: false,
                     active_mpv_playback_generation: 0,
+                    youtube_paused_at: None,
+                    youtube_pause_position_secs: None,
+                    youtube_stall_recovery_attempts: 0,
                     active_mpv_ipc: None,
                     active_mpv_subtitle_generation: 0,
                     next_mpv_request_id: 1,
@@ -12728,6 +12961,55 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
             }
             WM_RESTART_YOUTUBE_MPV_AFTER_PREVIEW => {
                 restart_youtube_mpv_after_audio_description_preview(hwnd);
+                LRESULT(0)
+            }
+            WM_YOUTUBE_MPV_STALLED => {
+                let payload = Box::from_raw(lparam.0 as *mut YoutubeMpvStall);
+                // A queued stall event must not restart playback if the user
+                // has since paused or sought to a different part of the video.
+                let still_stalled = query_managed_mpv_property(hwnd, "pause")
+                    .ok()
+                    .and_then(|value| value.as_bool())
+                    == Some(false)
+                    && query_managed_mpv_property(hwnd, "eof-reached")
+                        .ok()
+                        .and_then(|value| value.as_bool())
+                        == Some(false)
+                    && query_managed_mpv_property(hwnd, "time-pos")
+                        .ok()
+                        .and_then(|value| value.as_f64())
+                        .is_some_and(|position| {
+                            position.is_finite() && (position - payload.position_secs).abs() < 1.0
+                        });
+                let attempt = with_state(hwnd, |state| {
+                    if !still_stalled
+                        || state.active_mpv_playback_generation != payload.generation
+                        || !state
+                            .active_mpv_session
+                            .as_ref()
+                            .is_some_and(|session| session.process_id == payload.process_id)
+                        || state.youtube_stall_recovery_attempts >= YOUTUBE_MAX_STALL_RECOVERIES
+                    {
+                        return None;
+                    }
+                    state.youtube_stall_recovery_attempts += 1;
+                    Some(state.youtube_stall_recovery_attempts)
+                })
+                .flatten();
+                if let Some(attempt) = attempt {
+                    log_debug(&format!(
+                        "YouTube stall recovery: attempt={attempt} position={:.1}s",
+                        payload.position_secs
+                    ));
+                    match refresh_youtube_mpv_after_long_pause(hwnd, Some(payload.position_secs)) {
+                        Ok(()) => monitor_youtube_mpv_progress(
+                            hwnd,
+                            payload.process_id,
+                            payload.generation,
+                        ),
+                        Err(err) => log_debug(&format!("YouTube stall recovery failed: {err}")),
+                    }
+                }
                 LRESULT(0)
             }
             WM_YOUTUBE_MPV_PLAYBACK_FAILED => {

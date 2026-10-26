@@ -7,6 +7,8 @@ Version 0.9.21 – 2026-10-26
 
 3. Globální správce záložek v nabídce Vložit: přehled všech souborů, hledání, řazení, filtry podle stáří a chybějících souborů, otevření uložené pozice, potvrzené hromadné mazání a zálohy. Oddělené datum otevření a změny, podpora starších souborů a čteček NVDA a JAWS.
 
+4. YouTube: po delší pauze Sonarpad znovu načte odkaz na video a pokusí se pokračovat od předchozí pozice. Sledování průběhu přehrávání umožňuje omezený počet pokusů o obnovení zaseknutého streamu. Stránky výsledků vyhledávání se ukládají do mezipaměti, aby se po návratu z přehrávače zachovalo pořadí, výběr i fokus. Výsledky zachovávají původní pořadí od poskytovatele, takže kanály se mohou zobrazit i na prvním místě. Rozšířeno obnovení při chybách HTTP 403/500 a dočasně nedostupných formátech; omezení soukromého obsahu ani ochrana DRM se neobcházejí.
+
 Version 0.9.20 – 2026-10-25
 
 1. Počasí: zpřesněny názvy lokalit ve výsledcích hledání a seznamu nedávno použitých měst. Jsou-li dostupné, zobrazují se také okres nebo správní obvod, region a země, aby bylo možné rozlišit stejnojmenná místa. Duplicitní názvy se vynechávají a dříve uložená města zůstávají kompatibilní.

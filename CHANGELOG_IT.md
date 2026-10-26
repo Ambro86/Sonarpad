@@ -6,6 +6,7 @@ Version 0.9.21 – 2026-10-26
 2. SonarMusic: corretto il menu contestuale, che mostrava alcune azioni in italiano anche selezionando un’altra lingua. Salvataggio, trascrizione e creazione di audiodescrizioni ora rispettano la lingua impostata.
 
 3. Gestione globale dei segnalibri: nuova finestra nel menu Inserisci per consultare tutti i segnalibri, con ricerca, ordinamento per data o file, filtri per anzianità e file inesistenti, apertura alla posizione salvata, eliminazione multipla confermata e backup. Tracciamento separato di ultima apertura e ultimo aggiornamento, compatibile con i vecchi bookmarks.json e accessibile a NVDA e JAWS.
+4. YouTube: dopo una pausa prolungata Sonarpad richiede un nuovo collegamento al video e tenta di riprendere dalla posizione precedente; un controllo del progresso prova a recuperare i flussi bloccati. Le pagine dei risultati di ricerca restano memorizzate per mantenere ordinamento, posizione e focus quando si torna dal lettore. I risultati rispettano l'ordine originale restituito dalla ricerca: i canali possono quindi comparire anche per primi, senza essere spostati dopo video e playlist. Ampliato il recupero dei problemi di trasporto HTTP 403/500 e dei formati temporaneamente non disponibili; nessun bypass di contenuti privati o DRM.
 
 Version 0.9.20 – 2026-10-25
 

@@ -7,6 +7,8 @@ Version 0.9.21 – 2026-10-26
 
 3. Gestor global de marcadores no menu Inserir: consulta de todos os ficheiros, pesquisa, ordenação, filtros de antiguidade e ficheiros em falta, abertura na posição guardada, eliminação múltipla confirmada e cópias de segurança. Datas de abertura e atualização separadas, compatível com bookmarks.json antigos e NVDA/JAWS.
 
+4. YouTube: após uma pausa prolongada, o Sonarpad atualiza a ligação do vídeo e tenta retomar a reprodução a partir da posição anterior. A monitorização do progresso tenta recuperar transmissões bloqueadas com um número limitado de tentativas. As páginas dos resultados de pesquisa ficam em cache para preservar a ordem, a seleção e o foco ao regressar do leitor. Os resultados mantêm a ordem original devolvida pelo serviço, pelo que os canais podem surgir em primeiro lugar quando assim classificados. Alargada a recuperação de erros HTTP 403/500 e de formatos temporariamente indisponíveis, sem contornar restrições de conteúdos privados ou protegidos por DRM.
+
 Version 0.9.20 – 2026-10-25
 
 1. Meteorologia: melhoradas as indicações de localização nos resultados de pesquisa e nas cidades recentes. Quando disponíveis, são apresentados também o distrito ou concelho, a região e o país para distinguir localidades com o mesmo nome. Evitam-se nomes repetidos e mantém-se a compatibilidade com as cidades já guardadas.
