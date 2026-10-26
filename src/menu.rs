@@ -113,6 +113,7 @@ pub const IDM_INSERT_CLEAR_BOOKMARKS: usize = 2103;
 pub const IDM_GOTO_NEXT_BOOKMARK: usize = 2104;
 pub const IDM_GOTO_PREV_BOOKMARK: usize = 2105;
 pub const IDM_AUTOMATIC_BOOKMARK: usize = 2106;
+pub const IDM_GLOBAL_BOOKMARK_MANAGER: usize = 2107;
 pub const IDM_NEXT_TAB: usize = 3001;
 pub const IDM_WINDOW_OPEN_DOCUMENTS: usize = 3002;
 pub const IDM_WINDOW_CLOSE_ALL: usize = 3003;
@@ -1570,6 +1571,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             MF_STRING,
             IDM_MANAGE_BOOKMARKS,
             &labels.manage_bookmarks,
+        );
+        append_menu_string(
+            insert_menu,
+            MF_STRING,
+            IDM_GLOBAL_BOOKMARK_MANAGER,
+            &i18n::tr(language, "bookmark_manager.menu"),
         );
         append_menu_string(hmenu, MF_POPUP, insert_menu.0 as usize, &labels.menu_insert);
 

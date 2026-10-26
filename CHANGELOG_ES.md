@@ -5,6 +5,8 @@ Version 0.9.21 – 2026-10-26
 1. Reproducir audio en streaming y SonarMusic: corregidos los bloqueos de la interfaz al cargar vídeos de YouTube, con ventana de espera y mensajes de error traducidos. Si el servidor devuelve HTTP 500, se intenta automáticamente una fuente HLS alternativa sin cambiar la reproducción normal; el error solo se muestra si también falla la recuperación. Mejorado el diagnóstico de errores de carga.
 2. SonarMusic: corregidas las acciones del menú contextual que aparecían en italiano al seleccionar otro idioma. Guardar medios, transcribir y crear audiodescripciones ahora utilizan el idioma seleccionado.
 
+3. Gestor global de marcadores en Insertar: lista de todos los archivos, búsqueda, ordenación, filtros por antigüedad y archivos inexistentes, apertura en la posición guardada, borrado múltiple con confirmación y copias de seguridad. Fechas de apertura y actualización separadas, compatibilidad con bookmarks.json y accesibilidad NVDA/JAWS.
+
 Version 0.9.20 – 2026-10-25
 
 1. Tiempo: mejoradas las etiquetas de ubicación en los resultados de búsqueda y las ciudades recientes. Cuando están disponibles, se muestran también el condado o distrito, la región y el país para distinguir localidades con el mismo nombre. Se evitan nombres repetidos y se mantiene la compatibilidad con las ciudades guardadas anteriormente.

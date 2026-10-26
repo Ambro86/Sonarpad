@@ -5,6 +5,8 @@ Version 0.9.21 – 2026-10-26
 1. Přehrávání streamovaného zvuku a SonarMusic: opraveno zamrzání rozhraní při načítání videí YouTube, přidáno okno čekání a přeložené chybové zprávy. Pokud server vrátí HTTP 500, automaticky se vyzkouší alternativní zdroj HLS beze změny běžného přehrávání; chyba se zobrazí pouze tehdy, když selže i tento pokus. Vylepšena diagnostika chyb načítání.
 2. SonarMusic: opraveny položky kontextové nabídky, které se zobrazovaly italsky i při výběru jiného jazyka. Ukládání médií, přepis a vytváření audiopopisů nyní používají zvolený jazyk.
 
+3. Globální správce záložek v nabídce Vložit: přehled všech souborů, hledání, řazení, filtry podle stáří a chybějících souborů, otevření uložené pozice, potvrzené hromadné mazání a zálohy. Oddělené datum otevření a změny, podpora starších souborů a čteček NVDA a JAWS.
+
 Version 0.9.20 – 2026-10-25
 
 1. Počasí: zpřesněny názvy lokalit ve výsledcích hledání a seznamu nedávno použitých měst. Jsou-li dostupné, zobrazují se také okres nebo správní obvod, region a země, aby bylo možné rozlišit stejnojmenná místa. Duplicitní názvy se vynechávají a dříve uložená města zůstávají kompatibilní.

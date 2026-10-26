@@ -5,6 +5,8 @@ Version 0.9.21 – 2026-10-26
 1. Reproduzir áudio em streaming e SonarMusic: corrigidos bloqueios da interface ao carregar vídeos do YouTube, com janela de espera e mensagens de erro traduzidas. Se o servidor devolver HTTP 500, é tentada automaticamente uma fonte HLS alternativa sem alterar a reprodução normal; o erro só é apresentado se a recuperação também falhar. Melhorado o diagnóstico de falhas de carregamento.
 2. SonarMusic: corrigidas as ações do menu de contexto que apareciam em italiano ao selecionar outro idioma. Guardar multimédia, transcrever e criar audiodescrições utilizam agora o idioma selecionado.
 
+3. Gestor global de marcadores no menu Inserir: consulta de todos os ficheiros, pesquisa, ordenação, filtros de antiguidade e ficheiros em falta, abertura na posição guardada, eliminação múltipla confirmada e cópias de segurança. Datas de abertura e atualização separadas, compatível com bookmarks.json antigos e NVDA/JAWS.
+
 Version 0.9.20 – 2026-10-25
 
 1. Meteorologia: melhoradas as indicações de localização nos resultados de pesquisa e nas cidades recentes. Quando disponíveis, são apresentados também o distrito ou concelho, a região e o país para distinguir localidades com o mesmo nome. Evitam-se nomes repetidos e mantém-se a compatibilidade com as cidades já guardadas.

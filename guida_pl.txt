@@ -265,3 +265,6 @@ Po wynikach przechodź strzałkami i naciśnij Enter. Odtwarzalne utwory i wideo
 Na wybranym wyniku naciśnij klawisz menu kontekstowego lub Shift+F10. Zależnie od elementu dostępne są: Otwórz, Zapisz/pobierz, Transkrybuj, Utwórz audiodeskrypcję AI oraz Dodaj/Usuń z ulubionych. Nie wszystkie działania są dostępne dla każdego rodzaju wyniku; pobieranie zależy od ograniczeń usługi.
 
 Lista Ulubione umożliwia otwarcie zapisanego elementu Enterem albo usunięcie go z menu kontekstowego. Wstecz cofa do poprzedniego widoku, Escape cofa lub zamyka okno. Tab, Shift+Tab i strzałki wspierają NVDA oraz JAWS. Wyszukiwanie wymaga internetu.
+
+Zarządzanie wszystkimi zakładkami:
+W menu Wstaw wybierz Zarządzaj wszystkimi zakładkami, aby zobaczyć zakładki wszystkich plików, także zamkniętych. Szukaj według ścieżki lub tekstu, sortuj według ostatniego otwarcia, nazwy albo aktualizacji i filtruj starsze niż 30, 60, 90, 180 lub 365 dni, nieznane daty, brakujące pliki albo zakładki automatyczne. Lista podaje ścieżkę, pozycję, daty i typ. Tab i strzałki współpracują z NVDA i JAWS; Ctrl+A zaznacza wszystkie, Ctrl lub Shift pozwalają zaznaczać wiele. Enter otwiera plik na zapisanej pozycji. Usuwanie wymaga potwierdzenia i tworzy kopię w bookmarks-backups obok bookmarks.json. Data otwarcia starych zakładek może być nieznana.

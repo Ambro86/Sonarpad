@@ -5,6 +5,8 @@ Version 0.9.21 – 2026-10-26
 1. Play Streaming Audio and SonarMusic: fixed interface freezes while loading YouTube videos, with a waiting window and localized error messages. If the server returns HTTP 500, an alternative HLS source is tried automatically without changing normal playback; an error is shown only if recovery also fails. Improved diagnostics for loading failures.
 2. SonarMusic: fixed context menu actions appearing in Italian when another language was selected. Saving media, transcription and audio description creation now use the selected language.
 
+3. Global bookmarks manager: a new Insert-menu window lists bookmarks across all files, with search, sorting by date or filename, age and missing-file filters, navigation to a saved position, confirmed multiple deletion and backups. Last opened and last updated are tracked separately; existing bookmarks.json files remain compatible and controls are accessible with NVDA and JAWS.
+
 Version 0.9.20 – 2026-10-25
 
 1. Weather: improved location labels in city search results and recently used cities. Where available, county or district, region and country are now shown to distinguish places with the same name. Repeated location names are omitted, and previously saved cities remain compatible.

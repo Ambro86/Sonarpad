@@ -264,3 +264,6 @@ V seznamu výsledků se pohybujte šipkami a potvrďte Enterem. Skladba či vide
 Klávesou kontextové nabídky nebo Shift+F10 otevřete akce vybrané položky: Otevřít, Uložit médium, Přepsat, Vytvořit audiopopis pomocí AI nebo Přidat/Odebrat z oblíbených. Nabídka závisí na druhu výsledku; ukládání podléhá dostupným možnostem a omezením služby.
 
 Uložené položky najdete v seznamu Oblíbené: Enter je otevře, kontextová nabídka je umožní odebrat. Zpět se vrací na předchozí stránku, Escape se vrací nebo zavírá okno. Tab, Shift+Tab a šipky umožňují ovládání s NVDA nebo JAWS. Vyhledávání vyžaduje internet.
+
+Správa všech záložek:
+V nabídce Vložit vyberte Spravovat všechny záložky. Zobrazí se záložky ze všech souborů, i zavřených. Lze hledat cestu a text, řadit podle posledního otevření, názvu nebo aktualizace a filtrovat stáří 30, 60, 90, 180 a 365 dní, neznámá data, chybějící soubory nebo automatické záložky. Seznam uvádí cestu, pozici, datum a typ. Klávesy Tab a šipky fungují s NVDA a JAWS; Ctrl+A označí vše, Ctrl a Shift umožňují vícenásobný výběr. Enter otevře soubor na uložené pozici. Mazání vybraných položek vyžaduje potvrzení a vytvoří zálohu ve složce bookmarks-backups vedle bookmarks.json. U starších záložek může být datum posledního otevření neznámé.

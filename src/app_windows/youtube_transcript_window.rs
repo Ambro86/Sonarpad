@@ -7547,7 +7547,7 @@ fn playlist_download_entry_is_checked(list: HWND, index: usize) -> bool {
     state & LVIS_STATEIMAGEMASK.0 == 2 << 12
 }
 
-fn playlist_download_set_entry_checked(list: HWND, index: usize, checked: bool) {
+pub(crate) fn playlist_download_set_entry_checked(list: HWND, index: usize, checked: bool) {
     let mut item = LVITEMW {
         state: LIST_VIEW_ITEM_STATE_FLAGS((if checked { 2 } else { 1 }) << 12),
         stateMask: LVIS_STATEIMAGEMASK,
@@ -7563,7 +7563,7 @@ fn playlist_download_set_entry_checked(list: HWND, index: usize, checked: bool) 
     }
 }
 
-fn playlist_download_selected_indices(list: HWND) -> Vec<usize> {
+pub(crate) fn playlist_download_selected_indices(list: HWND) -> Vec<usize> {
     let item_count = unsafe { SendMessageW(list, LVM_GETITEMCOUNT, WPARAM(0), LPARAM(0)).0 };
     if item_count <= 0 {
         return Vec::new();
@@ -7573,7 +7573,7 @@ fn playlist_download_selected_indices(list: HWND) -> Vec<usize> {
         .collect()
 }
 
-fn playlist_download_insert_entry(list: HWND, index: usize, entry_label: &str) {
+pub(crate) fn playlist_download_insert_entry(list: HWND, index: usize, entry_label: &str) {
     let mut label = to_wide(entry_label);
     let mut item = LVITEMW {
         mask: LVIF_TEXT,

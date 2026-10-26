@@ -5,6 +5,8 @@ Version 0.9.21 – 2026-10-26
 1. Strömmande ljud och SonarMusic: åtgärdat att gränssnittet fryser när YouTube-videor läses in, med väntefönster och översatta felmeddelanden. Om servern svarar med HTTP 500 provas automatiskt en alternativ HLS-källa utan att ändra normal uppspelning; felet visas bara om även återställningen misslyckas. Förbättrad diagnostik för inläsningsfel.
 2. SonarMusic: åtgärdade snabbmenyalternativ som visades på italienska trots att ett annat språk hade valts. Mediesparande, transkribering och skapande av syntolkning använder nu det valda språket.
 
+3. Global bokmärkeshanterare i Infoga: översikt över alla filer med sökning, sortering, åldersfilter och filter för saknade filer, öppna sparad position, bekräftad massborttagning och säkerhetskopior. Separata datum för öppning och uppdatering, kompatibilitet med äldre bookmarks.json och NVDA/JAWS.
+
 Version 0.9.20 – 2026-10-25
 
 1. Väder: platsangivelserna har förbättrats i sökresultat och listan över senast använda städer. När uppgifterna finns visas även län eller distrikt, region och land för att skilja orter med samma namn åt. Upprepade platsnamn tas bort och tidigare sparade städer fungerar fortfarande.

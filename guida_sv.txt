@@ -250,3 +250,6 @@ Bläddra med piltangenterna bland sökresultaten och tryck Retur. Spelbara låta
 Tryck Programtangenten eller Skift+F10 på ett valt resultat för snabbmenyn. Beroende på innehåll finns Öppna, Spara/ladda ned media, Transkribera, Skapa AI-ljudbeskrivning samt Lägg till/Ta bort favorit. Vissa åtgärder finns bara för spelbara objekt och nedladdning påverkas av tjänstens begränsningar.
 
 I Favoriter väljer du ett sparat objekt och trycker Retur för att öppna eller tar bort det via snabbmenyn. Tillbaka återgår till föregående sida; Escape går tillbaka eller stänger fönstret. Tab, Skift+Tab och pilar stöder NVDA och JAWS. Sökningen kräver internet.
+
+Global bokmärkeshantering:
+Välj Hantera alla bokmärken i menyn Infoga för att visa bokmärken från alla filer, även stängda. Sök efter sökväg eller text, sortera efter senast öppnad, filnamn eller uppdatering och filtrera efter 30, 60, 90, 180 eller 365 dagar, okända datum, saknade filer eller automatiska bokmärken. Listan visar sökväg, position, datum och typ. Tab och piltangenter fungerar med NVDA och JAWS; Ctrl+A markerar alla, Ctrl eller Skift möjliggör flera markeringar. Enter öppnar filen på sparad position. Borttagning kräver bekräftelse och skapar en säkerhetskopia i bookmarks-backups bredvid bookmarks.json. Äldre bokmärken kan sakna senaste öppningsdatum.

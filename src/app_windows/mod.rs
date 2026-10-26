@@ -7,6 +7,7 @@ pub mod audio_description_window;
 pub mod audiobook_window;
 pub mod batch_audiobooks_window;
 pub mod bdciechi_window;
+pub mod bookmark_manager_window;
 pub mod bookmarks_window;
 pub mod calendar_window;
 pub mod cinema_service;

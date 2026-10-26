@@ -4237,6 +4237,13 @@ pub fn select_tab(hwnd: HWND, index: usize) {
         crate::sync_voice_panel_visibility_for_current_document(hwnd);
         crate::update_main_status_bar(hwnd);
         crate::restore_transcription_progress_focus_for_current_document(hwnd);
+        if let Some(path) = with_state(hwnd, |state| {
+            state.docs.get(index).and_then(|doc| doc.path.clone())
+        })
+        .flatten()
+        {
+            crate::record_bookmark_open(hwnd, &path.to_string_lossy());
+        }
     }
 }
 
@@ -5282,6 +5289,11 @@ pub fn close_document_at(hwnd: HWND, index: usize) -> bool {
         if with_state(hwnd, |state| {
             was_current = state.current == index;
             let doc = state.docs.remove(index);
+            if let Some(path) = doc.path.as_ref() {
+                state
+                    .bookmark_cleanup_suppressed
+                    .remove(&path.to_string_lossy().to_string());
+            }
             removed_path = doc.path.clone();
             removed_from_rss = doc.from_rss;
             closing_hwnd_edit = doc.hwnd_edit;

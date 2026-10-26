@@ -249,3 +249,6 @@ Kroz rezultate se krećite strelicama i pritisnite Enter. Pesme i video snimci k
 Na stavci pritisnite taster Aplikacije ili Shift+F10 za kontekstni meni. U zavisnosti od vrste dostupni su Otvori, Sačuvaj/preuzmi medij, Transkribuj, Napravi audio-opis uz AI i Dodaj ili Ukloni iz omiljenih. Neke radnje rade samo sa sadržajem za reprodukciju i podležu ograničenjima usluge.
 
 U listi Omiljeno odaberite stavku i pritisnite Enter za otvaranje ili je uklonite kroz kontekstni meni. Nazad vraća na prethodnu stranicu; Escape se vraća ili zatvara prozor. Tab, Shift+Tab i strelice omogućavaju rad sa NVDA i JAWS. Za pretragu je potreban internet.
+
+Globalno upravljanje obeleživačima:
+U meniju Umetni izaberite Upravljanje svim obeleživačima. Prikazuju se obeleživači svih datoteka, uključujući zatvorene. Pretražujte putanju ili tekst, sortirajte po poslednjem otvaranju, nazivu ili ažuriranju i filtrirajte starije od 30, 60, 90, 180 ili 365 dana, nepoznate datume, nedostajuće datoteke ili automatske obeleživače. Lista prikazuje putanju, poziciju, datume i tip. Tab i strelice rade uz NVDA i JAWS; Ctrl+A bira sve, Ctrl ili Shift omogućavaju višestruki izbor. Enter otvara sačuvanu poziciju. Brisanje zahteva potvrdu i pravi rezervnu kopiju u bookmarks-backups pored bookmarks.json. Datum otvaranja starih obeleživača može biti nepoznat.

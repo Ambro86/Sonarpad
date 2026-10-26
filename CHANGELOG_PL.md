@@ -5,6 +5,8 @@ Version 0.9.21 – 2026-10-26
 1. Odtwarzanie strumieniowe i SonarMusic: naprawiono zawieszanie interfejsu podczas wczytywania filmów YouTube, dodano okno oczekiwania i przetłumaczone komunikaty błędów. Jeśli serwer zwróci HTTP 500, automatycznie sprawdzane jest alternatywne źródło HLS bez zmiany zwykłego odtwarzania; błąd pojawia się tylko wtedy, gdy ta próba również się nie powiedzie. Ulepszono diagnostykę błędów wczytywania.
 2. SonarMusic: poprawiono polecenia menu kontekstowego wyświetlane po włosku mimo wybrania innego języka. Zapisywanie multimediów, transkrypcja i tworzenie audiodeskrypcji używają teraz wybranego języka.
 
+3. Globalny menedżer zakładek w menu Wstaw: wszystkie pliki, wyszukiwanie, sortowanie i filtry wieku lub brakujących plików, otwieranie zapisanej pozycji, potwierdzone usuwanie wielu pozycji i kopie zapasowe. Osobne daty otwarcia i aktualizacji, zgodność ze starym bookmarks.json, dostępność NVDA/JAWS.
+
 Version 0.9.20 – 2026-10-25
 
 1. Pogoda: ulepszono opisy lokalizacji w wynikach wyszukiwania i na liście ostatnich miast. Gdy dane są dostępne, pokazywane są również powiat lub okręg, region i kraj, co pozwala odróżnić miejscowości o tej samej nazwie. Usunięto powtarzające się nazwy, zachowując zgodność z wcześniej zapisanymi miastami.

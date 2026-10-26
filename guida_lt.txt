@@ -248,3 +248,6 @@ Rezultatus naršykite rodyklėmis ir spauskite Enter. Atkuriamos dainos ir vaizd
 Paspauskite kontekstinio meniu klavišą arba Shift+F10 ant pasirinkto elemento. Pagal jo tipą siūloma Atverti, Išsaugoti/atsisiųsti, Transkribuoti, Sukurti DI garsinį aprašymą bei Pridėti prie mėgstamų ar pašalinti. Ne visos funkcijos tinka kiekvienam elementui, o atsisiuntimui taikomi paslaugos apribojimai.
 
 Mėgstamų sąraše Enter atveria išsaugotą elementą, kontekstinis meniu leidžia jį pašalinti. Atgal grąžina į ankstesnį puslapį, Escape grįžta atgal arba uždaro langą. Tab, Shift+Tab ir rodyklės leidžia naudotis su NVDA ar JAWS. Paieškai reikalingas internetas.
+
+Visų žymių tvarkymas:
+Įterpimo meniu pasirinkite Tvarkyti visas žymes. Rodomos visų failų žymės, net jei failai uždaryti. Ieškokite pagal kelią ar tekstą, rikiuokite pagal paskutinį atidarymą, pavadinimą arba atnaujinimą ir filtruokite 30, 60, 90, 180 ar 365 dienų senumo, nežinomų datų, trūkstamų failų arba automatines žymes. Sąraše pateikiamas kelias, pozicija, datos ir tipas. Tab ir rodyklių klavišai veikia su NVDA ir JAWS; Ctrl+A pažymi visas, Ctrl ar Shift leidžia pasirinkti kelias. Enter atidaro išsaugotą vietą. Trinant reikia patvirtinti, o atsarginė kopija saugoma bookmarks-backups šalia bookmarks.json. Senų žymių atidarymo data gali būti nežinoma.

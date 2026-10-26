@@ -264,3 +264,6 @@ Dùng phím mũi tên để duyệt kết quả và nhấn Enter. Bài hát và 
 Nhấn phím Ứng dụng hoặc Shift+F10 trên kết quả đã chọn để mở menu ngữ cảnh. Tùy loại mục có thể có Mở, Lưu/tải phương tiện, Phiên âm, Tạo mô tả âm thanh bằng AI và Thêm/Xóa khỏi yêu thích. Một số tác vụ chỉ khả dụng cho nội dung phát được; việc tải xuống chịu giới hạn của dịch vụ.
 
 Trong danh sách Yêu thích, chọn mục rồi nhấn Enter để mở hoặc dùng menu ngữ cảnh để xóa. Quay lại trở về trang trước; Escape quay lại khi có thể hoặc đóng cửa sổ. Tab, Shift+Tab và phím mũi tên hỗ trợ NVDA và JAWS. Tìm kiếm cần Internet.
+
+Quản lý dấu trang toàn cục:
+Trong menu Chèn, chọn Quản lý tất cả dấu trang để xem dấu trang của mọi tệp, kể cả tệp đã đóng. Tìm theo đường dẫn hoặc văn bản, sắp xếp theo lần mở gần nhất, tên tệp hoặc lần cập nhật và lọc mục cũ hơn 30, 60, 90, 180 hoặc 365 ngày, ngày không rõ, tệp bị thiếu hoặc chỉ dấu trang tự động. Danh sách hiển thị đường dẫn, vị trí, ngày và loại. Tab và các phím mũi tên hoạt động với NVDA và JAWS; Ctrl+A chọn tất cả, Ctrl hoặc Shift cho phép chọn nhiều mục. Enter mở tệp tại vị trí đã lưu. Việc xóa cần xác nhận và tạo bản sao trong bookmarks-backups cạnh bookmarks.json. Ngày mở cuối của dấu trang cũ có thể không rõ.

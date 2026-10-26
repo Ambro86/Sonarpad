@@ -882,4 +882,9 @@ Navigieren Sie mit den Pfeiltasten durch die Suchergebnisse und drücken Sie Ein
 
 Über die Favoritenliste öffnen Sie gespeicherte Elemente mit Eingabe und entfernen sie über das Kontextmenü. Zurück führt zur vorherigen Ansicht, Escape geht zurück oder schließt das Fenster. Tab, Umschalt+Tab und Pfeiltasten erleichtern die Bedienung mit NVDA und JAWS. Für die Suche ist Internet erforderlich.
 
+
+
+Globale Lesezeichenverwaltung:
+Über das Menü Einfügen öffnen Sie Alle Lesezeichen verwalten. Die Liste enthält Lesezeichen aller Dateien, auch geschlossener Dokumente. Suchen Sie nach Pfad oder Text, sortieren Sie nach letzter Öffnung, Dateinamen oder Aktualisierung und filtern Sie nach 30, 60, 90, 180 oder 365 Tagen, unbekannten Daten, fehlenden Dateien oder automatischen Lesezeichen. Angezeigt werden Pfad, Position, Datum und Typ. Tab und Pfeiltasten funktionieren mit NVDA und JAWS; Strg+A markiert alle, Strg oder Umschalt ermöglicht Mehrfachauswahl. Eingabe öffnet die Datei an der gespeicherten Position. Beim bestätigten Löschen ausgewählter Einträge wird unter bookmarks-backups neben bookmarks.json eine Sicherung erstellt. Bei älteren Lesezeichen kann das letzte Öffnungsdatum unbekannt sein.
+
 ENDE DES HANDBUCHS

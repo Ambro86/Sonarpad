@@ -5,6 +5,8 @@ Version 0.9.21 – 2026-10-26
 1. Phát âm thanh trực tuyến và SonarMusic: khắc phục giao diện bị treo khi tải video YouTube, bổ sung cửa sổ chờ và thông báo lỗi được dịch. Nếu máy chủ trả về HTTP 500, ứng dụng tự động thử nguồn HLS thay thế mà không thay đổi cách phát thông thường; lỗi chỉ hiển thị nếu lần thử này cũng thất bại. Cải thiện chẩn đoán lỗi tải.
 2. SonarMusic: sửa các thao tác trong menu ngữ cảnh hiển thị bằng tiếng Ý khi đã chọn ngôn ngữ khác. Lưu nội dung đa phương tiện, phiên âm và tạo mô tả âm thanh giờ sử dụng ngôn ngữ đã chọn.
 
+3. Trình quản lý dấu trang toàn cục trong menu Chèn: danh sách mọi tệp, tìm kiếm, sắp xếp, lọc theo tuổi và tệp bị thiếu, mở vị trí đã lưu, xóa nhiều mục có xác nhận và sao lưu. Theo dõi riêng ngày mở và ngày cập nhật; tương thích bookmarks.json cũ và NVDA/JAWS.
+
 Version 0.9.20 – 2026-10-25
 
 1. Thời tiết: cải thiện nhãn vị trí trong kết quả tìm kiếm và danh sách thành phố gần đây. Khi có dữ liệu, chương trình hiển thị thêm quận hoặc huyện, vùng và quốc gia để phân biệt những địa điểm trùng tên. Tên địa danh lặp lại được loại bỏ và các thành phố đã lưu trước đây vẫn tương thích.

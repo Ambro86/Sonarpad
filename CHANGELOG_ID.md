@@ -5,6 +5,8 @@ Version 0.9.21 – 2026-10-26
 1. Pemutaran audio streaming dan SonarMusic: memperbaiki antarmuka yang macet saat memuat video YouTube, dengan jendela tunggu dan pesan kesalahan yang diterjemahkan. Jika server mengembalikan HTTP 500, sumber HLS alternatif dicoba secara otomatis tanpa mengubah pemutaran normal; kesalahan hanya ditampilkan jika pemulihan juga gagal. Diagnostik kegagalan pemuatan ditingkatkan.
 2. SonarMusic: memperbaiki tindakan menu konteks yang muncul dalam bahasa Italia meskipun bahasa lain dipilih. Penyimpanan media, transkripsi, dan pembuatan deskripsi audio kini menggunakan bahasa yang dipilih.
 
+3. Pengelola penanda global pada menu Sisipkan: daftar seluruh berkas, pencarian, pengurutan, filter usia dan berkas hilang, buka pada posisi tersimpan, hapus beberapa penanda dengan konfirmasi serta cadangan. Tanggal dibuka dan diperbarui terpisah; tetap kompatibel dengan bookmarks.json lama dan NVDA/JAWS.
+
 Version 0.9.20 – 2026-10-25
 
 1. Cuaca: label lokasi pada hasil pencarian kota dan daftar kota terbaru diperjelas. Jika tersedia, kabupaten atau distrik, wilayah, dan negara kini ditampilkan agar lokasi bernama sama dapat dibedakan. Nama lokasi yang berulang dihilangkan dan kota yang sudah tersimpan tetap kompatibel.

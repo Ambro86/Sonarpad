@@ -406,3 +406,6 @@ Pressione a tecla Aplicativos ou Shift+F10 em um resultado para abrir seu menu d
 Na lista Favoritos, selecione e pressione Enter para abrir ou utilize o menu de contexto para remover. Voltar retorna à página anterior; Escape volta quando possível ou fecha a janela. Tab, Shift+Tab e as setas funcionam com NVDA e JAWS. A busca requer conexão com a Internet.
 
 FIM DO GUIA
+
+Gerenciamento global de marcadores:
+No menu Inserir escolha Gerenciar todos os marcadores para ver os marcadores de todos os arquivos, inclusive os fechados. Pesquise pelo caminho ou texto, ordene por última abertura, nome ou atualização e filtre por 30, 60, 90, 180 ou 365 dias, datas desconhecidas, arquivos ausentes ou marcadores automáticos. A lista mostra caminho, posição, datas e tipo. Tab e setas funcionam com NVDA e JAWS; Ctrl+A seleciona tudo, Ctrl ou Shift permitem seleção múltipla. Enter abre o arquivo na posição salva. A exclusão exige confirmação e cria uma cópia em bookmarks-backups, ao lado de bookmarks.json. A última abertura de marcadores antigos pode ser desconhecida.

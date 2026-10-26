@@ -10255,6 +10255,10 @@ pub(crate) struct AppState {
     recent_files: Vec<PathBuf>,
     settings: AppSettings,
     bookmarks: BookmarkStore,
+    /// One-shot suppression after deleting bookmarks of an already-open document.
+    bookmark_cleanup_suppressed: HashSet<String>,
+    /// Requested offset when opening a document from the global bookmark manager.
+    pending_global_bookmark: Option<(PathBuf, i32)>,
     find_dialog: HWND,
     replace_dialog: HWND,
     options_dialog: HWND,
@@ -10263,6 +10267,7 @@ pub(crate) struct AppState {
     donations_window: HWND,
     feedback_window: HWND,
     bookmarks_window: HWND,
+    bookmark_manager_window: HWND,
     dictionary_window: HWND,
     dictionary_entry_dialog: HWND,
     wiktionary_window: HWND,
@@ -11709,6 +11714,15 @@ fn run_app(
                     handled = true;
                     return;
                 }
+                if state.bookmark_manager_window.0 != 0
+                    && app_windows::bookmark_manager_window::handle_navigation(
+                        state.bookmark_manager_window,
+                        &msg,
+                    )
+                {
+                    handled = true;
+                    return;
+                }
 
                 if state.dictionary_window.0 != 0
                     && app_windows::dictionary_window::handle_navigation(
@@ -12411,6 +12425,8 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     recent_files,
                     settings: settings.clone(),
                     bookmarks,
+                    bookmark_cleanup_suppressed: HashSet::new(),
+                    pending_global_bookmark: None,
                     find_dialog: HWND(0),
                     replace_dialog: HWND(0),
                     options_dialog: HWND(0),
@@ -12419,6 +12435,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     donations_window: HWND(0),
                     feedback_window: HWND(0),
                     bookmarks_window: HWND(0),
+                    bookmark_manager_window: HWND(0),
                     dictionary_window: HWND(0),
                     dictionary_entry_dialog: HWND(0),
                     wiktionary_window: HWND(0),
@@ -15314,6 +15331,11 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     IDM_MANAGE_BOOKMARKS => {
                         log_debug("Menu: Manage Bookmarks");
                         app_windows::bookmarks_window::open(hwnd);
+                        LRESULT(0)
+                    }
+                    IDM_GLOBAL_BOOKMARK_MANAGER => {
+                        log_debug("Menu: Manage All Bookmarks");
+                        app_windows::bookmark_manager_window::open(hwnd);
                         LRESULT(0)
                     }
                     IDM_NEXT_TAB => {
@@ -22756,6 +22778,14 @@ pub(crate) fn save_automatic_bookmark_for_document(hwnd: HWND, doc_index: usize)
     if !persist_to_disk {
         return false;
     }
+    // A cleanup performed while the document is open must survive its closing.
+    if with_state(hwnd, |state| {
+        state.bookmark_cleanup_suppressed.contains(&storage_key)
+    })
+    .unwrap_or(false)
+    {
+        return false;
+    }
 
     let bookmark = if matches!(format, FileFormat::Audiobook) {
         let mpv_position_secs = path
@@ -22834,10 +22864,15 @@ pub(crate) fn save_automatic_bookmark_for_document(hwnd: HWND, doc_index: usize)
     };
 
     let bookmarks_window = with_state(hwnd, |state| {
-        state
+        let list = state
             .bookmarks
             .files
-            .insert(storage_key.clone(), vec![bookmark]);
+            .entry(storage_key.clone())
+            .or_default();
+        // Automatic updates must not discard manually inserted bookmarks.
+        list.retain(|existing| !existing.automatic);
+        list.push(bookmark);
+        bookmarks::sort_bookmarks(list);
         save_bookmarks(&state.bookmarks);
         let should_clear_tts_bookmark = state.tts_automatic_bookmark_position.as_ref().is_some_and(
             |(bookmark_hwnd, bookmark_key, _)| {
@@ -23271,7 +23306,11 @@ pub(crate) fn goto_first_bookmark(
     if let Some(list) = bookmarks.files.get(&path_str)
         && let Some(bm) = list
             .iter()
-            .find(|bookmark| bookmark.is_visible(automatic_bookmark_enabled))
+            .find(|bookmark| automatic_bookmark_enabled && bookmark.automatic)
+            .or_else(|| {
+                list.iter()
+                    .find(|bookmark| bookmark.is_visible(automatic_bookmark_enabled))
+            })
     {
         if matches!(format, FileFormat::Audiobook) {
             // Audiobook position is handled by playback start
@@ -23307,6 +23346,47 @@ pub(crate) fn rebuild_menus(hwnd: HWND) {
         crate::menu::update_playback_menu(hwnd, true);
     }
     update_voice_panel_menu_check(hwnd);
+}
+
+pub(crate) fn record_bookmark_open(hwnd: HWND, key: &str) {
+    with_state(hwnd, |state| {
+        // Do not cancel an active cleanup suppression on tab switches.
+        // The suppression is cleared only when that document closes.
+        let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        if bookmarks::mark_file_opened(&mut state.bookmarks, key, &now) {
+            save_bookmarks(&state.bookmarks);
+        }
+    });
+}
+
+fn apply_pending_global_bookmark(hwnd: HWND, path: &Path, hwnd_edit: HWND) {
+    let pending = with_state(hwnd, |state| {
+        if state
+            .pending_global_bookmark
+            .as_ref()
+            .is_some_and(|(target, _)| target == path)
+        {
+            state.pending_global_bookmark.take()
+        } else {
+            None
+        }
+    })
+    .flatten();
+    if let Some((_, offset)) = pending {
+        let mut selection = CHARRANGE {
+            cpMin: offset.max(0),
+            cpMax: offset.max(0),
+        };
+        unsafe {
+            SendMessageW(
+                hwnd_edit,
+                EM_EXSETSEL,
+                WPARAM(0),
+                LPARAM(&mut selection as *mut _ as isize),
+            );
+            SendMessageW(hwnd_edit, EM_SCROLLCARET, WPARAM(0), LPARAM(0));
+        }
+    }
 }
 
 pub(crate) fn push_recent_file(hwnd: HWND, path: &Path) {
@@ -23910,6 +23990,7 @@ pub(crate) fn queue_audio_files_and_play(hwnd: HWND, paths: Vec<PathBuf>) {
                 ));
             }
             push_recent_file(hwnd, path);
+            record_bookmark_open(hwnd, &path.to_string_lossy());
         }
         let target_index = with_state(hwnd, |state| {
             let play_path = paths[0].clone();
@@ -24470,6 +24551,8 @@ fn handle_pdf_loaded(hwnd: HWND, payload: PdfLoadResult) {
                     update_window_title(hwnd);
                 }
                 push_recent_file(hwnd, &path);
+                record_bookmark_open(hwnd, &path.to_string_lossy());
+                apply_pending_global_bookmark(hwnd, &path, hwnd_edit);
             }
             Ok(PdfTextResult::NoText) => {
                 // Never offer language installation automatically for scanned PDFs.
@@ -24601,6 +24684,8 @@ fn handle_document_loaded(hwnd: HWND, payload: editor_manager::DocumentLoadResul
             }
         }
         push_recent_file(hwnd, &path);
+        record_bookmark_open(hwnd, &path.to_string_lossy());
+        apply_pending_global_bookmark(hwnd, &path, hwnd_edit);
 
         let pending = with_state(hwnd, |state| state.pending_find_in_files.clone()).unwrap_or(None);
         if let Some(pending) = pending
