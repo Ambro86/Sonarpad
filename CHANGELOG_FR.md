@@ -1,5 +1,10 @@
 # Journal des modifications
 
+Version 0.9.21 – 2026-10-26
+
+1. Lecture audio en streaming et SonarMusic : correction des blocages de l’interface pendant le chargement des vidéos YouTube, avec fenêtre d’attente et messages d’erreur traduits. Si le serveur renvoie HTTP 500, une source HLS alternative est essayée automatiquement sans modifier la lecture normale ; l’erreur n’est affichée que si cette tentative échoue également. Diagnostic des erreurs de chargement amélioré.
+2. SonarMusic : correction des actions du menu contextuel affichées en italien malgré le choix d’une autre langue. L’enregistrement des médias, la transcription et la création d’audiodescriptions utilisent désormais la langue sélectionnée.
+
 Version 0.9.20 – 2026-10-25
 
 1. Météo : amélioration des indications géographiques dans les résultats de recherche et les villes récentes. Le comté ou district, la région et le pays s’affichent lorsqu’ils sont disponibles afin de distinguer les lieux portant le même nom. Les informations répétées sont supprimées et les villes déjà enregistrées restent compatibles.

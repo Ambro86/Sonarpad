@@ -2375,5 +2375,8 @@
   "media_join.menu": "&Fusionner des fichiers multimédias…\tAlt+Shift+Y",
   "media_join.overwrite": "Le fichier de destination existe déjà. Le remplacer ?",
   "media_join.cancelled": "Fusion annulée.",
-  "media_join.failed": "Impossible de fusionner les fichiers."
+  "media_join.failed": "Impossible de fusionner les fichiers.",
+  "stream_audio.player_loading": "Chargement des pistes audio du flux…",
+  "stream_audio.player_load_timeout": "Le lecteur n’a chargé aucune piste audio dans les 60 secondes. Réessayez plus tard ou enregistrez la vidéo pour la lire localement.",
+  "stream_audio.player_exited_before_load": "Le lecteur s’est fermé avant de charger les pistes audio."
 }

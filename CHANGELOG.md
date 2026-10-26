@@ -1,5 +1,10 @@
 # Changelog
 
+Version 0.9.21 – 2026-10-26
+
+1. Play Streaming Audio and SonarMusic: fixed interface freezes while loading YouTube videos, with a waiting window and localized error messages. If the server returns HTTP 500, an alternative HLS source is tried automatically without changing normal playback; an error is shown only if recovery also fails. Improved diagnostics for loading failures.
+2. SonarMusic: fixed context menu actions appearing in Italian when another language was selected. Saving media, transcription and audio description creation now use the selected language.
+
 Version 0.9.20 – 2026-10-25
 
 1. Weather: improved location labels in city search results and recently used cities. Where available, county or district, region and country are now shown to distinguish places with the same name. Repeated location names are omitted, and previously saved cities remain compatible.

@@ -322,8 +322,8 @@ fn show_result_menu(hwnd: HWND, s: &State, position: LPARAM, favorites: bool) {
         let Ok(menu) = CreatePopupMenu() else {
             return;
         };
-        let language =
-            with_state(GetParent(hwnd), |state| state.settings.language).unwrap_or_default();
+        // This is an owned top-level window, not a child: GetParent can be null.
+        let language = with_state(s.parent, |state| state.settings.language).unwrap_or_default();
         for action in actions {
             let title = match action {
                 ADD_FAVORITE => label(s, "add_favorite"),

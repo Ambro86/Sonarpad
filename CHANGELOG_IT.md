@@ -1,5 +1,10 @@
 # Changelog
 
+Version 0.9.21 – 2026-10-26
+
+1. Riproduci audio da streaming e SonarMusic: corretti i blocchi dell’interfaccia durante il caricamento dei video YouTube, con finestra di attesa e messaggi di errore localizzati. Se il server restituisce HTTP 500, viene provata automaticamente una sorgente HLS alternativa senza modificare il percorso di riproduzione normale; l’errore viene mostrato solo se fallisce anche il recupero. Migliorata la diagnostica degli errori di caricamento.
+2. SonarMusic: corretto il menu contestuale, che mostrava alcune azioni in italiano anche selezionando un’altra lingua. Salvataggio, trascrizione e creazione di audiodescrizioni ora rispettano la lingua impostata.
+
 Version 0.9.20 – 2026-10-25
 
 1. Meteo: migliorate le indicazioni geografiche nei risultati di ricerca e nelle città recenti. Quando disponibili, vengono mostrati anche contea o distretto, regione e Paese, così da distinguere località con lo stesso nome. Eliminati i nomi ripetuti e mantenuta la compatibilità con le città già salvate.

@@ -2427,5 +2427,8 @@
   "media_join.menu": "&Unisci file media…\tAlt+Shift+Y",
   "media_join.overwrite": "Il file di destinazione esiste già. Vuoi sostituirlo?",
   "media_join.cancelled": "Unione annullata.",
-  "media_join.failed": "Impossibile unire i file."
+  "media_join.failed": "Impossibile unire i file.",
+  "stream_audio.player_loading": "Caricamento delle tracce audio dello streaming…",
+  "stream_audio.player_load_timeout": "Il lettore non ha caricato alcuna traccia audio entro 60 secondi. Riprova più tardi oppure salva il video e riproducilo localmente.",
+  "stream_audio.player_exited_before_load": "Il lettore si è chiuso prima di caricare le tracce audio."
 }

@@ -2375,5 +2375,8 @@
   "media_join.menu": "&Sammanfoga mediefiler…\tAlt+Shift+Y",
   "media_join.overwrite": "Utdatafilen finns redan. Ersätta den?",
   "media_join.cancelled": "Sammanfogningen avbröts.",
-  "media_join.failed": "Det gick inte att sammanfoga filerna."
+  "media_join.failed": "Det gick inte att sammanfoga filerna.",
+  "stream_audio.player_loading": "Läser in strömmens ljudspår…",
+  "stream_audio.player_load_timeout": "Spelaren läste inte in något ljudspår inom 60 sekunder. Försök igen senare eller spara videon och spela upp den lokalt.",
+  "stream_audio.player_exited_before_load": "Spelaren stängdes innan ljudspåren hade lästs in."
 }

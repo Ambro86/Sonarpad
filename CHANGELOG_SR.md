@@ -1,5 +1,10 @@
 # Dnevnik izmena
 
+Version 0.9.21 – 2026-10-26
+
+1. Стриминг звука и SonarMusic: исправљено замрзавање интерфејса при учитавању YouTube видеа, уз прозор за чекање и преведене поруке о грешкама. Ако сервер врати HTTP 500, аутоматски се покушава алтернативни HLS извор без промене уобичајене репродукције; грешка се приказује само ако ни тај покушај не успе. Побољшана дијагностика грешака учитавања.
+2. SonarMusic: ispravljene su stavke kontekstnog menija koje su se prikazivale na italijanskom i kada je izabran drugi jezik. Čuvanje medija, transkripcija i kreiranje audio-deskripcija sada koriste izabrani jezik.
+
 Version 0.9.20 – 2026-10-25
 
 1. Vremenska prognoza: poboljšane su oznake lokacija u rezultatima pretrage i listi nedavno korišćenih gradova. Kada su dostupni, prikazuju se i okrug ili distrikt, region i država radi razlikovanja mesta sa istim imenom. Duplirani nazivi se uklanjaju, a ranije sačuvani gradovi ostaju kompatibilni.

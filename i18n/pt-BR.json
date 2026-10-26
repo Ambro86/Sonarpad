@@ -2427,5 +2427,8 @@
   "media_join.menu": "&Unir arquivos multimédia…\tAlt+Shift+Y",
   "media_join.overwrite": "O arquivo de destino já existe. Substituí-lo?",
   "media_join.cancelled": "União cancelada.",
-  "media_join.failed": "Não foi possível unir os arquivos."
+  "media_join.failed": "Não foi possível unir os arquivos.",
+  "stream_audio.player_loading": "Carregando as faixas de áudio da transmissão…",
+  "stream_audio.player_load_timeout": "O reprodutor não carregou nenhuma faixa de áudio em 60 segundos. Tente novamente mais tarde ou salve o vídeo e reproduza-o localmente.",
+  "stream_audio.player_exited_before_load": "O reprodutor fechou antes de carregar as faixas de áudio."
 }

@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+Version 0.9.21 – 2026-10-26
+
+1. Streaming-Audio und SonarMusic: Einfrieren der Oberfläche beim Laden von YouTube-Videos behoben, mit Wartefenster und übersetzten Fehlermeldungen. Bei HTTP 500 wird automatisch eine alternative HLS-Quelle versucht, ohne die normale Wiedergabe zu ändern; eine Fehlermeldung erscheint nur, wenn auch die Wiederherstellung fehlschlägt. Verbesserte Diagnose von Ladefehlern.
+2. SonarMusic: Einige Aktionen im Kontextmenü wurden trotz einer anderen Sprachauswahl auf Italienisch angezeigt. Medien speichern, Transkription und Audiodeskription verwenden jetzt die eingestellte Sprache.
+
 Version 0.9.20 – 2026-10-25
 
 1. Wetter: Ortsangaben in den Suchergebnissen und zuletzt verwendeten Städten verbessert. Sofern verfügbar, werden auch Landkreis oder Bezirk, Region und Land angezeigt, damit gleichnamige Orte unterschieden werden können. Doppelte Ortsangaben werden vermieden; bereits gespeicherte Städte bleiben kompatibel.

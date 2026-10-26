@@ -2375,5 +2375,8 @@
   "media_join.menu": "&Połącz pliki multimedialne…\tAlt+Shift+Y",
   "media_join.overwrite": "Plik docelowy już istnieje. Zastąpić go?",
   "media_join.cancelled": "Łączenie anulowane.",
-  "media_join.failed": "Nie można połączyć plików."
+  "media_join.failed": "Nie można połączyć plików.",
+  "stream_audio.player_loading": "Wczytywanie ścieżek audio strumienia…",
+  "stream_audio.player_load_timeout": "Odtwarzacz nie wczytał żadnej ścieżki audio w ciągu 60 sekund. Spróbuj ponownie później lub zapisz film i odtwórz go lokalnie.",
+  "stream_audio.player_exited_before_load": "Odtwarzacz zamknął się przed wczytaniem ścieżek audio."
 }

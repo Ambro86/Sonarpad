@@ -1,5 +1,10 @@
 # Pakeitimų žurnalas
 
+Version 0.9.21 – 2026-10-26
+
+1. Srautinio garso atkūrimas ir SonarMusic: ištaisytas sąsajos strigimas įkeliant YouTube vaizdo įrašus, pridėtas laukimo langas ir išversti klaidų pranešimai. Serveriui grąžinus HTTP 500, automatiškai išbandomas alternatyvus HLS šaltinis, nekeičiant įprasto atkūrimo; klaida rodoma tik nepavykus ir šiam bandymui. Patobulinta įkėlimo klaidų diagnostika.
+2. SonarMusic: ištaisytos kontekstinio meniu komandos, kurios buvo rodomos italų kalba pasirinkus kitą kalbą. Medijos išsaugojimas, transkripcija ir garsinio vaizdavimo kūrimas dabar naudoja pasirinktą kalbą.
+
 Version 0.9.20 – 2026-10-25
 
 1. Orų prognozė: patikslintos vietovių žymos miestų paieškos rezultatuose ir neseniai naudotų miestų sąraše. Kai yra duomenų, rodomi rajonas ar apygarda, regionas ir šalis, kad būtų galima atskirti vienodai pavadintas vietoves. Pasikartojantys pavadinimai pašalinti, o anksčiau išsaugoti miestai išlieka suderinami.

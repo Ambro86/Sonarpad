@@ -2427,5 +2427,8 @@
   "media_join.menu": "&Mediendateien zusammenfügen…\tAlt+Shift+Y",
   "media_join.overwrite": "Die Zieldatei existiert bereits. Ersetzen?",
   "media_join.cancelled": "Zusammenfügen abgebrochen.",
-  "media_join.failed": "Die Dateien konnten nicht zusammengefügt werden."
+  "media_join.failed": "Die Dateien konnten nicht zusammengefügt werden.",
+  "stream_audio.player_loading": "Audiotracks des Streams werden geladen…",
+  "stream_audio.player_load_timeout": "Der Player hat innerhalb von 60 Sekunden keine Audiospur geladen. Versuchen Sie es später erneut oder speichern Sie das Video und spielen Sie es lokal ab.",
+  "stream_audio.player_exited_before_load": "Der Player wurde vor dem Laden der Audiospuren geschlossen."
 }

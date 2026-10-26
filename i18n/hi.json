@@ -2375,5 +2375,8 @@
   "media_join.menu": "&मीडिया फ़ाइलें जोड़ें…\tAlt+Shift+Y",
   "media_join.overwrite": "आउटपुट फ़ाइल पहले से मौजूद है। इसे बदलें?",
   "media_join.cancelled": "फ़ाइलें जोड़ना रद्द किया गया।",
-  "media_join.failed": "फ़ाइलें जोड़ी नहीं जा सकीं।"
+  "media_join.failed": "फ़ाइलें जोड़ी नहीं जा सकीं।",
+  "stream_audio.player_loading": "स्ट्रीम के ऑडियो ट्रैक लोड हो रहे हैं…",
+  "stream_audio.player_load_timeout": "प्लेयर 60 सेकंड में कोई ऑडियो ट्रैक लोड नहीं कर पाया। बाद में फिर कोशिश करें या वीडियो सहेजकर स्थानीय रूप से चलाएँ।",
+  "stream_audio.player_exited_before_load": "ऑडियो ट्रैक लोड होने से पहले प्लेयर बंद हो गया।"
 }

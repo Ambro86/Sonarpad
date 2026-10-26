@@ -2375,5 +2375,8 @@
   "media_join.menu": "&Spoji medijske datoteke…\tAlt+Shift+Y",
   "media_join.overwrite": "Izlazna datoteka već postoji. Zameniti je?",
   "media_join.cancelled": "Spajanje je otkazano.",
-  "media_join.failed": "Nije moguće spojiti datoteke."
+  "media_join.failed": "Nije moguće spojiti datoteke.",
+  "stream_audio.player_loading": "Учитавање аудио записа стрима…",
+  "stream_audio.player_load_timeout": "Плејер није учитао ниједан аудио запис у року од 60 секунди. Покушајте касније или сачувајте видео и репродукујте га локално.",
+  "stream_audio.player_exited_before_load": "Плејер се затворио пре учитавања аудио записа."
 }

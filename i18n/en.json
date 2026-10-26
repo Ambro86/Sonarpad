@@ -2375,5 +2375,8 @@
   "media_join.menu": "&Join media files…\tAlt+Shift+Y",
   "media_join.overwrite": "The output file already exists. Replace it?",
   "media_join.cancelled": "Joining cancelled.",
-  "media_join.failed": "Unable to join the files."
+  "media_join.failed": "Unable to join the files.",
+  "stream_audio.player_loading": "Loading stream audio tracks…",
+  "stream_audio.player_load_timeout": "The player did not load any audio tracks within 60 seconds. Try again later or save the video and play it locally.",
+  "stream_audio.player_exited_before_load": "The player closed before loading the audio tracks."
 }

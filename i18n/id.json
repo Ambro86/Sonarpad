@@ -2375,5 +2375,8 @@
   "media_join.menu": "&Gabungkan berkas media…\tAlt+Shift+Y",
   "media_join.overwrite": "Berkas keluaran sudah ada. Ganti?",
   "media_join.cancelled": "Penggabungan dibatalkan.",
-  "media_join.failed": "Tidak dapat menggabungkan berkas."
+  "media_join.failed": "Tidak dapat menggabungkan berkas.",
+  "stream_audio.player_loading": "Memuat trek audio streaming…",
+  "stream_audio.player_load_timeout": "Pemutar tidak memuat trek audio apa pun dalam 60 detik. Coba lagi nanti atau simpan video dan putar secara lokal.",
+  "stream_audio.player_exited_before_load": "Pemutar ditutup sebelum memuat trek audio."
 }

@@ -9531,6 +9531,99 @@ fn report_progress_status(dialog: HWND, text: &str) {
     crate::app_windows::podcast_save_window::set_status_text(dialog, text);
 }
 
+#[cfg(test)]
+mod stream_startup_wait_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use windows::Win32::UI::WindowsAndMessaging::{KillTimer, SetTimer};
+
+    static TIMER_TICKS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "system" fn timer_tick(_: HWND, _: u32, _: usize, _: u32) {
+        TIMER_TICKS.fetch_add(1, Ordering::Relaxed);
+    }
+
+    #[test]
+    fn stream_startup_wait_dispatches_real_windows_messages_and_keeps_error() {
+        TIMER_TICKS.store(0, Ordering::Relaxed);
+        // A thread timer invokes its callback only when Windows messages are dispatched.
+        let timer = unsafe { SetTimer(HWND(0), 0, 20, Some(timer_tick)) };
+        assert_ne!(timer, 0);
+        let result = wait_for_stream_startup_responsive(HWND(0), || {
+            std::thread::sleep(std::time::Duration::from_millis(180));
+            Err("HTTP 403".to_string())
+        });
+        // The timer belongs to this test thread and must not outlive it.
+        unsafe { KillTimer(HWND(0), timer).expect("remove test timer") };
+        assert_eq!(result, Err("HTTP 403".to_string()));
+        assert!(TIMER_TICKS.load(Ordering::Relaxed) >= 2);
+    }
+
+    #[test]
+    fn stream_startup_wait_preserves_success() {
+        assert!(wait_for_stream_startup_responsive(HWND(0), || Ok(())).is_ok());
+    }
+
+    #[test]
+    fn stream_startup_wait_errors_are_localized() {
+        let message = stream_download_error_message(
+            Language::English,
+            &i18n::tr(Language::English, "stream_audio.player_load_timeout"),
+        );
+        assert!(message.contains("60 seconds"));
+        assert!(!message.contains("non ha caricato"));
+        for locale in [
+            "it", "en", "de", "es", "pt", "pt-BR", "sv", "vi", "cs", "pl", "fr", "sr", "uk", "lt",
+            "ru", "zh", "hi", "id",
+        ] {
+            let language: Language = serde_json::from_value(serde_json::json!(locale)).unwrap();
+            for key in [
+                "stream_audio.player_loading",
+                "stream_audio.player_load_timeout",
+                "stream_audio.player_exited_before_load",
+            ] {
+                let text = i18n::tr(language, key);
+                assert!(!text.is_empty() && text != key, "{locale}: {key}");
+            }
+        }
+    }
+}
+
+// The same progress window and message pump used by stream downloads, while
+// mpv IPC/file reads run off the UI thread. Borrowed child ownership stays here.
+pub(crate) fn wait_for_stream_startup_responsive<F>(parent: HWND, task: F) -> Result<(), String>
+where
+    F: FnOnce() -> Result<(), String> + Send,
+{
+    let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new()
+            .name("mpv-stream-load".to_string())
+            .spawn_scoped(scope, task)
+            .map_err(|error| error.to_string())?;
+        let started = std::time::Instant::now();
+        let mut dialog = HWND(0);
+        while !worker.is_finished() {
+            if dialog.0 == 0 && parent.0 != 0 && started.elapsed().as_millis() >= 400 {
+                dialog = open_progress_dialog(
+                    parent,
+                    language,
+                    "stream_audio.prompt_title",
+                    "stream_audio.player_loading",
+                    false,
+                );
+            }
+            ignore_bool(pump_messages_detect_stream_cancel(parent, dialog));
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        close_progress_dialog(dialog);
+        worker.join().unwrap_or_else(|_| {
+            crate::log_debug("Managed mpv load worker panicked");
+            Err(i18n::tr(language, "stream_audio.player_exited_before_load"))
+        })
+    })
+}
+
 fn pump_messages_detect_stream_cancel(parent: HWND, dialog: HWND) -> bool {
     // Long streaming downloads/conversions temporarily run this responsive nested
     // message pump on the UI thread. Since reaching this point means the UI is

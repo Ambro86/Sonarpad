@@ -2375,5 +2375,8 @@
   "media_join.menu": "&Ghép tệp phương tiện…\tAlt+Shift+Y",
   "media_join.overwrite": "Tệp đầu ra đã tồn tại. Thay thế tệp?",
   "media_join.cancelled": "Đã hủy ghép tệp.",
-  "media_join.failed": "Không thể ghép các tệp."
+  "media_join.failed": "Không thể ghép các tệp.",
+  "stream_audio.player_loading": "Đang tải các bản âm thanh của luồng…",
+  "stream_audio.player_load_timeout": "Trình phát không tải được bản âm thanh nào trong 60 giây. Hãy thử lại sau hoặc lưu video và phát trên thiết bị.",
+  "stream_audio.player_exited_before_load": "Trình phát đã đóng trước khi tải các bản âm thanh."
 }

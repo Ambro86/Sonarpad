@@ -2375,5 +2375,8 @@
   "media_join.menu": "&Sujungti medijos failus…\tAlt+Shift+Y",
   "media_join.overwrite": "Išvesties failas jau yra. Pakeisti jį?",
   "media_join.cancelled": "Jungimas atšauktas.",
-  "media_join.failed": "Nepavyko sujungti failų."
+  "media_join.failed": "Nepavyko sujungti failų.",
+  "stream_audio.player_loading": "Įkeliami srauto garso takeliai…",
+  "stream_audio.player_load_timeout": "Grotuvas per 60 sekundžių neįkėlė nė vieno garso takelio. Bandykite vėliau arba išsaugokite vaizdo įrašą ir paleiskite jį vietoje.",
+  "stream_audio.player_exited_before_load": "Grotuvas užsidarė prieš įkeldamas garso takelius."
 }

@@ -3708,6 +3708,9 @@ fn youtube_mpv_log_has_failure(log: &str) -> Option<String> {
         ),
         ("this video is unavailable", &["this video is unavailable"]),
         ("http error 403", &["http error 403"]),
+        // The player can stay alive after a CDN failure with an empty track
+        // list. Report the real HTTP status instead of waiting for the timeout.
+        ("HTTP 500", &["http error 500"]),
         (
             "failed to recognize file format",
             &[
@@ -3785,6 +3788,7 @@ fn wait_for_youtube_mpv_file_loaded(
     child: &mut std::process::Child,
     ipc_path: &Path,
     log_path: Option<&Path>,
+    language: Language,
 ) -> Result<(), String> {
     // Long progressive MP4 files can need a remote index/range read before
     // exposing tracks. Measured public videos take 19s direct and 44s via
@@ -3799,7 +3803,10 @@ fn wait_for_youtube_mpv_file_loaded(
             let detail = log_path
                 .and_then(|path| std::fs::read_to_string(path).ok())
                 .and_then(|log| youtube_mpv_log_has_failure(&log))
-                .unwrap_or_else(|| format!("mpv terminato prima di file-loaded: {status}"));
+                .unwrap_or_else(|| {
+                    log_debug(&format!("Managed mpv exited before file-loaded: {status}"));
+                    i18n::tr(language, "stream_audio.player_exited_before_load")
+                });
             return Err(detail);
         }
         if let Ok(mut pipe) = open_mpv_ipc_pipe(ipc_path)
@@ -3836,7 +3843,37 @@ fn wait_for_youtube_mpv_file_loaded(
         }
         std::thread::sleep(Duration::from_millis(100));
     }
-    Err("file-loaded timeout: mpv non ha caricato alcuna traccia audio".to_string())
+    log_debug("Managed mpv file-loaded timeout: no audio track within 60 seconds");
+    Err(i18n::tr(language, "stream_audio.player_load_timeout"))
+}
+
+fn log_youtube_mpv_load_failure(path: &Path) {
+    let Ok(log) = std::fs::read_to_string(path) else {
+        return;
+    };
+    // Keep useful transport/demux errors in the diagnostics before removing the
+    // temporary log. Signed stream URLs are not needed to understand the error.
+    let Ok(url_pattern) = regex::Regex::new(r#"https?://[^\s"']+"#) else {
+        return;
+    };
+    let lines: Vec<_> = log
+        .lines()
+        .filter(|line| {
+            let lower = line.to_ascii_lowercase();
+            [
+                "error", "failed", "http", "ffmpeg", "lavf", "demux", "end-file",
+            ]
+            .iter()
+            .any(|marker| lower.contains(marker))
+        })
+        .rev()
+        .take(12)
+        .collect();
+    for line in lines.into_iter().rev() {
+        let sanitized = url_pattern.replace_all(line, "[URL]");
+        let short: String = sanitized.chars().take(800).collect();
+        log_debug(&format!("Managed mpv load diagnostic: {short}"));
+    }
 }
 
 fn clear_managed_mpv_state(hwnd: HWND) {
@@ -5010,8 +5047,13 @@ pub(crate) fn launch_stream_url_in_mpv(
                     title: title.or(Some(&resolved_title)),
                     ..options
                 };
-                match launch_stream_url_in_mpv_with_input(hwnd, url, direct_options, Some(&direct))
-                {
+                match launch_stream_url_in_mpv_with_input(
+                    hwnd,
+                    url,
+                    direct_options,
+                    Some(&direct),
+                    false,
+                ) {
                     Ok(()) => return Ok(()),
                     Err(err) if err.contains("richiesta più recente") => return Err(err),
                     Err(_) => log_debug("SonarTube direct playback failed; fallback to yt-dlp"),
@@ -5142,6 +5184,7 @@ pub(crate) fn try_launch_sonarmusic_direct_in_mpv(
                     configure_tv_tracks_async: true,
                 },
                 Some(&direct),
+                false,
             );
             if result.is_ok() {
                 return result.map(|()| true);
@@ -5468,12 +5511,48 @@ struct StreamMpvOptions<'a> {
     configure_tv_tracks_async: bool,
 }
 
+const YOUTUBE_HTTP_500_HLS_FORMAT: &str =
+    "bestvideo[protocol^=m3u8][height<=360]+bestaudio[protocol^=m3u8]/best[protocol^=m3u8]";
+
+fn should_retry_youtube_http500(url: &str, options: StreamMpvOptions<'_>, error: &str) -> bool {
+    error == "HTTP 500"
+        && options.ytdlp_path.is_some()
+        && options.ytdlp_credentials.is_none()
+        && sonartube::direct_watch_url(url, false).is_some()
+}
+
 fn launch_stream_url_in_mpv_with_options(
     hwnd: HWND,
     url: &str,
     options: StreamMpvOptions<'_>,
 ) -> Result<(), String> {
-    launch_stream_url_in_mpv_with_input(hwnd, url, options, None)
+    let result = launch_stream_url_in_mpv_with_input(hwnd, url, options, None, false);
+    if result
+        .as_ref()
+        .err()
+        .is_some_and(|error| should_retry_youtube_http500(url, options, error))
+    {
+        log_debug("Managed mpv YouTube HTTP 500: retrying HLS with automatic yt-dlp clients");
+        // This is one additional attempt, only after the normal route returned
+        // HTTP 500. Reuse the same player, UI wait, bookmarks and video settings.
+        let retry = launch_stream_url_in_mpv_with_input(
+            hwnd,
+            url,
+            StreamMpvOptions {
+                ytdl_format: Some(YOUTUBE_HTTP_500_HLS_FORMAT),
+                ..options
+            },
+            None,
+            true,
+        );
+        log_debug(if retry.is_ok() {
+            "Managed mpv YouTube HTTP 500 HLS recovery succeeded"
+        } else {
+            "Managed mpv YouTube HTTP 500 HLS recovery failed"
+        });
+        return retry;
+    }
+    result
 }
 
 fn launch_stream_url_in_mpv_with_input(
@@ -5481,6 +5560,7 @@ fn launch_stream_url_in_mpv_with_input(
     url: &str,
     options: StreamMpvOptions<'_>,
     direct_input: Option<&str>,
+    youtube_hls_fallback: bool,
 ) -> Result<(), String> {
     let launch_started = std::time::Instant::now();
     let StreamMpvOptions {
@@ -5551,17 +5631,16 @@ fn launch_stream_url_in_mpv_with_input(
     };
     // mpv logs its full command line. Never create this diagnostic file when
     // username/password options are present; IPC still performs the load check.
-    let youtube_log_path = (is_youtube && direct_input.is_none() && ytdlp_credentials.is_none())
-        .then(|| {
-            std::env::temp_dir().join(format!(
-                "sonarpad-youtube-mpv-{}-{}.log",
-                std::process::id(),
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_millis()
-            ))
-        });
+    let youtube_log_path = (is_youtube && ytdlp_credentials.is_none()).then(|| {
+        std::env::temp_dir().join(format!(
+            "sonarpad-youtube-mpv-{}-{}.log",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ))
+    });
 
     let mut command = std::process::Command::new(&mpv_exe);
     // Regression guard: .arg(if is_youtube { "--pause=no" } else { "--pause=yes" })
@@ -5651,7 +5730,7 @@ fn launch_stream_url_in_mpv_with_input(
         command.arg(format!("--ytdl-format={ytdl_format}"));
     }
     let mut ytdl_raw_options = Vec::new();
-    if is_youtube {
+    if is_youtube && !youtube_hls_fallback {
         // Avoid yt-dlp's automatic android_vr choice: its signed media URLs
         // currently return 403 for otherwise public videos on Windows.
         ytdl_raw_options.push("extractor-args=youtube:player_client=android".to_string());
@@ -5699,17 +5778,30 @@ fn launch_stream_url_in_mpv_with_input(
                 return Err("Riproduzione mpv annullata da una richiesta più recente.".to_string());
             }
             if is_youtube
-                && let Err(detail) = wait_for_youtube_mpv_file_loaded(
-                    &mut child,
-                    &ipc_path,
-                    youtube_log_path.as_deref(),
-                )
+                && let Err(detail) = {
+                    let language =
+                        with_state(hwnd, |state| state.settings.language).unwrap_or_default();
+                    app_windows::youtube_transcript_window::wait_for_stream_startup_responsive(
+                        hwnd,
+                        || {
+                            wait_for_youtube_mpv_file_loaded(
+                                &mut child,
+                                &ipc_path,
+                                youtube_log_path.as_deref(),
+                                language,
+                            )
+                        },
+                    )
+                }
             {
                 log_debug(&format!(
                     "Managed mpv YouTube IPC end-file/load failure: pid={} detail={}",
                     child.id(),
                     detail
                 ));
+                if let Some(path) = youtube_log_path.as_deref() {
+                    log_youtube_mpv_load_failure(path);
+                }
                 if let Err(error) = child.kill() {
                     log_debug(&format!(
                         "Managed mpv YouTube failed to stop after load error: {error}"
@@ -5730,6 +5822,10 @@ fn launch_stream_url_in_mpv_with_input(
                 }
                 set_local_mpv_video_mode(hwnd, false);
                 return Err(detail);
+            }
+            if stop_obsolete_mpv_child(hwnd, mpv_generation, &mut child, "stream tracks ready") {
+                set_local_mpv_video_mode(hwnd, false);
+                return Err("Riproduzione mpv annullata da una richiesta più recente.".to_string());
             }
             log_debug(&format!(
                 "Managed mpv startup timing: track_wait_ms={} total_ms={}",
@@ -23262,6 +23358,105 @@ fn spawn_new_window_with_path(path: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn youtube_http500_hls_fallback_is_restricted_to_the_reported_failure() {
+        let options = super::StreamMpvOptions {
+            title: None,
+            ytdlp_path: Some(std::path::Path::new("yt-dlp.exe")),
+            ytdl_format: Some("18/best"),
+            ytdlp_credentials: None,
+            user_agent: None,
+            prefer_audio_description: false,
+            allow_bookmark_resume: true,
+            force_video: false,
+            live_tv: false,
+            configure_tv_tracks_async: false,
+        };
+        let url = "https://www.youtube.com/watch?v=-U8Tu9MkEb4";
+        assert!(super::should_retry_youtube_http500(
+            url, options, "HTTP 500"
+        ));
+        for error in [
+            "",
+            "HTTP 403",
+            "members-only",
+            "widevine drm",
+            "file-loaded timeout",
+            "Riproduzione mpv annullata da una richiesta più recente.",
+        ] {
+            assert!(!super::should_retry_youtube_http500(url, options, error));
+        }
+        assert!(!super::should_retry_youtube_http500(
+            "https://example.com/live.m3u8",
+            options,
+            "HTTP 500"
+        ));
+        assert!(!super::should_retry_youtube_http500(
+            url,
+            super::StreamMpvOptions {
+                ytdlp_path: None,
+                ..options
+            },
+            "HTTP 500"
+        ));
+        assert!(!super::should_retry_youtube_http500(
+            url,
+            super::StreamMpvOptions {
+                ytdlp_credentials: Some(("user", "password")),
+                ..options
+            },
+            "HTTP 500"
+        ));
+    }
+
+    #[test]
+    fn stream_startup_wait_reports_early_exit_in_selected_language() {
+        let mut child = std::process::Command::new("cmd.exe")
+            .args(["/C", "exit", "7"])
+            .spawn()
+            .expect("start test process");
+        child.wait().expect("finish test process");
+        let error = super::wait_for_youtube_mpv_file_loaded(
+            &mut child,
+            std::path::Path::new("unused-mpv-test-pipe"),
+            None,
+            super::Language::English,
+        )
+        .unwrap_err();
+        assert_eq!(
+            error,
+            super::i18n::tr(
+                super::Language::English,
+                "stream_audio.player_exited_before_load"
+            )
+        );
+        assert!(!error.contains("terminato"));
+    }
+
+    #[test]
+    fn stream_startup_wait_keeps_specific_server_failure() {
+        assert_eq!(
+            super::youtube_mpv_log_has_failure(
+                "[ffmpeg] https: HTTP error 500 Internal Server Error\n[demux] EDL: Could not open source file\n"
+            ),
+            Some("HTTP 500".to_string())
+        );
+        assert_eq!(
+            super::youtube_mpv_log_has_failure("HTTP error 403\n"),
+            Some("http error 403".to_string())
+        );
+        assert_eq!(
+            super::youtube_mpv_log_has_failure("HTTP error 403\nStarting playback\n"),
+            None
+        );
+        assert_eq!(
+            super::youtube_mpv_log_has_failure(
+                "This video is available to members of this channel\nHTTP error 403\n"
+            ),
+            Some("members-only".to_string())
+        );
+    }
+
     #[test]
     fn mpv_ipc_keeps_response_buffered_after_events() {
         let messages = concat!(

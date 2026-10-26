@@ -2375,5 +2375,8 @@
   "media_join.menu": "&合并媒体文件…\tAlt+Shift+Y",
   "media_join.overwrite": "输出文件已存在。要替换吗？",
   "media_join.cancelled": "合并已取消。",
-  "media_join.failed": "无法合并文件。"
+  "media_join.failed": "无法合并文件。",
+  "stream_audio.player_loading": "正在加载流媒体音轨…",
+  "stream_audio.player_load_timeout": "播放器未能在60秒内加载任何音轨。请稍后重试，或保存视频后在本地播放。",
+  "stream_audio.player_exited_before_load": "播放器在加载音轨前已关闭。"
 }

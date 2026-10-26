@@ -2375,5 +2375,8 @@
   "media_join.menu": "&Spojit multimediální soubory…\tAlt+Shift+Y",
   "media_join.overwrite": "Cílový soubor již existuje. Nahradit jej?",
   "media_join.cancelled": "Spojování zrušeno.",
-  "media_join.failed": "Soubory nelze spojit."
+  "media_join.failed": "Soubory nelze spojit.",
+  "stream_audio.player_loading": "Načítání zvukových stop streamu…",
+  "stream_audio.player_load_timeout": "Přehrávač během 60 sekund nenačetl žádnou zvukovou stopu. Zkuste to později nebo video uložte a přehrajte místně.",
+  "stream_audio.player_exited_before_load": "Přehrávač se zavřel před načtením zvukových stop."
 }
