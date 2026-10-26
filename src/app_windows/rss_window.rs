@@ -2965,10 +2965,10 @@ fn google_news_root_url(locale: &GoogleNewsLocale) -> String {
 }
 
 fn google_news_topic_url(locale: &GoogleNewsLocale, topic: &str) -> String {
-    format!(
+    crate::tools::rss::normalize_google_news_category_url(&format!(
         "https://news.google.com/news/rss/headlines/section/topic/{}?hl={}&gl={}&ceid={}",
         topic, locale.hl, locale.gl, locale.ceid
-    )
+    ))
 }
 
 fn google_news_categories(code: &str) -> Vec<GoogleNewsCategory> {
