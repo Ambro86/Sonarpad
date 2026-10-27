@@ -32,7 +32,7 @@ class WindowsYoutubeSaveArchitectureTests(unittest.TestCase):
         self.assertIn("STREAM_SAVE_OPTIONS_ID_FORMAT", block)
         self.assertIn("STREAM_SAVE_OPTIONS_ID_QUALITY", block)
         self.assertGreaterEqual(block.count("WS_TABSTOP"), 4)
-        self.assertIn("stream_save_format_items()", block)
+        self.assertIn("stream_save_format_items(init.language)", block)
         self.assertIn("set_combo_selection_for_quality(", block)
 
     def test_save_media_context_action_is_single_action_not_format_submenu(self):
@@ -48,12 +48,11 @@ class WindowsYoutubeSaveArchitectureTests(unittest.TestCase):
         formats_start = self.youtube.index("fn youtube_save_media_formats()")
         formats_end = self.youtube.index("fn youtube_context_quality_for_format(", formats_start)
         formats_block = self.youtube[formats_start:formats_end]
-        for format_name in ["Mp4", "Mp3", "M4a", "Opus", "Ogg", "Wav", "Flac"]:
+        for format_name in ["Auto", "Webm", "Mp4", "Mp3", "M4a", "Opus", "Ogg", "Wav", "Flac"]:
             self.assertIn(f"StreamOutputFormat::{format_name}", formats_block)
-        self.assertNotIn("StreamOutputFormat::Auto", formats_block)
-        self.assertIn("fn stream_save_format_items()", self.youtube)
-        self.assertIn("youtube_save_media_formats()", self.youtube[self.youtube.index("fn stream_save_format_items()"):])
-        self.assertIn("let format_options = stream_save_format_items();", self.youtube)
+        self.assertIn("fn stream_save_format_items(language: Language)", self.youtube)
+        self.assertIn("youtube_save_media_formats()", self.youtube[self.youtube.index("fn stream_save_format_items(language: Language)"):])
+        self.assertIn("let format_options = stream_save_format_items(language);", self.youtube)
 
     def test_playlist_selector_has_tab_reachable_format_and_quality_combos(self):
         start = self.youtube.index("fn playlist_download_selection_wndproc_inner(")
