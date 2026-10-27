@@ -1,6 +1,6 @@
 # Änderungsprotokoll
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Streaming-Audio und SonarMusic: Einfrieren der Oberfläche beim Laden von YouTube-Videos behoben, mit Wartefenster und übersetzten Fehlermeldungen. Bei HTTP 500 wird automatisch eine alternative HLS-Quelle versucht, ohne die normale Wiedergabe zu ändern; eine Fehlermeldung erscheint nur, wenn auch die Wiederherstellung fehlschlägt. Verbesserte Diagnose von Ladefehlern.
 2. SonarMusic: Einige Aktionen im Kontextmenü wurden trotz einer anderen Sprachauswahl auf Italienisch angezeigt. Medien speichern, Transkription und Audiodeskription verwenden jetzt die eingestellte Sprache.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: Nach einer längeren Pause lädt Sonarpad den Videolink neu und versucht, die Wiedergabe an der vorherigen Position fortzusetzen. Eine Überwachung des Wiedergabefortschritts versucht, hängen gebliebene Streams mit einer begrenzten Anzahl von Wiederholungen wiederherzustellen. Suchergebnisseiten werden zwischengespeichert, damit Reihenfolge, Auswahl und Fokus nach der Rückkehr aus dem Player erhalten bleiben. Die Suchergebnisse behalten die ursprüngliche Reihenfolge des Anbieters bei, sodass Kanäle auch an erster Stelle erscheinen können. Die Wiederherstellung bei HTTP-403/500-Fehlern und vorübergehend nicht verfügbaren Formaten wurde erweitert; Beschränkungen privater oder DRM-geschützter Inhalte werden nicht umgangen.
 5. Video-Downloads: Neu ist Automatisch (Originalformat), wobei yt-dlp das Format selbst wählt, ohne WebM, MP4 oder eine bestimmte Spur zu erzwingen; WebM bleibt eine echte WebM-Auswahl. Die gespeicherte Datei erhält ihre tatsächliche Endung. SonarMusic: Links zu Titeln, Alben, Interpreten und Playlists per Strg+C oder Kontextmenü kopieren, auch in Favoriten.
+6. Podcast-Aufnahme: Neben „Stoppen und speichern“ gibt es jetzt die Schaltfläche „Abbrechen und verwerfen“. Nach Bestätigung wird die aktuelle Aufnahme auch im Pausenzustand beendet; temporäre Dateien werden gelöscht, ohne eine Audiodatei zu speichern. „Stoppen und speichern“ funktioniert weiterhin wie bisher.
+7. Audioexport und Audiodeskriptionen: Fehler beim Erstellen von MP3-Dateien bei Änderungen der Abtastrate behoben. Resampling, Verarbeitung der letzten Audiosamples auch bei anderen Formaten und Kompatibilität mit den vom Encoder unterstützten Abtastraten verbessert.
 
 Version 0.9.20 – 2026-10-25
 

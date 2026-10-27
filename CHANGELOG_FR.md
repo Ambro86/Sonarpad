@@ -1,6 +1,6 @@
 # Journal des modifications
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Lecture audio en streaming et SonarMusic : correction des blocages de l’interface pendant le chargement des vidéos YouTube, avec fenêtre d’attente et messages d’erreur traduits. Si le serveur renvoie HTTP 500, une source HLS alternative est essayée automatiquement sans modifier la lecture normale ; l’erreur n’est affichée que si cette tentative échoue également. Diagnostic des erreurs de chargement amélioré.
 2. SonarMusic : correction des actions du menu contextuel affichées en italien malgré le choix d’une autre langue. L’enregistrement des médias, la transcription et la création d’audiodescriptions utilisent désormais la langue sélectionnée.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube : après une pause prolongée, Sonarpad actualise le lien de la vidéo et tente de reprendre la lecture à la position précédente. Un suivi de la progression permet de tenter, un nombre limité de fois, de relancer les flux bloqués. Les pages de résultats de recherche sont mises en cache pour conserver leur ordre, la sélection et le focus au retour du lecteur. Les résultats conservent l'ordre d'origine du fournisseur, ce qui permet aux chaînes d'apparaître en premier lorsqu'elles sont ainsi classées. La récupération des erreurs HTTP 403/500 et des formats temporairement indisponibles a été étendue, sans contourner les restrictions des contenus privés ou protégés par DRM.
 5. Téléchargement vidéo : ajout du mode Automatique (format d’origine), qui laisse yt-dlp choisir le format sans imposer WebM, MP4 ou une piste particulière ; WebM reste réservé aux véritables flux WebM. Le fichier conserve son extension réelle. SonarMusic : copier les liens des titres, albums, artistes et playlists avec Ctrl+C ou le menu contextuel, y compris dans les favoris.
+6. Enregistrement de podcasts : ajout du bouton « Annuler et supprimer » à côté de « Arrêter et enregistrer ». Après confirmation, il arrête l’enregistrement en cours, même en pause, et supprime les fichiers temporaires sans enregistrer de fichier audio. Le bouton « Arrêter et enregistrer » reste inchangé.
+7. Export audio et audiodescriptions : correction d’une erreur lors de la création de MP3 avec changement de fréquence d’échantillonnage. Amélioration du rééchantillonnage, du traitement des derniers échantillons, également pour les autres formats, et de la compatibilité avec les fréquences prises en charge par les encodeurs.
 
 Version 0.9.20 – 2026-10-25
 

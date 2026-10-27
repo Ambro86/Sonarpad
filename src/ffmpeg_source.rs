@@ -238,6 +238,8 @@ pub(crate) struct FfmpegApi {
     pub(crate) swr_free: SwrFree,
     pub(crate) swr_convert: SwrConvert,
     pub(crate) swr_get_out_samples: SwrGetOutSamples,
+    pub(crate) av_get_bytes_per_sample: unsafe extern "C" fn(AVSampleFormat) -> libc::c_int,
+    pub(crate) av_sample_fmt_is_planar: unsafe extern "C" fn(AVSampleFormat) -> libc::c_int,
     pub(crate) av_channel_layout_check: AvChannelLayoutCheck,
     pub(crate) av_channel_layout_copy: AvChannelLayoutCopy,
     pub(crate) av_channel_layout_default: AvChannelLayoutDefault,
@@ -405,6 +407,8 @@ fn load_ffmpeg_api() -> Result<FfmpegApi, String> {
     let swr_free = load_symbol(swresample, b"swr_free\0")?;
     let swr_convert = load_symbol(swresample, b"swr_convert\0")?;
     let swr_get_out_samples = load_symbol(swresample, b"swr_get_out_samples\0")?;
+    let av_get_bytes_per_sample = load_symbol(avutil, b"av_get_bytes_per_sample\0")?;
+    let av_sample_fmt_is_planar = load_symbol(avutil, b"av_sample_fmt_is_planar\0")?;
     let av_channel_layout_check = load_symbol(avutil, b"av_channel_layout_check\0")?;
     let av_channel_layout_copy = load_symbol(avutil, b"av_channel_layout_copy\0")?;
     let av_channel_layout_default = load_symbol(avutil, b"av_channel_layout_default\0")?;
@@ -469,6 +473,8 @@ fn load_ffmpeg_api() -> Result<FfmpegApi, String> {
         swr_free,
         swr_convert,
         swr_get_out_samples,
+        av_get_bytes_per_sample,
+        av_sample_fmt_is_planar,
         av_channel_layout_check,
         av_channel_layout_copy,
         av_channel_layout_default,

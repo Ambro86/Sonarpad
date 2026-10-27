@@ -1,6 +1,6 @@
 # Přehled změn
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Přehrávání streamovaného zvuku a SonarMusic: opraveno zamrzání rozhraní při načítání videí YouTube, přidáno okno čekání a přeložené chybové zprávy. Pokud server vrátí HTTP 500, automaticky se vyzkouší alternativní zdroj HLS beze změny běžného přehrávání; chyba se zobrazí pouze tehdy, když selže i tento pokus. Vylepšena diagnostika chyb načítání.
 2. SonarMusic: opraveny položky kontextové nabídky, které se zobrazovaly italsky i při výběru jiného jazyka. Ukládání médií, přepis a vytváření audiopopisů nyní používají zvolený jazyk.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: po delší pauze Sonarpad znovu načte odkaz na video a pokusí se pokračovat od předchozí pozice. Sledování průběhu přehrávání umožňuje omezený počet pokusů o obnovení zaseknutého streamu. Stránky výsledků vyhledávání se ukládají do mezipaměti, aby se po návratu z přehrávače zachovalo pořadí, výběr i fokus. Výsledky zachovávají původní pořadí od poskytovatele, takže kanály se mohou zobrazit i na prvním místě. Rozšířeno obnovení při chybách HTTP 403/500 a dočasně nedostupných formátech; omezení soukromého obsahu ani ochrana DRM se neobcházejí.
 5. Stahování videí: přidána možnost Automaticky (původní formát), která ponechává výběr formátu na yt-dlp bez vynucení WebM, MP4 či určité stopy; WebM nadále vyžaduje skutečný formát WebM. Uložený soubor používá skutečnou příponu. SonarMusic: kopírování odkazů na skladby, alba, interprety a playlisty pomocí Ctrl+C nebo kontextové nabídky, také v oblíbených.
+6. Nahrávání podcastů: vedle tlačítka „Zastavit a uložit“ bylo přidáno „Zrušit a zahodit“. Po potvrzení ukončí aktuální nahrávání, i když je pozastavené, a odstraní dočasné soubory bez uložení zvukového souboru. Původní tlačítko pro zastavení a uložení zůstává beze změny.
+7. Export zvuku a audiopopisů: opravena chyba při vytváření MP3 při změně vzorkovací frekvence. Vylepšeno převzorkování a zpracování posledních vzorků, také u dalších formátů, a kompatibilita s frekvencemi podporovanými kodéry.
 
 Version 0.9.20 – 2026-10-25
 

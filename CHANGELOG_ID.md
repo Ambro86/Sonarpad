@@ -1,6 +1,6 @@
 # Catatan perubahan
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Pemutaran audio streaming dan SonarMusic: memperbaiki antarmuka yang macet saat memuat video YouTube, dengan jendela tunggu dan pesan kesalahan yang diterjemahkan. Jika server mengembalikan HTTP 500, sumber HLS alternatif dicoba secara otomatis tanpa mengubah pemutaran normal; kesalahan hanya ditampilkan jika pemulihan juga gagal. Diagnostik kegagalan pemuatan ditingkatkan.
 2. SonarMusic: memperbaiki tindakan menu konteks yang muncul dalam bahasa Italia meskipun bahasa lain dipilih. Penyimpanan media, transkripsi, dan pembuatan deskripsi audio kini menggunakan bahasa yang dipilih.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: setelah jeda panjang, Sonarpad memperbarui tautan video dan mencoba melanjutkan pemutaran dari posisi sebelumnya. Pemantauan kemajuan pemutaran mencoba memulihkan aliran yang macet dengan jumlah percobaan terbatas. Halaman hasil pencarian disimpan dalam cache agar urutan, pilihan, dan fokus tetap terjaga saat kembali dari pemutar. Hasil mempertahankan urutan asli dari penyedia, sehingga saluran dapat muncul paling atas jika memang ditempatkan di sana. Pemulihan untuk kesalahan HTTP 403/500 dan format yang sementara tidak tersedia diperluas, tanpa melewati pembatasan konten pribadi atau perlindungan DRM.
 5. Unduhan video: opsi Otomatis (format asli) kini membiarkan yt-dlp memilih format tanpa memaksa WebM, MP4, atau trek tertentu; pilihan WebM tetap khusus untuk berkas WebM asli. Berkas tersimpan memakai ekstensi yang sesuai. SonarMusic: salin tautan lagu, album, artis, dan daftar putar dengan Ctrl+C atau menu konteks, termasuk favorit.
+6. Perekaman podcast: tombol «Batalkan dan buang» ditambahkan di samping «Hentikan dan simpan». Setelah konfirmasi, tombol ini menghentikan rekaman saat ini, termasuk ketika dijeda, lalu menghapus berkas sementara tanpa menyimpan berkas audio. Tombol «Hentikan dan simpan» tetap berfungsi seperti sebelumnya.
+7. Ekspor audio dan deskripsi audio: memperbaiki kegagalan pembuatan MP3 saat laju sampel audio berubah. Meningkatkan resampling dan penanganan sampel terakhir, termasuk format lain, serta kompatibilitas dengan laju sampel yang didukung enkoder.
 
 Version 0.9.20 – 2026-10-25
 

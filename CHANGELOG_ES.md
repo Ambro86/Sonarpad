@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Reproducir audio en streaming y SonarMusic: corregidos los bloqueos de la interfaz al cargar vídeos de YouTube, con ventana de espera y mensajes de error traducidos. Si el servidor devuelve HTTP 500, se intenta automáticamente una fuente HLS alternativa sin cambiar la reproducción normal; el error solo se muestra si también falla la recuperación. Mejorado el diagnóstico de errores de carga.
 2. SonarMusic: corregidas las acciones del menú contextual que aparecían en italiano al seleccionar otro idioma. Guardar medios, transcribir y crear audiodescripciones ahora utilizan el idioma seleccionado.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: tras una pausa prolongada, Sonarpad actualiza el enlace del vídeo e intenta reanudar la reproducción desde la posición anterior. Un monitor del progreso intenta recuperar las transmisiones bloqueadas con un número limitado de reintentos. Las páginas de resultados de búsqueda se guardan en caché para conservar el orden, la selección y el foco al volver del reproductor. Los resultados conservan el orden original del proveedor, por lo que los canales pueden aparecer en primer lugar cuando corresponda. Se amplía la recuperación ante errores HTTP 403/500 y formatos temporalmente no disponibles, sin eludir las restricciones de contenido privado o protegido mediante DRM.
 5. Descarga de vídeos: añadida la opción Automático (formato original), que deja a yt-dlp elegir el formato sin imponer WebM, MP4 ni una pista concreta; WebM sigue exigiendo un formato WebM auténtico. El archivo conserva su extensión real. SonarMusic: copiar enlaces de canciones, álbumes, artistas y listas con Ctrl+C o desde el menú contextual, también en favoritos.
+6. Grabación de podcasts: añadido el botón «Cancelar y descartar» junto a «Detener y guardar». Tras la confirmación, detiene la grabación actual, incluso si está en pausa, y elimina los archivos temporales sin guardar ningún archivo de audio. «Detener y guardar» sigue funcionando como antes.
+7. Exportación de audio y audiodescripciones: corregido un error al crear MP3 cuando cambia la frecuencia de muestreo. Mejorados el remuestreo, el tratamiento de las muestras finales, también en otros formatos, y la compatibilidad con las frecuencias admitidas por los codificadores.
 
 Version 0.9.20 – 2026-10-25
 

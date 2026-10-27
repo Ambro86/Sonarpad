@@ -22659,6 +22659,11 @@ fn create_accelerators() -> HACCEL {
             },
             ACCEL {
                 fVirt: virt_shift,
+                key: 'N' as u16,
+                cmd: IDM_GLOBAL_BOOKMARK_MANAGER as u16,
+            },
+            ACCEL {
+                fVirt: virt_shift,
                 key: 'L' as u16,
                 cmd: IDM_INSERT_CLEAR_BOOKMARKS as u16,
             },

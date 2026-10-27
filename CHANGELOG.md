@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Play Streaming Audio and SonarMusic: fixed interface freezes while loading YouTube videos, with a waiting window and localized error messages. If the server returns HTTP 500, an alternative HLS source is tried automatically without changing normal playback; an error is shown only if recovery also fails. Improved diagnostics for loading failures.
 2. SonarMusic: fixed context menu actions appearing in Italian when another language was selected. Saving media, transcription and audio description creation now use the selected language.
@@ -8,6 +8,8 @@ Version 0.9.21 – 2026-10-26
 3. Global bookmarks manager: a new Insert-menu window lists bookmarks across all files, with search, sorting by date or filename, age and missing-file filters, navigation to a saved position, confirmed multiple deletion and backups. Last opened and last updated are tracked separately; existing bookmarks.json files remain compatible and controls are accessible with NVDA and JAWS.
 4. YouTube: after a long pause, Sonarpad refreshes the video URL and attempts to resume near the previous position; a playback progress monitor attempts recovery of stalled streams. Search result pages are cached to preserve their order, selection and focus when returning from playback. Search results retain the provider's original ranking, so channels can appear first when the provider ranks them first. Expanded recovery for HTTP 403/500 transport errors and temporarily unavailable formats; no bypass of private or DRM-protected content.
 5. Video downloads: added Automatic (original), which uses yt-dlp’s normal format selection without forcing WebM, MP4 or a specific track; WebM remains a strict WebM choice. The saved file keeps its actual container extension. SonarMusic: copy song, album, artist and playlist links with Ctrl+C or from the context menu, including favorites.
+6. Podcast recording: added the "Cancel and discard" button next to "Stop and save". After confirmation, it stops the current recording, including when paused, and deletes its temporary files without saving an audio file. The existing "Stop and save" button works as before.
+7. Audio export and audio descriptions: fixed MP3 creation failures when the audio sample rate changes. Improved resampling and final-sample handling, including other formats, and compatibility with encoder-supported sample rates.
 
 Version 0.9.20 – 2026-10-25
 

@@ -723,6 +723,10 @@ fn find_fixed_shortcut_conflict_label(
             labels.manage_bookmarks,
         ),
         (
+            ShortcutBinding::new(true, true, false, 'N' as u16),
+            i18n::tr(language, "bookmark_manager.menu"),
+        ),
+        (
             ShortcutBinding::new(true, true, false, 'L' as u16),
             labels.insert_clear_bookmarks,
         ),

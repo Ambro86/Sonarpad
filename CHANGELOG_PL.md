@@ -1,6 +1,6 @@
 # Dziennik zmian
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Odtwarzanie strumieniowe i SonarMusic: naprawiono zawieszanie interfejsu podczas wczytywania filmów YouTube, dodano okno oczekiwania i przetłumaczone komunikaty błędów. Jeśli serwer zwróci HTTP 500, automatycznie sprawdzane jest alternatywne źródło HLS bez zmiany zwykłego odtwarzania; błąd pojawia się tylko wtedy, gdy ta próba również się nie powiedzie. Ulepszono diagnostykę błędów wczytywania.
 2. SonarMusic: poprawiono polecenia menu kontekstowego wyświetlane po włosku mimo wybrania innego języka. Zapisywanie multimediów, transkrypcja i tworzenie audiodeskrypcji używają teraz wybranego języka.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: po dłuższej pauzie Sonarpad odświeża adres filmu i próbuje wznowić odtwarzanie od poprzedniej pozycji. Monitorowanie postępu odtwarzania umożliwia ograniczoną liczbę prób przywrócenia zatrzymanego strumienia. Strony wyników wyszukiwania są przechowywane w pamięci podręcznej, aby po powrocie z odtwarzacza zachować kolejność, zaznaczenie i fokus. Wyniki zachowują oryginalną kolejność zwróconą przez dostawcę, więc kanały mogą ponownie pojawiać się na początku listy. Rozszerzono odzyskiwanie po błędach HTTP 403/500 i przy czasowo niedostępnych formatach; ograniczenia treści prywatnych i chronionych DRM nie są obchodzone.
 5. Pobieranie wideo: dodano opcję Automatycznie (oryginalny format), która pozwala yt-dlp wybrać format bez wymuszania WebM, MP4 ani określonej ścieżki; WebM nadal oznacza rzeczywisty format WebM. Zapisany plik zachowuje właściwe rozszerzenie. SonarMusic: kopiowanie linków do utworów, albumów, wykonawców i playlist przez Ctrl+C lub menu kontekstowe, także w ulubionych.
+6. Nagrywanie podcastów: obok „Zatrzymaj i zapisz” dodano przycisk „Anuluj i odrzuć”. Po potwierdzeniu zatrzymuje bieżące nagranie, także wstrzymane, i usuwa pliki tymczasowe bez zapisywania pliku audio. Dotychczasowa funkcja „Zatrzymaj i zapisz” pozostaje bez zmian.
+7. Eksport dźwięku i audiodeskrypcji: naprawiono błąd tworzenia MP3 przy zmianie częstotliwości próbkowania. Ulepszono resampling i obsługę końcowych próbek, także w innych formatach, oraz zgodność z częstotliwościami obsługiwanymi przez kodery.
 
 Version 0.9.20 – 2026-10-25
 

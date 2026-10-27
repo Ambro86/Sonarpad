@@ -1,6 +1,6 @@
 # Ändringslogg
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Strömmande ljud och SonarMusic: åtgärdat att gränssnittet fryser när YouTube-videor läses in, med väntefönster och översatta felmeddelanden. Om servern svarar med HTTP 500 provas automatiskt en alternativ HLS-källa utan att ändra normal uppspelning; felet visas bara om även återställningen misslyckas. Förbättrad diagnostik för inläsningsfel.
 2. SonarMusic: åtgärdade snabbmenyalternativ som visades på italienska trots att ett annat språk hade valts. Mediesparande, transkribering och skapande av syntolkning använder nu det valda språket.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: efter en längre paus hämtar Sonarpad en ny videolänk och försöker återuppta uppspelningen från den tidigare positionen. En övervakning av uppspelningen gör ett begränsat antal försök att återställa strömmar som fastnat. Söksidor sparas i cache så att ordning, markering och fokus bevaras när man återvänder från spelaren. Sökresultaten behåller tjänstens ursprungliga ordning, så kanaler kan visas först när tjänsten placerar dem där. Återhämtningen vid HTTP 403/500-fel och tillfälligt otillgängliga format har förbättrats, utan att kringgå begränsningar för privat eller DRM-skyddat innehåll.
 5. Videonedladdning: alternativet Automatiskt (originalformat) låter yt-dlp välja format utan att tvinga WebM, MP4 eller ett visst spår; WebM kräver fortfarande äkta WebM. Den sparade filen får rätt filändelse. SonarMusic: kopiera länkar till låtar, album, artister och spellistor med Ctrl+C eller snabbmenyn, även bland favoriter.
+6. Podcastinspelning: knappen ”Avbryt och kasta” har lagts till bredvid ”Stoppa och spara”. Efter bekräftelse stoppas den aktuella inspelningen, även om den är pausad, och tillfälliga filer tas bort utan att någon ljudfil sparas. ”Stoppa och spara” fungerar som tidigare.
+7. Ljudexport och syntolkning: åtgärdat fel vid skapande av MP3 när samplingsfrekvensen ändras. Förbättrad omsampling och hantering av de sista ljudsamplen, även för andra format, samt kompatibilitet med de samplingsfrekvenser som kodarna stöder.
 
 Version 0.9.20 – 2026-10-25
 

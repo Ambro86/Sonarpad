@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Reproduzir áudio em streaming e SonarMusic: corrigidos travamentos da interface ao carregar vídeos do YouTube, com janela de espera e mensagens de erro traduzidas. Se o servidor retornar HTTP 500, uma fonte HLS alternativa será tentada automaticamente sem alterar a reprodução normal; o erro só será exibido se a recuperação também falhar. Melhorado o diagnóstico de falhas de carregamento.
 2. SonarMusic: corrigidas as ações do menu de contexto que apareciam em italiano ao selecionar outro idioma. Salvar mídia, transcrever e criar audiodescrições agora usam o idioma selecionado.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: após uma pausa prolongada, o Sonarpad atualiza o link do vídeo e tenta retomar a reprodução da posição anterior. O monitoramento do progresso tenta recuperar transmissões travadas com um número limitado de tentativas. As páginas dos resultados de pesquisa são armazenadas em cache para preservar a ordem, a seleção e o foco ao voltar do player. Os resultados mantêm a ordem original retornada pelo serviço, permitindo que os canais apareçam primeiro quando forem os mais relevantes. A recuperação de erros HTTP 403/500 e de formatos temporariamente indisponíveis foi ampliada, sem contornar restrições de conteúdo privado ou protegido por DRM.
 5. Download de vídeos: adicionada a opção Automático (formato original), que deixa o yt-dlp escolher o formato sem forçar WebM, MP4 ou uma faixa específica; WebM continua exigindo um arquivo WebM verdadeiro. O arquivo preserva sua extensão real. SonarMusic: copiar links de músicas, álbuns, artistas e playlists com Ctrl+C ou pelo menu de contexto, inclusive nos favoritos.
+6. Gravação de podcasts: adicionado o botão «Cancelar e descartar» ao lado de «Parar e salvar». Após confirmação, interrompe a gravação atual, mesmo pausada, e exclui os arquivos temporários sem salvar um arquivo de áudio. «Parar e salvar» continua funcionando como antes.
+7. Exportação de áudio e audiodescrições: corrigido um erro ao criar MP3 quando a frequência de amostragem muda. Melhorados a reamostragem, o tratamento das amostras finais, também em outros formatos, e a compatibilidade com as frequências suportadas pelos codificadores.
 
 Version 0.9.20 – 2026-10-25
 

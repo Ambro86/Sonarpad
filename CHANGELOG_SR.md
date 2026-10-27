@@ -1,6 +1,6 @@
 # Dnevnik izmena
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Стриминг звука и SonarMusic: исправљено замрзавање интерфејса при учитавању YouTube видеа, уз прозор за чекање и преведене поруке о грешкама. Ако сервер врати HTTP 500, аутоматски се покушава алтернативни HLS извор без промене уобичајене репродукције; грешка се приказује само ако ни тај покушај не успе. Побољшана дијагностика грешака учитавања.
 2. SonarMusic: ispravljene su stavke kontekstnog menija koje su se prikazivale na italijanskom i kada je izabran drugi jezik. Čuvanje medija, transkripcija i kreiranje audio-deskripcija sada koriste izabrani jezik.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: после дуге паузе Sonarpad освежава везу ка видеу и покушава да настави репродукцију са претходне позиције. Праћење напретка репродукције омогућава ограничен број покушаја опоравка заустављеног стрима. Странице резултата претраге чувају се у кешу како би се по повратку из плејера задржали редослед, избор и фокус. Резултати задржавају изворни редослед који враћа сервис, па канали могу поново да се појаве на почетку листе. Побољшан је опоравак од грешака HTTP 403/500 и привремено недоступних формата, без заобилажења ограничења приватног садржаја или DRM заштите.
 5. Преузимање видеа: додата је аутоматска опција која препушта yt-dlp избор изворног формата без наметања WebM, MP4 или одређене траке; WebM и даље захтева прави WebM. Сачувана датотека добија стварну екстензију. SonarMusic: копирање веза за песме, албуме, извођаче и плејлисте помоћу Ctrl+C или контекстног менија, укључујући омиљене.
+6. Snimanje podkasta: dodat je taster „Otkaži i odbaci“ pored „Zaustavi i sačuvaj“. Posle potvrde zaustavlja trenutno snimanje, čak i kada je pauzirano, i briše privremene datoteke bez čuvanja audio-fajla. „Zaustavi i sačuvaj“ nastavlja da radi kao ranije.
+7. Izvoz zvuka i audio-deskripcija: ispravljena greška pri kreiranju MP3 datoteka kada se menja frekvencija uzorkovanja. Poboljšani su ponovno uzorkovanje i obrada završnih uzoraka, uključujući druge formate, kao i kompatibilnost sa frekvencijama koje podržavaju koderi.
 
 Version 0.9.20 – 2026-10-25
 

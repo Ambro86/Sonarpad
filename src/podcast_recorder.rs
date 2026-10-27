@@ -755,6 +755,61 @@ impl RecorderHandle {
         self.stop_with_progress(|_| {}, None)
     }
 
+    /// Stop capture and discard the unfinished recording without publishing a file.
+    pub fn discard(mut self) -> Result<(), String> {
+        self.buffer.finish();
+        self.paused.store(false, Ordering::SeqCst);
+        self.stop.store(true, Ordering::SeqCst);
+        // Join all writers before removing temporary files, even after worker errors.
+        let mut failure = None;
+        for worker in std::mem::take(&mut self.threads) {
+            let error = match worker.join() {
+                Ok(Ok(())) => None,
+                Ok(Err(message)) => Some(message),
+                Err(_) => Some("Recording thread panicked.".to_string()),
+            };
+            if failure.is_none() {
+                failure = error;
+            }
+        }
+        for path in [
+            Some(&self.temp_wav),
+            Some(&self.temp_mp3),
+            self.secondary_temp_wav.as_ref(),
+            self.secondary_temp_mp3.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            match std::fs::remove_file(path) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => {
+                    crate::log_debug(&format!(
+                        "Podcast discard failed to delete {}: {}",
+                        path.display(),
+                        e
+                    ));
+                    if failure.is_none() {
+                        failure = Some(format!(
+                            "Could not delete temporary recording {}: {}",
+                            path.display(),
+                            e
+                        ));
+                    }
+                }
+            }
+        }
+        if let Ok(mut status) = self.shared.status.lock() {
+            *status = if failure.is_none() {
+                RecorderStatus::Idle
+            } else {
+                RecorderStatus::Error
+            };
+        }
+        failure.map_or(Ok(()), Err)
+    }
+
     pub fn stop_with_progress<F>(
         mut self,
         mut progress: F,
@@ -2216,6 +2271,57 @@ fn process_image_name(process_id: u32) -> Option<String> {
 #[cfg(test)]
 mod synchronization_tests {
     use super::*;
+
+    #[test]
+    fn discard_removes_all_temporary_recordings_but_preserves_published_file() -> Result<(), String>
+    {
+        let folder = std::env::temp_dir().join(format!(
+            "sonarpad_discard_test_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
+        let wav = folder.join("temp.wav.tmp");
+        let mp3 = folder.join("temp.mp3");
+        let wav2 = folder.join("temp_second.wav.tmp");
+        let mp32 = folder.join("temp_second.mp3");
+        let published = folder.join("existing.mp3");
+        for path in [&wav, &mp3, &wav2, &mp32, &published] {
+            std::fs::write(path, b"example").map_err(|e| e.to_string())?;
+        }
+        let handle = RecorderHandle {
+            shared: Arc::new(SharedState::new(true, true)),
+            buffer: Arc::new(MixBuffer::new(2)?),
+            stop: Arc::new(AtomicBool::new(false)),
+            paused: Arc::new(AtomicBool::new(true)),
+            single_app_process_id: None,
+            threads: vec![std::thread::spawn(|| Ok(()))],
+            output_path: published.clone(),
+            secondary_output_path: Some(folder.join("new_system.mp3")),
+            temp_wav: wav.clone(),
+            temp_mp3: mp3.clone(),
+            secondary_temp_wav: Some(wav2.clone()),
+            secondary_temp_mp3: Some(mp32.clone()),
+            format: PodcastFormat::Mp3,
+        };
+        handle.discard()?;
+        for path in [&wav, &mp3, &wav2, &mp32] {
+            assert!(
+                !path.exists(),
+                "Temporary recording was not discarded: {}",
+                path.display()
+            );
+        }
+        assert!(
+            published.exists(),
+            "Discard must not remove already saved recordings"
+        );
+        std::fs::remove_dir_all(folder).map_err(|e| e.to_string())?;
+        Ok(())
+    }
 
     fn stopped_buffer(frames: u64, systems: usize) -> Result<Arc<MixBuffer>, String> {
         let buffer = Arc::new(MixBuffer::new(systems)?);

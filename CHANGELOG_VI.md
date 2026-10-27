@@ -1,6 +1,6 @@
 # Nhật ký thay đổi
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Phát âm thanh trực tuyến và SonarMusic: khắc phục giao diện bị treo khi tải video YouTube, bổ sung cửa sổ chờ và thông báo lỗi được dịch. Nếu máy chủ trả về HTTP 500, ứng dụng tự động thử nguồn HLS thay thế mà không thay đổi cách phát thông thường; lỗi chỉ hiển thị nếu lần thử này cũng thất bại. Cải thiện chẩn đoán lỗi tải.
 2. SonarMusic: sửa các thao tác trong menu ngữ cảnh hiển thị bằng tiếng Ý khi đã chọn ngôn ngữ khác. Lưu nội dung đa phương tiện, phiên âm và tạo mô tả âm thanh giờ sử dụng ngôn ngữ đã chọn.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: sau khi tạm dừng lâu, Sonarpad làm mới liên kết video và thử phát tiếp từ vị trí trước đó. Bộ theo dõi tiến trình phát sẽ thử khôi phục luồng bị treo với số lần thử giới hạn. Các trang kết quả tìm kiếm được lưu vào bộ nhớ đệm để giữ nguyên thứ tự, mục đã chọn và tiêu điểm khi quay lại từ trình phát. Kết quả giữ nguyên thứ tự ban đầu do dịch vụ cung cấp, vì vậy các kênh có thể xuất hiện ở đầu danh sách nếu được xếp hạng cao. Khả năng khôi phục khi gặp lỗi HTTP 403/500 hoặc định dạng tạm thời không khả dụng đã được mở rộng, nhưng không vượt qua các hạn chế đối với nội dung riêng tư hay được bảo vệ bằng DRM.
 5. Tải video: thêm tùy chọn Tự động (định dạng gốc), để yt-dlp tự chọn định dạng mà không ép WebM, MP4 hay luồng cụ thể; tùy chọn WebM vẫn chỉ nhận WebM thật. Tệp được lưu với phần mở rộng thực tế. SonarMusic: sao chép liên kết bài hát, album, nghệ sĩ và danh sách phát bằng Ctrl+C hoặc menu ngữ cảnh, kể cả mục yêu thích.
+6. Ghi podcast: thêm nút «Hủy và bỏ» bên cạnh «Dừng và lưu». Sau khi xác nhận, nút này dừng bản ghi hiện tại, kể cả khi đang tạm dừng, và xóa các tệp tạm mà không lưu tệp âm thanh. Nút «Dừng và lưu» vẫn hoạt động như trước.
+7. Xuất âm thanh và mô tả âm thanh: sửa lỗi tạo MP3 khi thay đổi tần số lấy mẫu. Cải thiện việc lấy mẫu lại và xử lý các mẫu âm thanh cuối cùng, kể cả với các định dạng khác, cùng khả năng tương thích với tần số mà bộ mã hóa hỗ trợ.
 
 Version 0.9.20 – 2026-10-25
 

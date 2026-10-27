@@ -1622,7 +1622,7 @@ fn choose(
         };
         let filter = to_wide(&filter_text);
         let title = to_wide(title);
-        let ext = to_wide(if video { "mp4" } else { "m4a" });
+        let ext = to_wide(if video { "mp4" } else { "mp3" });
         let mut ofn = OPENFILENAMEW {
             lStructSize: std::mem::size_of::<OPENFILENAMEW>() as u32,
             hwndOwner: hwnd,

@@ -1,6 +1,6 @@
 # Pakeitimų žurnalas
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Srautinio garso atkūrimas ir SonarMusic: ištaisytas sąsajos strigimas įkeliant YouTube vaizdo įrašus, pridėtas laukimo langas ir išversti klaidų pranešimai. Serveriui grąžinus HTTP 500, automatiškai išbandomas alternatyvus HLS šaltinis, nekeičiant įprasto atkūrimo; klaida rodoma tik nepavykus ir šiam bandymui. Patobulinta įkėlimo klaidų diagnostika.
 2. SonarMusic: ištaisytos kontekstinio meniu komandos, kurios buvo rodomos italų kalba pasirinkus kitą kalbą. Medijos išsaugojimas, transkripcija ir garsinio vaizdavimo kūrimas dabar naudoja pasirinktą kalbą.
@@ -9,6 +9,8 @@ Version 0.9.21 – 2026-10-26
 
 4. YouTube: po ilgesnės pauzės Sonarpad iš naujo gauna vaizdo įrašo nuorodą ir bando tęsti atkūrimą nuo ankstesnės vietos. Atkūrimo eigos stebėjimas leidžia ribotą skaičių kartų bandyti atkurti sustojusį srautą. Paieškos rezultatų puslapiai saugomi podėlyje, kad grįžus iš grotuvo išliktų tvarka, pasirinkimas ir fokusas. Rezultatai išlaiko pradinę paslaugos pateiktą tvarką, todėl kanalai gali būti rodomi pirmieji, jei taip juos išrikiavo paslauga. Išplėstas atkūrimas įvykus HTTP 403/500 klaidoms arba laikinai nepasiekiant formatų; privatumo ir DRM apsaugos apribojimai neapeinami.
 5. Vaizdo įrašų atsisiuntimas: pridėtas automatinis (pradinis) formatas, leidžiantis yt-dlp pasirinkti formatą be priverstinio WebM, MP4 ar konkretaus takelio; WebM pasirinkimas ir toliau reikalauja tikro WebM. Išsaugomas tikrasis failo plėtinys. SonarMusic: kūrinių, albumų, atlikėjų ir grojaraščių nuorodas galima kopijuoti Ctrl+C arba kontekstiniame meniu, taip pat iš parankinių.
+6. Tinklalaidžių įrašymas: šalia „Sustabdyti ir išsaugoti“ pridėtas mygtukas „Atšaukti ir ištrinti“. Patvirtinus dabartinis įrašymas nutraukiamas, net jei buvo pristabdytas, o laikinieji failai pašalinami neišsaugant garso failo. Įprastas sustabdymas ir išsaugojimas nepakito.
+7. Garso ir garsinių aprašymų eksportas: ištaisyta MP3 kūrimo klaida keičiantis diskretizavimo dažniui. Patobulintas dažnio keitimas, paskutinių garso mėginių apdorojimas ir kituose formatuose bei suderinamumas su koduotuvų palaikomais dažniais.
 
 Version 0.9.20 – 2026-10-25
 

@@ -4647,6 +4647,26 @@ fn convert_audio_file_with_stream_index(
         crate::ffmpeg_source::avformat_free_context_safe(api, out_ctx);
         return Err("FFmpeg: encoder not found".to_string());
     }
+    // Preserve supported rates; otherwise choose the nearest rate advertised by
+    // the encoder (e.g. 96 kHz input cannot be encoded directly as MP3).
+    let out_sample_rate = unsafe {
+        let mut rates = (*codec).supported_samplerates;
+        let mut nearest = None;
+        let high_bitrate_mp3 = settings.format == ConvertAudioFormat::Mp3
+            && matches!(settings.quality, ConvertAudioQuality::BitrateKbps(value) if value > 160);
+        while !rates.is_null() && *rates > 0 {
+            let rate = *rates as u32;
+            if (!high_bitrate_mp3 || rate >= 32_000)
+                && nearest.is_none_or(|best: u32| {
+                    rate.abs_diff(out_sample_rate) < best.abs_diff(out_sample_rate)
+                })
+            {
+                nearest = Some(rate);
+            }
+            rates = rates.add(1);
+        }
+        nearest.unwrap_or(out_sample_rate)
+    };
     let native_vorbis = settings.format == ConvertAudioFormat::Ogg
         && unsafe {
             !(*codec).name.is_null()
@@ -4856,6 +4876,29 @@ fn convert_audio_file_with_stream_index(
     }
 
     let in_channel_count = in_channels as usize;
+    let mut buffered_samples = 0;
+    // A partially filled encoder frame must survive between resampler calls.
+    // Use extended_data so planar audio with more than eight channels is safe.
+    let output_planes = unsafe {
+        if (api.av_sample_fmt_is_planar)(enc_fmt) != 0 {
+            out_channels as usize
+        } else {
+            1
+        }
+    };
+    let output_stride = unsafe { (api.av_get_bytes_per_sample)(enc_fmt) as usize }
+        * if output_planes == 1 {
+            out_channels as usize
+        } else {
+            1
+        };
+    let frame_output = |frame: *mut AVFrame, offset: i32| -> Vec<*mut u8> {
+        (0..output_planes)
+            .map(|plane| unsafe {
+                (*(*frame).extended_data.add(plane)).add(offset as usize * output_stride)
+            })
+            .collect()
+    };
     let mut next_pts: i64 = 0;
     let mut canceled = false;
     let mut processed_frames: u64 = 0;
@@ -4906,6 +4949,16 @@ fn convert_audio_file_with_stream_index(
             canceled = true;
             break;
         }
+        // Read only enough input for the remaining output space. Equal-rate
+        // input/output block sizes otherwise accumulate an entire upsampled film
+        // inside swresample. Retain partial frames for downsampling as well.
+        let in_frame_size = if encoder_has_fixed_frame_size {
+            (((encoder_frame_size - buffered_samples) as u64 * in_sample_rate as u64)
+                / out_sample_rate as u64)
+                .max(1) as usize
+        } else {
+            in_frame_size
+        };
         let mut input_frame = Vec::with_capacity(in_frame_size * in_channel_count);
         while input_frame.len() < in_frame_size * in_channel_count {
             if is_canceled(&cancel) {
@@ -4984,11 +5037,12 @@ fn convert_audio_file_with_stream_index(
         }
         let mut in_ptr = input_frame.as_ptr() as *const u8;
         let in_ptrs = &mut in_ptr as *mut *const u8;
-        let out_count = crate::ffmpeg_source::av_frame_nb_samples_safe(frame);
+        let out_count = crate::ffmpeg_source::av_frame_nb_samples_safe(frame) - buffered_samples;
+        let mut output = frame_output(frame, buffered_samples);
         let converted = crate::ffmpeg_source::swr_convert_safe(
             api,
             swr_ctx,
-            crate::ffmpeg_source::av_frame_data_mut_ptr_safe(frame),
+            output.as_mut_ptr(),
             out_count,
             in_ptrs,
             input_samples,
@@ -5003,16 +5057,23 @@ fn convert_audio_file_with_stream_index(
                 (api.av_channel_layout_uninit)(&mut in_layout);
                 (api.av_channel_layout_uninit)(&mut out_layout);
             }
-            return Err("FFmpeg: resample failed".to_string());
+            return Err(format!(
+                "FFmpeg: resample failed: {} ({converted})",
+                ffmpeg_error_text(api, converted)
+            ));
         }
-        if converted == 0 {
+        buffered_samples += converted;
+        if buffered_samples == 0
+            || (encoder_has_fixed_frame_size && buffered_samples < encoder_frame_size)
+        {
             continue;
         }
         unsafe {
-            (*frame).nb_samples = converted;
+            (*frame).nb_samples = buffered_samples;
             (*frame).pts = next_pts;
         }
-        next_pts += converted as i64;
+        next_pts += buffered_samples as i64;
+        buffered_samples = 0;
 
         let send_ret = crate::ffmpeg_source::avcodec_send_frame_safe(api, codec_ctx, frame);
         if send_ret < 0 {
@@ -5052,7 +5113,7 @@ fn convert_audio_file_with_stream_index(
                 break;
             }
             let pending = crate::ffmpeg_source::swr_get_out_samples_safe(api, swr_ctx, 0);
-            if pending <= 0 {
+            if pending <= 0 && buffered_samples == 0 {
                 break;
             }
             let current_cap = crate::ffmpeg_source::av_frame_nb_samples_safe(frame);
@@ -5079,23 +5140,48 @@ fn convert_audio_file_with_stream_index(
                     (*frame).nb_samples = encoder_frame_size;
                 }
             }
-            let out_count = crate::ffmpeg_source::av_frame_nb_samples_safe(frame);
+            let out_count =
+                crate::ffmpeg_source::av_frame_nb_samples_safe(frame) - buffered_samples;
+            let mut output = frame_output(frame, buffered_samples);
             let converted = crate::ffmpeg_source::swr_convert_safe(
                 api,
                 swr_ctx,
-                crate::ffmpeg_source::av_frame_data_mut_ptr_safe(frame),
+                output.as_mut_ptr(),
                 out_count,
                 ptr::null(),
                 0,
             );
-            if converted <= 0 {
+            if converted < 0 {
+                unsafe {
+                    (api.swr_free)(&mut swr_ctx);
+                    (api.av_frame_free)(&mut frame);
+                    (api.avio_closep)(&mut io);
+                    (api.avcodec_free_context)(&mut codec_ctx);
+                    (api.avformat_free_context)(out_ctx);
+                    (api.av_channel_layout_uninit)(&mut in_layout);
+                    (api.av_channel_layout_uninit)(&mut out_layout);
+                }
+                return Err(format!(
+                    "FFmpeg: resampler flush failed: {} ({converted})",
+                    ffmpeg_error_text(api, converted)
+                ));
+            }
+            buffered_samples += converted;
+            if buffered_samples == 0 {
                 break;
             }
+            if converted > 0
+                && encoder_has_fixed_frame_size
+                && buffered_samples < encoder_frame_size
+            {
+                continue;
+            }
             unsafe {
-                (*frame).nb_samples = converted;
+                (*frame).nb_samples = buffered_samples;
                 (*frame).pts = next_pts;
             }
-            next_pts += converted as i64;
+            next_pts += buffered_samples as i64;
+            buffered_samples = 0;
             let send_ret = crate::ffmpeg_source::avcodec_send_frame_safe(api, codec_ctx, frame);
             if send_ret < 0 {
                 unsafe {
@@ -5280,6 +5366,85 @@ mod convert_tests {
         let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
         s.parse::<f64>()
             .map_err(|e| format!("ffprobe parse duration failed ({}): {}", s, e))
+    }
+
+    #[test]
+    fn test_resampled_exports_preserve_duration_and_tail() {
+        let directory =
+            std::env::temp_dir().join(format!("sonarpad_resample_{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        for (rate, channels, seconds) in [
+            (8000, 1, 3.137),
+            (16000, 2, 3.137),
+            (22050, 2, 120.137),
+            (24000, 2, 3.137),
+            (25000, 2, 3.137),
+            (44100, 2, 3.137),
+            (48000, 1, 3.137),
+            (96000, 2, 3.137),
+            (22050, 6, 3.137),
+            (22050, 2, 0.017),
+        ] {
+            let input = directory.join("input.wav");
+            let mut writer = hound::WavWriter::create(
+                &input,
+                hound::WavSpec {
+                    channels,
+                    sample_rate: rate,
+                    bits_per_sample: 16,
+                    sample_format: hound::SampleFormat::Int,
+                },
+            )
+            .unwrap();
+            let frames = (seconds * rate as f64) as usize;
+            for index in 0..frames {
+                let sample = ((index as f64 * 440.0 * std::f64::consts::TAU / rate as f64).sin()
+                    * 12000.0) as i16;
+                for _ in 0..channels {
+                    writer.write_sample(sample).unwrap();
+                }
+            }
+            writer.finalize().unwrap();
+            for (format, extension, bitrate) in [
+                (ConvertAudioFormat::Mp3, "mp3", 192),
+                (ConvertAudioFormat::Mp3, "mp3", 128),
+                (ConvertAudioFormat::Opus, "opus", 128),
+                (ConvertAudioFormat::Aac, "m4a", 128),
+                (ConvertAudioFormat::Flac, "flac", 128),
+                (ConvertAudioFormat::Wav, "wav", 128),
+            ] {
+                let output = directory.join(format!("output.{extension}"));
+                let settings = ConvertAudioSettings {
+                    format,
+                    quality: ConvertAudioQuality::BitrateKbps(bitrate),
+                };
+                convert_audio_file(&input, &output, &settings, None, None).unwrap_or_else(
+                    |error| panic!("{rate} Hz/{channels} ch/{extension}/{bitrate}: {error}"),
+                );
+                let actual = ffprobe_duration(&output).unwrap();
+                assert!(
+                    (actual - frames as f64 / rate as f64).abs() < 0.20,
+                    "{rate} Hz/{channels} ch/{extension}/{bitrate}: expected {seconds}, got {actual}"
+                );
+                {
+                    let mut decoded = FfmpegSource::try_new(&output, 0, None, None).unwrap();
+                    let decoded_rate = decoded.sample_rate();
+                    let decoded_channels = decoded.channels();
+                    let pcm: Vec<_> = decoded.by_ref().collect();
+                    let tail =
+                        (decoded_rate as usize * decoded_channels as usize / 10).min(pcm.len());
+                    assert!(
+                        pcm[pcm.len() - tail..]
+                            .iter()
+                            .any(|value| value.abs() > 0.01),
+                        "Missing audio tail"
+                    );
+                }
+                std::fs::remove_file(output).unwrap();
+            }
+            std::fs::remove_file(input).unwrap();
+        }
+        std::fs::remove_dir(directory).unwrap();
     }
 
     #[test]

@@ -83,7 +83,9 @@ const PODCAST_ID_TEST_SINGLE_APP_AUDIO: usize = 11030;
 const PODCAST_ID_SELECTED_APPS: usize = 11031;
 const PODCAST_ID_SHOW_INACTIVE_APPS: usize = 11032;
 const PODCAST_ID_SPLIT_SOURCES: usize = 11033;
+const PODCAST_ID_DISCARD: usize = 11034;
 const WM_PODCAST_SAVE_RESULT: u32 = windows::Win32::UI::WindowsAndMessaging::WM_APP + 74;
+const WM_PODCAST_DISCARD_DONE: u32 = windows::Win32::UI::WindowsAndMessaging::WM_APP + 75;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ActiveMonitorKind {
@@ -96,6 +98,10 @@ struct PodcastSaveResult {
     success: bool,
     message: String,
     saved_folder: Option<PathBuf>,
+}
+
+struct PodcastDiscardResult {
+    error: Option<String>,
 }
 
 pub fn handle_navigation(hwnd: HWND, msg: &MSG) -> bool {
@@ -191,6 +197,7 @@ struct PodcastState {
     pause_button: HWND,
     resume_button: HWND,
     stop_button: HWND,
+    discard_button: HWND,
     status_text: HWND,
     source_text: HWND,
     elapsed_text: HWND,
@@ -210,6 +217,7 @@ struct PodcastState {
     system_available: bool,
     saving_dialog: HWND,
     save_cancel: Option<Arc<AtomicBool>>,
+    discarding: bool,
 }
 
 struct PodcastLabels {
@@ -251,6 +259,8 @@ struct PodcastLabels {
     pause: String,
     resume: String,
     stop: String,
+    discard: String,
+    discard_confirm: String,
     close: String,
     status_label: String,
     elapsed_label: String,
@@ -322,6 +332,8 @@ fn labels(language: Language) -> PodcastLabels {
         pause: i18n::tr(language, "podcast.pause"),
         resume: i18n::tr(language, "podcast.resume"),
         stop: i18n::tr(language, "podcast.stop"),
+        discard: i18n::tr(language, "podcast.discard"),
+        discard_confirm: i18n::tr(language, "podcast.discard_confirm"),
         close: i18n::tr(language, "podcast.close"),
         status_label: i18n::tr(language, "podcast.status_label"),
         elapsed_label: i18n::tr(language, "podcast.elapsed_label"),
@@ -998,6 +1010,21 @@ fn podcast_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     None,
                 );
 
+                let discard_button = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.discard).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                    280,
+                    612,
+                    110,
+                    30,
+                    hwnd,
+                    HMENU(PODCAST_ID_DISCARD as isize),
+                    None,
+                    None,
+                );
+
                 let stop_button = CreateWindowExW(
                     Default::default(),
                     WC_BUTTON,
@@ -1232,6 +1259,7 @@ fn podcast_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     start_button,
                     pause_button,
                     resume_button,
+                    discard_button,
                     stop_button,
                     close_button,
                     group_status,
@@ -1290,6 +1318,7 @@ fn podcast_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     pause_button,
                     resume_button,
                     stop_button,
+                    discard_button,
                     status_text,
                     source_text,
                     elapsed_text,
@@ -1309,6 +1338,7 @@ fn podcast_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     system_available,
                     saving_dialog: HWND(0),
                     save_cancel: None,
+                    discarding: false,
                 };
 
                 // VIDEO REMOVED: populate_monitors removed
@@ -1594,6 +1624,10 @@ fn podcast_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                         }
                         handled = true;
                     }
+                    PODCAST_ID_DISCARD => {
+                        handled = true;
+                        discard_recording_action(state, hwnd);
+                    }
                     PODCAST_ID_STOP => {
                         handled = true;
                         stop_recording_action(state, hwnd);
@@ -1675,6 +1709,32 @@ fn podcast_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                 }
                 LRESULT(0)
             }
+            WM_PODCAST_DISCARD_DONE => {
+                if lparam.0 == 0 {
+                    return LRESULT(0);
+                }
+                let payload = Box::from_raw(lparam.0 as *mut PodcastDiscardResult);
+                if with_podcast_state(hwnd, |state| {
+                    state.discarding = false;
+                    update_recording_controls(state);
+                    update_status_text(
+                        state,
+                        if payload.error.is_some() {
+                            RecorderStatus::Error
+                        } else {
+                            RecorderStatus::Idle
+                        },
+                    );
+                    if let Some(error) = payload.error.as_ref() {
+                        show_error(state.parent, state.language, error);
+                    }
+                })
+                .is_none()
+                {
+                    crate::log_debug("Failed to access podcast state after discarding");
+                }
+                LRESULT(0)
+            }
             WM_PODCAST_SAVE_RESULT => {
                 if lparam.0 == 0 {
                     return LRESULT(0);
@@ -1741,6 +1801,10 @@ fn podcast_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
             WM_CLOSE => {
                 let mut should_close = true;
                 if with_podcast_state(hwnd, |state| {
+                    if state.discarding {
+                        should_close = false;
+                        return;
+                    }
                     if let Some(recorder) = state.recorder.as_ref()
                         && matches!(
                             recorder.status(),
@@ -2382,7 +2446,14 @@ fn update_recording_controls(state: &PodcastState) {
             state.split_sources,
             split_sources_available(state) && !recording && !paused,
         );
-        EnableWindow(state.start_button, has_sources && !recording && !paused);
+        EnableWindow(
+            state.start_button,
+            has_sources
+                && !recording
+                && !paused
+                && !state.discarding
+                && state.save_cancel.is_none(),
+        );
         EnableWindow(state.pause_button, recording || paused);
         if let Err(_e) = SetWindowTextW(state.pause_button, PCWSTR(pause_wide.as_ptr())) {
             crate::log_debug(&format!("Error: {:?}", _e));
@@ -2393,6 +2464,7 @@ fn update_recording_controls(state: &PodcastState) {
             windows::Win32::UI::WindowsAndMessaging::SW_HIDE,
         );
         EnableWindow(state.stop_button, recording || paused);
+        EnableWindow(state.discard_button, recording || paused);
     }
 }
 
@@ -2694,7 +2766,7 @@ fn stop_active_monitor(state: &mut PodcastState) {
 }
 
 fn start_recording_action(state: &mut PodcastState, _hwnd: HWND) {
-    if state.recorder.is_some() {
+    if state.recorder.is_some() || state.discarding {
         return;
     }
     let labels = labels(state.language);
@@ -2885,6 +2957,61 @@ fn start_recording_action(state: &mut PodcastState, _hwnd: HWND) {
             update_recording_controls(state);
         }
     }
+}
+
+fn discard_recording_action(state: &mut PodcastState, hwnd: HWND) {
+    if state.discarding
+        || !state.recorder.as_ref().is_some_and(|recorder| {
+            matches!(
+                recorder.status(),
+                RecorderStatus::Recording | RecorderStatus::Paused
+            )
+        })
+    {
+        return;
+    }
+    let labels = labels(state.language);
+    let question = to_wide(&labels.discard_confirm);
+    let title = to_wide(&confirm_title(state.language));
+    unsafe {
+        if MessageBoxW(
+            hwnd,
+            PCWSTR(question.as_ptr()),
+            PCWSTR(title.as_ptr()),
+            MB_YESNO | MB_ICONWARNING,
+        ) != IDYES
+        {
+            return;
+        }
+    }
+    let Some(recorder) = state.recorder.take() else {
+        return;
+    };
+    state.discarding = true;
+    update_recording_controls(state);
+    let status = to_wide(&i18n::tr(state.language, "podcast.status.discarding"));
+    unsafe {
+        crate::log_if_err!(SetWindowTextW(state.status_text, PCWSTR(status.as_ptr())));
+    }
+    std::thread::spawn(move || {
+        let payload = Box::into_raw(Box::new(PodcastDiscardResult {
+            error: recorder.discard().err(),
+        }));
+        unsafe {
+            if let Err(error) = PostMessageW(
+                hwnd,
+                WM_PODCAST_DISCARD_DONE,
+                WPARAM(0),
+                LPARAM(payload as isize),
+            ) {
+                let _undelivered_result = Box::from_raw(payload);
+                crate::log_debug(&format!(
+                    "Failed to notify podcast discard completion: {}",
+                    error
+                ));
+            }
+        }
+    });
 }
 
 fn stop_recording_action(state: &mut PodcastState, hwnd: HWND) {

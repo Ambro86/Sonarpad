@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.21 – 2026-10-26
+Version 0.9.21 – 2026-10-27
 
 1. Riproduci audio da streaming e SonarMusic: corretti i blocchi dell’interfaccia durante il caricamento dei video YouTube, con finestra di attesa e messaggi di errore localizzati. Se il server restituisce HTTP 500, viene provata automaticamente una sorgente HLS alternativa senza modificare il percorso di riproduzione normale; l’errore viene mostrato solo se fallisce anche il recupero. Migliorata la diagnostica degli errori di caricamento.
 2. SonarMusic: corretto il menu contestuale, che mostrava alcune azioni in italiano anche selezionando un’altra lingua. Salvataggio, trascrizione e creazione di audiodescrizioni ora rispettano la lingua impostata.
@@ -8,6 +8,8 @@ Version 0.9.21 – 2026-10-26
 3. Gestione globale dei segnalibri: nuova finestra nel menu Inserisci per consultare tutti i segnalibri, con ricerca, ordinamento per data o file, filtri per anzianità e file inesistenti, apertura alla posizione salvata, eliminazione multipla confermata e backup. Tracciamento separato di ultima apertura e ultimo aggiornamento, compatibile con i vecchi bookmarks.json e accessibile a NVDA e JAWS.
 4. YouTube: dopo una pausa prolungata Sonarpad richiede un nuovo collegamento al video e tenta di riprendere dalla posizione precedente; un controllo del progresso prova a recuperare i flussi bloccati. Le pagine dei risultati di ricerca restano memorizzate per mantenere ordinamento, posizione e focus quando si torna dal lettore. I risultati rispettano l'ordine originale restituito dalla ricerca: i canali possono quindi comparire anche per primi, senza essere spostati dopo video e playlist. Ampliato il recupero dei problemi di trasporto HTTP 403/500 e dei formati temporaneamente non disponibili; nessun bypass di contenuti privati o DRM.
 5. Download video: aggiunta l’opzione Automatico (originale), che lascia scegliere il formato a yt-dlp senza imporre WebM, MP4 o una traccia specifica; WebM rimane una scelta riservata ai veri file WebM. Il file salvato mantiene l’estensione del contenitore effettivo. SonarMusic: copia dei link di brani, album, artisti e playlist con Ctrl+C o dal menu contestuale, anche nei preferiti.
+6. Registrazione podcast: aggiunto il pulsante «Annulla ed elimina» accanto a «Ferma e salva». Dopo conferma interrompe la registrazione corrente, anche se in pausa, ed elimina i file temporanei senza salvare alcun file audio. Il pulsante «Ferma e salva» continua a funzionare come prima.
+7. Esportazione audio e audiodescrizioni: corretto un errore nella creazione dell’MP3 quando cambia la frequenza audio. Migliorata la gestione del ricampionamento e dei campioni finali, anche per altri formati, e la compatibilità con le frequenze supportate dagli encoder.
 
 Version 0.9.20 – 2026-10-25
 

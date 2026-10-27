@@ -31,7 +31,7 @@ pub struct ExportPlan {
     pub rotation: u16,
     pub track: Option<AddedTrack>,
 }
-pub const AUDIO_EXTENSIONS: &[&str] = &["m4a", "mp3", "wav", "flac", "ogg", "opus", "aiff"];
+pub const AUDIO_EXTENSIONS: &[&str] = &["mp3", "m4a", "wav", "flac", "ogg", "opus", "aiff"];
 pub const VIDEO_EXTENSIONS: &[&str] = &["mp4", "mkv", "avi", "mov"];
 fn output_settings(ext: &str) -> Result<ConvertAudioSettings, String> {
     use ConvertAudioFormat::*;
