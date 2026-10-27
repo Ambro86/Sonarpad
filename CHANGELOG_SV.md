@@ -8,6 +8,7 @@ Version 0.9.21 – 2026-10-26
 3. Global bokmärkeshanterare i Infoga: översikt över alla filer med sökning, sortering, åldersfilter och filter för saknade filer, öppna sparad position, bekräftad massborttagning och säkerhetskopior. Separata datum för öppning och uppdatering, kompatibilitet med äldre bookmarks.json och NVDA/JAWS.
 
 4. YouTube: efter en längre paus hämtar Sonarpad en ny videolänk och försöker återuppta uppspelningen från den tidigare positionen. En övervakning av uppspelningen gör ett begränsat antal försök att återställa strömmar som fastnat. Söksidor sparas i cache så att ordning, markering och fokus bevaras när man återvänder från spelaren. Sökresultaten behåller tjänstens ursprungliga ordning, så kanaler kan visas först när tjänsten placerar dem där. Återhämtningen vid HTTP 403/500-fel och tillfälligt otillgängliga format har förbättrats, utan att kringgå begränsningar för privat eller DRM-skyddat innehåll.
+5. Videonedladdning: alternativet Automatiskt (originalformat) låter yt-dlp välja format utan att tvinga WebM, MP4 eller ett visst spår; WebM kräver fortfarande äkta WebM. Den sparade filen får rätt filändelse. SonarMusic: kopiera länkar till låtar, album, artister och spellistor med Ctrl+C eller snabbmenyn, även bland favoriter.
 
 Version 0.9.20 – 2026-10-25
 

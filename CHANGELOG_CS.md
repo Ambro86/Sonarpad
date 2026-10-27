@@ -8,6 +8,7 @@ Version 0.9.21 – 2026-10-26
 3. Globální správce záložek v nabídce Vložit: přehled všech souborů, hledání, řazení, filtry podle stáří a chybějících souborů, otevření uložené pozice, potvrzené hromadné mazání a zálohy. Oddělené datum otevření a změny, podpora starších souborů a čteček NVDA a JAWS.
 
 4. YouTube: po delší pauze Sonarpad znovu načte odkaz na video a pokusí se pokračovat od předchozí pozice. Sledování průběhu přehrávání umožňuje omezený počet pokusů o obnovení zaseknutého streamu. Stránky výsledků vyhledávání se ukládají do mezipaměti, aby se po návratu z přehrávače zachovalo pořadí, výběr i fokus. Výsledky zachovávají původní pořadí od poskytovatele, takže kanály se mohou zobrazit i na prvním místě. Rozšířeno obnovení při chybách HTTP 403/500 a dočasně nedostupných formátech; omezení soukromého obsahu ani ochrana DRM se neobcházejí.
+5. Stahování videí: přidána možnost Automaticky (původní formát), která ponechává výběr formátu na yt-dlp bez vynucení WebM, MP4 či určité stopy; WebM nadále vyžaduje skutečný formát WebM. Uložený soubor používá skutečnou příponu. SonarMusic: kopírování odkazů na skladby, alba, interprety a playlisty pomocí Ctrl+C nebo kontextové nabídky, také v oblíbených.
 
 Version 0.9.20 – 2026-10-25
 

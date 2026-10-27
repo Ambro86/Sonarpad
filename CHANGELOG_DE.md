@@ -8,6 +8,7 @@ Version 0.9.21 – 2026-10-26
 3. Globale Lesezeichenverwaltung im Menü Einfügen: dateiübergreifende Liste mit Suche, Sortierung, Alters- und Fehlende-Dateien-Filtern, direktem Öffnen, bestätigtem Mehrfachlöschen und Sicherung. Getrennte Daten für Öffnung und Aktualisierung, kompatibel mit bisherigen bookmarks.json-Dateien, zugänglich mit NVDA und JAWS.
 
 4. YouTube: Nach einer längeren Pause lädt Sonarpad den Videolink neu und versucht, die Wiedergabe an der vorherigen Position fortzusetzen. Eine Überwachung des Wiedergabefortschritts versucht, hängen gebliebene Streams mit einer begrenzten Anzahl von Wiederholungen wiederherzustellen. Suchergebnisseiten werden zwischengespeichert, damit Reihenfolge, Auswahl und Fokus nach der Rückkehr aus dem Player erhalten bleiben. Die Suchergebnisse behalten die ursprüngliche Reihenfolge des Anbieters bei, sodass Kanäle auch an erster Stelle erscheinen können. Die Wiederherstellung bei HTTP-403/500-Fehlern und vorübergehend nicht verfügbaren Formaten wurde erweitert; Beschränkungen privater oder DRM-geschützter Inhalte werden nicht umgangen.
+5. Video-Downloads: Neu ist Automatisch (Originalformat), wobei yt-dlp das Format selbst wählt, ohne WebM, MP4 oder eine bestimmte Spur zu erzwingen; WebM bleibt eine echte WebM-Auswahl. Die gespeicherte Datei erhält ihre tatsächliche Endung. SonarMusic: Links zu Titeln, Alben, Interpreten und Playlists per Strg+C oder Kontextmenü kopieren, auch in Favoriten.
 
 Version 0.9.20 – 2026-10-25
 

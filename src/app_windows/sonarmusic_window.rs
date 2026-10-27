@@ -8,8 +8,8 @@ use windows::Win32::Graphics::Gdi::{COLOR_WINDOW, HBRUSH};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Accessibility::NotifyWinEvent;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    EnableWindow, GetFocus, GetKeyState, IsWindowEnabled, SetFocus, VK_APPS, VK_ESCAPE, VK_F10,
-    VK_RETURN, VK_SHIFT,
+    EnableWindow, GetFocus, GetKeyState, IsWindowEnabled, SetFocus, VK_APPS, VK_CONTROL, VK_ESCAPE,
+    VK_F10, VK_RETURN, VK_SHIFT,
 };
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::core::{PCWSTR, w};
@@ -33,6 +33,8 @@ const OPEN_FAVORITE: usize = 115;
 const ADD_FAVORITE: usize = 116;
 const REMOVE_FAVORITE: usize = 117;
 const REMOVE_SAVED: usize = 118;
+const COPY_LINK_RESULT: usize = 119;
+const COPY_LINK_FAVORITE: usize = 120;
 #[derive(Clone, Default)]
 struct SearchSnapshot {
     query: String,
@@ -265,6 +267,17 @@ fn selected_item(s: &State) -> Option<&music::Item> {
         _ => None,
     }
 }
+fn selected_share_url(s: &State, favorite: bool) -> Option<String> {
+    if s.receiver.is_some() {
+        return None;
+    }
+    if favorite {
+        s.favorites.get(selected(s.favorites_combo))?.share_url()
+    } else {
+        selected_item(s)?.share_url()
+    }
+}
+
 fn result_actions(s: &State) -> Vec<usize> {
     if s.receiver.is_some() {
         return Vec::new();
@@ -288,6 +301,7 @@ fn result_actions(s: &State) -> Vec<usize> {
             SAVE,
             TRANSCRIBE,
             AD,
+            COPY_LINK_RESULT,
             if s.favorites.iter().any(|f| music::same_favorite(f, item)) {
                 REMOVE_FAVORITE
             } else {
@@ -296,6 +310,7 @@ fn result_actions(s: &State) -> Vec<usize> {
         ],
         Some(item) if item.browse_request().is_some() => vec![
             OPEN,
+            COPY_LINK_RESULT,
             if s.favorites.iter().any(|f| music::same_favorite(f, item)) {
                 REMOVE_FAVORITE
             } else {
@@ -308,7 +323,7 @@ fn result_actions(s: &State) -> Vec<usize> {
 fn show_result_menu(hwnd: HWND, s: &State, position: LPARAM, favorites: bool) {
     let actions = if favorites {
         if s.receiver.is_none() && s.favorites.get(selected(s.favorites_combo)).is_some() {
-            vec![OPEN_FAVORITE, REMOVE_SAVED]
+            vec![OPEN_FAVORITE, COPY_LINK_FAVORITE, REMOVE_SAVED]
         } else {
             Vec::new()
         }
@@ -334,6 +349,9 @@ fn show_result_menu(hwnd: HWND, s: &State, position: LPARAM, favorites: bool) {
                 SAVE => i18n::tr(language, "playback.download_episode"),
                 TRANSCRIBE => i18n::tr(language, "playback.transcribe_current"),
                 AD => i18n::tr(language, "menu.create_audio_description"),
+                COPY_LINK_RESULT | COPY_LINK_FAVORITE => {
+                    format!("{} (Ctrl+C)", i18n::tr(language, "stream_audio.copy_link"))
+                }
                 _ => label(s, "open"),
             };
             crate::log_if_err!(AppendMenuW(
@@ -464,6 +482,22 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) ->
                         return LRESULT(0);
                     }
                     match id {
+                        COPY_LINK_RESULT | COPY_LINK_FAVORITE => {
+                            if let Some(url) = selected_share_url(s, id == COPY_LINK_FAVORITE) {
+                                crate::app_windows::rai_audiodescrizioni_window::copy_text_to_clipboard(hwnd, &url);
+                                let language =
+                                    with_state(s.parent, |state| state.settings.language)
+                                        .unwrap_or_default();
+                                set(
+                                    s.status,
+                                    &format!(
+                                        "{}: {}",
+                                        i18n::tr(language, "stream_audio.copy_link"),
+                                        url
+                                    ),
+                                );
+                            }
+                        }
                         ADD_FAVORITE | REMOVE_FAVORITE | REMOVE_SAVED => {
                             let item = if id == REMOVE_SAVED {
                                 s.favorites.get(selected(s.favorites_combo)).cloned()
@@ -941,6 +975,19 @@ fn open_with_snapshot(parent: HWND, snapshot: Option<SearchSnapshot>) {
         while IsWindow(hwnd).as_bool() && GetMessageW(&mut msg, HWND(0), 0, 0).as_bool() {
             remember_focus(hwnd, &mut state);
             if crate::app_windows::calendar_window::handle_reminder_alert_message(&msg) {
+                continue;
+            }
+            if msg.message == WM_KEYDOWN
+                && msg.wParam.0 == b'C' as usize
+                && GetKeyState(VK_CONTROL.0 as i32) < 0
+                && (msg.hwnd == results || msg.hwnd == favorites_combo)
+            {
+                let id = if msg.hwnd == favorites_combo {
+                    COPY_LINK_FAVORITE
+                } else {
+                    COPY_LINK_RESULT
+                };
+                SendMessageW(hwnd, WM_COMMAND, WPARAM(id), LPARAM(0));
                 continue;
             }
             if msg.message == WM_KEYDOWN

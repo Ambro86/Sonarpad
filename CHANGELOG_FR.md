@@ -8,6 +8,7 @@ Version 0.9.21 – 2026-10-26
 3. Gestion globale des signets dans Insertion : liste de tous les fichiers avec recherche, tri, filtres d’ancienneté et fichiers manquants, ouverture à la position enregistrée, suppression multiple confirmée et sauvegardes. Dates d’ouverture et de mise à jour distinctes, compatibilité bookmarks.json, accessibilité NVDA/JAWS.
 
 4. YouTube : après une pause prolongée, Sonarpad actualise le lien de la vidéo et tente de reprendre la lecture à la position précédente. Un suivi de la progression permet de tenter, un nombre limité de fois, de relancer les flux bloqués. Les pages de résultats de recherche sont mises en cache pour conserver leur ordre, la sélection et le focus au retour du lecteur. Les résultats conservent l'ordre d'origine du fournisseur, ce qui permet aux chaînes d'apparaître en premier lorsqu'elles sont ainsi classées. La récupération des erreurs HTTP 403/500 et des formats temporairement indisponibles a été étendue, sans contourner les restrictions des contenus privés ou protégés par DRM.
+5. Téléchargement vidéo : ajout du mode Automatique (format d’origine), qui laisse yt-dlp choisir le format sans imposer WebM, MP4 ou une piste particulière ; WebM reste réservé aux véritables flux WebM. Le fichier conserve son extension réelle. SonarMusic : copier les liens des titres, albums, artistes et playlists avec Ctrl+C ou le menu contextuel, y compris dans les favoris.
 
 Version 0.9.20 – 2026-10-25
 

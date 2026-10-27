@@ -7,6 +7,7 @@ Version 0.9.21 – 2026-10-26
 
 3. Global bookmarks manager: a new Insert-menu window lists bookmarks across all files, with search, sorting by date or filename, age and missing-file filters, navigation to a saved position, confirmed multiple deletion and backups. Last opened and last updated are tracked separately; existing bookmarks.json files remain compatible and controls are accessible with NVDA and JAWS.
 4. YouTube: after a long pause, Sonarpad refreshes the video URL and attempts to resume near the previous position; a playback progress monitor attempts recovery of stalled streams. Search result pages are cached to preserve their order, selection and focus when returning from playback. Search results retain the provider's original ranking, so channels can appear first when the provider ranks them first. Expanded recovery for HTTP 403/500 transport errors and temporarily unavailable formats; no bypass of private or DRM-protected content.
+5. Video downloads: added Automatic (original), which uses yt-dlp’s normal format selection without forcing WebM, MP4 or a specific track; WebM remains a strict WebM choice. The saved file keeps its actual container extension. SonarMusic: copy song, album, artist and playlist links with Ctrl+C or from the context menu, including favorites.
 
 Version 0.9.20 – 2026-10-25
 

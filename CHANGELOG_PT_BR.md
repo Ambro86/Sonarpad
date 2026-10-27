@@ -8,6 +8,7 @@ Version 0.9.21 – 2026-10-26
 3. Gerenciador global de marcadores no menu Inserir: todos os arquivos, pesquisa, ordenação, filtros por idade e arquivos ausentes, abertura na posição salva, exclusão múltipla confirmada e backup. Datas de abertura e atualização separadas, compatibilidade com bookmarks.json antigos e NVDA/JAWS.
 
 4. YouTube: após uma pausa prolongada, o Sonarpad atualiza o link do vídeo e tenta retomar a reprodução da posição anterior. O monitoramento do progresso tenta recuperar transmissões travadas com um número limitado de tentativas. As páginas dos resultados de pesquisa são armazenadas em cache para preservar a ordem, a seleção e o foco ao voltar do player. Os resultados mantêm a ordem original retornada pelo serviço, permitindo que os canais apareçam primeiro quando forem os mais relevantes. A recuperação de erros HTTP 403/500 e de formatos temporariamente indisponíveis foi ampliada, sem contornar restrições de conteúdo privado ou protegido por DRM.
+5. Download de vídeos: adicionada a opção Automático (formato original), que deixa o yt-dlp escolher o formato sem forçar WebM, MP4 ou uma faixa específica; WebM continua exigindo um arquivo WebM verdadeiro. O arquivo preserva sua extensão real. SonarMusic: copiar links de músicas, álbuns, artistas e playlists com Ctrl+C ou pelo menu de contexto, inclusive nos favoritos.
 
 Version 0.9.20 – 2026-10-25
 

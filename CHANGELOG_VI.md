@@ -8,6 +8,7 @@ Version 0.9.21 – 2026-10-26
 3. Trình quản lý dấu trang toàn cục trong menu Chèn: danh sách mọi tệp, tìm kiếm, sắp xếp, lọc theo tuổi và tệp bị thiếu, mở vị trí đã lưu, xóa nhiều mục có xác nhận và sao lưu. Theo dõi riêng ngày mở và ngày cập nhật; tương thích bookmarks.json cũ và NVDA/JAWS.
 
 4. YouTube: sau khi tạm dừng lâu, Sonarpad làm mới liên kết video và thử phát tiếp từ vị trí trước đó. Bộ theo dõi tiến trình phát sẽ thử khôi phục luồng bị treo với số lần thử giới hạn. Các trang kết quả tìm kiếm được lưu vào bộ nhớ đệm để giữ nguyên thứ tự, mục đã chọn và tiêu điểm khi quay lại từ trình phát. Kết quả giữ nguyên thứ tự ban đầu do dịch vụ cung cấp, vì vậy các kênh có thể xuất hiện ở đầu danh sách nếu được xếp hạng cao. Khả năng khôi phục khi gặp lỗi HTTP 403/500 hoặc định dạng tạm thời không khả dụng đã được mở rộng, nhưng không vượt qua các hạn chế đối với nội dung riêng tư hay được bảo vệ bằng DRM.
+5. Tải video: thêm tùy chọn Tự động (định dạng gốc), để yt-dlp tự chọn định dạng mà không ép WebM, MP4 hay luồng cụ thể; tùy chọn WebM vẫn chỉ nhận WebM thật. Tệp được lưu với phần mở rộng thực tế. SonarMusic: sao chép liên kết bài hát, album, nghệ sĩ và danh sách phát bằng Ctrl+C hoặc menu ngữ cảnh, kể cả mục yêu thích.
 
 Version 0.9.20 – 2026-10-25
 

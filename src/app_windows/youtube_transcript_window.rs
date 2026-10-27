@@ -670,11 +670,80 @@ mod ytdlp_command_tests {
     }
 
     #[test]
-    fn omni_port_automatic_video_save_requests_a_muxed_audio_video_stream() {
-        assert_eq!(
-            configured_selector(true).as_deref(),
-            Some("best[vcodec!=?none][acodec!=?none]")
+    fn omni_port_automatic_video_save_uses_native_ytdlp_selection() {
+        assert_eq!(configured_selector(true), None);
+        let mut command = ytdlp_command(Path::new("yt-dlp.exe"));
+        configure_ytdlp_stream_download_command(
+            &mut command,
+            "https://www.dailymotion.com/video/example",
+            Path::new("output.%(ext)s"),
+            &dialog(StreamOutputFormat::Auto),
+            Some("audio-track-chosen-for-playback"),
+            true,
+            None,
         );
+        let args: Vec<_> = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            !args.iter().any(|arg| arg == "-f"
+                || arg == "--merge-output-format"
+                || arg == "--extractor-args")
+        );
+        assert!(
+            args.iter()
+                .any(|arg| arg == "https://www.dailymotion.com/video/example")
+        );
+    }
+
+    #[test]
+    fn automatic_original_is_offered_persisted_and_uses_real_file_extension() {
+        assert!(super::youtube_save_media_formats().contains(&StreamOutputFormat::Auto));
+        assert_eq!(
+            super::normalized_stream_save_format(StreamOutputFormat::Auto, true),
+            StreamOutputFormat::Auto
+        );
+        assert_eq!(
+            StreamOutputFormat::from_settings_value("auto"),
+            StreamOutputFormat::Auto
+        );
+        assert_eq!(StreamOutputFormat::Auto.settings_value(), "auto");
+        let items = super::stream_save_format_items(crate::settings::Language::Italian);
+        assert_eq!(
+            items.first().map(|(_, fmt)| *fmt),
+            Some(StreamOutputFormat::Auto)
+        );
+        assert_eq!(
+            super::stream_save_target_ext(StreamOutputFormat::Auto),
+            "mp4"
+        );
+        assert_eq!(
+            super::stream_save_final_target_path(
+                std::path::PathBuf::from("name.mp4"),
+                Path::new("download.webm"),
+                StreamOutputFormat::Auto
+            ),
+            std::path::PathBuf::from("name.webm")
+        );
+    }
+
+    #[test]
+    fn native_ytdlp_download_only_accepts_complete_media_not_unmerged_tracks() {
+        let dir =
+            std::env::temp_dir().join(format!("sonarpad_format_parts_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir(&dir).unwrap();
+        std::fs::write(dir.join("test.f137.mp4"), b"video only").unwrap();
+        std::fs::write(dir.join("test.f140.m4a"), b"audio only").unwrap();
+        std::fs::write(dir.join("testother.mp4"), b"unrelated job").unwrap();
+        assert!(super::find_latest_downloaded_stream_file(&dir, "test").is_none());
+        let final_path = dir.join("test.mkv");
+        std::fs::write(&final_path, b"completed output").unwrap();
+        assert_eq!(
+            super::find_latest_downloaded_stream_file(&dir, "test"),
+            Some(final_path)
+        );
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
@@ -682,6 +751,29 @@ mod ytdlp_command_tests {
         assert_eq!(
             configured_selector(false).as_deref(),
             Some("bestaudio/best")
+        );
+    }
+
+    #[test]
+    fn automatic_youtube_video_does_not_force_an_extractor_client() {
+        let mut command = ytdlp_command(Path::new("yt-dlp.exe"));
+        configure_ytdlp_stream_download_command(
+            &mut command,
+            "https://www.youtube.com/watch?v=test",
+            Path::new("output.%(ext)s"),
+            &dialog(StreamOutputFormat::Auto),
+            None,
+            true,
+            None,
+        );
+        let args: Vec<_> = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            !args
+                .iter()
+                .any(|arg| arg == "--extractor-args" || arg == "-f")
         );
     }
 
@@ -3093,8 +3185,9 @@ fn youtube_context_menu_label(language: Language, key: &str) -> String {
         .to_string()
 }
 
-fn youtube_save_media_formats() -> [StreamOutputFormat; 8] {
+fn youtube_save_media_formats() -> [StreamOutputFormat; 9] {
     [
+        StreamOutputFormat::Auto,
         StreamOutputFormat::Mp4,
         StreamOutputFormat::Webm,
         StreamOutputFormat::Mp3,
@@ -7500,10 +7593,17 @@ fn stream_quality_items(
     }
 }
 
-fn stream_save_format_items() -> Vec<(String, StreamOutputFormat)> {
+fn stream_save_format_items(language: Language) -> Vec<(String, StreamOutputFormat)> {
     youtube_save_media_formats()
         .into_iter()
-        .map(|format| (format.settings_value().to_ascii_uppercase(), format))
+        .map(|format| {
+            let label = if format == StreamOutputFormat::Auto {
+                i18n::tr(language, "stream_audio.format.auto")
+            } else {
+                format.settings_value().to_ascii_uppercase()
+            };
+            (label, format)
+        })
         .collect()
 }
 
@@ -8396,7 +8496,7 @@ fn choose_playlist_download_entries(
         .into_iter()
         .map(|entry| format!("{}. {}", entry.position, entry.label))
         .collect();
-    let format_options = stream_save_format_items();
+    let format_options = stream_save_format_items(language);
     let default_format = if youtube_save_media_formats().contains(&options.format) {
         options.format
     } else {
@@ -8430,7 +8530,7 @@ fn choose_playlist_download_entries(
 }
 
 fn selected_stream_save_options(state: &StreamSaveOptionsState) -> PlaylistDownloadOptions {
-    let formats = stream_save_format_items();
+    let formats = stream_save_format_items(state.language);
     let format =
         selected_stream_format_from_combo(state.format_combo, &formats, StreamOutputFormat::Mp3);
     let quality = selected_stream_quality_from_combo(state.quality_combo, state.language, format);
@@ -8441,7 +8541,7 @@ fn refill_stream_save_options_quality(
     state: &StreamSaveOptionsState,
     preferred: StreamQualitySelection,
 ) {
-    let formats = stream_save_format_items();
+    let formats = stream_save_format_items(state.language);
     let format =
         selected_stream_format_from_combo(state.format_combo, &formats, StreamOutputFormat::Mp3);
     set_combo_selection_for_quality(state.quality_combo, state.language, format, preferred);
@@ -8583,7 +8683,7 @@ fn stream_save_options_wndproc_inner(
                     }
                 }
 
-                let formats = stream_save_format_items();
+                let formats = stream_save_format_items(init.language);
                 for (label, _) in &formats {
                     let wide = to_wide(label);
                     SendMessageW(
@@ -10183,8 +10283,10 @@ fn configure_ytdlp_stream_download_command(
     prefer_video: bool,
     credentials: Option<&YtdlpAuthCredentials>,
 ) {
-    // The Android playback profile may omit high-resolution WEBM downloads.
-    if dialog_data.format != StreamOutputFormat::Webm {
+    // In automatic video mode, leave format selection and extractor profile
+    // to yt-dlp, just like running yt-dlp URL from a console.
+    let native_video_selection = dialog_data.format == StreamOutputFormat::Auto && prefer_video;
+    if dialog_data.format != StreamOutputFormat::Webm && !native_video_selection {
         configure_ytdlp_standard_youtube_client(cmd, url);
     }
     cmd.arg("--no-playlist")
@@ -10206,7 +10308,10 @@ fn configure_ytdlp_stream_download_command(
             .arg(&credentials.password);
     }
 
-    if dialog_data.format == StreamOutputFormat::Webm {
+    if native_video_selection {
+        // No forced -f, container or audio track; yt-dlp chooses the original
+        // available source format on Dailymotion, TikTok, YouTube and others.
+    } else if dialog_data.format == StreamOutputFormat::Webm {
         // Comma downloads individual streams; Sonarpad's existing DLL muxer
         // joins them without launching ffmpeg.exe or re-encoding either track.
         let selector = selected_audio_format
@@ -10589,8 +10694,15 @@ fn run_ytdlp_stream_download_attempt(
         } else {
             None
         }
-    } else {
+    } else if !stalled
+        && (status.is_some_and(|result| result.success())
+            || (status.is_none() && allow_early_finalize && reached_100_at.is_some()))
+    {
+        // A failed yt-dlp merge can leave separately downloaded video and
+        // audio fragments. Never present those artifacts as the final media.
         find_latest_downloaded_stream_file(req.cache_dir, req.prefix)
+    } else {
+        None
     };
     let file_bytes = primary_path
         .as_ref()
@@ -10693,7 +10805,16 @@ fn find_latest_downloaded_stream_file(cache_dir: &Path, prefix: &str) -> Option<
         let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
             continue;
         };
-        if !name.starts_with(prefix) {
+        let Some(suffix) = name
+            .strip_prefix(prefix)
+            .and_then(|tail| tail.strip_prefix('.'))
+        else {
+            continue;
+        };
+        // With output template prefix.%(ext)s, completed files have just one
+        // extension; prefix.f137.mp4 and similar are separate tracks and must
+        // never be interpreted as the finished download.
+        if suffix.is_empty() || suffix.contains('.') {
             continue;
         }
         let name_lc = name.to_ascii_lowercase();
@@ -11500,7 +11621,9 @@ pub(crate) fn unique_stream_media_path(folder: &Path, base_name: &str, extension
 }
 
 fn stream_save_target_ext(format: StreamOutputFormat) -> &'static str {
-    format.extension().unwrap_or("webm")
+    // Automatic mode has no fixed extension. MP4 is only a dialog hint;
+    // stream_save_final_target_path assigns the actual downloaded extension.
+    format.extension().unwrap_or("mp4")
 }
 
 fn stream_save_final_target_path(
@@ -11842,7 +11965,7 @@ fn download_playlist_entry_with_retries(
             selected_audio_format: None,
             prefer_video: matches!(
                 dialog_data.format,
-                StreamOutputFormat::Mp4 | StreamOutputFormat::Webm
+                StreamOutputFormat::Auto | StreamOutputFormat::Mp4 | StreamOutputFormat::Webm
             ),
             ytdlp_debug: ytdlp_debug_enabled(),
             credentials,
@@ -12274,7 +12397,8 @@ pub(crate) fn download_active_streaming_audio_media(
         output_template: &output_template,
         dialog_data: &context.dialog_data,
         selected_audio_format: context.selected_audio_format.as_deref(),
-        prefer_video: context.prefer_video,
+        prefer_video: context.prefer_video
+            || context.dialog_data.format == StreamOutputFormat::Auto,
         ytdlp_debug: ytdlp_debug_enabled(),
         credentials: active_credentials.as_ref(),
     }) {
@@ -12345,7 +12469,8 @@ pub(crate) fn download_active_streaming_audio_media(
                 output_template: &output_template,
                 dialog_data: &context.dialog_data,
                 selected_audio_format: context.selected_audio_format.as_deref(),
-                prefer_video: context.prefer_video,
+                prefer_video: context.prefer_video
+                    || context.dialog_data.format == StreamOutputFormat::Auto,
                 ytdlp_debug: ytdlp_debug_enabled(),
                 credentials: active_credentials.as_ref(),
             }) {
@@ -15521,6 +15646,37 @@ mod webm_download_tests {
             || s == "--merge-output-format"
             || s == YOUTUBE_STANDARD_PLAYER_EXTRACTOR_ARGS));
     }
+    #[test]
+    fn webm_is_a_strict_webm_request_even_for_non_youtube_sites() {
+        for url in [
+            "https://www.dailymotion.com/video/example",
+            "https://www.tiktok.com/@creator/video/1234567890",
+        ] {
+            let mut cmd = Command::new("yt-dlp.exe");
+            configure_ytdlp_stream_download_command(
+                &mut cmd,
+                url,
+                Path::new("test.%(ext)s"),
+                &options(),
+                None,
+                true,
+                None,
+            );
+            let args: Vec<_> = cmd
+                .get_args()
+                .map(|arg| arg.to_string_lossy().into_owned())
+                .collect();
+            assert!(
+                args.windows(2).any(|pair| {
+                    pair[0] == "-f"
+                        && pair[1] == "(bestvideo[ext=webm],bestaudio[ext=webm])/best[ext=webm]"
+                }),
+                "WebM must not silently become automatic: {url}"
+            );
+            assert!(!args.iter().any(|arg| arg == "--merge-output-format"));
+        }
+    }
+
     #[test]
     fn selected_audio_is_not_silently_replaced_and_parts_are_not_complete() {
         let mut cmd = Command::new("yt-dlp.exe");

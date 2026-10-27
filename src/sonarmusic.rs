@@ -80,6 +80,33 @@ impl Item {
         self.playable()
             .then(|| format!("https://www.youtube.com/watch?v={}", self.video_id))
     }
+    /// Public share link for a song, album, artist or playlist.
+    pub fn share_url(&self) -> Option<String> {
+        if let Some(url) = self.watch_url() {
+            return Some(url);
+        }
+        let Request::Browse { id, .. } = self.browse_request()? else {
+            return None;
+        };
+        if id.is_empty()
+            || !id
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+        {
+            return None;
+        }
+        if let Some(list) = id.strip_prefix("VL") {
+            if list.is_empty() {
+                return None;
+            }
+            return Some(format!("https://music.youtube.com/playlist?list={list}"));
+        }
+        if id.starts_with("UC") {
+            return Some(format!("https://music.youtube.com/channel/{id}"));
+        }
+        Some(format!("https://music.youtube.com/browse/{id}"))
+    }
+
     pub fn browse_request(&self) -> Option<Request> {
         if !self.available
             || !matches!(
@@ -670,6 +697,31 @@ mod tests {
         assert!(!i.playable());
         assert!(i.browse_request().unwrap().collection());
     }
+    #[test]
+    fn sonarmusic_share_links_support_tracks_albums_and_playlists() {
+        assert_eq!(
+            item().share_url(),
+            Some("https://www.youtube.com/watch?v=LX5Z7R6rt_I".into())
+        );
+        let album = Item::parse(&json!({"id":"MPRE123","kind":"album"})).unwrap();
+        assert_eq!(
+            album.share_url(),
+            Some("https://music.youtube.com/browse/MPRE123".into())
+        );
+        let playlist = Item::parse(&json!({"id":"PLabc123","kind":"playlist"})).unwrap();
+        assert_eq!(
+            playlist.share_url(),
+            Some("https://music.youtube.com/playlist?list=PLabc123".into())
+        );
+        let artist = Item::parse(&json!({"id":"UCabc123","kind":"artist"})).unwrap();
+        assert_eq!(
+            artist.share_url(),
+            Some("https://music.youtube.com/channel/UCabc123".into())
+        );
+        let bad = Item::parse(&json!({"id":"PLbad?tag=1","kind":"playlist"})).unwrap();
+        assert_eq!(bad.share_url(), None);
+    }
+
     #[test]
     fn playlist_prefix_is_normalized() {
         assert_eq!(normalize_browse_id("PL123"), "VLPL123");
