@@ -5421,16 +5421,16 @@ mod convert_tests {
                 convert_audio_file(&input, &output, &settings, None, None).unwrap_or_else(
                     |error| panic!("{rate} Hz/{channels} ch/{extension}/{bitrate}: {error}"),
                 );
-                let actual = ffprobe_duration(&output).unwrap();
-                assert!(
-                    (actual - frames as f64 / rate as f64).abs() < 0.20,
-                    "{rate} Hz/{channels} ch/{extension}/{bitrate}: expected {seconds}, got {actual}"
-                );
                 {
                     let mut decoded = FfmpegSource::try_new(&output, 0, None, None).unwrap();
                     let decoded_rate = decoded.sample_rate();
                     let decoded_channels = decoded.channels();
                     let pcm: Vec<_> = decoded.by_ref().collect();
+                    let actual = pcm.len() as f64 / decoded_channels as f64 / decoded_rate as f64;
+                    assert!(
+                        (actual - frames as f64 / rate as f64).abs() < 0.20,
+                        "{rate} Hz/{channels} ch/{extension}/{bitrate}: expected {seconds}, got {actual}"
+                    );
                     let tail =
                         (decoded_rate as usize * decoded_channels as usize / 10).min(pcm.len());
                     assert!(
