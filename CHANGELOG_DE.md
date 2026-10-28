@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+Version 0.9.22 – 2026-10-28
+
+1. Audiodeskription: Ein abschließender Wiederherstellungsversuch berücksichtigt Beschreibungen, die aufgrund der anfänglichen Dauerschätzung ausgeschlossen wurden. Sonarpad prüft die tatsächliche Sprechdauer und versucht es bei Bedarf mit 10 % oder höchstens 15 % höherer Geschwindigkeit erneut, ohne vorhandene Beschreibungen zu verschieben oder Dialoge zu überlagern. Wiederhergestellte Beschreibungen und ihre individuelle Geschwindigkeit werden im Projekt gespeichert.
+
 Version 0.9.21 – 2026-10-27
 
 1. Streaming-Audio und SonarMusic: Einfrieren der Oberfläche beim Laden von YouTube-Videos behoben, mit Wartefenster und übersetzten Fehlermeldungen. Bei HTTP 500 wird automatisch eine alternative HLS-Quelle versucht, ohne die normale Wiedergabe zu ändern; eine Fehlermeldung erscheint nur, wenn auch die Wiederherstellung fehlschlägt. Verbesserte Diagnose von Ladefehlern.

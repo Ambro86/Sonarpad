@@ -1,5 +1,9 @@
 # Ändringslogg
 
+Version 0.9.22 – 2026-10-28
+
+1. Syntolkning: ett avslutande återställningsförsök har lagts till för beskrivningar som uteslutits av den första tidsuppskattningen. Sonarpad kontrollerar talets faktiska längd och försöker vid behov igen med 10 % eller högst 15 % högre hastighet, utan att flytta befintliga beskrivningar eller överlappa dialog. Återställda beskrivningar och deras individuella hastighet sparas i projektet.
+
 Version 0.9.21 – 2026-10-27
 
 1. Strömmande ljud och SonarMusic: åtgärdat att gränssnittet fryser när YouTube-videor läses in, med väntefönster och översatta felmeddelanden. Om servern svarar med HTTP 500 provas automatiskt en alternativ HLS-källa utan att ändra normal uppspelning; felet visas bara om även återställningen misslyckas. Förbättrad diagnostik för inläsningsfel.

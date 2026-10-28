@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.22 – 2026-10-28
+
+1. Audiodescripciones: añadido un intento final de recuperación de las frases excluidas por la estimación inicial de duración. Sonarpad comprueba la duración real de la voz y, si es necesario, vuelve a intentarlo con una velocidad un 10 % o como máximo un 15 % mayor, sin mover las descripciones ya insertadas ni superponerlas a los diálogos. Las descripciones recuperadas y su velocidad individual se guardan en el proyecto.
+
 Version 0.9.21 – 2026-10-27
 
 1. Reproducir audio en streaming y SonarMusic: corregidos los bloqueos de la interfaz al cargar vídeos de YouTube, con ventana de espera y mensajes de error traducidos. Si el servidor devuelve HTTP 500, se intenta automáticamente una fuente HLS alternativa sin cambiar la reproducción normal; el error solo se muestra si también falla la recuperación. Mejorado el diagnóstico de errores de carga.

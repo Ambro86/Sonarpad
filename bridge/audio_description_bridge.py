@@ -559,15 +559,18 @@ def run(request: dict) -> dict:
             )
         )
 
+    deferred_descriptions = []
     if bool(request.get("allow_extended_pauses", True)):
         aligned, dropped, short_gap_candidates = (
             speech_detector.align_descriptions_with_extended_pauses_prioritizing_slots(
-                descriptions, dialogue_intervals, duration, mandatory_slots
+                descriptions, dialogue_intervals, duration, mandatory_slots,
+                rejected_descriptions=deferred_descriptions,
             )
         )
     else:
         aligned, dropped = speech_detector.align_descriptions_prioritizing_slots(
-            descriptions, dialogue_intervals, duration, mandatory_slots
+            descriptions, dialogue_intervals, duration, mandatory_slots,
+            rejected_descriptions=deferred_descriptions,
         )
         short_gap_candidates = 0
 
@@ -601,6 +604,7 @@ def run(request: dict) -> dict:
         "recognize_characters": bool(request.get("recognize_characters", True)),
         "protected_intervals": protected,
         "descriptions": normalized,
+        "deferred_descriptions": _normalise_descriptions(deferred_descriptions),
         "dropped_before_tts": int(dropped),
         "short_gap_candidates": int(short_gap_candidates),
         "character_glossary": glossary or [],

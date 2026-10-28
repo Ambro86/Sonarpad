@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(debug_assertions)]
 const BRIDGE_DEBUG_FILE_NAME: &str = "audio_description_bridge.exe";
-const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v14.exe";
+const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v15.exe";
 const BRIDGE_MIN_VALID_SIZE_BYTES: u64 = 5_000_000;
 const BRIDGE_DOWNLOAD_URLS: [&str; 2] = [
     "https://github.com/Ambro86/Sonarpad-Tools/releases/download/0.7/audio_description_bridge.exe",
@@ -118,6 +118,9 @@ pub struct AudioDescriptionBridgeResult {
     pub protected_intervals: Vec<BridgeInterval>,
     #[serde(default)]
     pub descriptions: Vec<BridgeDescription>,
+    /// Estimates rejected these cues; the host may try exact TTS after normal scheduling.
+    #[serde(default)]
+    pub deferred_descriptions: Vec<BridgeDescription>,
     #[serde(default)]
     pub character_glossary: Vec<BridgeCharacter>,
     #[serde(default)]

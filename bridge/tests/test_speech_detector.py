@@ -192,6 +192,21 @@ class SpeechDetectorIntervalTests(unittest.TestCase):
         self.assertEqual(aligned, [])
         self.assertEqual(dropped, 1)
 
+    def test_deferred_candidates_do_not_change_existing_alignment(self):
+        descriptions = [(1.0, 2.0, "uno due tre quattro cinque sei sette otto"),
+                        (8.0, 9.0, "Goku ride.")]
+        protected = [(0.0, 1.0), (3.0, 8.0), (10.0, 20.0)]
+        for align in [align_descriptions_prioritizing_slots,
+                      speech_detector.align_descriptions_with_extended_pauses_prioritizing_slots]:
+            before = align(descriptions, protected, 20.0, [])
+            rejected = []
+            after = align(descriptions, protected, 20.0, [],
+                          rejected_descriptions=rejected)
+            self.assertEqual(before, after)
+            self.assertEqual(len(rejected), after[1])
+            if after[1]:
+                self.assertEqual(rejected, [descriptions[0]])
+
     def test_priority_alignment_reserves_mandatory_slot_before_optional_cue(self):
         descriptions = [
             (2.0, 3.0, "uno due tre quattro cinque sei sette otto nove dieci"),

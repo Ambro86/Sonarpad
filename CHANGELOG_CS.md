@@ -1,5 +1,9 @@
 # Přehled změn
 
+Version 0.9.22 – 2026-10-28
+
+1. Zvukové popisy: přidán závěrečný pokus o obnovení vět vyřazených podle počátečního odhadu délky. Sonarpad ověří skutečnou délku řeči a podle potřeby ji zkusí znovu s rychlostí vyšší o 10 % nebo nejvýše 15 %, aniž by posouval již vložené popisy nebo překrýval dialogy. Obnovené popisy a jejich individuální rychlost se ukládají do projektu.
+
 Version 0.9.21 – 2026-10-27
 
 1. Přehrávání streamovaného zvuku a SonarMusic: opraveno zamrzání rozhraní při načítání videí YouTube, přidáno okno čekání a přeložené chybové zprávy. Pokud server vrátí HTTP 500, automaticky se vyzkouší alternativní zdroj HLS beze změny běžného přehrávání; chyba se zobrazí pouze tehdy, když selže i tento pokus. Vylepšena diagnostika chyb načítání.

@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.22 – 2026-10-28
+
+1. Audio descriptions: added a final recovery attempt for descriptions excluded by the initial duration estimate. Sonarpad checks the actual speech duration and, when needed, retries at 10% or at most 15% higher speed, without moving existing descriptions or overlapping dialogue. Recovered descriptions and any individual speed adjustment are saved in the project.
+
 Version 0.9.21 – 2026-10-27
 
 1. Play Streaming Audio and SonarMusic: fixed interface freezes while loading YouTube videos, with a waiting window and localized error messages. If the server returns HTTP 500, an alternative HLS source is tried automatically without changing normal playback; an error is shown only if recovery also fails. Improved diagnostics for loading failures.

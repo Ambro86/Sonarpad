@@ -1,5 +1,9 @@
 # Nhật ký thay đổi
 
+Version 0.9.22 – 2026-10-28
+
+1. Mô tả âm thanh: thêm bước khôi phục cuối cùng cho những câu bị loại do ước tính thời lượng ban đầu. Sonarpad kiểm tra thời lượng giọng đọc thực tế và khi cần sẽ thử lại với tốc độ tăng 10% hoặc tối đa 15%, không di chuyển các mô tả đã chèn hay chồng lên lời thoại. Các mô tả được khôi phục và tốc độ riêng của chúng được lưu trong dự án.
+
 Version 0.9.21 – 2026-10-27
 
 1. Phát âm thanh trực tuyến và SonarMusic: khắc phục giao diện bị treo khi tải video YouTube, bổ sung cửa sổ chờ và thông báo lỗi được dịch. Nếu máy chủ trả về HTTP 500, ứng dụng tự động thử nguồn HLS thay thế mà không thay đổi cách phát thông thường; lỗi chỉ hiển thị nếu lần thử này cũng thất bại. Cải thiện chẩn đoán lỗi tải.

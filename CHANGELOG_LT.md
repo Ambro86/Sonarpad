@@ -1,5 +1,9 @@
 # Pakeitimų žurnalas
 
+Version 0.9.22 – 2026-10-28
+
+1. Garsinis vaizdavimas: pridėtas baigiamasis bandymas atkurti frazes, atmestas pagal pradinį trukmės įvertinimą. Sonarpad patikrina tikrąją kalbos trukmę ir prireikus bando dar kartą padidinęs greitį 10 % arba daugiausia 15 %, neperkeldamas jau įterptų aprašymų ir neuždengdamas dialogų. Atkurti aprašymai ir jų individualus greitis išsaugomi projekte.
+
 Version 0.9.21 – 2026-10-27
 
 1. Srautinio garso atkūrimas ir SonarMusic: ištaisytas sąsajos strigimas įkeliant YouTube vaizdo įrašus, pridėtas laukimo langas ir išversti klaidų pranešimai. Serveriui grąžinus HTTP 500, automatiškai išbandomas alternatyvus HLS šaltinis, nekeičiant įprasto atkūrimo; klaida rodoma tik nepavykus ir šiam bandymui. Patobulinta įkėlimo klaidų diagnostika.

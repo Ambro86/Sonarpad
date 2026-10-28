@@ -217,7 +217,7 @@ def _slot_for_description(description, required_slots):
 def _align_descriptions_prioritizing_slots(
     descriptions, protected_intervals, duration_sec, required_slots,
     max_shift_sec=DEFAULT_MAX_SHIFT_SEC, allow_extended_pauses=False,
-    min_anchor_sec=DEFAULT_EXTENDED_ANCHOR_SEC,
+    min_anchor_sec=DEFAULT_EXTENDED_ANCHOR_SEC, rejected_descriptions=None,
 ):
     """Place mandatory-slot descriptions before optional narration.
 
@@ -345,6 +345,8 @@ def _align_descriptions_prioritizing_slots(
                 continue
 
         dropped += 1
+        if rejected_descriptions is not None:
+            rejected_descriptions.append(item)
         app_logger.warning(
             "Dropping optional description at %.3fs after mandatory-slot reservation: "
             "no dialogue-free slot of %.3fs nearby.",
@@ -364,11 +366,12 @@ def _align_descriptions_prioritizing_slots(
 
 def align_descriptions_prioritizing_slots(
     descriptions, protected_intervals, duration_sec, required_slots,
-    max_shift_sec=DEFAULT_MAX_SHIFT_SEC,
+    max_shift_sec=DEFAULT_MAX_SHIFT_SEC, rejected_descriptions=None,
 ):
     aligned, dropped, _extended = _align_descriptions_prioritizing_slots(
         descriptions, protected_intervals, duration_sec, required_slots,
         max_shift_sec=max_shift_sec, allow_extended_pauses=False,
+        rejected_descriptions=rejected_descriptions,
     )
     return aligned, dropped
 
@@ -376,12 +379,12 @@ def align_descriptions_prioritizing_slots(
 def align_descriptions_with_extended_pauses_prioritizing_slots(
     descriptions, protected_intervals, duration_sec, required_slots,
     max_shift_sec=DEFAULT_MAX_SHIFT_SEC,
-    min_anchor_sec=DEFAULT_EXTENDED_ANCHOR_SEC,
+    min_anchor_sec=DEFAULT_EXTENDED_ANCHOR_SEC, rejected_descriptions=None,
 ):
     return _align_descriptions_prioritizing_slots(
         descriptions, protected_intervals, duration_sec, required_slots,
         max_shift_sec=max_shift_sec, allow_extended_pauses=True,
-        min_anchor_sec=min_anchor_sec,
+        min_anchor_sec=min_anchor_sec, rejected_descriptions=rejected_descriptions,
     )
 
 

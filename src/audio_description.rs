@@ -3275,6 +3275,155 @@ fn retry_dropped_descriptions_at_native_rate(
     result
 }
 
+// Final fallback only: existing cues (including native-rate recoveries) are immutable.
+fn recover_deferred_descriptions<F>(
+    candidates: &[BridgeDescription],
+    first_index: usize,
+    protected_intervals: &[BridgeInterval],
+    duration_sec: f64,
+    base_rate: i32,
+    scheduled: &mut Vec<ScheduledDescription>,
+    mut synthesize: F,
+) -> Result<Vec<DroppedDescription>, String>
+where
+    F: FnMut(&BridgeDescription, usize, i32) -> Result<(Arc<[f32]>, u32, u16), String>,
+{
+    let mut dropped = Vec::new();
+    for (index, candidate) in candidates.iter().enumerate() {
+        let original_index = first_index + index;
+        let visual_start = candidate.visual_start_sec.unwrap_or(candidate.start_sec);
+        // Reuse the normal scheduler, protecting every previously accepted cue.
+        let mut occupied = protected_intervals.to_vec();
+        occupied.extend(scheduled.iter().map(|cue| BridgeInterval {
+            start_sec: cue.start_sec,
+            end_sec: cue.start_sec
+                + if cue.extended_pause {
+                    MIN_EXTENDED_ANCHOR_SEC
+                } else {
+                    scheduled_duration_sec(cue)
+                },
+        }));
+        let free =
+            speech_free_intervals(&normalize_intervals(&occupied, duration_sec), duration_sec);
+        if candidate.text.trim().is_empty()
+            || !candidate.start_sec.is_finite()
+            || !visual_start.is_finite()
+            || choose_slot(&free, candidate.start_sec, visual_start, 0.001, 0.0).is_none()
+        {
+            continue;
+        }
+        let (samples, sample_rate, channels) =
+            match synthesize(candidate, original_index, base_rate) {
+                Ok(audio) => audio,
+                Err(error) if error == "cancelled" => return Err(error),
+                Err(error) => {
+                    crate::log_debug(&format!(
+                        "Audio description: deferred TTS failed cue={original_index} error={error}"
+                    ));
+                    continue;
+                }
+            };
+        if !audio_description_samples_have_signal(&samples) {
+            continue;
+        }
+        let cue = SynthesizedDescription {
+            tts_rate_override: None,
+            original_index,
+            text: candidate.text.clone(),
+            desired_start_sec: candidate.start_sec,
+            visual_start_sec: visual_start,
+            visual_evidence_time_sec: candidate.visual_evidence_time_sec,
+            mandatory: false,
+            slot_start_sec: None,
+            slot_end_sec: None,
+            samples,
+            sample_rate,
+            channels,
+        };
+        let (accepted, mut rejected) = schedule_synthesized_descriptions(
+            std::slice::from_ref(&cue),
+            &occupied,
+            duration_sec,
+            false,
+        );
+        scheduled.extend(accepted);
+        recover_descriptions_with_native_rate(
+            std::slice::from_ref(&cue),
+            protected_intervals,
+            duration_sec,
+            base_rate,
+            scheduled,
+            &mut rejected,
+            |_, rate| synthesize(candidate, original_index, rate),
+        )?;
+        crate::log_debug(&format!(
+            "Audio description: deferred TTS cue={original_index} accepted={}",
+            rejected.is_empty()
+        ));
+        dropped.extend(rejected);
+    }
+    scheduled.sort_by(|left, right| left.start_sec.total_cmp(&right.start_sec));
+    Ok(dropped)
+}
+
+fn retry_deferred_descriptions_with_exact_tts(
+    candidates: &[BridgeDescription],
+    first_index: usize,
+    protected_intervals: &[BridgeInterval],
+    duration_sec: f64,
+    job: &AudioDescriptionJob,
+    cancel: &Arc<AtomicBool>,
+    scheduled: &mut Vec<ScheduledDescription>,
+) -> Result<Vec<DroppedDescription>, String> {
+    if candidates.is_empty() {
+        return Ok(Vec::new());
+    }
+    if cancel.load(Ordering::Relaxed) {
+        return Err("cancelled".into());
+    }
+    let initial_count = scheduled.len();
+    let mut cache_dir = None;
+    let result = recover_deferred_descriptions(
+        candidates,
+        first_index,
+        protected_intervals,
+        duration_sec,
+        job.tts_rate,
+        scheduled,
+        |candidate, index, rate| {
+            if cancel.load(Ordering::Relaxed) {
+                return Err("cancelled".into());
+            }
+            if cache_dir.is_none() {
+                cache_dir = Some(temporary_job_dir()?);
+            }
+            let mut retry_job = job.clone();
+            retry_job.tts_rate = rate;
+            synthesize_description(
+                &candidate.text,
+                index,
+                &retry_job,
+                cache_dir
+                    .as_deref()
+                    .ok_or("Audio description: missing deferred TTS folder")?,
+                cancel.clone(),
+            )
+        },
+    );
+    if let Some(path) = cache_dir {
+        crate::log_if_err!(
+            fs::remove_dir_all(path),
+            "Audio description: deferred TTS folder cleanup failed"
+        );
+    }
+    crate::log_debug(&format!(
+        "Audio description: deferred TTS fallback candidates={} recovered={} original_kept={initial_count}",
+        candidates.len(),
+        scheduled.len().saturating_sub(initial_count),
+    ));
+    result
+}
+
 pub fn audio_description_project_path(output_path: &Path) -> PathBuf {
     let mut path = output_path.to_path_buf();
     path.set_extension("sonarpad-ad.json");
@@ -7257,7 +7406,7 @@ pub fn create_audio_description(
         effective_job.gemini_model = analysis.gemini_model.trim().to_string();
     }
 
-    if analysis.descriptions.is_empty() {
+    if analysis.descriptions.is_empty() && analysis.deferred_descriptions.is_empty() {
         return Err("Audio description: Gemini returned no descriptions".to_string());
     }
     notify_status(
@@ -7322,6 +7471,15 @@ pub fn create_audio_description(
         &mut scheduled,
         &mut dropped_descriptions,
     )?;
+    dropped_descriptions.extend(retry_deferred_descriptions_with_exact_tts(
+        &analysis.deferred_descriptions,
+        analysis.descriptions.len(),
+        &analysis.protected_intervals,
+        analysis.duration_sec,
+        job,
+        &cancel,
+        &mut scheduled,
+    )?);
     let dropped_after_tts = dropped_descriptions.len();
     if scheduled.is_empty() {
         return Err(
@@ -7500,7 +7658,7 @@ pub fn create_audio_description(
         project_warning,
         character_catalog_path,
         character_catalog_warning,
-        generated_descriptions: analysis.descriptions.len(),
+        generated_descriptions: analysis.descriptions.len() + analysis.deferred_descriptions.len(),
         normal_descriptions,
         extended_pauses,
         dropped_after_tts,
@@ -7977,6 +8135,171 @@ mod tests {
             sample_rate: 1000,
             channels: 1,
         }
+    }
+
+    fn deferred_test_candidate(start: f64) -> super::BridgeDescription {
+        serde_json::from_value(serde_json::json!({
+            "start_sec": start, "end_sec": start + 8.0, "text": "Goku saluta.",
+            "visual_start_sec": start, "visual_evidence_time_sec": start + 1.0,
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn deferred_tts_fallback_preserves_normal_cues_and_reuses_native_rates() -> Result<(), String> {
+        for (normal_ms, retry_ms, expected_rate) in [
+            (1900, 0, Some(0)),
+            (2200, 1990, Some(10)),
+            (2300, 1990, Some(15)),
+            (2400, 0, None),
+            (2200, 2100, None),
+        ] {
+            let protected = [
+                super::BridgeInterval {
+                    start_sec: 0.0,
+                    end_sec: 1.0,
+                },
+                super::BridgeInterval {
+                    start_sec: 4.0,
+                    end_sec: 20.0,
+                },
+            ];
+            let normal = native_rate_test_cue(1000);
+            let (mut scheduled, _) =
+                super::schedule_synthesized_descriptions(&[normal], &protected, 20.0, false);
+            let original = scheduled[0].clone();
+            let mut calls = Vec::new();
+            let rejected = super::recover_deferred_descriptions(
+                &[deferred_test_candidate(2.0)],
+                100,
+                &protected,
+                20.0,
+                0,
+                &mut scheduled,
+                |_, index, rate| {
+                    assert_eq!(index, 100);
+                    calls.push(rate);
+                    Ok((
+                        std::sync::Arc::from(vec![
+                            0.2;
+                            if rate == 0 { normal_ms } else { retry_ms }
+                        ]),
+                        1000,
+                        1,
+                    ))
+                },
+            )?;
+            let unchanged = scheduled
+                .iter()
+                .find(|cue| cue.original_index == original.original_index)
+                .unwrap();
+            assert_eq!(unchanged.start_sec, original.start_sec);
+            assert_eq!(unchanged.samples, original.samples);
+            assert_eq!(unchanged.tts_rate_override, original.tts_rate_override);
+            if let Some(rate) = expected_rate {
+                assert_eq!(scheduled.len(), 2);
+                assert!(rejected.is_empty());
+                let recovered = scheduled
+                    .iter()
+                    .find(|cue| cue.original_index == 100)
+                    .unwrap();
+                assert_eq!(recovered.tts_rate_override.unwrap_or(0), rate);
+                assert!(recovered.start_sec >= 2.0);
+                assert!(recovered.start_sec + super::scheduled_duration_sec(recovered) <= 4.0);
+                assert_eq!(recovered.visual_evidence_time_sec, Some(3.0));
+                let job = super::audio_description_preview_job(
+                    std::path::PathBuf::new(),
+                    super::Language::Italian,
+                    &crate::settings::AppSettings::default(),
+                );
+                let project = super::build_audio_description_project(
+                    &job, 20.0, 20.0, &protected, &scheduled, &rejected,
+                );
+                let restored: super::AudioDescriptionProject =
+                    serde_json::from_str(&serde_json::to_string(&project).unwrap()).unwrap();
+                assert_eq!(
+                    restored
+                        .descriptions
+                        .iter()
+                        .find(|cue| cue.id == 100)
+                        .unwrap()
+                        .tts_rate_override,
+                    recovered.tts_rate_override
+                );
+            } else {
+                assert_eq!(scheduled.len(), 1);
+                assert_eq!(rejected.len(), 1);
+            }
+            assert_eq!(calls[0], 0);
+            assert!(calls.len() <= 2);
+            assert!(calls.iter().all(|rate| [0, 10, 15].contains(rate)));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn deferred_tts_fallback_skips_missing_nearby_space_and_keeps_new_cues_separate()
+    -> Result<(), String> {
+        let protected = [super::BridgeInterval {
+            start_sec: 3.0,
+            end_sec: 30.0,
+        }];
+        let mut scheduled = Vec::new();
+        let mut calls = 0;
+        let rejected = super::recover_deferred_descriptions(
+            &[
+                deferred_test_candidate(1.0),
+                deferred_test_candidate(1.5),
+                deferred_test_candidate(20.0),
+            ],
+            100,
+            &protected,
+            30.0,
+            0,
+            &mut scheduled,
+            |_, _, _| {
+                calls += 1;
+                Ok((std::sync::Arc::from(vec![0.2; 2000]), 1000, 1))
+            },
+        )?;
+        assert_eq!(calls, 2); // Far-away cue is never synthesized.
+        assert_eq!(scheduled.len(), 1);
+        assert_eq!(rejected.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn deferred_tts_fallback_handles_errors_cancellation_and_empty_legacy_results() {
+        let legacy: crate::tools::audio_description_bridge::AudioDescriptionBridgeResult =
+            serde_json::from_str(r#"{"ok":true,"descriptions":[]}"#).unwrap();
+        assert!(legacy.deferred_descriptions.is_empty());
+        let mut scheduled = Vec::new();
+        super::recover_deferred_descriptions(&[], 0, &[], 10.0, 0, &mut scheduled, |_, _, _| {
+            panic!("empty fallback must not synthesize")
+        })
+        .unwrap();
+        let candidate = deferred_test_candidate(1.0);
+        let result = super::recover_deferred_descriptions(
+            std::slice::from_ref(&candidate),
+            0,
+            &[],
+            10.0,
+            0,
+            &mut scheduled,
+            |_, _, _| Err("temporary failure".into()),
+        );
+        assert!(result.is_ok());
+        assert!(scheduled.is_empty());
+        let result = super::recover_deferred_descriptions(
+            &[candidate],
+            0,
+            &[],
+            10.0,
+            0,
+            &mut scheduled,
+            |_, _, _| Err("cancelled".into()),
+        );
+        assert_eq!(result.unwrap_err(), "cancelled");
     }
 
     #[test]

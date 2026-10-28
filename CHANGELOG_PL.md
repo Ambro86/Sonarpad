@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+Version 0.9.22 – 2026-10-28
+
+1. Audiodeskrypcja: dodano końcową próbę odzyskania opisów odrzuconych na podstawie wstępnego oszacowania czasu. Sonarpad sprawdza rzeczywisty czas syntezy i w razie potrzeby próbuje ponownie z prędkością większą o 10% lub maksymalnie 15%, bez przesuwania istniejących opisów i nakładania się na dialogi. Odzyskane opisy oraz ich indywidualna prędkość są zapisywane w projekcie.
+
 Version 0.9.21 – 2026-10-27
 
 1. Odtwarzanie strumieniowe i SonarMusic: naprawiono zawieszanie interfejsu podczas wczytywania filmów YouTube, dodano okno oczekiwania i przetłumaczone komunikaty błędów. Jeśli serwer zwróci HTTP 500, automatycznie sprawdzane jest alternatywne źródło HLS bez zmiany zwykłego odtwarzania; błąd pojawia się tylko wtedy, gdy ta próba również się nie powiedzie. Ulepszono diagnostykę błędów wczytywania.

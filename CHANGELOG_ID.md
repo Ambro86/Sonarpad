@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+Version 0.9.22 – 2026-10-28
+
+1. Deskripsi audio: menambahkan upaya pemulihan akhir untuk kalimat yang dikecualikan berdasarkan perkiraan durasi awal. Sonarpad memeriksa durasi suara sebenarnya dan, jika perlu, mencoba lagi dengan kecepatan 10% atau maksimal 15% lebih tinggi, tanpa memindahkan deskripsi yang sudah disisipkan atau menimpa dialog. Deskripsi yang dipulihkan beserta penyesuaian kecepatannya disimpan dalam proyek.
+
 Version 0.9.21 – 2026-10-27
 
 1. Pemutaran audio streaming dan SonarMusic: memperbaiki antarmuka yang macet saat memuat video YouTube, dengan jendela tunggu dan pesan kesalahan yang diterjemahkan. Jika server mengembalikan HTTP 500, sumber HLS alternatif dicoba secara otomatis tanpa mengubah pemutaran normal; kesalahan hanya ditampilkan jika pemulihan juga gagal. Diagnostik kegagalan pemuatan ditingkatkan.
