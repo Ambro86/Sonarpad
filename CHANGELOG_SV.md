@@ -1,8 +1,12 @@
 # Ändringslogg
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Syntolkning: ett avslutande återställningsförsök har lagts till för beskrivningar som uteslutits av den första tidsuppskattningen. Sonarpad kontrollerar talets faktiska längd och försöker vid behov igen med 10 % eller högst 15 % högre hastighet, utan att flytta befintliga beskrivningar eller överlappa dialog. Återställda beskrivningar och deras individuella hastighet sparas i projektet.
+
+2. Google-röster: åtgärdat ett startfel när Chrome tillfälligt låser en fil. Sonarpad försöker automatiskt igen och provar Microsoft Edge med samma Google-röst om låsningen kvarstår. Den vanliga funktionen är oförändrad.
+
+3. Nedladdning av YouTube-spellistor: ett automatiskt nytt försök med en alternativ yt-dlp-profil har lagts till när ett objekt misslyckas på grund av tillfälliga serverfel, som HTTP 503. Det tillgängliga förloppsfältet har också rättats: procentvärdet uppdateras utan att man behöver lämna fältet och återvända med Tab.
 
 Version 0.9.21 – 2026-10-27
 

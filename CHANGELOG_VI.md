@@ -1,8 +1,12 @@
 # Nhật ký thay đổi
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Mô tả âm thanh: thêm bước khôi phục cuối cùng cho những câu bị loại do ước tính thời lượng ban đầu. Sonarpad kiểm tra thời lượng giọng đọc thực tế và khi cần sẽ thử lại với tốc độ tăng 10% hoặc tối đa 15%, không di chuyển các mô tả đã chèn hay chồng lên lời thoại. Các mô tả được khôi phục và tốc độ riêng của chúng được lưu trong dự án.
+
+2. Giọng Google: đã sửa lỗi khởi động khi Chrome tạm thời khóa một tệp. Sonarpad tự động thử lại và nếu tệp vẫn bị khóa, sẽ thử Microsoft Edge nhưng giữ nguyên giọng Google. Hoạt động bình thường không thay đổi.
+
+3. Tải danh sách phát YouTube: thêm tính năng tự động thử lại với cấu hình yt-dlp thay thế khi một mục thất bại do lỗi máy chủ tạm thời như HTTP 503. Đồng thời sửa trường tiến độ hỗ trợ trình đọc màn hình: phần trăm được cập nhật mà không cần rời trường rồi quay lại bằng Tab.
 
 Version 0.9.21 – 2026-10-27
 

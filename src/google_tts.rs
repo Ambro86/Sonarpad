@@ -934,6 +934,31 @@ impl GoogleTtsRuntime {
                         Some((browser_process, browser_name, profile_dir, debug_port));
                     break;
                 }
+                Err(err) if is_devtools_file_lock_timeout(&err) => {
+                    // Only stop our isolated TTS browser, never the user's browser.
+                    if let Err(kill_err) = browser_process.kill() {
+                        crate::log_debug(&format!(
+                            "Google TTS {browser_name} locked-startup cleanup failed: {kill_err}"
+                        ));
+                        return Err(err);
+                    }
+                    if let Err(wait_err) = browser_process.wait() {
+                        crate::log_debug(&format!(
+                            "Google TTS {browser_name} locked-startup process wait failed: {wait_err}"
+                        ));
+                    }
+                    cleanup_failed_browser_profile(&profile_dir, browser_name);
+                    if cancel.load(Ordering::Relaxed) {
+                        return Err("cancelled".to_string());
+                    }
+                    if index + 1 >= browser_count {
+                        return Err(err);
+                    }
+                    crate::log_debug(&format!(
+                        "Google TTS {browser_name} port file remained locked; trying the alternate browser runtime: {err}"
+                    ));
+                    last_browser_start_error = Some(err);
+                }
                 Err(err)
                     if is_browser_early_exit_error(&err)
                         && index + 1 < browser_count
@@ -1688,12 +1713,50 @@ fn cleanup_failed_browser_profile(profile_dir: &Path, browser_name: &str) {
     }
 }
 
+const DEVTOOLS_FILE_LOCK_TIMEOUT: &str = "Google TTS DevTools file remained locked:";
+
+fn is_devtools_file_lock_timeout(error: &str) -> bool {
+    error.starts_with(DEVTOOLS_FILE_LOCK_TIMEOUT)
+}
+
+fn read_devtools_port(devtools_file: &Path, file_locked: &mut bool) -> Result<Option<u16>, String> {
+    *file_locked = false;
+    let content = match fs::read_to_string(devtools_file) {
+        Ok(content) => content,
+        // Chromium may still hold the file while publishing its debugging port.
+        // Reuse the existing startup polling deadline rather than failing TTS.
+        Err(err)
+            if err.kind() == std::io::ErrorKind::NotFound
+                || matches!(err.raw_os_error(), Some(32 | 33)) =>
+        {
+            if err.kind() != std::io::ErrorKind::NotFound {
+                *file_locked = true;
+                crate::log_debug(&format!(
+                    "Google TTS DevTools port file temporarily locked; retrying startup read: {err}"
+                ));
+            }
+            return Ok(None);
+        }
+        Err(err) => {
+            return Err(format!(
+                "Google TTS failed to read {}: {err}",
+                devtools_file.display()
+            ));
+        }
+    };
+    Ok(content
+        .lines()
+        .next()
+        .and_then(|line| line.trim().parse().ok()))
+}
+
 fn wait_for_devtools_port(
     browser: &mut Child,
     browser_name: &str,
     devtools_file: &Path,
     cancel: &Arc<AtomicBool>,
 ) -> Result<u16, String> {
+    let mut file_locked = false;
     for _ in 0..400 {
         if cancel.load(Ordering::Relaxed) {
             if let Err(err) = browser.kill() {
@@ -1712,17 +1775,16 @@ fn wait_for_devtools_port(
             Ok(None) => {}
             Err(err) => return Err(err.to_string()),
         }
-        if devtools_file.is_file() {
-            let content = fs::read_to_string(devtools_file).map_err(|err| err.to_string())?;
-            if let Some(first) = content.lines().next()
-                && let Ok(port) = first.trim().parse::<u16>()
-            {
-                return Ok(port);
-            }
+        if let Some(port) = read_devtools_port(devtools_file, &mut file_locked)? {
+            return Ok(port);
         }
         thread::sleep(Duration::from_millis(50));
     }
-    Err(format!("Timed out waiting for {browser_name} DevTools."))
+    if file_locked {
+        Err(format!("{DEVTOOLS_FILE_LOCK_TIMEOUT} {browser_name}"))
+    } else {
+        Err(format!("Timed out waiting for {browser_name} DevTools."))
+    }
 }
 
 fn wait_for_page_websocket(
@@ -1785,6 +1847,80 @@ fn cleanup_old_profiles(root: &Path, browser_name: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn alternate_browser_for_locked_file_does_not_match_unrelated_errors() {
+        assert!(is_devtools_file_lock_timeout(&format!(
+            "{DEVTOOLS_FILE_LOCK_TIMEOUT} Google Chrome"
+        )));
+        for error in [
+            "Timed out waiting for Google Chrome DevTools.",
+            "cancelled",
+            "Access denied",
+            "The selected Google TTS voice is not installed.",
+        ] {
+            assert!(!is_devtools_file_lock_timeout(error));
+        }
+    }
+
+    #[test]
+    fn devtools_port_retries_an_actual_windows_sharing_violation() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let path = std::env::temp_dir().join(format!(
+            "sonarpad-devtools-lock-test-{}-{}",
+            std::process::id(),
+            PROFILE_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+        ));
+        let mut file_locked = false;
+        {
+            let mut writer = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .share_mode(0)
+                .open(&path)
+                .expect("lock port file like Chromium");
+            writer
+                .write_all(b"45678\n/devtools/browser/test\n")
+                .unwrap();
+            assert_eq!(
+                fs::read_to_string(&path).unwrap_err().raw_os_error(),
+                Some(32)
+            );
+            assert_eq!(read_devtools_port(&path, &mut file_locked).unwrap(), None);
+            assert!(file_locked);
+        }
+        assert_eq!(
+            read_devtools_port(&path, &mut file_locked).unwrap(),
+            Some(45678)
+        );
+        assert!(!file_locked);
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn devtools_port_keeps_normal_startup_and_partial_file_polling() {
+        let mut file_locked = true;
+        let path = std::env::temp_dir().join(format!(
+            "sonarpad-devtools-read-test-{}-{}",
+            std::process::id(),
+            PROFILE_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+        ));
+        assert_eq!(read_devtools_port(&path, &mut file_locked).unwrap(), None);
+        assert!(!file_locked);
+        for content in ["", "not ready"] {
+            fs::write(&path, content).unwrap();
+            assert_eq!(read_devtools_port(&path, &mut file_locked).unwrap(), None);
+        }
+        fs::write(&path, " 45678\r\n/devtools/browser/test").unwrap();
+        assert_eq!(
+            read_devtools_port(&path, &mut file_locked).unwrap(),
+            Some(45678)
+        );
+        // Corrupt data must not be hidden as a temporary lock.
+        fs::write(&path, [0xff, 0xfe]).unwrap();
+        assert!(read_devtools_port(&path, &mut file_locked).is_err());
+        fs::remove_file(path).unwrap();
+    }
 
     #[test]
     fn synthesis_timeout_is_short_at_normal_rate_and_scales_for_slow_speech() {

@@ -1,8 +1,12 @@
 # Änderungsprotokoll
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Audiodeskription: Ein abschließender Wiederherstellungsversuch berücksichtigt Beschreibungen, die aufgrund der anfänglichen Dauerschätzung ausgeschlossen wurden. Sonarpad prüft die tatsächliche Sprechdauer und versucht es bei Bedarf mit 10 % oder höchstens 15 % höherer Geschwindigkeit erneut, ohne vorhandene Beschreibungen zu verschieben oder Dialoge zu überlagern. Wiederhergestellte Beschreibungen und ihre individuelle Geschwindigkeit werden im Projekt gespeichert.
+
+2. Google-Stimmen: Ein Startfehler wurde behoben, der auftritt, wenn Chrome eine Datei vorübergehend sperrt. Sonarpad versucht es automatisch erneut und wechselt bei anhaltender Sperre zu Microsoft Edge, ohne die Google-Stimme zu ändern. Der normale Betrieb bleibt unverändert.
+
+3. YouTube-Playlist-Downloads: Bei vorübergehenden Serverfehlern wie HTTP 503 wird das betroffene Element automatisch mit einem alternativen yt-dlp-Profil erneut versucht. Auch das barrierefreie Fortschrittsfeld wurde korrigiert: Der Prozentwert wird aktualisiert, ohne das Feld mit Tab verlassen und erneut aufrufen zu müssen.
 
 Version 0.9.21 – 2026-10-27
 

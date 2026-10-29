@@ -1,8 +1,12 @@
 # Changelog
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Audio descriptions: added a final recovery attempt for descriptions excluded by the initial duration estimate. Sonarpad checks the actual speech duration and, when needed, retries at 10% or at most 15% higher speed, without moving existing descriptions or overlapping dialogue. Recovered descriptions and any individual speed adjustment are saved in the project.
+
+2. Google voices: fixed a startup error when Chrome temporarily locks a file. Sonarpad retries automatically and, if the lock persists, tries Microsoft Edge while keeping the same Google voice. Normal operation remains unchanged.
+
+3. YouTube playlist downloads: added an automatic retry with an alternative yt-dlp profile when an item fails because of temporary server errors such as HTTP 503. Also fixed the accessible progress field: the percentage updates without having to move away and return with Tab.
 
 Version 0.9.21 – 2026-10-27
 

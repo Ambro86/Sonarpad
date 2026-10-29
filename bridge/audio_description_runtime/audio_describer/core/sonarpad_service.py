@@ -21,11 +21,12 @@ from types import SimpleNamespace
 
 
 class SonarpadServiceError(Exception):
-    def __init__(self, message: str, status_code: int | None = None, *, retry_after: int = 5):
+    def __init__(self, message: str, status_code: int | None = None, *, retry_after: int = 5, temporary_html_not_found: bool = False):
         super().__init__(message)
         self.status_code = status_code
         self.code = status_code
         self.retry_after = max(1, min(60, retry_after))
+        self.temporary_html_not_found = temporary_html_not_found
 
 
 def _http_retry_after(raw: str) -> int:
@@ -251,6 +252,13 @@ class SonarpadServiceClient:
             raise SonarpadServiceError(
                 _http_error_message(exc.code, raw), exc.code,
                 retry_after=_http_retry_after(raw),
+                # Only an HTML web-server response on our API qualifies, not
+                # a structured missing model/file or an external upload URL.
+                temporary_html_not_found=(
+                    exc.code == 404
+                    and url.startswith(self.base_url + "/v1/")
+                    and raw.lstrip().lower().startswith(("<!doctype html", "<html"))
+                ),
             ) from exc
         except (urllib.error.URLError, TimeoutError, socket.timeout, OSError) as exc:
             raise SonarpadServiceError(f"Sonarpad AI network error: {exc}", 503) from exc
@@ -391,6 +399,17 @@ class SonarpadServiceClient:
                 if exc.status_code == 503 and "generation_in_progress" in str(exc).lower():
                     transient_failures = 0
                     time.sleep(exc.retry_after)
+                    continue
+                if exc.temporary_html_not_found:
+                    # Stay inside this operation: the outer retry would create
+                    # a new idempotency key and could duplicate paid work.
+                    from .gemini_helpers import RETRY_DELAY_SEC
+                    from ..utils.logger import app_logger
+                    app_logger.warning(
+                        "Temporary Sonarpad AI HTML 404; retrying the same generation "
+                        "request in %ds.", RETRY_DELAY_SEC,
+                    )
+                    time.sleep(RETRY_DELAY_SEC)
                     continue
                 # An ambiguous failure after a POST must not generate a new
                 # request id. A bounded number of *same-id* recovery attempts

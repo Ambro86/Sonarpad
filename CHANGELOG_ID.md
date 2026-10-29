@@ -1,8 +1,12 @@
 # Catatan perubahan
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Deskripsi audio: menambahkan upaya pemulihan akhir untuk kalimat yang dikecualikan berdasarkan perkiraan durasi awal. Sonarpad memeriksa durasi suara sebenarnya dan, jika perlu, mencoba lagi dengan kecepatan 10% atau maksimal 15% lebih tinggi, tanpa memindahkan deskripsi yang sudah disisipkan atau menimpa dialog. Deskripsi yang dipulihkan beserta penyesuaian kecepatannya disimpan dalam proyek.
+
+2. Suara Google: memperbaiki kesalahan saat memulai ketika Chrome mengunci berkas untuk sementara. Sonarpad mencoba kembali secara otomatis dan, jika berkas tetap terkunci, mencoba Microsoft Edge dengan suara Google yang sama. Pengoperasian normal tidak berubah.
+
+3. Unduhan playlist YouTube: menambahkan percobaan ulang otomatis dengan profil yt-dlp alternatif ketika suatu item gagal karena kesalahan server sementara, seperti HTTP 503. Kolom progres yang dapat diakses juga diperbaiki: persentase diperbarui tanpa perlu keluar dari kolom dan kembali dengan Tab.
 
 Version 0.9.21 – 2026-10-27
 

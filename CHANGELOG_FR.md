@@ -1,8 +1,12 @@
 # Journal des modifications
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Audiodescription : ajout d’une tentative finale de récupération des phrases exclues par l’estimation initiale de durée. Sonarpad vérifie la durée réelle de la synthèse et, si nécessaire, réessaie avec une vitesse augmentée de 10 % ou de 15 % au maximum, sans déplacer les descriptions déjà insérées ni chevaucher les dialogues. Les descriptions récupérées et leur éventuelle vitesse individuelle sont enregistrées dans le projet.
+
+2. Voix Google : correction d’une erreur au démarrage lorsque Chrome verrouille temporairement un fichier. Sonarpad réessaie automatiquement et, si le verrouillage persiste, essaie Microsoft Edge en conservant la même voix Google. Le fonctionnement normal reste inchangé.
+
+3. Téléchargement des playlists YouTube : ajout d’une nouvelle tentative automatique avec un autre profil yt-dlp lorsqu’un élément échoue à cause d’une erreur temporaire du serveur, comme HTTP 503. Correction du champ de progression accessible : le pourcentage se met à jour sans devoir quitter le champ et y revenir avec Tab.
 
 Version 0.9.21 – 2026-10-27
 

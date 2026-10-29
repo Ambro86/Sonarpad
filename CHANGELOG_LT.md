@@ -1,8 +1,12 @@
 # Pakeitimų žurnalas
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Garsinis vaizdavimas: pridėtas baigiamasis bandymas atkurti frazes, atmestas pagal pradinį trukmės įvertinimą. Sonarpad patikrina tikrąją kalbos trukmę ir prireikus bando dar kartą padidinęs greitį 10 % arba daugiausia 15 %, neperkeldamas jau įterptų aprašymų ir neuždengdamas dialogų. Atkurti aprašymai ir jų individualus greitis išsaugomi projekte.
+
+2. Google balsai: ištaisyta paleidimo klaida, kai Chrome laikinai užrakina failą. Sonarpad automatiškai bando dar kartą, o jei failas lieka užrakintas, bando naudoti Microsoft Edge su tuo pačiu Google balsu. Įprastas veikimas nesikeičia.
+
+3. YouTube grojaraščių atsisiuntimas: pridėtas automatinis pakartotinis bandymas naudojant alternatyvų yt-dlp profilį, kai elemento nepavyksta atsisiųsti dėl laikinų serverio klaidų, pavyzdžiui, HTTP 503. Taip pat pataisytas prieinamas eigos laukas: procentai atnaujinami neišeinant iš lauko ir negrįžtant klavišu Tab.
 
 Version 0.9.21 – 2026-10-27
 

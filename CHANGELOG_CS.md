@@ -1,8 +1,12 @@
 # Přehled změn
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Zvukové popisy: přidán závěrečný pokus o obnovení vět vyřazených podle počátečního odhadu délky. Sonarpad ověří skutečnou délku řeči a podle potřeby ji zkusí znovu s rychlostí vyšší o 10 % nebo nejvýše 15 %, aniž by posouval již vložené popisy nebo překrýval dialogy. Obnovené popisy a jejich individuální rychlost se ukládají do projektu.
+
+2. Hlasy Google: opravena chyba při spuštění, když Chrome dočasně uzamkne soubor. Sonarpad pokus automaticky zopakuje a při přetrvávajícím zámku zkusí Microsoft Edge se stejným hlasem Google. Běžné fungování zůstává beze změny.
+
+3. Stahování playlistů YouTube: při dočasných chybách serveru, například HTTP 503, se stažení položky automaticky zkusí znovu s alternativním profilem yt-dlp. Opraveno také přístupné pole průběhu: procenta se aktualizují bez nutnosti pole opustit a vrátit se klávesou Tab.
 
 Version 0.9.21 – 2026-10-27
 

@@ -828,6 +828,14 @@ mod ytdlp_command_tests {
 
     #[test]
     fn youtube_download_retry_distinguishes_temporary_errors_from_restrictions() {
+        for error in [
+            "HTTP Error 502",
+            "HTTP Error 503",
+            "HTTP Error 504",
+            "Read timed out",
+        ] {
+            assert!(super::should_retry_youtube_download_failure(error, false));
+        }
         assert!(super::should_retry_youtube_download_failure(
             "HTTP Error 403",
             false
@@ -852,6 +860,41 @@ mod ytdlp_command_tests {
             "private video",
             true
         ));
+    }
+
+    #[test]
+    fn playlist_client_fallback_preserves_formats_and_changes_only_extractor() {
+        for format in [
+            StreamOutputFormat::Mp3,
+            StreamOutputFormat::Mp4,
+            StreamOutputFormat::Webm,
+        ] {
+            let mut normal = ytdlp_command(Path::new("yt-dlp.exe"));
+            let mut fallback = ytdlp_command(Path::new("yt-dlp.exe"));
+            for (command, automatic) in [(&mut normal, false), (&mut fallback, true)] {
+                super::configure_ytdlp_stream_download_command_with_client(
+                    command,
+                    "https://www.youtube.com/watch?v=4qUccV3MB0k",
+                    Path::new("output.%(ext)s"),
+                    &dialog(format),
+                    None,
+                    format != StreamOutputFormat::Mp3,
+                    None,
+                    automatic,
+                );
+            }
+            let args = |command: &std::process::Command| {
+                command
+                    .get_args()
+                    .map(|arg| arg.to_string_lossy().into_owned())
+                    .collect::<Vec<_>>()
+            };
+            let mut expected = args(&normal);
+            if let Some(index) = expected.iter().position(|arg| arg == "--extractor-args") {
+                expected.drain(index..index + 2);
+            }
+            assert_eq!(args(&fallback), expected);
+        }
     }
 
     #[test]
@@ -10283,10 +10326,36 @@ fn configure_ytdlp_stream_download_command(
     prefer_video: bool,
     credentials: Option<&YtdlpAuthCredentials>,
 ) {
+    configure_ytdlp_stream_download_command_with_client(
+        cmd,
+        url,
+        output_template,
+        dialog_data,
+        selected_audio_format,
+        prefer_video,
+        credentials,
+        false,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn configure_ytdlp_stream_download_command_with_client(
+    cmd: &mut Command,
+    url: &str,
+    output_template: &Path,
+    dialog_data: &StreamDialogResult,
+    selected_audio_format: Option<&str>,
+    prefer_video: bool,
+    credentials: Option<&YtdlpAuthCredentials>,
+    automatic_youtube_client: bool,
+) {
     // In automatic video mode, leave format selection and extractor profile
     // to yt-dlp, just like running yt-dlp URL from a console.
     let native_video_selection = dialog_data.format == StreamOutputFormat::Auto && prefer_video;
-    if dialog_data.format != StreamOutputFormat::Webm && !native_video_selection {
+    if !automatic_youtube_client
+        && dialog_data.format != StreamOutputFormat::Webm
+        && !native_video_selection
+    {
         configure_ytdlp_standard_youtube_client(cmd, url);
     }
     cmd.arg("--no-playlist")
@@ -10472,6 +10541,13 @@ fn spawn_ytdlp_output_reader<R: Read + Send + 'static>(
 fn run_ytdlp_stream_download_attempt(
     req: YtdlpDownloadRequest<'_>,
 ) -> Result<YtdlpDownloadAttempt, String> {
+    run_ytdlp_stream_download_attempt_with_client(req, false)
+}
+
+fn run_ytdlp_stream_download_attempt_with_client(
+    req: YtdlpDownloadRequest<'_>,
+    automatic_youtube_client: bool,
+) -> Result<YtdlpDownloadAttempt, String> {
     let _power_awake = crate::power_awake::acquire("download");
     let started_at = std::time::Instant::now();
     crate::log_debug(&format!(
@@ -10479,15 +10555,28 @@ fn run_ytdlp_stream_download_attempt(
         req.prefix, req.dialog_data.format, req.dialog_data.quality, req.prefer_video
     ));
     let mut cmd = ytdlp_command(req.ytdlp_path);
-    configure_ytdlp_stream_download_command(
-        &mut cmd,
-        req.url,
-        req.output_template,
-        req.dialog_data,
-        req.selected_audio_format,
-        req.prefer_video,
-        req.credentials,
-    );
+    if automatic_youtube_client {
+        configure_ytdlp_stream_download_command_with_client(
+            &mut cmd,
+            req.url,
+            req.output_template,
+            req.dialog_data,
+            req.selected_audio_format,
+            req.prefer_video,
+            req.credentials,
+            true,
+        );
+    } else {
+        configure_ytdlp_stream_download_command(
+            &mut cmd,
+            req.url,
+            req.output_template,
+            req.dialog_data,
+            req.selected_audio_format,
+            req.prefer_video,
+            req.credentials,
+        );
+    }
     if req.ytdlp_debug {
         let format_for_log = req.selected_audio_format.map_or_else(
             || match req.dialog_data.format {
@@ -11896,6 +11985,11 @@ fn should_retry_youtube_download_failure(error: &str, stalled: bool) -> bool {
             "http error 403",
             "http error 404",
             "http error 500",
+            "http error 502",
+            "http error 503",
+            "http error 504",
+            "read timed out",
+            "connection reset",
             "unable to download video data",
             "requested format is not available",
             "no video formats found",
@@ -11950,26 +12044,30 @@ fn download_playlist_entry_with_retries(
         dialog_data,
         credentials,
     } = request;
+    let mut automatic_youtube_client = false;
     for attempt_number in 1..=PLAYLIST_DOWNLOAD_MAX_ATTEMPTS {
         remove_stream_cache_files_for_prefix(cache_dir, prefix);
-        let result = run_ytdlp_stream_download_attempt(YtdlpDownloadRequest {
-            parent,
-            progress,
-            language,
-            ytdlp_path,
-            url: &entry.url,
-            cache_dir,
-            prefix,
-            output_template,
-            dialog_data,
-            selected_audio_format: None,
-            prefer_video: matches!(
-                dialog_data.format,
-                StreamOutputFormat::Auto | StreamOutputFormat::Mp4 | StreamOutputFormat::Webm
-            ),
-            ytdlp_debug: ytdlp_debug_enabled(),
-            credentials,
-        });
+        let result = run_ytdlp_stream_download_attempt_with_client(
+            YtdlpDownloadRequest {
+                parent,
+                progress,
+                language,
+                ytdlp_path,
+                url: &entry.url,
+                cache_dir,
+                prefix,
+                output_template,
+                dialog_data,
+                selected_audio_format: None,
+                prefer_video: matches!(
+                    dialog_data.format,
+                    StreamOutputFormat::Auto | StreamOutputFormat::Mp4 | StreamOutputFormat::Webm
+                ),
+                ytdlp_debug: ytdlp_debug_enabled(),
+                credentials,
+            },
+            automatic_youtube_client,
+        );
         let attempt = match result {
             Ok(attempt) => attempt,
             Err(message) if message.is_empty() => return Err(String::new()),
@@ -12014,6 +12112,15 @@ fn download_playlist_entry_with_retries(
             || playlist_download_error_is_permanent(&error)
         {
             return Err(error);
+        }
+        if !automatic_youtube_client
+            && is_youtube_stream_url(&entry.url)
+            && should_retry_youtube_download_failure(&error, attempt.stalled)
+        {
+            automatic_youtube_client = true;
+            crate::log_debug(
+                "YouTube playlist: retrying failed item with automatic extractor clients",
+            );
         }
         if !wait_before_playlist_download_retry(parent, progress) {
             return Err(String::new());
@@ -12142,7 +12249,7 @@ fn download_selected_youtube_playlist_entries(
             }
             Err(message) => {
                 crate::log_debug(&format!(
-                    "YouTube playlist item failed permanently: position={} url={} title={} error={}",
+                    "YouTube playlist item failed after retries: position={} url={} title={} error={}",
                     entry.position,
                     entry.url,
                     entry.title,

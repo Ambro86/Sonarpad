@@ -122,6 +122,69 @@ class ServiceRecoveryTests(unittest.TestCase):
         self.assertFalse(activations)
         self.assertIn('files/demo', client._uploads)
 
+    def test_html_404_classification_is_limited_to_our_api(self):
+        import io
+        import urllib.error
+        from audio_describer.core.gemini_helpers import is_retryable_transient_error
+        client = self.make_client()
+        client.base_url = 'https://example.test/sonarpad-ai'
+        cases = [
+            ('/v1/upload/start', 404, '<!DOCTYPE HTML><html>Not Found</html>', True),
+            ('/v1/generate', 404, '  <html>Not Found</html>', True),
+            ('/v1/generate', 404, '{"error":"model_not_found"}', False),
+            ('/v1/upload/complete', 404, '{"error":"file_not_found"}', False),
+            ('/v1/generate', 404, 'Not Found', False),
+            ('/v1/generate', 403, '<html>Forbidden</html>', False),
+            ('https://other.test/v1/generate', 404, '<html>Not Found</html>', False),
+        ]
+        for path, status, body, expected in cases:
+            with self.subTest(path=path, status=status, body=body):
+                error = urllib.error.HTTPError(path, status, 'failure', {}, io.BytesIO(body.encode()))
+                with patch('urllib.request.urlopen', side_effect=error):
+                    with self.assertRaises(SonarpadServiceError) as caught:
+                        client._request_json('POST', path, {})
+                self.assertEqual(expected, caught.exception.temporary_html_not_found)
+                self.assertEqual(expected, is_retryable_transient_error(caught.exception))
+
+    def test_html_404_generation_keeps_key_after_more_than_six_retries(self):
+        import io
+        import urllib.error
+        client = self.make_client()
+        client.base_url = 'https://example.test/sonarpad-ai'
+        calls = []
+
+        def open_request(request, **kwargs):
+            calls.append(request)
+            if len(calls) <= 9:
+                raise urllib.error.HTTPError(request.full_url, 404, 'Not Found', {},
+                                             io.BytesIO(b'<html>Not Found</html>'))
+            return io.BytesIO(b'{"candidates": []}')
+
+        with patch('urllib.request.urlopen', side_effect=open_request), patch(
+            'audio_describer.core.sonarpad_service.time.sleep'
+        ) as sleep:
+            client.generate('prompt', None)
+        self.assertEqual(10, len(calls))
+        self.assertEqual(9, sleep.call_count)
+        self.assertEqual(1, len({r.get_header('X-idempotency-key') for r in calls}))
+        self.assertTrue(calls[0].get_header('X-idempotency-key'))
+        self.assertTrue(all(r.data == calls[0].data for r in calls))
+
+    def test_html_404_upload_uses_existing_retry_and_can_be_cancelled(self):
+        from audio_describer.core.gemini_helpers import run_with_retry, GeminiRetryCancelledError
+        error = SonarpadServiceError('HTML 404', 404, temporary_html_not_found=True)
+        with patch('audio_describer.core.gemini_helpers.time.sleep') as sleep:
+            from unittest.mock import Mock
+            upload = Mock(side_effect=[error, error, {'upload_id': 'ok'}])
+            self.assertEqual({'upload_id': 'ok'}, run_with_retry(upload))
+            self.assertEqual(2, sleep.call_count)
+        upload = Mock(side_effect=error)
+        with patch('audio_describer.core.gemini_helpers.time.sleep',
+                   side_effect=GeminiRetryCancelledError('cancelled')):
+            with self.assertRaises(GeminiRetryCancelledError):
+                run_with_retry(upload)
+        self.assertEqual(1, upload.call_count)
+
     def test_backend_retry_after_is_bounded(self):
         from audio_describer.core.sonarpad_service import _http_retry_after
         self.assertEqual(5, _http_retry_after('{}'))

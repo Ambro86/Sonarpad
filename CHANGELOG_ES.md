@@ -1,8 +1,12 @@
 # Changelog
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Audiodescripciones: añadido un intento final de recuperación de las frases excluidas por la estimación inicial de duración. Sonarpad comprueba la duración real de la voz y, si es necesario, vuelve a intentarlo con una velocidad un 10 % o como máximo un 15 % mayor, sin mover las descripciones ya insertadas ni superponerlas a los diálogos. Las descripciones recuperadas y su velocidad individual se guardan en el proyecto.
+
+2. Voces de Google: corregido un error de inicio cuando Chrome bloquea temporalmente un archivo. Sonarpad reintenta automáticamente y, si el bloqueo persiste, prueba con Microsoft Edge manteniendo la misma voz de Google. El funcionamiento normal no cambia.
+
+3. Descarga de listas de YouTube: añadido un reintento automático con un perfil alternativo de yt-dlp cuando un elemento falla por errores temporales del servidor, como HTTP 503. Corregido también el campo de progreso accesible: el porcentaje se actualiza sin tener que salir del campo y volver con Tab.
 
 Version 0.9.21 – 2026-10-27
 

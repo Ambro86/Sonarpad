@@ -1,8 +1,12 @@
 # Dziennik zmian
 
-Version 0.9.22 – 2026-10-28
+Version 0.9.22 – 2026-10-29
 
 1. Audiodeskrypcja: dodano końcową próbę odzyskania opisów odrzuconych na podstawie wstępnego oszacowania czasu. Sonarpad sprawdza rzeczywisty czas syntezy i w razie potrzeby próbuje ponownie z prędkością większą o 10% lub maksymalnie 15%, bez przesuwania istniejących opisów i nakładania się na dialogi. Odzyskane opisy oraz ich indywidualna prędkość są zapisywane w projekcie.
+
+2. Głosy Google: naprawiono błąd uruchamiania, gdy Chrome tymczasowo blokuje plik. Sonarpad automatycznie ponawia próbę, a jeśli blokada nie ustępuje, próbuje użyć Microsoft Edge z zachowaniem tego samego głosu Google. Normalne działanie pozostaje bez zmian.
+
+3. Pobieranie playlist YouTube: dodano automatyczne ponawianie próby z alternatywnym profilem yt-dlp, gdy pobranie elementu nie powiedzie się z powodu tymczasowych błędów serwera, takich jak HTTP 503. Poprawiono też dostępne pole postępu: procent jest aktualizowany bez konieczności opuszczania pola i powracania do niego klawiszem Tab.
 
 Version 0.9.21 – 2026-10-27
 

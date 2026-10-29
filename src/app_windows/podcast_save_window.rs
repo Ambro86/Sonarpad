@@ -787,6 +787,9 @@ fn save_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> L
                 state.show_percentage = true;
                 state.current_pct = pct;
                 update_progress_label(state);
+                if state.accessible_progress_context {
+                    refresh_accessible_status_field(state);
+                }
                 true
             });
             match progress_changed {
@@ -952,6 +955,13 @@ fn refresh_accessible_status_field(state: &SaveState) {
                 "Failed to refresh accessible progress status: {}",
                 err
             ));
+        } else {
+            windows::Win32::UI::Accessibility::NotifyWinEvent(
+                0x800E, // EVENT_OBJECT_VALUECHANGE; do not move keyboard focus.
+                state.status_field,
+                -4, // OBJID_CLIENT
+                0,
+            );
         }
     }
 }
@@ -1022,6 +1032,111 @@ fn request_cancel(hwnd: HWND) {
                     crate::log_debug(&format!("Error: {:?}", _e));
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod playlist_progress_tests {
+    use super::*;
+
+    #[test]
+    fn playlist_status_updates_without_refocusing_on_real_windows_controls() {
+        unsafe {
+            // Hidden native controls: no visible dialog and no focus change.
+            let parent = CreateWindowExW(
+                Default::default(),
+                w!("STATIC"),
+                w!("test"),
+                WS_POPUP,
+                0,
+                0,
+                100,
+                100,
+                HWND(0),
+                HMENU(0),
+                HINSTANCE(0),
+                None,
+            );
+            assert_ne!(parent.0, 0);
+            let status = CreateWindowExW(
+                Default::default(),
+                WC_EDIT,
+                w!(""),
+                WS_CHILD | WINDOW_STYLE(ES_READONLY),
+                0,
+                0,
+                80,
+                20,
+                parent,
+                HMENU(1),
+                HINSTANCE(0),
+                None,
+            );
+            let label = CreateWindowExW(
+                Default::default(),
+                w!("STATIC"),
+                w!(""),
+                WS_CHILD,
+                0,
+                20,
+                80,
+                20,
+                parent,
+                HMENU(2),
+                HINSTANCE(0),
+                None,
+            );
+            assert_ne!(status.0, 0);
+            let mut state = Box::new(SaveState {
+                parent: HWND(0),
+                label,
+                status_field: status,
+                progress: label,
+                cancel_button: HWND(0),
+                cancel_requested: false,
+                language: Language::English,
+                status_text: "Downloading 1 of 9".into(),
+                current_pct: 0,
+                has_real_progress: false,
+                show_percentage: true,
+                opened_at: Instant::now(),
+                labels: save_labels(Language::English),
+                show_cancel: false,
+                suppress_parent_restore: true,
+                disable_parent: false,
+                accessible_progress_context: true,
+                static_window_title: true,
+                cancel_only_tab_navigation: false,
+            });
+            SetWindowLongPtrW(
+                parent,
+                GWLP_USERDATA,
+                (&mut *state as *mut SaveState) as isize,
+            );
+            let focus = crate::get_focus_safe();
+            for pct in [12, 58, 100] {
+                save_wndproc(parent, WM_PODCAST_SAVE_PROGRESS, WPARAM(pct), LPARAM(0));
+                let mut buffer = [0u16; 128];
+                let length = crate::get_window_text_w_safe(status, &mut buffer);
+                assert_eq!(
+                    String::from_utf16_lossy(&buffer[..length as usize]),
+                    format!("Downloading 1 of 9 {pct}%")
+                );
+                assert_eq!(crate::get_focus_safe(), focus);
+            }
+            set_status_text(parent, "Downloading 2 of 9");
+            save_wndproc(parent, WM_PODCAST_SAVE_PROGRESS, WPARAM(0), LPARAM(0));
+            let mut buffer = [0u16; 128];
+            let length = crate::get_window_text_w_safe(status, &mut buffer);
+            assert_eq!(
+                String::from_utf16_lossy(&buffer[..length as usize]),
+                "Downloading 2 of 9 0%"
+            );
+            SetWindowLongPtrW(parent, GWLP_USERDATA, 0);
+            crate::log_if_err!(windows::Win32::UI::WindowsAndMessaging::DestroyWindow(
+                parent
+            ));
         }
     }
 }
