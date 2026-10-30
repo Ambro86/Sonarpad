@@ -1,5 +1,13 @@
 # Änderungsprotokoll
 
+Version 0.9.23 – 2026-10-29
+
+1. YouTube-Audiodeskription: Ein Streaming-Downloadfehler kurz vor Abschluss wurde behoben, wenn Audio und Video getrennt heruntergeladen, aber nicht zusammengeführt wurden. Sonarpad führt die vollständig heruntergeladenen Spuren jetzt mit den integrierten Bibliotheken ohne erneute Kodierung zusammen.
+
+2. YouTube-Audiodeskription: Heruntergeladene Dateien verwenden jetzt den Videotitel. Fehlt er im Wiedergabekontext, ruft Sonarpad ihn vor dem Speichern ab. Die Video-ID wird nur verwendet, wenn der Titel nicht verfügbar ist.
+3. Stimmenauswahl: Beim Aktualisieren der Listen wird eine noch nicht gespeicherte Auswahl nicht mehr durch die zuvor gespeicherte Stimme ersetzt. Hauptstimme und beide Dialogstimmen behalten ihre Auswahl; die ausdrückliche Auswahl eines Stimmprofils übernimmt weiterhin dessen Einstellungen.
+
+
 Version 0.9.22 – 2026-10-29
 
 1. Audiodeskription: Ein abschließender Wiederherstellungsversuch berücksichtigt Beschreibungen, die aufgrund der anfänglichen Dauerschätzung ausgeschlossen wurden. Sonarpad prüft die tatsächliche Sprechdauer und versucht es bei Bedarf mit 10 % oder höchstens 15 % höherer Geschwindigkeit erneut, ohne vorhandene Beschreibungen zu verschieben oder Dialoge zu überlagern. Wiederhergestellte Beschreibungen und ihre individuelle Geschwindigkeit werden im Projekt gespeichert.

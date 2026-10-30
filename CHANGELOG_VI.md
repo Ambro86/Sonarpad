@@ -1,5 +1,13 @@
 # Nhật ký thay đổi
 
+Version 0.9.23 – 2026-10-29
+
+1. Mô tả âm thanh cho video YouTube: sửa lỗi tải luồng xuất hiện gần cuối khi âm thanh và video được tải riêng nhưng chưa được ghép lại. Sonarpad nay ghép các luồng đã tải hoàn chỉnh bằng thư viện tích hợp, không mã hóa lại.
+
+2. Mô tả âm thanh cho video YouTube: tệp tải xuống nay dùng tiêu đề video. Nếu tiêu đề không có trong ngữ cảnh phát, Sonarpad lấy tiêu đề trước khi lưu; mã video chỉ được dùng khi không lấy được tiêu đề.
+3. Chọn giọng đọc: làm mới danh sách không còn thay thế lựa chọn chưa lưu bằng giọng đã lưu trước đó. Giọng chính và hai giọng hội thoại giữ nguyên lựa chọn; khi chủ động chọn hồ sơ giọng đọc, các thiết lập của hồ sơ vẫn được áp dụng.
+
+
 Version 0.9.22 – 2026-10-29
 
 1. Mô tả âm thanh: thêm bước khôi phục cuối cùng cho những câu bị loại do ước tính thời lượng ban đầu. Sonarpad kiểm tra thời lượng giọng đọc thực tế và khi cần sẽ thử lại với tốc độ tăng 10% hoặc tối đa 15%, không di chuyển các mô tả đã chèn hay chồng lên lời thoại. Các mô tả được khôi phục và tốc độ riêng của chúng được lưu trong dự án.

@@ -10789,7 +10789,44 @@ fn run_ytdlp_stream_download_attempt_with_client(
     {
         // A failed yt-dlp merge can leave separately downloaded video and
         // audio fragments. Never present those artifacts as the final media.
-        find_latest_downloaded_stream_file(req.cache_dir, req.prefix)
+        let completed = find_latest_downloaded_stream_file(req.cache_dir, req.prefix);
+        if completed.is_none()
+            && status.is_some_and(|result| result.success())
+            && req.dialog_data.format == StreamOutputFormat::Auto
+            && req.prefer_video
+        {
+            // Without an external FFmpeg, yt-dlp can exit successfully while
+            // leaving separate completed tracks (e.g. H.264 MP4 + Opus WEBM).
+            // Reuse our DLL muxer; never return a video-only fragment as media.
+            let (video, audio) = completed_download_tracks(
+                req.cache_dir,
+                req.prefix,
+                &["mp4", "webm", "m4a", "opus", "mkv"],
+            )?;
+            let output = req.cache_dir.join(format!("{}.mkv", req.prefix));
+            crate::log_debug(&format!(
+                "Stream download [{}]: recovering completed separate tracks with DLL muxer",
+                req.prefix
+            ));
+            if let Err(error) = remux_stream_media_responsive(
+                req.parent,
+                req.progress,
+                &video,
+                &output,
+                req.language,
+                (video != audio).then_some(audio.as_path()),
+            ) {
+                crate::log_if_err!(std::fs::remove_file(&output));
+                return Err(error);
+            }
+            crate::log_if_err!(std::fs::remove_file(&video));
+            if audio != video {
+                crate::log_if_err!(std::fs::remove_file(&audio));
+            }
+            Some(output)
+        } else {
+            completed
+        }
     } else {
         None
     };
@@ -11672,6 +11709,27 @@ fn ensure_stream_save_extension(mut path: PathBuf, ext: &str) -> PathBuf {
     path
 }
 
+fn refresh_missing_stream_save_title(context: &mut StreamSaveContext) {
+    // A direct YouTube URL can reach Save media without a title in the cached
+    // stream context (for example after a playback/preview transition).  Do not
+    // expose the generic `stream_media` fallback to the user in that case: ask
+    // yt-dlp for the real video title again immediately before building the
+    // suggested file name.  This is intentionally limited to YouTube so generic
+    // streams keep their existing fast save path.
+    let missing_title = context
+        .title
+        .as_deref()
+        .map(str::trim)
+        .unwrap_or_default()
+        .is_empty();
+    if missing_title && is_youtube_stream_url(&context.url) {
+        crate::log_debug(
+            "YouTube save context has no title; probing title again before saving media",
+        );
+        context.title = probe_stream_media_title(&context.ytdlp_path, &context.url);
+    }
+}
+
 fn suggested_stream_save_name(context: &StreamSaveContext) -> String {
     if let Some(title) = context
         .title
@@ -12433,24 +12491,7 @@ pub(crate) fn download_active_streaming_audio_media(
     context.dialog_data.quality = selected_options.quality;
     persist_stream_save_format(parent, selected_options.format);
 
-    // A direct YouTube URL can reach Save media without a title in the cached
-    // stream context (for example after a playback/preview transition).  Do not
-    // expose the generic `stream_media` fallback to the user in that case: ask
-    // yt-dlp for the real video title again immediately before building the
-    // suggested file name.  This is intentionally limited to YouTube so generic
-    // streams keep their existing fast save path.
-    let missing_title = context
-        .title
-        .as_deref()
-        .map(str::trim)
-        .unwrap_or_default()
-        .is_empty();
-    if missing_title && is_youtube_stream_url(&context.url) {
-        crate::log_debug(
-            "YouTube save context has no title; probing title again before Save media",
-        );
-        context.title = probe_stream_media_title(&context.ytdlp_path, &context.url);
-    }
+    refresh_missing_stream_save_title(&mut context);
 
     set_active_stream_save_context(context.clone());
     let target_ext = stream_save_target_ext(context.dialog_data.format);
@@ -12688,7 +12729,7 @@ pub(crate) fn download_active_streaming_video_for_audio_description(
 
 fn download_stream_context_for_audio_description(
     parent: HWND,
-    context: StreamSaveContext,
+    mut context: StreamSaveContext,
     language: Language,
     prefix_label: &str,
     youtube_context_menu: bool,
@@ -12872,6 +12913,8 @@ fn download_stream_context_for_audio_description(
         .and_then(|extension| extension.to_str())
         .filter(|extension| !extension.trim().is_empty())
         .unwrap_or("webm");
+    refresh_missing_stream_save_title(&mut context);
+    set_active_stream_save_context(context.clone());
     let target_path = unique_stream_media_path(
         &target_dir,
         &suggested_stream_save_name(&context),
@@ -15668,34 +15711,99 @@ mod media_result_tests {
 
 /// Inspect only completed WEBM downloads, never .part fragments or other jobs.
 fn webm_download_tracks(directory: &Path, prefix: &str) -> Result<(PathBuf, PathBuf), String> {
+    completed_download_tracks(directory, prefix, &["webm"])
+}
+
+fn completed_download_tracks(
+    directory: &Path,
+    prefix: &str,
+    extensions: &[&str],
+) -> Result<(PathBuf, PathBuf), String> {
     let mut video = None;
     let mut audio = None;
     for entry in std::fs::read_dir(directory).map_err(|e| e.to_string())? {
         let path = entry.map_err(|e| e.to_string())?.path();
         if !path.is_file()
-            || path.extension().and_then(|e| e.to_str()) != Some("webm")
+            || !path
+                .extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| extensions.contains(&e))
             || !path
                 .file_name()
                 .and_then(|n| n.to_str())
-                .is_some_and(|n| n.starts_with(&format!("{prefix}.f")))
+                .and_then(|n| n.strip_prefix(&format!("{prefix}.f")))
+                .is_some_and(|tail| {
+                    tail.split_once('.')
+                        .is_some_and(|(id, ext)| !id.is_empty() && !ext.contains('.'))
+                })
         {
             continue;
         }
         if crate::ffmpeg_source::has_real_video_stream(&path)? {
+            if video.is_some() {
+                return Err("Download contains multiple video tracks; cannot choose safely".into());
+            }
             video = Some(path.clone());
         }
         if !crate::ffmpeg_source::list_audio_streams(&path)?.is_empty() {
+            if audio.is_some() {
+                return Err("Download contains multiple audio tracks; cannot choose safely".into());
+            }
             audio = Some(path);
         }
     }
     video
         .zip(audio)
-        .ok_or_else(|| "WEBM download is missing a complete video or audio track".into())
+        .ok_or_else(|| "Download is missing a complete video or audio track".into())
 }
 
 #[cfg(test)]
 mod webm_download_tests {
     use super::*;
+    #[test]
+    fn automatic_recovery_rejects_partial_and_unrelated_tracks() -> std::io::Result<()> {
+        let dir = std::env::temp_dir().join(format!("auto-tracks-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir(&dir)?;
+        for name in [
+            "test.f137.mp4.part",
+            "test.f251.webm.ytdl",
+            "other.f137.mp4",
+            "test2.f251.webm",
+        ] {
+            std::fs::write(dir.join(name), b"not complete media")?;
+        }
+        assert!(completed_download_tracks(&dir, "test", &["mp4", "webm"]).is_err());
+        std::fs::remove_dir_all(dir)?;
+        Ok(())
+    }
+
+    #[test]
+    #[ignore = "Uses generated H264/Opus fixtures and installed FFmpeg DLLs"]
+    fn automatic_recovery_muxes_mixed_mp4_webm_tracks() -> Result<(), Box<dyn std::error::Error>> {
+        let dir = PathBuf::from(std::env::var("SONARPAD_MIXED_TRACK_TEST_DIR")?);
+        let (video, audio) = completed_download_tracks(&dir, "test", &["mp4", "webm"])?;
+        assert_eq!(
+            video.file_name(),
+            Some(std::ffi::OsStr::new("test.f137.mp4"))
+        );
+        assert_eq!(
+            audio.file_name(),
+            Some(std::ffi::OsStr::new("test.f251.webm"))
+        );
+        assert!(find_latest_downloaded_stream_file(&dir, "test").is_none());
+        let output = dir.join("test.mkv");
+        crate::ffmpeg_export::remux_media_file_to_mp4_with_external_audio_stream(
+            &video, &audio, &output, None, None,
+        )?;
+        assert!(crate::ffmpeg_source::has_real_video_stream(&output)?);
+        assert_eq!(crate::ffmpeg_source::list_audio_streams(&output)?.len(), 1);
+        assert_eq!(
+            find_latest_downloaded_stream_file(&dir, "test"),
+            Some(output)
+        );
+        Ok(())
+    }
+
     fn options() -> StreamDialogResult {
         StreamDialogResult {
             url: String::new(),

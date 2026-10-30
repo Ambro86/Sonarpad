@@ -1,5 +1,13 @@
 # Catatan perubahan
 
+Version 0.9.23 – 2026-10-29
+
+1. Deskripsi audio YouTube: memperbaiki kesalahan unduhan streaming yang muncul menjelang selesai ketika audio dan video diunduh terpisah tetapi tidak digabungkan. Sonarpad kini menggabungkan trek yang telah selesai diunduh menggunakan pustaka bawaan, tanpa pengodean ulang.
+
+2. Deskripsi audio YouTube: berkas yang diunduh kini menggunakan judul video. Jika judul tidak ada dalam konteks pemutaran, Sonarpad mengambilnya sebelum menyimpan; ID video hanya digunakan jika judul tidak tersedia.
+3. Pemilihan suara: memperbarui daftar tidak lagi mengganti pilihan yang belum disimpan dengan suara yang sebelumnya tersimpan. Suara utama dan kedua suara dialog mempertahankan pilihannya; memilih profil suara secara eksplisit tetap menerapkan pengaturannya.
+
+
 Version 0.9.22 – 2026-10-29
 
 1. Deskripsi audio: menambahkan upaya pemulihan akhir untuk kalimat yang dikecualikan berdasarkan perkiraan durasi awal. Sonarpad memeriksa durasi suara sebenarnya dan, jika perlu, mencoba lagi dengan kecepatan 10% atau maksimal 15% lebih tinggi, tanpa memindahkan deskripsi yang sudah disisipkan atau menimpa dialog. Deskripsi yang dipulihkan beserta penyesuaian kecepatannya disimpan dalam proyek.

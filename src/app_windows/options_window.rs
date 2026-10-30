@@ -9905,6 +9905,20 @@ fn populate_voice_combo(
     labels: &OptionsLabels,
 ) {
     unsafe {
+        // Refreshing another voice role/filter must not restore the last saved
+        // choice over an unsaved selection. Match the full displayed identity,
+        // not an index into a potentially refreshed voice list or a truncated
+        // name (SAPI names themselves can contain parentheses).
+        let current_label = window_text(combo_voice);
+        let current_voice = voices.iter().find(|voice| {
+            let name = if engine == TtsEngine::Google {
+                crate::google_tts::voice_display_name(&voice.short_name)
+            } else {
+                voice.short_name.clone()
+            };
+            current_label == format!("{} ({})", name, voice.locale)
+        });
+        let selected = current_voice.map_or(selected, |voice| voice.short_name.as_str());
         SendMessageW(combo_voice, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
         if voices.is_empty() {
             let label = &labels.voices_empty;
@@ -9967,6 +9981,88 @@ fn populate_voice_combo(
             SendMessageW(combo_voice, CB_SETCURSEL, WPARAM(idx), LPARAM(0));
         } else if combo_index > 0 {
             SendMessageW(combo_voice, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+        }
+    }
+}
+
+#[cfg(test)]
+mod voice_selection_refresh_tests {
+    use super::*;
+
+    #[test]
+    fn refresh_preserves_unsaved_voice_and_explicit_profile_selection() {
+        unsafe {
+            let combo = CreateWindowExW(
+                WS_EX_CLIENTEDGE,
+                WC_COMBOBOXW,
+                PCWSTR::null(),
+                windows::Win32::UI::WindowsAndMessaging::WS_POPUP
+                    | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                0,
+                0,
+                300,
+                140,
+                HWND(0),
+                HMENU(0),
+                HINSTANCE(0),
+                None,
+            );
+            assert_ne!(combo.0, 0);
+            let voices: Vec<_> = ["Monika", "Pavel", "Eliska (Czech) HQ SAPI 5"]
+                .into_iter()
+                .map(|name| VoiceInfo {
+                    short_name: name.into(),
+                    locale: "cs-CZ".into(),
+                    is_multilingual: false,
+                })
+                .collect();
+            let labels = options_labels(Language::Italian);
+            populate_voice_combo(
+                combo,
+                TtsEngine::Sapi5,
+                &voices,
+                "Monika",
+                false,
+                None,
+                &labels,
+            );
+            SendMessageW(combo, CB_SETCURSEL, WPARAM(1), LPARAM(0));
+            let mut reordered = voices.clone();
+            reordered.reverse();
+            populate_voice_combo(
+                combo,
+                TtsEngine::Sapi5,
+                &reordered,
+                "Monika",
+                false,
+                None,
+                &labels,
+            );
+            assert_eq!(window_text(combo), "Pavel (cs-CZ)");
+            // The explicit profile path still selects its requested identity.
+            select_voice_combo_by_short_name(combo, &reordered, "Eliska (Czech) HQ SAPI 5");
+            populate_voice_combo(
+                combo,
+                TtsEngine::Sapi5,
+                &voices,
+                "Monika",
+                false,
+                None,
+                &labels,
+            );
+            assert_eq!(window_text(combo), "Eliska (Czech) HQ SAPI 5 (cs-CZ)");
+            // An absent/filtered selection must not be resurrected.
+            populate_voice_combo(
+                combo,
+                TtsEngine::Sapi5,
+                &voices[..1],
+                "Monika",
+                false,
+                None,
+                &labels,
+            );
+            assert_eq!(window_text(combo), "Monika (cs-CZ)");
+            crate::destroy_window_safe(combo).unwrap();
         }
     }
 }

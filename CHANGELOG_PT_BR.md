@@ -1,5 +1,13 @@
 # Changelog
 
+Version 0.9.23 – 2026-10-29
+
+1. Audiodescrições do YouTube: corrigido um erro de download de streaming que aparecia quase no final quando o áudio e o vídeo eram baixados separadamente, mas não eram unidos. O Sonarpad agora une as faixas completas com as bibliotecas integradas, sem recodificação.
+
+2. Audiodescrições do YouTube: os arquivos baixados agora usam o título do vídeo. Se ele não estiver no contexto de reprodução, o Sonarpad o recupera antes de salvar; o identificador do vídeo só é usado quando o título não está disponível.
+3. Seleção de vozes: atualizar as listas não substitui mais uma escolha ainda não salva pela voz salva anteriormente. A voz principal e as duas vozes de diálogo mantêm suas seleções; escolher explicitamente um perfil continua aplicando suas configurações.
+
+
 Version 0.9.22 – 2026-10-29
 
 1. Audiodescrições: adicionada uma tentativa final de recuperação das frases excluídas pela estimativa inicial de duração. O Sonarpad verifica a duração real da voz e, quando necessário, tenta novamente com uma velocidade 10% ou, no máximo, 15% maior, sem mover as descrições já inseridas nem sobrepor os diálogos. As descrições recuperadas e sua velocidade individual são salvas no projeto.

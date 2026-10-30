@@ -1,5 +1,13 @@
 # Ändringslogg
 
+Version 0.9.23 – 2026-10-29
+
+1. Syntolkning av YouTube-videor: åtgärdat ett strömningsnedladdningsfel nära slutet när ljud och video hade hämtats separat men inte sammanfogats. Sonarpad sammanfogar nu de fullständiga spåren med de inbyggda biblioteken, utan omkodning.
+
+2. Syntolkning av YouTube-videor: hämtade filer använder nu videons titel. Om titeln saknas i uppspelningskontexten hämtar Sonarpad den innan filen sparas; videons ID används endast när titeln inte är tillgänglig.
+3. Röstval: uppdatering av listorna ersätter inte längre ett osparat val med den tidigare sparade rösten. Huvudrösten och båda dialogrösterna behåller sina val; när en röstprofil väljs uttryckligen tillämpas fortfarande dess inställningar.
+
+
 Version 0.9.22 – 2026-10-29
 
 1. Syntolkning: ett avslutande återställningsförsök har lagts till för beskrivningar som uteslutits av den första tidsuppskattningen. Sonarpad kontrollerar talets faktiska längd och försöker vid behov igen med 10 % eller högst 15 % högre hastighet, utan att flytta befintliga beskrivningar eller överlappa dialog. Återställda beskrivningar och deras individuella hastighet sparas i projektet.

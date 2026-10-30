@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+Version 0.9.23 – 2026-10-29
+
+1. Audiodeskrypcja filmów z YouTube: naprawiono błąd pobierania strumienia pojawiający się pod koniec, gdy dźwięk i obraz zostały pobrane oddzielnie, ale nie zostały połączone. Sonarpad łączy teraz kompletne ścieżki za pomocą wbudowanych bibliotek, bez ponownego kodowania.
+
+2. Audiodeskrypcja filmów z YouTube: pobrane pliki otrzymują teraz tytuł filmu. Jeśli brakuje go w kontekście odtwarzania, Sonarpad pobiera go przed zapisaniem; identyfikator filmu jest używany tylko wtedy, gdy tytuł jest niedostępny.
+3. Wybór głosów: odświeżanie list nie zastępuje już niezapisanego wyboru wcześniej zapisanym głosem. Głos główny i oba głosy dialogów zachowują swoje ustawienia; świadome wybranie profilu głosowego nadal stosuje jego ustawienia.
+
+
 Version 0.9.22 – 2026-10-29
 
 1. Audiodeskrypcja: dodano końcową próbę odzyskania opisów odrzuconych na podstawie wstępnego oszacowania czasu. Sonarpad sprawdza rzeczywisty czas syntezy i w razie potrzeby próbuje ponownie z prędkością większą o 10% lub maksymalnie 15%, bez przesuwania istniejących opisów i nakładania się na dialogi. Odzyskane opisy oraz ich indywidualna prędkość są zapisywane w projekcie.

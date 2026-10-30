@@ -1,5 +1,13 @@
 # Changelog
 
+Version 0.9.23 – 2026-10-29
+
+1. YouTube audio descriptions: fixed a streaming download error near completion when audio and video were downloaded separately but not merged. Sonarpad now joins the completed tracks using its built-in libraries, without re-encoding.
+
+2. YouTube audio descriptions: downloaded files now use the video title. If the playback context has no title, Sonarpad retrieves it before saving; the video ID is used only when the title is unavailable.
+3. Voice selection: refreshing voice lists no longer resets an unsaved choice to the previously saved voice. The main voice and both dialogue voices retain their selections; explicitly choosing a voice profile still applies its settings.
+
+
 Version 0.9.22 – 2026-10-29
 
 1. Audio descriptions: added a final recovery attempt for descriptions excluded by the initial duration estimate. Sonarpad checks the actual speech duration and, when needed, retries at 10% or at most 15% higher speed, without moving existing descriptions or overlapping dialogue. Recovered descriptions and any individual speed adjustment are saved in the project.

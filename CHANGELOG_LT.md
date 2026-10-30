@@ -1,5 +1,13 @@
 # Pakeitimų žurnalas
 
+Version 0.9.23 – 2026-10-29
+
+1. YouTube garsinis vaizdavimas: ištaisyta srauto atsisiuntimo klaida, pasirodydavusi beveik baigus siuntimą, kai garsas ir vaizdas buvo atsisiųsti atskirai, bet nesujungti. Sonarpad dabar sujungia visas atsisiųstas takelių dalis naudodamas integruotas bibliotekas, be pakartotinio kodavimo.
+
+2. YouTube garsinis vaizdavimas: atsisiųsti failai dabar pavadinami vaizdo įrašo pavadinimu. Jei jo nėra atkūrimo kontekste, Sonarpad jį gauna prieš išsaugodamas; vaizdo įrašo ID naudojamas tik tada, kai pavadinimas neprieinamas.
+3. Balsų pasirinkimas: atnaujinant sąrašus neišsaugotas pasirinkimas nebepakeičiamas anksčiau išsaugotu balsu. Pagrindinis balsas ir abu dialogų balsai išlaiko savo pasirinkimus; pasirinkus balso profilį vis tiek taikomos jo nuostatos.
+
+
 Version 0.9.22 – 2026-10-29
 
 1. Garsinis vaizdavimas: pridėtas baigiamasis bandymas atkurti frazes, atmestas pagal pradinį trukmės įvertinimą. Sonarpad patikrina tikrąją kalbos trukmę ir prireikus bando dar kartą padidinęs greitį 10 % arba daugiausia 15 %, neperkeldamas jau įterptų aprašymų ir neuždengdamas dialogų. Atkurti aprašymai ir jų individualus greitis išsaugomi projekte.
