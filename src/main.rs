@@ -11714,10 +11714,8 @@ fn run_app(
                             let youtube_return_context =
                                 state.active_youtube_return_context.clone();
                             let stopped_url = state.active_podcast_episode_url.clone();
-                            let stopped_audio_path = state
-                                .active_audiobook
-                                .as_ref()
-                                .map(|player| player.path.clone());
+                            // Capture the media path before closing the tab, including MPV previews.
+                            let stopped_audio_path = current_playback_media_path(hwnd);
                             let is_mpv = state.active_mpv_session.is_some();
                             if is_stop {
                                 // close_current_document() already stops audiobook playback

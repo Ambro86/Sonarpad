@@ -364,6 +364,20 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertIn("SetFocus((*pointer).close_button);", returned)
         self.assertNotIn("SetFocus((*pointer).start_button);", returned)
 
+    def test_output_player_escape_captures_mpv_path_before_stopping(self):
+        start = MAIN.index("let is_stop = matches!(command, PlayerCommand::Stop);")
+        stop = MAIN[start:MAIN.index("if from_rai == RaiAudioOrigin::Recenti", start)]
+        capture = "let stopped_audio_path = current_playback_media_path(hwnd);"
+        self.assertIn(capture, stop)
+        self.assertLess(stop.index(capture), stop.index("stop_managed_mpv_playback(hwnd);"))
+        self.assertLess(stop.index(capture), stop.index("editor_manager::close_current_document(hwnd);"))
+        self.assertIn("audio_description_window::restore_after_player_stop", stop)
+        helper = MAIN[MAIN.index("pub(crate) fn current_playback_media_path("):
+                      MAIN.index("pub(crate) fn current_local_playback_media_path(")]
+        self.assertIn("state.active_audiobook.as_ref()", helper)
+        self.assertIn("state.docs.get(state.current)", helper)
+        self.assertIn("doc.path.clone()", helper)
+
     def test_audio_description_windows_block_player_keyboard_shortcuts(self):
         start = MAIN.index("// Audiobook keyboard controls (ONLY if no secondary window is open)")
         keyboard = MAIN[
