@@ -31,8 +31,16 @@ class AudioDescriptionCancellationTests(unittest.TestCase):
         self.assertNotIn("stderr_thread.join()", cancel_block)
 
     def test_dialog_cancel_uses_strong_flag_and_reports_completion(self):
-        self.assertIn("Audio description: cancellation requested from dialog", WINDOW)
-        self.assertIn("cancel.store(true, Ordering::SeqCst)", WINDOW)
+        start = WINDOW.index("fn request_cancel(hwnd: HWND)")
+        end = WINDOW.index("fn set_text", start)
+        request = WINDOW[start:end]
+        self.assertIn('"audio_description.cancel_confirm"', request)
+        self.assertIn("MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2", request)
+        self.assertIn("Arc::ptr_eq(c, &pending.0)", request)
+        confirmation = request.index("if answer == IDYES")
+        self.assertNotIn("store(true, Ordering::SeqCst)", request[:confirmation])
+        self.assertIn("pending.0.store(true, Ordering::SeqCst)", request[confirmation:])
+        self.assertIn("Audio description: cancellation confirmed", request)
         self.assertIn("Audio description: cancellation completed; worker stopped", WINDOW)
 
 

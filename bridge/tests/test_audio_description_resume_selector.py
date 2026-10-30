@@ -101,7 +101,7 @@ class AudioDescriptionResumeSelectorTests(unittest.TestCase):
         focus = window[handler:handler + 900]
         self.assertIn("ShowWindow(hwnd, SW_SHOW);", focus)
         self.assertIn("SetForegroundWindow(hwnd);", focus)
-        self.assertIn("SetFocus(state.cancel_button);", focus)
+        self.assertIn("SetFocus(state.progress);", focus)
 
     def test_browse_keeps_selector_open_so_model_can_be_chosen(self):
         selector = SELECTOR.read_text(encoding="utf-8")
