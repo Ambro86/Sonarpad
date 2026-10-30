@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Pasirinkti vaizdo įrašą...",
   "audio_description.browse_output": "Keisti paskirties aplanką...",
   "audio_description.cancel": "Atšaukti",
+  "audio_description.cancel_confirm": "Garsinis aprašymas kuriamas. Ar tikrai norite atšaukti?",
   "audio_description.close": "Uždaryti",
   "audio_description.engine": "Kalbos sintezės variklis:",
   "audio_description.error.api_key": "Įveskite Gemini API raktą.",

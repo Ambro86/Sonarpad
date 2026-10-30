@@ -1,12 +1,16 @@
 # Ändringslogg
 
-Version 0.9.23 – 2026-10-29
+Version 0.9.23 – 2026-10-30
 
 1. Syntolkning av YouTube-videor: åtgärdat ett strömningsnedladdningsfel nära slutet när ljud och video hade hämtats separat men inte sammanfogats. Sonarpad sammanfogar nu de fullständiga spåren med de inbyggda biblioteken, utan omkodning.
 
 2. Syntolkning av YouTube-videor: hämtade filer använder nu videons titel. Om titeln saknas i uppspelningskontexten hämtar Sonarpad den innan filen sparas; videons ID används endast när titeln inte är tillgänglig.
+
 3. Röstval: uppdatering av listorna ersätter inte längre ett osparat val med den tidigare sparade rösten. Huvudrösten och båda dialogrösterna behåller sina val; när en röstprofil väljs uttryckligen tillämpas fortfarande dess inställningar.
 
+4. AI-syntolkning: tydligare förloppsfönster, även när avbrutet arbete återupptas. Procent, segment och status visas på separata rader i ett textfält som kan läsas med piltangenterna. Tab växlar mellan fältet och Avbryt; den inbyggda förloppsindikatorn finns kvar för NVDA.
+
+5. AI-syntolkning: Avbryt och stängning av fönstret under arbetet kräver nu bekräftelse med Ja/Nej. Arbetet stoppas endast efter användarens uttryckliga bekräftelse.
 
 Version 0.9.22 – 2026-10-29
 

@@ -1,12 +1,16 @@
 # Catatan perubahan
 
-Version 0.9.23 – 2026-10-29
+Version 0.9.23 – 2026-10-30
 
 1. Deskripsi audio YouTube: memperbaiki kesalahan unduhan streaming yang muncul menjelang selesai ketika audio dan video diunduh terpisah tetapi tidak digabungkan. Sonarpad kini menggabungkan trek yang telah selesai diunduh menggunakan pustaka bawaan, tanpa pengodean ulang.
 
 2. Deskripsi audio YouTube: berkas yang diunduh kini menggunakan judul video. Jika judul tidak ada dalam konteks pemutaran, Sonarpad mengambilnya sebelum menyimpan; ID video hanya digunakan jika judul tidak tersedia.
+
 3. Pemilihan suara: memperbarui daftar tidak lagi mengganti pilihan yang belum disimpan dengan suara yang sebelumnya tersimpan. Suara utama dan kedua suara dialog mempertahankan pilihannya; memilih profil suara secara eksplisit tetap menerapkan pengaturannya.
 
+4. Deskripsi audio AI: jendela kemajuan lebih mudah dibaca, termasuk saat melanjutkan pekerjaan yang terhenti. Persentase, segmen, dan status berada pada baris terpisah dalam bidang teks yang dapat dijelajahi dengan tombol panah. Tab berpindah antara bidang dan Batal; bilah kemajuan asli tetap tersedia untuk NVDA.
+
+5. Deskripsi audio AI: Batal dan menutup jendela saat proses berlangsung kini meminta konfirmasi Ya/Tidak. Pekerjaan berhenti hanya setelah pengguna mengonfirmasi secara tegas.
 
 Version 0.9.22 – 2026-10-29
 

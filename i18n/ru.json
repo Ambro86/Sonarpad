@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Выбрать видео...",
   "audio_description.browse_output": "Изменить папку назначения...",
   "audio_description.cancel": "Отмена",
+  "audio_description.cancel_confirm": "Создаётся аудиодескрипция. Вы уверены, что хотите отменить её создание?",
   "audio_description.close": "Закрыть",
   "audio_description.engine": "Движок синтеза речи:",
   "audio_description.error.api_key": "Введите ключ API Gemini.",

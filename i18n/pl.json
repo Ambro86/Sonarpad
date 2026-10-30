@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Wybierz wideo...",
   "audio_description.browse_output": "Zmień folder docelowy...",
   "audio_description.cancel": "Anuluj",
+  "audio_description.cancel_confirm": "Trwa tworzenie audiodeskrypcji. Czy na pewno chcesz je anulować?",
   "audio_description.close": "Zamknij",
   "audio_description.engine": "Silnik syntezy mowy:",
   "audio_description.error.api_key": "Wprowadź klucz API Gemini.",

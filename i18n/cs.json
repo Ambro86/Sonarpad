@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Vybrat video...",
   "audio_description.browse_output": "Změnit cílovou složku...",
   "audio_description.cancel": "Zrušit",
+  "audio_description.cancel_confirm": "Zvukový popis se právě vytváří. Opravdu jej chcete zrušit?",
   "audio_description.close": "Zavřít",
   "audio_description.engine": "Modul syntézy řeči:",
   "audio_description.error.api_key": "Zadejte klíč API Gemini.",

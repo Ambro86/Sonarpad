@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Вибрати відео...",
   "audio_description.browse_output": "Змінити папку призначення...",
   "audio_description.cancel": "Скасувати",
+  "audio_description.cancel_confirm": "Створюється аудіодескрипція. Ви впевнені, що хочете скасувати її створення?",
   "audio_description.close": "Закрити",
   "audio_description.engine": "Движок синтеза мовлення:",
   "audio_description.error.api_key": "Введіть ключ API Gemini.",

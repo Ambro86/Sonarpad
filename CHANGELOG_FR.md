@@ -1,12 +1,16 @@
 # Journal des modifications
 
-Version 0.9.23 – 2026-10-29
+Version 0.9.23 – 2026-10-30
 
 1. Audiodescription YouTube : correction d’une erreur de téléchargement en streaming survenant vers la fin lorsque les pistes audio et vidéo étaient téléchargées séparément sans être assemblées. Sonarpad assemble désormais les pistes complètes avec ses bibliothèques intégrées, sans réencodage.
 
 2. Audiodescription YouTube : les fichiers téléchargés portent désormais le titre de la vidéo. S’il manque dans le contexte de lecture, Sonarpad le récupère avant l’enregistrement ; l’identifiant de la vidéo n’est utilisé que si le titre est indisponible.
+
 3. Sélection des voix : actualiser les listes ne remplace plus un choix non enregistré par la voix précédemment enregistrée. La voix principale et les deux voix des dialogues conservent leur sélection ; choisir explicitement un profil applique toujours ses paramètres.
 
+4. Audiodescriptions IA : fenêtre de progression plus facile à consulter, y compris lors de la reprise. Pourcentage, segment et état figurent sur des lignes distinctes dans un champ de texte parcourable avec les flèches. Tab alterne entre le champ et Annuler ; la barre native est conservée pour NVDA.
+
+5. Audiodescriptions IA : Annuler et fermer la fenêtre pendant le traitement demandent désormais une confirmation Oui/Non. Le travail ne s’arrête qu’après confirmation explicite de l’utilisateur.
 
 Version 0.9.22 – 2026-10-29
 

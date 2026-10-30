@@ -1,12 +1,16 @@
 # Changelog
 
-Version 0.9.23 – 2026-10-29
+Version 0.9.23 – 2026-10-30
 
 1. Audiodescrizioni da YouTube: corretto un errore di download streaming che compariva quasi al termine quando audio e video erano scaricati separatamente ma non uniti. Sonarpad ora unisce le tracce complete con le librerie integrate, senza ricodifica.
 
 2. Audiodescrizioni da YouTube: i file scaricati ora usano il titolo del video. Se manca nel contesto di riproduzione, Sonarpad lo recupera prima del salvataggio; l’ID del video viene usato solo quando il titolo non è disponibile.
+
 3. Selezione delle voci: aggiornando gli elenchi non viene più ripristinata la voce salvata al posto di quella appena scelta. La voce principale e le due voci dei dialoghi mantengono le proprie selezioni; scegliendo esplicitamente un profilo vengono applicate le sue impostazioni.
 
+4. Audiodescrizioni AI: finestra di avanzamento più facile da consultare, anche quando si riprende un lavoro interrotto. Percentuale, segmento e stato sono su righe separate in un campo di testo leggibile con le frecce. Tab alterna il campo e Annulla; resta disponibile la barra di progresso nativa per il feedback di NVDA.
+
+5. Audiodescrizioni AI: Annulla e la chiusura della finestra durante il lavoro ora chiedono conferma Sì/No. Il lavoro viene interrotto solo dopo la conferma esplicita dell’utente.
 
 Version 0.9.22 – 2026-10-29
 

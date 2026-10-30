@@ -1,12 +1,16 @@
 # Přehled změn
 
-Version 0.9.23 – 2026-10-29
+Version 0.9.23 – 2026-10-30
 
 1. Zvukové popisy videí z YouTube: opravena chyba stahování streamu, která se objevovala těsně před dokončením, když se zvuk a video stáhly odděleně, ale nesloučily se. Sonarpad nyní spojuje úplné stopy pomocí vestavěných knihoven bez opětovného kódování.
 
 2. Zvukové popisy videí z YouTube: stažené soubory nyní používají název videa. Pokud chybí v kontextu přehrávání, Sonarpad jej získá před uložením; ID videa se použije pouze tehdy, když název není dostupný.
+
 3. Výběr hlasů: obnovení seznamů již nenahrazuje nově vybraný hlas dříve uloženým hlasem. Hlavní hlas i oba hlasy dialogů si zachovají svůj výběr; při výslovném výběru hlasového profilu se nadále použije jeho nastavení.
 
+4. Zvukové popisy AI: přehlednější okno průběhu, také při pokračování přerušené práce. Procenta, úsek a stav jsou na samostatných řádcích v textovém poli ovládaném šipkami. Tab přepíná mezi polem a tlačítkem Zrušit; nativní ukazatel průběhu zůstává pro zpětnou vazbu NVDA.
+
+5. Zvukové popisy AI: tlačítko Zrušit i zavření okna během práce nyní vyžadují potvrzení Ano/Ne. Práce se přeruší pouze po výslovném potvrzení uživatele.
 
 Version 0.9.22 – 2026-10-29
 

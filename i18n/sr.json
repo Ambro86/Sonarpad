@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Izaberi video...",
   "audio_description.browse_output": "Promeni odredišnu fasciklu...",
   "audio_description.cancel": "Откажи",
+  "audio_description.cancel_confirm": "Аудио-опис је у току. Да ли сте сигурни да желите да га откажете?",
   "audio_description.close": "Затвори",
   "audio_description.engine": "Движок синтеза говора:",
   "audio_description.error.api_key": "Унесите ключ API Gemini.",

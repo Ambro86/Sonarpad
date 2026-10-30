@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Elegir vídeo...",
   "audio_description.browse_output": "Cambiar carpeta de destino...",
   "audio_description.cancel": "Cancelar",
+  "audio_description.cancel_confirm": "La audiodescripción está en curso. ¿Seguro que quieres cancelarla?",
   "audio_description.close": "Cerrar",
   "audio_description.engine": "Motor de síntesis de voz:",
   "audio_description.error.api_key": "Introduce una clave API de Gemini.",

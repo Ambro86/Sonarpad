@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Video auswählen...",
   "audio_description.browse_output": "Zielordner ändern...",
   "audio_description.cancel": "Abbrechen",
+  "audio_description.cancel_confirm": "Die Audiodeskription wird gerade erstellt. Möchten Sie sie wirklich abbrechen?",
   "audio_description.close": "Schließen",
   "audio_description.engine": "Sprachsynthese-Engine:",
   "audio_description.error.api_key": "Geben Sie einen Gemini-API-Schlüssel ein.",

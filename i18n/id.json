@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Pilih video...",
   "audio_description.browse_output": "Ubah folder tujuan...",
   "audio_description.cancel": "Batal",
+  "audio_description.cancel_confirm": "Deskripsi audio sedang dibuat. Yakin ingin membatalkannya?",
   "audio_description.close": "Tutup",
   "audio_description.engine": "Sistem teks ke suara:",
   "audio_description.error.api_key": "Masukkan kunci API Gemini.",

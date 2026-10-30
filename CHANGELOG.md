@@ -1,12 +1,16 @@
 # Changelog
 
-Version 0.9.23 – 2026-10-29
+Version 0.9.23 – 2026-10-30
 
 1. YouTube audio descriptions: fixed a streaming download error near completion when audio and video were downloaded separately but not merged. Sonarpad now joins the completed tracks using its built-in libraries, without re-encoding.
 
 2. YouTube audio descriptions: downloaded files now use the video title. If the playback context has no title, Sonarpad retrieves it before saving; the video ID is used only when the title is unavailable.
+
 3. Voice selection: refreshing voice lists no longer resets an unsaved choice to the previously saved voice. The main voice and both dialogue voices retain their selections; explicitly choosing a voice profile still applies its settings.
 
+4. AI audio descriptions: progress is easier to review, including when resuming interrupted work. Percentage, segment and status appear on separate lines in a text field navigable with arrow keys. Tab switches between this field and Cancel; the native progress bar remains available for NVDA feedback.
+
+5. AI audio descriptions: Cancel and closing the window during processing now ask for Yes/No confirmation. Work stops only after the user explicitly confirms.
 
 Version 0.9.22 – 2026-10-29
 

@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Scegli video...",
   "audio_description.browse_output": "Cambia cartella di destinazione...",
   "audio_description.cancel": "Annulla",
+  "audio_description.cancel_confirm": "L’audiodescrizione è in corso. Sei sicuro di volerla annullare?",
   "audio_description.close": "Chiudi",
   "audio_description.engine": "Motore di sintesi vocale:",
   "audio_description.error.api_key": "Inserisci una chiave API Gemini.",

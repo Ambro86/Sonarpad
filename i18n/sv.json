@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Välj video...",
   "audio_description.browse_output": "Ändra målmapp...",
   "audio_description.cancel": "Avbryt",
+  "audio_description.cancel_confirm": "Syntolkningen skapas. Är du säker på att du vill avbryta?",
   "audio_description.close": "Stäng",
   "audio_description.engine": "Talsyntesmotor:",
   "audio_description.error.api_key": "Ange en Gemini API-nyckel.",

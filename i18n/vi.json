@@ -154,6 +154,7 @@
   "audio_description.browse_input": "Chọn video...",
   "audio_description.browse_output": "Đổi thư mục đích...",
   "audio_description.cancel": "Hủy",
+  "audio_description.cancel_confirm": "Đang tạo mô tả âm thanh. Bạn có chắc muốn hủy không?",
   "audio_description.close": "Đóng",
   "audio_description.engine": "Công cụ tổng hợp giọng nói:",
   "audio_description.error.api_key": "Nhập khóa API Gemini.",

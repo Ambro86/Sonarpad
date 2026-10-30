@@ -1,12 +1,16 @@
 # Änderungsprotokoll
 
-Version 0.9.23 – 2026-10-29
+Version 0.9.23 – 2026-10-30
 
 1. YouTube-Audiodeskription: Ein Streaming-Downloadfehler kurz vor Abschluss wurde behoben, wenn Audio und Video getrennt heruntergeladen, aber nicht zusammengeführt wurden. Sonarpad führt die vollständig heruntergeladenen Spuren jetzt mit den integrierten Bibliotheken ohne erneute Kodierung zusammen.
 
 2. YouTube-Audiodeskription: Heruntergeladene Dateien verwenden jetzt den Videotitel. Fehlt er im Wiedergabekontext, ruft Sonarpad ihn vor dem Speichern ab. Die Video-ID wird nur verwendet, wenn der Titel nicht verfügbar ist.
+
 3. Stimmenauswahl: Beim Aktualisieren der Listen wird eine noch nicht gespeicherte Auswahl nicht mehr durch die zuvor gespeicherte Stimme ersetzt. Hauptstimme und beide Dialogstimmen behalten ihre Auswahl; die ausdrückliche Auswahl eines Stimmprofils übernimmt weiterhin dessen Einstellungen.
 
+4. KI-Audiodeskriptionen: übersichtlicheres Fortschrittsfenster, auch beim Fortsetzen unterbrochener Arbeiten. Prozentwert, Abschnitt und Status stehen auf getrennten Zeilen in einem mit Pfeiltasten lesbaren Textfeld. Tab wechselt zwischen Textfeld und Abbrechen; die native Fortschrittsanzeige bleibt für NVDA erhalten.
+
+5. KI-Audiodeskriptionen: Abbrechen und das Schließen des Fensters während der Verarbeitung erfordern jetzt eine Ja/Nein-Bestätigung. Die Arbeit wird erst nach ausdrücklicher Bestätigung beendet.
 
 Version 0.9.22 – 2026-10-29
 

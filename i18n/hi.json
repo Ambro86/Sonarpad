@@ -154,6 +154,7 @@
   "audio_description.browse_input": "वीडियो चुनें...",
   "audio_description.browse_output": "गंतव्य फ़ोल्डर बदलें...",
   "audio_description.cancel": "रद्द करें",
+  "audio_description.cancel_confirm": "ऑडियो विवरण बनाया जा रहा है। क्या आप वाकई इसे रद्द करना चाहते हैं?",
   "audio_description.close": "बंद करें",
   "audio_description.engine": "वाक् संश्लेषण इंजन:",
   "audio_description.error.api_key": "Gemini API कुंजी दर्ज करें।",

@@ -22,13 +22,14 @@ use windows::Win32::UI::WindowsAndMessaging::{
     BM_GETCHECK, BM_SETCHECK, BS_AUTOCHECKBOX, BS_AUTORADIOBUTTON, BS_DEFPUSHBUTTON, CB_ADDSTRING,
     CB_FINDSTRINGEXACT, CB_GETCOUNT, CB_GETCURSEL, CB_GETLBTEXT, CB_GETLBTEXTLEN, CB_RESETCONTENT,
     CB_SETCURSEL, CBN_SELCHANGE, CBS_DROPDOWNLIST, CREATESTRUCTW, CreateWindowExW, DefWindowProcW,
-    DestroyWindow, EN_CHANGE, EN_KILLFOCUS, ES_AUTOHSCROLL, ES_PASSWORD, ES_READONLY,
-    GetWindowLongPtrW, HMENU, IDC_ARROW, IDNO, IDYES, IsWindowVisible, LoadCursorW,
-    MB_ICONQUESTION, MB_YESNO, MB_YESNOCANCEL, MessageBoxW, PostMessageW, SW_HIDE, SW_SHOW,
-    SendMessageW, SetForegroundWindow, SetWindowLongPtrW, ShowWindow, WINDOW_STYLE, WM_APP,
-    WM_CLOSE, WM_COMMAND, WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_NCDESTROY, WM_SETFOCUS, WM_SETFONT,
-    WM_TIMER, WNDCLASSW, WS_CAPTION, WS_CHILD, WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT,
-    WS_EX_DLGMODALFRAME, WS_GROUP, WS_SYSMENU, WS_TABSTOP, WS_VISIBLE,
+    DestroyWindow, EN_CHANGE, EN_KILLFOCUS, ES_AUTOHSCROLL, ES_AUTOVSCROLL, ES_MULTILINE,
+    ES_PASSWORD, ES_READONLY, GetWindowLongPtrW, HMENU, IDC_ARROW, IDNO, IDYES, IsWindowVisible,
+    LoadCursorW, MB_DEFBUTTON2, MB_ICONQUESTION, MB_YESNO, MB_YESNOCANCEL, MessageBoxW,
+    PostMessageW, SW_HIDE, SW_SHOW, SendMessageW, SetForegroundWindow, SetWindowLongPtrW,
+    ShowWindow, WINDOW_STYLE, WM_APP, WM_CLOSE, WM_COMMAND, WM_CREATE, WM_DESTROY, WM_KEYDOWN,
+    WM_NCDESTROY, WM_SETFOCUS, WM_SETFONT, WM_TIMER, WNDCLASSW, WS_CAPTION, WS_CHILD,
+    WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_GROUP, WS_SYSMENU, WS_TABSTOP,
+    WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::{PCWSTR, PWSTR};
 
@@ -237,6 +238,10 @@ struct WindowState {
     mix_preview: MixPreview,
     progress_label: HWND,
     progress: HWND,
+    progress_bar: HWND,
+    progress_percent: u32,
+    progress_segment: Option<String>,
+    cancel_confirmation_open: bool,
     status: HWND,
     start_button: HWND,
     // Keep this HWND in state: validation errors for interrupted projects must restore focus here.
@@ -640,6 +645,49 @@ fn labels(language: Language) -> Labels {
     }
 }
 
+fn focus_progress_tab(progress: HWND, cancel: HWND) {
+    let previous = crate::get_focus_safe();
+    let target = if previous == progress
+        && unsafe { windows::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled(cancel).as_bool() }
+    {
+        cancel
+    } else {
+        progress
+    };
+    crate::set_focus_safe(target);
+    crate::log_debug(&format!(
+        "Audio description: progress Tab target={} focused={}",
+        if target == cancel { "cancel" } else { "text" },
+        crate::get_focus_safe() == target,
+    ));
+}
+
+pub fn handle_progress_tab_early(
+    hwnd: HWND,
+    msg: &windows::Win32::UI::WindowsAndMessaging::MSG,
+) -> bool {
+    if msg.message != WM_KEYDOWN
+        || msg.wParam.0 != windows::Win32::UI::Input::KeyboardAndMouse::VK_TAB.0 as usize
+        || (msg.hwnd != hwnd && !crate::is_child_safe(hwnd, msg.hwnd))
+        || !unsafe { IsWindowVisible(hwnd).as_bool() }
+    {
+        return false;
+    }
+    let controls = unsafe {
+        let pointer =
+            GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                as *const WindowState;
+        if pointer.is_null() || !(*pointer).running || (*pointer).cancel_confirmation_open {
+            return false;
+        }
+        ((*pointer).progress, (*pointer).cancel_button)
+    };
+    // Two controls have the same cycle for Tab and Shift+Tab. Never let the
+    // multiline edit or a global player/voice-panel handler consume this key.
+    focus_progress_tab(controls.0, controls.1);
+    true
+}
+
 pub fn handle_navigation(hwnd: HWND, msg: &windows::Win32::UI::WindowsAndMessaging::MSG) -> bool {
     if !unsafe { IsWindowVisible(hwnd).as_bool() } {
         return false;
@@ -1004,10 +1052,133 @@ fn progress_control_name(language: Language, segment: Option<&str>) -> String {
     segment.map_or_else(|| base.clone(), |segment| format!("{base}. {segment}"))
 }
 
-fn set_progress_segment(state: &WindowState, segment: Option<&str>) {
-    let name = progress_control_name(state.language, segment);
-    set_text(state.progress_label, &name);
-    set_text(state.progress, &name);
+fn progress_text(percent: u32, segment: Option<&str>, status: &str) -> String {
+    let mut lines = vec![format!("{}%", percent.min(100))];
+    if let Some(segment) = segment {
+        lines.push(segment.to_string());
+    }
+    if !status.is_empty() && Some(status) != segment {
+        lines.push(status.to_string());
+    }
+    lines.join("\r\n")
+}
+
+fn refresh_progress_text(state: &WindowState) {
+    let text = progress_text(
+        state.progress_percent,
+        state.progress_segment.as_deref(),
+        &get_text(state.status),
+    );
+    set_progress_text(state.progress, &text);
+}
+
+fn set_progress_text(control: HWND, text: &str) {
+    if get_text(control) == text {
+        return;
+    }
+    // Updating the text must not move a screen-reader user's caret to the start.
+    unsafe {
+        let mut start = 0u32;
+        let mut end = 0u32;
+        SendMessageW(
+            control,
+            crate::accessibility::EM_GETSEL,
+            WPARAM(&mut start as *mut u32 as usize),
+            LPARAM(&mut end as *mut u32 as isize),
+        );
+        let first_line = SendMessageW(control, 0x00CE, WPARAM(0), LPARAM(0)).0; // EM_GETFIRSTVISIBLELINE
+        set_text(control, text);
+        SendMessageW(
+            control,
+            0x00B1,
+            WPARAM(start as usize),
+            LPARAM(end as isize),
+        ); // EM_SETSEL
+        let current_line = SendMessageW(control, 0x00CE, WPARAM(0), LPARAM(0)).0;
+        SendMessageW(
+            control,
+            0x00B6,
+            WPARAM(0),
+            LPARAM(first_line - current_line),
+        ); // EM_LINESCROLL
+    }
+}
+
+fn set_progress_percent(state: &mut WindowState, percent: u32) {
+    state.progress_percent = percent.min(100);
+    unsafe {
+        SendMessageW(
+            state.progress_bar,
+            PBM_SETPOS,
+            WPARAM(state.progress_percent as usize),
+            LPARAM(0),
+        );
+    }
+    refresh_progress_text(state);
+}
+
+fn set_progress_segment(state: &mut WindowState, segment: Option<&str>) {
+    state.progress_segment = segment.map(str::to_string);
+    refresh_progress_text(state);
+}
+
+fn request_cancel(hwnd: HWND) {
+    // Do not retain a state reference across MessageBox's nested message loop:
+    // the worker can finish (or the window can close) while confirmation is open.
+    let pending = unsafe {
+        let pointer =
+            GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                as *mut WindowState;
+        if pointer.is_null() {
+            return;
+        }
+        let state = &mut *pointer;
+        if !state.running || state.cancel_confirmation_open {
+            return;
+        }
+        let Some(cancel) = state.cancel.clone() else {
+            return;
+        };
+        if cancel.load(Ordering::SeqCst) {
+            return;
+        }
+        state.cancel_confirmation_open = true;
+        (cancel, state.language)
+    };
+    let answer = crate::message_box_w_safe(
+        hwnd,
+        PCWSTR(to_wide(&i18n::tr(pending.1, "audio_description.cancel_confirm")).as_ptr()),
+        PCWSTR(to_wide(&i18n::tr(pending.1, "app.confirm_title")).as_ptr()),
+        MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2,
+    );
+    unsafe {
+        let pointer =
+            GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                as *mut WindowState;
+        if pointer.is_null() {
+            return;
+        }
+        let state = &mut *pointer;
+        state.cancel_confirmation_open = false;
+        if !state.running
+            || !state
+                .cancel
+                .as_ref()
+                .is_some_and(|c| Arc::ptr_eq(c, &pending.0))
+        {
+            return;
+        }
+        if answer == IDYES {
+            pending.0.store(true, Ordering::SeqCst);
+            set_text(state.status, &labels(state.language).canceling);
+            refresh_progress_text(state);
+            EnableWindow(state.cancel_button, false);
+            SetFocus(state.progress);
+            crate::log_debug("Audio description: cancellation confirmed");
+        } else {
+            SetFocus(state.progress);
+        }
+    }
 }
 
 fn set_text(hwnd: HWND, text: &str) {
@@ -1984,21 +2155,11 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
         }
         ShowWindow(
             state.progress_label,
-            if enabled && state.resume_mode {
-                SW_HIDE
-            } else {
-                SW_SHOW
-            },
+            if enabled { SW_HIDE } else { SW_SHOW },
         );
-        ShowWindow(
-            state.progress,
-            if enabled && state.resume_mode {
-                SW_HIDE
-            } else {
-                SW_SHOW
-            },
-        );
-        ShowWindow(state.status, SW_SHOW);
+        ShowWindow(state.progress, if enabled { SW_HIDE } else { SW_SHOW });
+        ShowWindow(state.progress_bar, if enabled { SW_HIDE } else { SW_SHOW });
+        ShowWindow(state.status, if enabled { SW_SHOW } else { SW_HIDE });
         ShowWindow(
             state.cancel_button,
             if enabled && state.resume_mode {
@@ -2019,7 +2180,7 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
                 SetFocus(state.start_button);
             }
         } else {
-            SetFocus(state.cancel_button);
+            SetFocus(state.progress);
         }
     }
 }
@@ -2449,7 +2610,7 @@ fn launch_audio_description_dialogue_overlap_fallback(
             "audio_description.dialogue_overlap_retrying",
         ),
     );
-    unsafe { SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0)) };
+    set_progress_percent(state, 0);
 
     thread::spawn(move || {
         let status_hwnd = hwnd;
@@ -2499,7 +2660,7 @@ fn launch_audio_description_job(
     set_progress_segment(state, None);
     set_controls_enabled(state, false);
     set_text(state.status, &labels.running);
-    unsafe { SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0)) };
+    set_progress_percent(state, 0);
 
     thread::spawn(move || {
         let status_hwnd = hwnd;
@@ -3430,17 +3591,37 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 let bitrate = with_state(parent, |app| app.settings.audio_description_bitrate_kbps)
                     .unwrap_or(192);
                 select_bitrate(bitrate_combo, bitrate);
-                // Give the progress bar its own accessible name rather than letting
+                // Give the progress text its own accessible name rather than letting
                 // screen readers infer it from the preceding audio settings labels.
                 let progress_name = progress_control_name(language, None);
                 let progress_label = create_label(hwnd, &progress_name, 16, 702, 650, hfont);
+                ShowWindow(progress_label, SW_HIDE);
                 let progress = CreateWindowExW(
+                    Default::default(),
+                    WC_EDIT,
+                    PCWSTR(to_wide(&progress_name).as_ptr()),
+                    WS_CHILD
+                        | WS_TABSTOP
+                        | WS_VSCROLL
+                        | WINDOW_STYLE((ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL) as u32),
+                    16,
+                    724,
+                    650,
+                    72,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+
+                // Keep native progress events for NVDA without another Tab stop.
+                let progress_bar = CreateWindowExW(
                     Default::default(),
                     PROGRESS_CLASSW,
                     PCWSTR(to_wide(&progress_name).as_ptr()),
-                    WS_CHILD | WS_VISIBLE,
+                    WS_CHILD,
                     16,
-                    724,
+                    802,
                     650,
                     20,
                     hwnd,
@@ -3448,7 +3629,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     HINSTANCE(0),
                     None,
                 );
-                SendMessageW(progress, PBM_SETRANGE32, WPARAM(0), LPARAM(100));
+                SendMessageW(progress_bar, PBM_SETRANGE32, WPARAM(0), LPARAM(100));
                 let status = CreateWindowExW(
                     Default::default(),
                     WC_STATIC,
@@ -3594,6 +3775,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     gemini_refresh_models_button,
                     engine_combo,
                     voice_combo,
+                    progress,
                     status,
                     voice_settings_button,
                     start_button,
@@ -3659,6 +3841,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     mix_preview: MixPreview::default(),
                     progress_label,
                     progress,
+                    progress_bar,
+                    progress_percent: 0,
+                    progress_segment: None,
+                    cancel_confirmation_open: false,
                     status,
                     start_button,
                     continue_interrupted_button,
@@ -3779,6 +3965,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
                         as *mut WindowState;
                 if pointer.is_null() {
+                    return LRESULT(0);
+                }
+                if id == ID_CANCEL {
+                    request_cancel(hwnd);
                     return LRESULT(0);
                 }
                 let state = &mut *pointer;
@@ -3960,16 +4150,6 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         continue_interrupted_from_window(hwnd, state);
                     }
                     ID_START => start_job(hwnd, state),
-                    ID_CANCEL => {
-                        if let Some(cancel) = state.cancel.as_ref() {
-                            crate::log_debug(
-                                "Audio description: cancellation requested from dialog",
-                            );
-                            cancel.store(true, Ordering::SeqCst);
-                            set_text(state.status, &labels.canceling);
-                            EnableWindow(state.cancel_button, false);
-                        }
-                    }
                     ID_CLOSE if !state.running => {
                         crate::log_if_err!(
                             DestroyWindow(hwnd),
@@ -4067,12 +4247,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         as *mut WindowState;
                 if !pointer.is_null() {
                     let state = &mut *pointer;
-                    SendMessageW(
-                        state.progress,
-                        PBM_SETPOS,
-                        WPARAM(wparam.0.min(100)),
-                        LPARAM(0),
-                    );
+                    set_progress_percent(state, wparam.0.min(100) as u32);
                 }
                 LRESULT(0)
             }
@@ -4089,13 +4264,14 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     if stage == "gemini_chunk" {
                         if let Some(segment) = segment_progress_text((*pointer).language, &message)
                         {
-                            set_progress_segment(&*pointer, Some(&segment));
+                            set_progress_segment(&mut *pointer, Some(&segment));
                         }
                     } else if !stage.starts_with("gemini") {
-                        set_progress_segment(&*pointer, None);
+                        set_progress_segment(&mut *pointer, None);
                     }
                     let localized = localized_status_text((*pointer).language, &stage, &message);
                     set_text((*pointer).status, &localized);
+                    refresh_progress_text(&*pointer);
                 }
                 LRESULT(0)
             }
@@ -4329,7 +4505,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 let labels = labels(state.language);
                 match result {
                     Ok(outcome) => {
-                        SendMessageW(state.progress, PBM_SETPOS, WPARAM(100), LPARAM(0));
+                        set_progress_percent(state, 100);
                         set_text(state.status, &labels.complete);
                         let mut message = i18n::tr_f(
                             state.language,
@@ -4645,7 +4821,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     set_text(state.start_button, &current_labels.start);
                     set_text(hwnd, &current_labels.title);
                     set_text(state.status, &current_labels.ready);
-                    SendMessageW(state.progress, PBM_SETPOS, WPARAM(0), LPARAM(0));
+                    set_progress_percent(state, 0);
                     set_controls_enabled(state, true);
                     update_character_catalog_visibility(state);
                     update_delete_video_visibility(state);
@@ -4832,7 +5008,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     let state = &*pointer;
                     ShowWindow(hwnd, SW_SHOW);
                     SetForegroundWindow(hwnd);
-                    SetFocus(state.cancel_button);
+                    SetFocus(state.progress);
                     crate::log_debug(
                         "Audio description: restored running resume window after selector close",
                     );
@@ -4846,7 +5022,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 if !pointer.is_null() {
                     let state = &*pointer;
                     if state.running {
-                        SetFocus(state.cancel_button);
+                        SetFocus(state.progress);
                     } else if state.return_to_editor_after_player {
                         SetFocus(state.close_button);
                     } else if state.resume_mode {
@@ -4872,13 +5048,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
                         as *mut WindowState;
                 if !pointer.is_null() && (*pointer).running {
-                    if let Some(cancel) = (*pointer).cancel.as_ref() {
-                        crate::log_debug(
-                            "Audio description: cancellation requested by closing dialog",
-                        );
-                        cancel.store(true, Ordering::SeqCst);
-                    }
-                    set_text((*pointer).status, &labels((*pointer).language).canceling);
+                    request_cancel(hwnd);
                     return LRESULT(0);
                 }
                 if !pointer.is_null() {
@@ -5010,6 +5180,122 @@ mod tests {
         assert!(text.contains('2'));
         assert!(text.contains('5'));
         assert!(text.contains("Segment"));
+    }
+
+    #[test]
+    fn audio_description_progress_text_has_navigable_lines() {
+        assert_eq!(
+            super::progress_text(43, Some("Segmento 10 di 23"), "Attesa risposta"),
+            "43%\r\nSegmento 10 di 23\r\nAttesa risposta"
+        );
+        assert_eq!(
+            super::progress_text(101, None, "Completato"),
+            "100%\r\nCompletato"
+        );
+        assert_eq!(
+            super::progress_text(43, Some("Segmento 10 di 23"), "Segmento 10 di 23"),
+            "43%\r\nSegmento 10 di 23"
+        );
+    }
+
+    #[test]
+    fn audio_description_progress_native_edit_preserves_caret() {
+        use super::*;
+        unsafe {
+            let edit = CreateWindowExW(
+                Default::default(),
+                WC_EDIT,
+                PCWSTR::null(),
+                windows::Win32::UI::WindowsAndMessaging::WS_POPUP
+                    | WINDOW_STYLE((ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL) as u32),
+                0,
+                0,
+                400,
+                80,
+                HWND(0),
+                HMENU(0),
+                HINSTANCE(0),
+                None,
+            );
+            assert_ne!(edit.0, 0);
+            set_progress_text(edit, "42%\r\nSegmento 10 di 23");
+            SendMessageW(edit, 0x00B1, WPARAM(8), LPARAM(8));
+            set_progress_text(edit, "43%\r\nSegmento 10 di 23");
+            assert_eq!(get_text(edit), "43%\r\nSegmento 10 di 23");
+            let selection =
+                SendMessageW(edit, crate::accessibility::EM_GETSEL, WPARAM(0), LPARAM(0)).0;
+            assert_eq!(selection & 0xffff, 8);
+            assert_eq!((selection >> 16) & 0xffff, 8);
+            assert!(crate::destroy_window_safe(edit).is_ok());
+        }
+    }
+
+    #[test]
+    fn audio_description_progress_tab_cycles_between_text_and_cancel() {
+        use super::*;
+        unsafe {
+            let parent = CreateWindowExW(
+                Default::default(),
+                WC_STATIC,
+                PCWSTR::null(),
+                windows::Win32::UI::WindowsAndMessaging::WS_POPUP,
+                -32000,
+                -32000,
+                200,
+                100,
+                HWND(0),
+                HMENU(0),
+                HINSTANCE(0),
+                None,
+            );
+            assert_ne!(parent.0, 0);
+            let edit = CreateWindowExW(
+                Default::default(),
+                WC_EDIT,
+                PCWSTR::null(),
+                WS_CHILD
+                    | WS_VISIBLE
+                    | WS_TABSTOP
+                    | WINDOW_STYLE((ES_MULTILINE | ES_READONLY) as u32),
+                0,
+                0,
+                150,
+                50,
+                parent,
+                HMENU(1),
+                HINSTANCE(0),
+                None,
+            );
+            let cancel = CreateWindowExW(
+                Default::default(),
+                WC_BUTTON,
+                PCWSTR(to_wide("Cancel").as_ptr()),
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                0,
+                50,
+                100,
+                25,
+                parent,
+                HMENU(2),
+                HINSTANCE(0),
+                None,
+            );
+            assert_ne!(edit.0, 0);
+            assert_ne!(cancel.0, 0);
+            ShowWindow(
+                parent,
+                windows::Win32::UI::WindowsAndMessaging::SW_SHOWNOACTIVATE,
+            );
+            SetFocus(edit);
+            focus_progress_tab(edit, cancel);
+            assert_eq!(crate::get_focus_safe(), cancel);
+            focus_progress_tab(edit, cancel);
+            assert_eq!(crate::get_focus_safe(), edit);
+            EnableWindow(cancel, false);
+            focus_progress_tab(edit, cancel);
+            assert_eq!(crate::get_focus_safe(), edit);
+            assert!(crate::destroy_window_safe(parent).is_ok());
+        }
     }
 
     #[test]

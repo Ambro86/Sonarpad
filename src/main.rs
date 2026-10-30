@@ -11099,6 +11099,16 @@ fn run_app(
             // global Ctrl+Tab handler or another open window's accessibility
             // handler can redirect focus to an editor or read-only Edit field.
             if msg.message == WM_KEYDOWN && msg.wParam.0 as u32 == VK_TAB.0 as u32 {
+                let description_window =
+                    with_state(hwnd, |state| state.audio_description_window).unwrap_or(HWND(0));
+                if description_window.0 != 0
+                    && app_windows::audio_description_window::handle_progress_tab_early(
+                        description_window,
+                        &msg,
+                    )
+                {
+                    continue;
+                }
                 let japanese_dialog = japanese_ocr_installer::active_dialog();
                 if japanese_dialog.0 != 0
                     && (msg.hwnd == japanese_dialog

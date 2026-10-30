@@ -154,6 +154,7 @@
   "audio_description.browse_input": "选择视频...",
   "audio_description.browse_output": "更改目标文件夹...",
   "audio_description.cancel": "取消",
+  "audio_description.cancel_confirm": "正在创建音频描述。确定要取消吗？",
   "audio_description.close": "关闭",
   "audio_description.engine": "语音合成引擎：",
   "audio_description.error.api_key": "请输入 Gemini API 密钥。",
