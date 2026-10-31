@@ -2411,5 +2411,12 @@
   "media_join.failed": "Det gick inte att sammanfoga filerna.",
   "stream_audio.player_loading": "Läser in strömmens ljudspår…",
   "stream_audio.player_load_timeout": "Spelaren läste inte in något ljudspår inom 60 sekunder. Försök igen senare eller spara videon och spela upp den lokalt.",
-  "stream_audio.player_exited_before_load": "Spelaren stängdes innan ljudspåren hade lästs in."
+  "stream_audio.player_exited_before_load": "Spelaren stängdes innan ljudspåren hade lästs in.",
+  "app.pdf_password_title": "Skyddad PDF",
+  "app.pdf_password_prompt": "Ange PDF-filens lösenord:",
+  "app.pdf_password_incorrect": "Fel lösenord. Ange PDF-filens lösenord igen:",
+  "file.save_pdf_without_password": "Spara PDF utan lösenord…",
+  "app.pdf_copy_different_path": "Välj ett annat namn: den ursprungliga PDF-filen ska förbli oförändrad.",
+  "app.pdf_copy_saved": "PDF-kopia utan lösenord sparad.",
+  "app.pdf_unlocked_hint": "Du kan spara PDF-filen utan lösenord genom att välja Spara PDF utan lösenord i menyn Arkiv."
 }

@@ -2411,5 +2411,12 @@
   "media_join.failed": "Не удалось объединить файлы.",
   "stream_audio.player_loading": "Загрузка звуковых дорожек потока…",
   "stream_audio.player_load_timeout": "Проигрыватель не загрузил ни одной звуковой дорожки за 60 секунд. Повторите попытку позже или сохраните видео и воспроизведите его локально.",
-  "stream_audio.player_exited_before_load": "Проигрыватель закрылся до загрузки звуковых дорожек."
+  "stream_audio.player_exited_before_load": "Проигрыватель закрылся до загрузки звуковых дорожек.",
+  "app.pdf_password_title": "Защищённый PDF",
+  "app.pdf_password_prompt": "Введите пароль PDF:",
+  "app.pdf_password_incorrect": "Неверный пароль. Введите пароль PDF ещё раз:",
+  "file.save_pdf_without_password": "Сохранить PDF без пароля…",
+  "app.pdf_copy_different_path": "Выберите другое имя: исходный PDF должен остаться неизменным.",
+  "app.pdf_copy_saved": "Копия PDF без пароля сохранена.",
+  "app.pdf_unlocked_hint": "Чтобы сохранить PDF без пароля, выберите «Сохранить PDF без пароля» в меню «Файл»."
 }

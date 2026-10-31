@@ -2411,5 +2411,12 @@
   "media_join.failed": "Nie można połączyć plików.",
   "stream_audio.player_loading": "Wczytywanie ścieżek audio strumienia…",
   "stream_audio.player_load_timeout": "Odtwarzacz nie wczytał żadnej ścieżki audio w ciągu 60 sekund. Spróbuj ponownie później lub zapisz film i odtwórz go lokalnie.",
-  "stream_audio.player_exited_before_load": "Odtwarzacz zamknął się przed wczytaniem ścieżek audio."
+  "stream_audio.player_exited_before_load": "Odtwarzacz zamknął się przed wczytaniem ścieżek audio.",
+  "app.pdf_password_title": "Chroniony PDF",
+  "app.pdf_password_prompt": "Wpisz hasło do pliku PDF:",
+  "app.pdf_password_incorrect": "Nieprawidłowe hasło. Wpisz ponownie hasło do pliku PDF:",
+  "file.save_pdf_without_password": "Zapisz PDF bez hasła…",
+  "app.pdf_copy_different_path": "Wybierz inną nazwę: oryginalny PDF musi pozostać niezmieniony.",
+  "app.pdf_copy_saved": "Zapisano kopię PDF bez hasła.",
+  "app.pdf_unlocked_hint": "Możesz zapisać PDF bez hasła, wybierając Zapisz PDF bez hasła w menu Plik."
 }

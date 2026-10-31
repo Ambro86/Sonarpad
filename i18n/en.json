@@ -2411,5 +2411,12 @@
   "media_join.failed": "Unable to join the files.",
   "stream_audio.player_loading": "Loading stream audio tracks…",
   "stream_audio.player_load_timeout": "The player did not load any audio tracks within 60 seconds. Try again later or save the video and play it locally.",
-  "stream_audio.player_exited_before_load": "The player closed before loading the audio tracks."
+  "stream_audio.player_exited_before_load": "The player closed before loading the audio tracks.",
+  "app.pdf_password_title": "Protected PDF",
+  "app.pdf_password_prompt": "Enter the PDF password:",
+  "app.pdf_password_incorrect": "Incorrect password. Enter the PDF password again:",
+  "file.save_pdf_without_password": "Save PDF without password…",
+  "app.pdf_copy_different_path": "Choose a different name: the original PDF must remain unchanged.",
+  "app.pdf_copy_saved": "PDF copy without password saved.",
+  "app.pdf_unlocked_hint": "You can save the PDF without a password from the File menu by choosing Save PDF without password."
 }

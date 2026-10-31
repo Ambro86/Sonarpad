@@ -2411,5 +2411,12 @@
   "media_join.failed": "Не вдалося об’єднати файли.",
   "stream_audio.player_loading": "Завантаження звукових доріжок потоку…",
   "stream_audio.player_load_timeout": "Програвач не завантажив жодної звукової доріжки за 60 секунд. Спробуйте пізніше або збережіть відео та відтворіть його локально.",
-  "stream_audio.player_exited_before_load": "Програвач закрився до завантаження звукових доріжок."
+  "stream_audio.player_exited_before_load": "Програвач закрився до завантаження звукових доріжок.",
+  "app.pdf_password_title": "Захищений PDF",
+  "app.pdf_password_prompt": "Введіть пароль PDF:",
+  "app.pdf_password_incorrect": "Неправильний пароль. Введіть пароль PDF ще раз:",
+  "file.save_pdf_without_password": "Зберегти PDF без пароля…",
+  "app.pdf_copy_different_path": "Виберіть іншу назву: оригінальний PDF має залишитися незмінним.",
+  "app.pdf_copy_saved": "Копію PDF без пароля збережено.",
+  "app.pdf_unlocked_hint": "Щоб зберегти PDF без пароля, виберіть «Зберегти PDF без пароля» в меню «Файл»."
 }

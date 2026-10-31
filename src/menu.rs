@@ -28,6 +28,7 @@ pub const IDM_FILE_READ_PREVIOUS_SENTENCE: usize = 1017;
 pub const IDM_FILE_READ_NEXT_SENTENCE: usize = 1018;
 pub const IDM_FILE_SAVE_IMAGE: usize = 1019;
 pub const IDM_FILE_PRINT: usize = 1020;
+pub const IDM_FILE_SAVE_PDF_WITHOUT_PASSWORD: usize = 1021;
 pub const IDM_FILE_EXECUTE: usize = 1015;
 pub const IDM_FILE_AUDIOBOOK: usize = 1011;
 pub const IDM_FILE_PODCAST: usize = 1012;
@@ -1172,6 +1173,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
         append_menu_string(file_menu, MF_STRING, IDM_FILE_OPEN, &labels.file_open);
         append_menu_string(file_menu, MF_STRING, IDM_FILE_SAVE, &labels.file_save);
         append_menu_string(file_menu, MF_STRING, IDM_FILE_SAVE_AS, &labels.file_save_as);
+        append_menu_string(
+            file_menu,
+            MF_STRING,
+            IDM_FILE_SAVE_PDF_WITHOUT_PASSWORD,
+            &i18n::tr(language, "file.save_pdf_without_password"),
+        );
         append_menu_string(
             file_menu,
             MF_STRING,

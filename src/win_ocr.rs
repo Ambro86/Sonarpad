@@ -259,11 +259,23 @@ fn ocr_file_path(
 }
 
 pub fn recognize_text_from_pdf(path: &Path, language: Language) -> Result<String, String> {
+    recognize_text_from_pdf_with_password(path, language, None)
+}
+
+pub fn recognize_text_from_pdf_with_password(
+    path: &Path,
+    language: Language,
+    password: Option<&str>,
+) -> Result<String, String> {
     // This function must be synchronous/blocking as per caller expectation.
     let path_str = ocr_file_path(path, |path| path.canonicalize())?;
     let future = async {
         let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(&path_str))?.await?;
-        let pdf_doc = PdfDocument::LoadFromFileAsync(&file)?.await?;
+        let pdf_doc = if let Some(password) = password {
+            PdfDocument::LoadFromFileWithPasswordAsync(&file, &HSTRING::from(password))?.await?
+        } else {
+            PdfDocument::LoadFromFileAsync(&file)?.await?
+        };
 
         let tag = language_tag(language);
         let win_lang = WinLanguage::CreateLanguage(&tag)?;

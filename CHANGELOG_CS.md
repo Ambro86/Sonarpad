@@ -1,5 +1,11 @@
 # Přehled změn
 
+Version 0.9.24 – 2026-10-31
+
+1. Streamování z YouTube: opraveno otevírání videí bez zvuku, když přímý stream skončil bez přehratelných zvukových dat. Sonarpad nyní tuto chybu rozpozná a automaticky zopakuje pokus pomocí yt-dlp/HLS.
+2. PDF chráněné heslem: Sonarpad nyní požádá o heslo v přístupném poli a po jeho ověření dokument otevře.
+3. Do nabídky Soubor přidána položka „Uložit PDF bez hesla“: po otevření dokumentu správným heslem můžete uložit nechráněnou kopii se zachovaným rozložením a obsahem, aniž by se změnil originál. Po otevření na tuto možnost upozorní odečítač obrazovky.
+
 Version 0.9.23 – 2026-10-30
 
 1. Zvukové popisy videí z YouTube: opravena chyba stahování streamu, která se objevovala těsně před dokončením, když se zvuk a video stáhly odděleně, ale nesloučily se. Sonarpad nyní spojuje úplné stopy pomocí vestavěných knihoven bez opětovného kódování.

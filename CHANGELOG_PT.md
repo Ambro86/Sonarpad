@@ -1,5 +1,11 @@
 # Changelog
 
+Version 0.9.24 – 2026-10-31
+
+1. Reprodução em streaming do YouTube: corrigidos os vídeos que abriam sem som quando o fluxo direto terminava sem dados de áudio reproduzíveis. O Sonarpad deteta agora este erro e tenta novamente de forma automática através de yt-dlp/HLS.
+2. PDF protegidos por palavra-passe: o Sonarpad pede agora a palavra-passe num campo acessível e abre o documento após a verificar.
+3. Adicionada a opção «Guardar PDF sem palavra-passe» ao menu Ficheiro: após abrir o documento com a palavra-passe correta, permite guardar uma cópia sem proteção, preservando a disposição e o conteúdo e mantendo o original inalterado. O leitor de ecrã anuncia esta possibilidade após a abertura.
+
 Version 0.9.23 – 2026-10-30
 
 1. Audiodescrições do YouTube: corrigido um erro de transferência em streaming que surgia perto do fim quando o áudio e o vídeo eram transferidos separadamente, mas não eram unidos. O Sonarpad junta agora as faixas completas com as bibliotecas integradas, sem recodificação.

@@ -2411,5 +2411,12 @@
   "media_join.failed": "Nepavyko sujungti failų.",
   "stream_audio.player_loading": "Įkeliami srauto garso takeliai…",
   "stream_audio.player_load_timeout": "Grotuvas per 60 sekundžių neįkėlė nė vieno garso takelio. Bandykite vėliau arba išsaugokite vaizdo įrašą ir paleiskite jį vietoje.",
-  "stream_audio.player_exited_before_load": "Grotuvas užsidarė prieš įkeldamas garso takelius."
+  "stream_audio.player_exited_before_load": "Grotuvas užsidarė prieš įkeldamas garso takelius.",
+  "app.pdf_password_title": "Apsaugotas PDF",
+  "app.pdf_password_prompt": "Įveskite PDF slaptažodį:",
+  "app.pdf_password_incorrect": "Neteisingas slaptažodis. Dar kartą įveskite PDF slaptažodį:",
+  "file.save_pdf_without_password": "Išsaugoti PDF be slaptažodžio…",
+  "app.pdf_copy_different_path": "Pasirinkite kitą pavadinimą: originalus PDF turi likti nepakeistas.",
+  "app.pdf_copy_saved": "PDF kopija be slaptažodžio išsaugota.",
+  "app.pdf_unlocked_hint": "PDF be slaptažodžio galite išsaugoti meniu Failas pasirinkę Išsaugoti PDF be slaptažodžio."
 }

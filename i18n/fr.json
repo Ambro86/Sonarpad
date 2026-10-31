@@ -2411,5 +2411,12 @@
   "media_join.failed": "Impossible de fusionner les fichiers.",
   "stream_audio.player_loading": "Chargement des pistes audio du flux…",
   "stream_audio.player_load_timeout": "Le lecteur n’a chargé aucune piste audio dans les 60 secondes. Réessayez plus tard ou enregistrez la vidéo pour la lire localement.",
-  "stream_audio.player_exited_before_load": "Le lecteur s’est fermé avant de charger les pistes audio."
+  "stream_audio.player_exited_before_load": "Le lecteur s’est fermé avant de charger les pistes audio.",
+  "app.pdf_password_title": "PDF protégé",
+  "app.pdf_password_prompt": "Saisissez le mot de passe du PDF :",
+  "app.pdf_password_incorrect": "Mot de passe incorrect. Saisissez à nouveau le mot de passe du PDF :",
+  "file.save_pdf_without_password": "Enregistrer le PDF sans mot de passe…",
+  "app.pdf_copy_different_path": "Choisissez un autre nom : le PDF original doit rester inchangé.",
+  "app.pdf_copy_saved": "Copie du PDF sans mot de passe enregistrée.",
+  "app.pdf_unlocked_hint": "Vous pouvez enregistrer le PDF sans mot de passe depuis le menu Fichier, en choisissant Enregistrer le PDF sans mot de passe."
 }

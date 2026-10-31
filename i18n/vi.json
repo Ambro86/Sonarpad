@@ -2411,5 +2411,12 @@
   "media_join.failed": "Không thể ghép các tệp.",
   "stream_audio.player_loading": "Đang tải các bản âm thanh của luồng…",
   "stream_audio.player_load_timeout": "Trình phát không tải được bản âm thanh nào trong 60 giây. Hãy thử lại sau hoặc lưu video và phát trên thiết bị.",
-  "stream_audio.player_exited_before_load": "Trình phát đã đóng trước khi tải các bản âm thanh."
+  "stream_audio.player_exited_before_load": "Trình phát đã đóng trước khi tải các bản âm thanh.",
+  "app.pdf_password_title": "PDF được bảo vệ",
+  "app.pdf_password_prompt": "Nhập mật khẩu PDF:",
+  "app.pdf_password_incorrect": "Mật khẩu không đúng. Nhập lại mật khẩu PDF:",
+  "file.save_pdf_without_password": "Lưu PDF không có mật khẩu…",
+  "app.pdf_copy_different_path": "Chọn tên khác: PDF gốc phải được giữ nguyên.",
+  "app.pdf_copy_saved": "Đã lưu bản sao PDF không có mật khẩu.",
+  "app.pdf_unlocked_hint": "Bạn có thể lưu PDF không có mật khẩu từ trình đơn Tệp bằng cách chọn Lưu PDF không có mật khẩu."
 }

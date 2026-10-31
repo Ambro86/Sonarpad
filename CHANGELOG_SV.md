@@ -1,5 +1,11 @@
 # Ändringslogg
 
+Version 0.9.24 – 2026-10-31
+
+1. Strömning från YouTube: åtgärdat att videor öppnades utan ljud när direktströmmen avslutades utan spelbara ljuddata. Sonarpad upptäcker nu felet och försöker automatiskt igen via yt-dlp/HLS.
+2. Lösenordsskyddade PDF-filer: Sonarpad ber nu om lösenordet i ett tillgängligt fält och öppnar dokumentet efter verifiering.
+3. Lagt till ”Spara PDF utan lösenord” i menyn Arkiv: efter att ha öppnat dokumentet med rätt lösenord kan du spara en oskyddad kopia med bevarad layout och innehåll, utan att ändra originalet. Skärmläsaren meddelar denna möjlighet när dokumentet har öppnats.
+
 Version 0.9.23 – 2026-10-30
 
 1. Syntolkning av YouTube-videor: åtgärdat ett strömningsnedladdningsfel nära slutet när ljud och video hade hämtats separat men inte sammanfogats. Sonarpad sammanfogar nu de fullständiga spåren med de inbyggda biblioteken, utan omkodning.

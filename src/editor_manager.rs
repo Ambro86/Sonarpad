@@ -1365,6 +1365,8 @@ pub struct Document {
     pub epub_index: Vec<EpubIndexEntry>,
     pub epub_original_text: Option<String>,
     pub pdf_is_imported_source: bool,
+    // Session only: never serialized or included in diagnostics.
+    pub pdf_password: Option<String>,
 }
 
 #[derive(Clone)]
@@ -1399,6 +1401,7 @@ impl Default for Document {
             epub_index: Vec::new(),
             epub_original_text: None,
             pdf_is_imported_source: false,
+            pdf_password: None,
         }
     }
 }
@@ -3461,6 +3464,7 @@ pub fn new_document(hwnd: HWND) {
                 epub_index: Vec::new(),
                 epub_original_text: None,
                 pdf_is_imported_source: false,
+                pdf_password: None,
             };
             state.docs.push(doc);
             insert_tab(state.hwnd_tab, &title, (state.docs.len() - 1) as i32);
@@ -3512,6 +3516,7 @@ pub fn ensure_audio_document_tab(hwnd: HWND, path: &Path) -> Option<usize> {
                 epub_index: Vec::new(),
                 epub_original_text: None,
                 pdf_is_imported_source: false,
+                pdf_password: None,
             };
             SendMessageW(hwnd_edit, EM_SETREADONLY, WPARAM(1), LPARAM(0));
             ShowWindow(hwnd_edit, SW_HIDE);
@@ -4115,6 +4120,7 @@ pub fn get_or_create_rss_document(hwnd: HWND, title: &str) -> Option<HWND> {
                 epub_index: Vec::new(),
                 epub_original_text: None,
                 pdf_is_imported_source: false,
+                pdf_password: None,
             };
             state.docs.push(doc);
             insert_tab(state.hwnd_tab, title, (state.docs.len() - 1) as i32);
@@ -5132,6 +5138,7 @@ pub fn save_document_at(hwnd: HWND, index: usize, force_dialog: bool) -> bool {
 
             if !exporting_epub_copy {
                 state.docs[index].pdf_is_imported_source = false;
+                state.docs[index].pdf_password = None;
             }
 
             if exporting_epub_copy {

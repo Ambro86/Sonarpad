@@ -2411,5 +2411,12 @@
   "media_join.failed": "फ़ाइलें जोड़ी नहीं जा सकीं।",
   "stream_audio.player_loading": "स्ट्रीम के ऑडियो ट्रैक लोड हो रहे हैं…",
   "stream_audio.player_load_timeout": "प्लेयर 60 सेकंड में कोई ऑडियो ट्रैक लोड नहीं कर पाया। बाद में फिर कोशिश करें या वीडियो सहेजकर स्थानीय रूप से चलाएँ।",
-  "stream_audio.player_exited_before_load": "ऑडियो ट्रैक लोड होने से पहले प्लेयर बंद हो गया।"
+  "stream_audio.player_exited_before_load": "ऑडियो ट्रैक लोड होने से पहले प्लेयर बंद हो गया।",
+  "app.pdf_password_title": "सुरक्षित PDF",
+  "app.pdf_password_prompt": "PDF का पासवर्ड दर्ज करें:",
+  "app.pdf_password_incorrect": "गलत पासवर्ड। PDF का पासवर्ड दोबारा दर्ज करें:",
+  "file.save_pdf_without_password": "बिना पासवर्ड के PDF सहेजें…",
+  "app.pdf_copy_different_path": "दूसरा नाम चुनें: मूल PDF में बदलाव नहीं होना चाहिए।",
+  "app.pdf_copy_saved": "बिना पासवर्ड वाली PDF प्रति सहेजी गई।",
+  "app.pdf_unlocked_hint": "आप फ़ाइल मेनू में पासवर्ड के बिना PDF सहेजें चुनकर PDF को बिना पासवर्ड सहेज सकते हैं।"
 }

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+Version 0.9.24 – 2026-10-31
+
+1. Odtwarzanie strumieniowe z YouTube: naprawiono otwieranie filmów bez dźwięku, gdy bezpośredni strumień kończył się bez danych audio możliwych do odtworzenia. Sonarpad wykrywa teraz ten błąd i automatycznie ponawia próbę przez yt-dlp/HLS.
+2. Pliki PDF chronione hasłem: Sonarpad prosi teraz o hasło w dostępnym polu i otwiera dokument po jego sprawdzeniu.
+3. Dodano opcję „Zapisz PDF bez hasła” w menu Plik: po otwarciu dokumentu poprawnym hasłem można zapisać niezabezpieczoną kopię z zachowaniem układu i zawartości, bez zmieniania oryginału. Czytnik ekranu informuje o tej możliwości po otwarciu dokumentu.
+
 Version 0.9.23 – 2026-10-30
 
 1. Audiodeskrypcja filmów z YouTube: naprawiono błąd pobierania strumienia pojawiający się pod koniec, gdy dźwięk i obraz zostały pobrane oddzielnie, ale nie zostały połączone. Sonarpad łączy teraz kompletne ścieżki za pomocą wbudowanych bibliotek, bez ponownego kodowania.

@@ -1,5 +1,11 @@
 # Nhật ký thay đổi
 
+Version 0.9.24 – 2026-10-31
+
+1. Phát trực tuyến từ YouTube: sửa lỗi video mở nhưng không có tiếng khi luồng trực tiếp kết thúc mà không có dữ liệu âm thanh phát được. Sonarpad nay nhận diện lỗi này và tự động thử lại qua yt-dlp/HLS.
+2. PDF được bảo vệ bằng mật khẩu: Sonarpad nay yêu cầu mật khẩu trong một ô nhập hỗ trợ tiếp cận và mở tài liệu sau khi xác minh.
+3. Thêm “Lưu PDF không có mật khẩu” vào trình đơn Tệp: sau khi mở tài liệu bằng mật khẩu đúng, bạn có thể lưu một bản sao không được bảo vệ, giữ nguyên bố cục và nội dung mà không thay đổi bản gốc. Trình đọc màn hình thông báo tùy chọn này sau khi mở tài liệu.
+
 Version 0.9.23 – 2026-10-30
 
 1. Mô tả âm thanh cho video YouTube: sửa lỗi tải luồng xuất hiện gần cuối khi âm thanh và video được tải riêng nhưng chưa được ghép lại. Sonarpad nay ghép các luồng đã tải hoàn chỉnh bằng thư viện tích hợp, không mã hóa lại.

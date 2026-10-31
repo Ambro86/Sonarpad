@@ -2463,5 +2463,12 @@
   "media_join.failed": "Die Dateien konnten nicht zusammengefügt werden.",
   "stream_audio.player_loading": "Audiotracks des Streams werden geladen…",
   "stream_audio.player_load_timeout": "Der Player hat innerhalb von 60 Sekunden keine Audiospur geladen. Versuchen Sie es später erneut oder speichern Sie das Video und spielen Sie es lokal ab.",
-  "stream_audio.player_exited_before_load": "Der Player wurde vor dem Laden der Audiospuren geschlossen."
+  "stream_audio.player_exited_before_load": "Der Player wurde vor dem Laden der Audiospuren geschlossen.",
+  "app.pdf_password_title": "Geschütztes PDF",
+  "app.pdf_password_prompt": "Passwort für das PDF eingeben:",
+  "app.pdf_password_incorrect": "Falsches Passwort. Bitte das PDF-Passwort erneut eingeben:",
+  "file.save_pdf_without_password": "PDF ohne Passwort speichern…",
+  "app.pdf_copy_different_path": "Wählen Sie einen anderen Namen: Das Original-PDF muss unverändert bleiben.",
+  "app.pdf_copy_saved": "PDF-Kopie ohne Passwort gespeichert.",
+  "app.pdf_unlocked_hint": "Sie können die PDF ohne Passwort speichern: Wählen Sie im Menü Datei den Eintrag PDF ohne Passwort speichern."
 }

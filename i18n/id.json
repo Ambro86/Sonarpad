@@ -2411,5 +2411,12 @@
   "media_join.failed": "Tidak dapat menggabungkan berkas.",
   "stream_audio.player_loading": "Memuat trek audio streaming…",
   "stream_audio.player_load_timeout": "Pemutar tidak memuat trek audio apa pun dalam 60 detik. Coba lagi nanti atau simpan video dan putar secara lokal.",
-  "stream_audio.player_exited_before_load": "Pemutar ditutup sebelum memuat trek audio."
+  "stream_audio.player_exited_before_load": "Pemutar ditutup sebelum memuat trek audio.",
+  "app.pdf_password_title": "PDF terlindungi",
+  "app.pdf_password_prompt": "Masukkan kata sandi PDF:",
+  "app.pdf_password_incorrect": "Kata sandi salah. Masukkan kembali kata sandi PDF:",
+  "file.save_pdf_without_password": "Simpan PDF tanpa kata sandi…",
+  "app.pdf_copy_different_path": "Pilih nama lain: PDF asli harus tetap tidak berubah.",
+  "app.pdf_copy_saved": "Salinan PDF tanpa kata sandi disimpan.",
+  "app.pdf_unlocked_hint": "Anda dapat menyimpan PDF tanpa kata sandi melalui menu Berkas dengan memilih Simpan PDF tanpa kata sandi."
 }

@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+Version 0.9.24 – 2026-10-31
+
+1. YouTube-Streaming: Videos wurden ohne Ton geöffnet, wenn der direkte Stream ohne abspielbare Audiodaten endete. Sonarpad erkennt diesen Fehler jetzt und versucht die Wiedergabe automatisch erneut über yt-dlp/HLS.
+2. Passwortgeschützte PDFs: Sonarpad fragt das Passwort jetzt in einem barrierefreien Eingabefeld ab und öffnet das Dokument nach erfolgreicher Prüfung.
+3. Im Menü Datei wurde „PDF ohne Passwort speichern“ hinzugefügt: Nach dem Öffnen mit dem richtigen Passwort lässt sich eine ungeschützte Kopie mit unverändertem Layout und Inhalt speichern. Das Original bleibt unverändert. Eine Screenreader-Ansage weist nach dem Öffnen auf diese Möglichkeit hin.
+
 Version 0.9.23 – 2026-10-30
 
 1. YouTube-Audiodeskription: Ein Streaming-Downloadfehler kurz vor Abschluss wurde behoben, wenn Audio und Video getrennt heruntergeladen, aber nicht zusammengeführt wurden. Sonarpad führt die vollständig heruntergeladenen Spuren jetzt mit den integrierten Bibliotheken ohne erneute Kodierung zusammen.

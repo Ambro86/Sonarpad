@@ -1,5 +1,11 @@
 # Catatan perubahan
 
+Version 0.9.24 – 2026-10-31
+
+1. Streaming YouTube: memperbaiki video yang terbuka tanpa suara ketika aliran langsung berakhir tanpa data audio yang dapat diputar. Sonarpad kini mendeteksi kesalahan ini dan otomatis mencoba lagi melalui yt-dlp/HLS.
+2. PDF yang dilindungi kata sandi: Sonarpad kini meminta kata sandi melalui kolom yang aksesibel dan membuka dokumen setelah memverifikasinya.
+3. Menambahkan “Simpan PDF tanpa kata sandi” ke menu Berkas: setelah membuka dokumen dengan kata sandi yang benar, Anda dapat menyimpan salinan tanpa perlindungan dengan mempertahankan tata letak dan isinya, tanpa mengubah dokumen asli. Pembaca layar mengumumkan opsi ini setelah dokumen dibuka.
+
 Version 0.9.23 – 2026-10-30
 
 1. Deskripsi audio YouTube: memperbaiki kesalahan unduhan streaming yang muncul menjelang selesai ketika audio dan video diunduh terpisah tetapi tidak digabungkan. Sonarpad kini menggabungkan trek yang telah selesai diunduh menggunakan pustaka bawaan, tanpa pengodean ulang.

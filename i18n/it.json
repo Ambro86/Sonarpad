@@ -2463,5 +2463,12 @@
   "media_join.failed": "Impossibile unire i file.",
   "stream_audio.player_loading": "Caricamento delle tracce audio dello streaming…",
   "stream_audio.player_load_timeout": "Il lettore non ha caricato alcuna traccia audio entro 60 secondi. Riprova più tardi oppure salva il video e riproducilo localmente.",
-  "stream_audio.player_exited_before_load": "Il lettore si è chiuso prima di caricare le tracce audio."
+  "stream_audio.player_exited_before_load": "Il lettore si è chiuso prima di caricare le tracce audio.",
+  "app.pdf_password_title": "PDF protetto",
+  "app.pdf_password_prompt": "Inserisci la password del PDF:",
+  "app.pdf_password_incorrect": "Password errata. Inserisci nuovamente la password del PDF:",
+  "file.save_pdf_without_password": "Salva PDF senza password…",
+  "app.pdf_copy_different_path": "Scegli un nome diverso: il PDF originale deve rimanere invariato.",
+  "app.pdf_copy_saved": "Copia PDF senza password salvata.",
+  "app.pdf_unlocked_hint": "Puoi salvare il PDF senza password dal menu File, scegliendo la voce Salva PDF senza password."
 }

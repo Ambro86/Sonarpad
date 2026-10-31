@@ -1495,6 +1495,13 @@ fn log_foreground_snapshot(tag: &str) {
         } else {
             String::new()
         };
+        if class_name.eq_ignore_ascii_case("Edit")
+            && get_window_long_ptr_w_safe(hwnd, windows::Win32::UI::WindowsAndMessaging::GWL_STYLE)
+                & windows::Win32::UI::WindowsAndMessaging::ES_PASSWORD as isize
+                != 0
+        {
+            return (class_name, "[REDACTED_PASSWORD]".to_string(), 0);
+        }
         let text_len = get_window_text_length_w_safe(hwnd);
         let window_text = if text_len > 0 {
             let mut text_buf = vec![0u16; text_len as usize + 1];
@@ -1641,6 +1648,7 @@ struct PdfLoadResult {
     path: PathBuf,
     result: Result<PdfTextResult, String>,
     from_copydata: bool,
+    password: Option<String>,
 }
 
 pub struct UpdateDialogRequest {
@@ -3662,6 +3670,18 @@ fn spawn_mpv_with_runtime_repair(
 
 fn youtube_mpv_log_has_failure(log: &str) -> Option<String> {
     let lower = log.to_ascii_lowercase();
+    // mpv also reports "playback restart complete" for an empty stream.
+    // Only actual audio output can supersede this specific startup failure.
+    if lower
+        .rfind("got eof with no data before it")
+        .is_some_and(|failure| {
+            lower
+                .rfind("audio=playing")
+                .is_none_or(|success| failure > success)
+        })
+    {
+        return Some("empty audio stream".to_string());
+    }
     let last_success = ["starting playback", "playback restart complete"]
         .into_iter()
         .filter_map(|marker| lower.rfind(marker))
@@ -3884,6 +3904,7 @@ fn wait_for_youtube_mpv_file_loaded(
     ipc_path: &Path,
     log_path: Option<&Path>,
     language: Language,
+    require_audio_output: bool,
 ) -> Result<(), String> {
     // Long progressive MP4 files can need a remote index/range read before
     // exposing tracks. Measured public videos take 19s direct and 44s via
@@ -3920,7 +3941,18 @@ fn wait_for_youtube_mpv_file_loaded(
                         track.get("type").and_then(serde_json::Value::as_str) == Some("audio")
                     })
                 });
-            if has_audio {
+            let audio_ready = if require_audio_output {
+                let log = log_path
+                    .and_then(|path| std::fs::read_to_string(path).ok())
+                    .unwrap_or_default();
+                if let Some(detail) = youtube_mpv_log_has_failure(&log) {
+                    return Err(detail);
+                }
+                log.contains("audio=playing")
+            } else {
+                true
+            };
+            if has_audio && audio_ready {
                 log_debug(&format!(
                     "Managed mpv YouTube IPC file-loaded confirmed: pid={} attempt={} elapsed_ms={}",
                     child.id(),
@@ -5232,6 +5264,21 @@ pub(crate) fn launch_stream_url_in_mpv(
                 ) {
                     Ok(()) => return Ok(()),
                     Err(err) if err.contains("richiesta più recente") => return Err(err),
+                    Err(err) if err == "empty audio stream" => {
+                        log_debug(
+                            "SonarTube direct stream has no playable audio; retrying with yt-dlp HLS",
+                        );
+                        return launch_stream_url_in_mpv_with_input(
+                            hwnd,
+                            url,
+                            StreamMpvOptions {
+                                ytdl_format: Some(YOUTUBE_HTTP_500_HLS_FORMAT),
+                                ..direct_options
+                            },
+                            None,
+                            true,
+                        );
+                    }
                     Err(_) => log_debug("SonarTube direct playback failed; fallback to yt-dlp"),
                 }
             }
@@ -5972,6 +6019,7 @@ fn launch_stream_url_in_mpv_with_input(
                                 &ipc_path,
                                 youtube_log_path.as_deref(),
                                 language,
+                                direct_input.is_some(),
                             )
                         },
                     )
@@ -14550,6 +14598,17 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     let file_menu = GetSubMenu(main_menu, 0);
                     if file_menu == hmenu {
                         update_route_image_menu_item(hwnd, hmenu);
+                        let unlocked_pdf = with_state(hwnd, |state| {
+                            state.docs.get(state.current).is_some_and(|doc| {
+                                doc.pdf_is_imported_source && doc.pdf_password.is_some()
+                            })
+                        })
+                        .unwrap_or(false);
+                        let _enabled = EnableMenuItem(
+                            hmenu,
+                            IDM_FILE_SAVE_PDF_WITHOUT_PASSWORD as u32,
+                            MF_BYCOMMAND | if unlocked_pdf { MF_ENABLED } else { MF_GRAYED },
+                        );
                     }
                     let view_menu = GetSubMenu(main_menu, 2);
                     if view_menu == hmenu {
@@ -14868,6 +14927,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                         log_debug("Menu: Save document as");
                         editor_manager::save_current_document_as(hwnd);
                         editor_manager::refresh_current_editor_visual(hwnd);
+                        LRESULT(0)
+                    }
+                    IDM_FILE_SAVE_PDF_WITHOUT_PASSWORD => {
+                        save_current_pdf_without_password(hwnd);
                         LRESULT(0)
                     }
                     IDM_FILE_SAVE_ALL => {
@@ -23796,6 +23859,7 @@ mod tests {
             std::path::Path::new("unused-mpv-test-pipe"),
             None,
             super::Language::English,
+            false,
         )
         .unwrap_err();
         assert_eq!(
@@ -23806,6 +23870,32 @@ mod tests {
             )
         );
         assert!(!error.contains("terminato"));
+    }
+
+    #[test]
+    fn youtube_empty_audio_is_not_a_successful_playback_restart() {
+        let empty = concat!(
+            "stream 1, offset 0x21c67: partial file\n",
+            "got EOF with no data before it\n",
+            "playback restart complete @ -9223372036854775808.000000, audio=eof, video=eof\n"
+        );
+        assert_eq!(
+            super::youtube_mpv_log_has_failure(empty).as_deref(),
+            Some("empty audio stream")
+        );
+        assert_eq!(
+            super::youtube_mpv_log_has_failure(&format!(
+                "{empty}playback restart complete @ 0.03, audio=playing, video=eof\n"
+            )),
+            None
+        );
+        assert_eq!(
+            super::youtube_mpv_log_has_failure(
+                "playback restart complete @ 0.03, audio=playing, video=eof\naudio EOF reached\n"
+            ),
+            None
+        );
+        assert_eq!(super::youtube_mpv_log_has_failure("partial file\n"), None);
     }
 
     #[test]
@@ -24606,68 +24696,169 @@ where
     crate::with_raw_mut_ptr_safe(ptr, f)
 }
 
-pub(crate) fn open_pdf_document_async(hwnd: HWND, path: &Path, from_copydata: bool) {
-    unsafe {
-        let language = with_state(hwnd, |state| state.settings.language).unwrap_or_default();
-        let path_buf = path.to_path_buf();
-        let title = path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("File")
-            .to_string();
-        let (hwnd_edit, new_index) = with_state(hwnd, |state| {
-            let hwnd_edit = create_edit(
-                hwnd,
-                state.hfont,
-                state.settings.word_wrap,
-                state.settings.text_color,
-                state.settings.text_size,
-            );
-            editor_manager::set_edit_text(hwnd_edit, &pdf_loading_placeholder(0, language));
-            let doc = Document {
-                title: title.clone(),
-                path: Some(path_buf.clone()),
-                hwnd_edit,
-                dirty: false,
-                format: FileFormat::Pdf,
-                opened_text_encoding: None,
-                current_save_text_encoding: None,
-                from_rss: false,
-                from_italiaonline: false,
-                from_find_in_files: false,
-                from_wikipedia: false,
-                from_treccani: false,
-                is_temporary: false,
-                confirm_close_when_clean: false,
-                prefer_title_for_save_suggestion: false,
-                prefer_mpv_playback: false,
-                route_map: None,
-                epub_index: Vec::new(),
-                epub_original_text: None,
-                pdf_is_imported_source: true,
-            };
-            state.docs.push(doc);
-            insert_tab(state.hwnd_tab, &title, (state.docs.len() - 1) as i32);
-            (hwnd_edit, state.docs.len() - 1)
-        })
-        .unwrap_or((HWND(0), 0));
-
-        if hwnd_edit.0 == 0 {
-            return;
+fn save_current_pdf_without_password(hwnd: HWND) {
+    let Some((source, password, language)) = with_state(hwnd, |state| {
+        let doc = state.docs.get(state.current)?;
+        if !doc.pdf_is_imported_source {
+            return None;
         }
-        select_tab(hwnd, new_index);
+        Some((
+            doc.path.clone()?,
+            doc.pdf_password.clone()?,
+            state.settings.language,
+        ))
+    })
+    .flatten() else {
+        return;
+    };
+    let destination = (|| -> Option<PathBuf> {
+        let _com = crate::com_guard::ComGuard::new_sta().ok()?;
+        unsafe {
+            let dialog: IFileSaveDialog =
+                CoCreateInstance(&FileSaveDialog, None, CLSCTX_ALL).ok()?;
+            dialog
+                .SetFileTypes(&[COMDLG_FILTERSPEC {
+                    pszName: w!("PDF (*.pdf)"),
+                    pszSpec: w!("*.pdf"),
+                }])
+                .ok()?;
+            dialog.SetDefaultExtension(w!("pdf")).ok()?;
+            use windows::Win32::UI::Shell::{
+                FOS_FORCEFILESYSTEM, FOS_OVERWRITEPROMPT, FOS_PATHMUSTEXIST, FOS_STRICTFILETYPES,
+            };
+            dialog
+                .SetOptions(
+                    FOS_FORCEFILESYSTEM
+                        | FOS_OVERWRITEPROMPT
+                        | FOS_PATHMUSTEXIST
+                        | FOS_STRICTFILETYPES,
+                )
+                .ok()?;
+            dialog
+                .SetTitle(PCWSTR(
+                    to_wide(&i18n::tr(language, "file.save_pdf_without_password")).as_ptr(),
+                ))
+                .ok()?;
+            let name = format!("{}.unlocked.pdf", source.file_stem()?.to_string_lossy());
+            dialog.SetFileName(PCWSTR(to_wide(&name).as_ptr())).ok()?;
+            if let Some(parent) = source.parent()
+                && let Ok(folder) = SHCreateItemFromParsingName::<_, _, IShellItem>(
+                    PCWSTR(to_wide(&parent.to_string_lossy()).as_ptr()),
+                    None,
+                )
+            {
+                let _unused = dialog.SetFolder(&folder);
+            }
+            dialog.Show(hwnd).ok()?;
+            let path = dialog
+                .GetResult()
+                .ok()?
+                .GetDisplayName(windows::Win32::UI::Shell::SIGDN_FILESYSPATH)
+                .ok()?;
+            let result = path.to_string().ok().map(PathBuf::from);
+            CoTaskMemFree(Some(path.0 as *const _));
+            result
+        }
+    })();
+    let Some(destination) = destination else {
+        return;
+    };
+    match file_handler::save_pdf_without_password(&source, &destination, &password, language) {
+        Ok(()) => show_info(hwnd, language, &i18n::tr(language, "app.pdf_copy_saved")),
+        Err(error) => show_error(hwnd, language, &error),
+    }
+}
 
-        let ocr_timeout_secs = if from_copydata {
-            PDF_OCR_PROMPT_TIMEOUT_COPYDATA_SECS
-        } else {
-            0
+pub(crate) fn open_pdf_document_async(hwnd: HWND, path: &Path, from_copydata: bool) {
+    let language = with_state(hwnd, |state| state.settings.language).unwrap_or_default();
+    let path_buf = path.to_path_buf();
+    let title = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("File")
+        .to_string();
+    let (hwnd_edit, new_index) = with_state(hwnd, |state| {
+        let hwnd_edit = create_edit(
+            hwnd,
+            state.hfont,
+            state.settings.word_wrap,
+            state.settings.text_color,
+            state.settings.text_size,
+        );
+        editor_manager::set_edit_text(hwnd_edit, &pdf_loading_placeholder(0, language));
+        let doc = Document {
+            title: title.clone(),
+            path: Some(path_buf.clone()),
+            hwnd_edit,
+            dirty: false,
+            format: FileFormat::Pdf,
+            opened_text_encoding: None,
+            current_save_text_encoding: None,
+            from_rss: false,
+            from_italiaonline: false,
+            from_find_in_files: false,
+            from_wikipedia: false,
+            from_treccani: false,
+            is_temporary: false,
+            confirm_close_when_clean: false,
+            prefer_title_for_save_suggestion: false,
+            prefer_mpv_playback: false,
+            route_map: None,
+            epub_index: Vec::new(),
+            epub_original_text: None,
+            pdf_is_imported_source: true,
+            pdf_password: None,
         };
-        start_pdf_loading_animation(hwnd, hwnd_edit, ocr_timeout_secs);
+        state.docs.push(doc);
+        insert_tab(state.hwnd_tab, &title, (state.docs.len() - 1) as i32);
+        (hwnd_edit, state.docs.len() - 1)
+    })
+    .unwrap_or((HWND(0), 0));
 
+    if hwnd_edit.0 == 0 {
+        return;
+    }
+    select_tab(hwnd, new_index);
+
+    let ocr_timeout_secs = if from_copydata {
+        PDF_OCR_PROMPT_TIMEOUT_COPYDATA_SECS
+    } else {
+        0
+    };
+    start_pdf_loading_animation(hwnd, hwnd_edit, ocr_timeout_secs);
+
+    start_pdf_text_extraction(hwnd, hwnd_edit, path_buf, from_copydata, language, None);
+}
+
+fn start_pdf_text_extraction(
+    hwnd: HWND,
+    hwnd_edit: HWND,
+    path_buf: PathBuf,
+    from_copydata: bool,
+    language: Language,
+    password: Option<String>,
+) {
+    unsafe {
         let hwnd_main = hwnd;
         std::thread::spawn(move || {
             let result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                read_pdf_text_with_status(&path_buf, language)
+                if let Some(password) = password.as_deref() {
+                    match file_handler::read_pdf_text_with_password(
+                        &path_buf,
+                        language,
+                        Some(password),
+                    )? {
+                        PdfTextResult::NoText => win_ocr::recognize_text_from_pdf_with_password(
+                            &path_buf,
+                            language,
+                            Some(password),
+                        )
+                        .map(PdfTextResult::Text),
+                        result => Ok(result),
+                    }
+                } else {
+                    read_pdf_text_with_status(&path_buf, language)
+                }
             })) {
                 Ok(result) => result,
                 Err(panic) => {
@@ -24691,6 +24882,7 @@ pub(crate) fn open_pdf_document_async(hwnd: HWND, path: &Path, from_copydata: bo
                 path: path_buf,
                 result,
                 from_copydata,
+                password,
             });
             let payload_ptr = Box::into_raw(payload);
             if let Err(e) = PostMessageW(
@@ -24744,6 +24936,7 @@ fn start_ocr_for_pdf(
             path,
             result: final_result,
             from_copydata,
+            password: None,
         });
         unsafe {
             let payload_ptr = Box::into_raw(payload);
@@ -24800,6 +24993,7 @@ fn handle_pdf_loaded(hwnd: HWND, payload: PdfLoadResult) {
             path,
             result,
             from_copydata,
+            password,
         } = payload;
         let language = with_state(hwnd, |state| state.settings.language).unwrap_or_default();
 
@@ -24819,7 +25013,47 @@ fn handle_pdf_loaded(hwnd: HWND, payload: PdfLoadResult) {
         };
 
         match result {
+            Ok(PdfTextResult::PasswordRequired { incorrect }) => {
+                select_tab(hwnd, index);
+                let title = i18n::tr(language, "app.pdf_password_title");
+                let body = i18n::tr(
+                    language,
+                    if incorrect {
+                        "app.pdf_password_incorrect"
+                    } else {
+                        "app.pdf_password_prompt"
+                    },
+                );
+                let password = app_windows::prompt_window::prompt_user_with_options(
+                    hwnd,
+                    &title,
+                    &body,
+                    "",
+                    language,
+                    app_windows::prompt_window::PromptUserOptions { masked: true },
+                );
+                if let Some(password) = password {
+                    start_pdf_loading_animation(hwnd, hwnd_edit, 0);
+                    start_pdf_text_extraction(
+                        hwnd,
+                        hwnd_edit,
+                        path,
+                        from_copydata,
+                        language,
+                        Some(password),
+                    );
+                } else if let Some(current_index) = with_state(hwnd, |state| {
+                    state.docs.iter().position(|doc| doc.hwnd_edit == hwnd_edit)
+                })
+                .flatten()
+                {
+                    editor_manager::close_document_at(hwnd, current_index);
+                }
+            }
+
             Ok(PdfTextResult::Text(text)) => {
+                let authenticated_pdf = password.is_some();
+                with_state(hwnd, |state| state.docs[index].pdf_password = password);
                 editor_manager::set_edit_text(hwnd_edit, &text);
                 with_state(hwnd, |state| {
                     goto_first_bookmark(
@@ -24830,7 +25064,11 @@ fn handle_pdf_loaded(hwnd: HWND, payload: PdfLoadResult) {
                         state.settings.automatic_bookmark,
                     );
                 });
-                let msg = pdf_loaded_message(language);
+                let mut msg = pdf_loaded_message(language);
+                if authenticated_pdf {
+                    msg.push(' ');
+                    msg.push_str(&i18n::tr(language, "app.pdf_unlocked_hint"));
+                }
                 crate::log_debug(&format!("Info (speech): {msg}"));
                 crate::accessibility::nvda_speak(&msg);
                 crate::log_if_err!(MessageBeep(MB_ICONASTERISK));
@@ -24935,6 +25173,7 @@ fn handle_document_loaded(hwnd: HWND, payload: editor_manager::DocumentLoadResul
                 epub_index: loaded.epub_index,
                 epub_original_text: loaded.epub_original_text,
                 pdf_is_imported_source: false,
+                pdf_password: None,
             };
             state.docs.push(doc);
             if large_file_no_wrap {

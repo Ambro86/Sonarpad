@@ -2411,5 +2411,12 @@
   "media_join.failed": "Não foi possível unir os ficheiros.",
   "stream_audio.player_loading": "A carregar as faixas de áudio da transmissão…",
   "stream_audio.player_load_timeout": "O leitor não carregou nenhuma faixa de áudio em 60 segundos. Tente novamente mais tarde ou guarde o vídeo e reproduza-o localmente.",
-  "stream_audio.player_exited_before_load": "O leitor fechou antes de carregar as faixas de áudio."
+  "stream_audio.player_exited_before_load": "O leitor fechou antes de carregar as faixas de áudio.",
+  "app.pdf_password_title": "PDF protegido",
+  "app.pdf_password_prompt": "Introduza a palavra-passe do PDF:",
+  "app.pdf_password_incorrect": "Palavra-passe incorreta. Introduza novamente a palavra-passe do PDF:",
+  "file.save_pdf_without_password": "Guardar PDF sem palavra-passe…",
+  "app.pdf_copy_different_path": "Escolha outro nome: o PDF original deve permanecer inalterado.",
+  "app.pdf_copy_saved": "Cópia do PDF sem palavra-passe guardada.",
+  "app.pdf_unlocked_hint": "Pode guardar o PDF sem palavra-passe no menu Ficheiro, escolhendo Guardar PDF sem palavra-passe."
 }

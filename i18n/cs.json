@@ -2411,5 +2411,12 @@
   "media_join.failed": "Soubory nelze spojit.",
   "stream_audio.player_loading": "Načítání zvukových stop streamu…",
   "stream_audio.player_load_timeout": "Přehrávač během 60 sekund nenačetl žádnou zvukovou stopu. Zkuste to později nebo video uložte a přehrajte místně.",
-  "stream_audio.player_exited_before_load": "Přehrávač se zavřel před načtením zvukových stop."
+  "stream_audio.player_exited_before_load": "Přehrávač se zavřel před načtením zvukových stop.",
+  "app.pdf_password_title": "Chráněné PDF",
+  "app.pdf_password_prompt": "Zadejte heslo k PDF:",
+  "app.pdf_password_incorrect": "Nesprávné heslo. Zadejte heslo k PDF znovu:",
+  "file.save_pdf_without_password": "Uložit PDF bez hesla…",
+  "app.pdf_copy_different_path": "Vyberte jiný název: původní PDF musí zůstat nezměněné.",
+  "app.pdf_copy_saved": "Kopie PDF bez hesla byla uložena.",
+  "app.pdf_unlocked_hint": "PDF můžete uložit bez hesla v nabídce Soubor pomocí položky Uložit PDF bez hesla."
 }

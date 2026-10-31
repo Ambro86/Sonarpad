@@ -2096,6 +2096,78 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Requires a private PDF and password supplied through the environment"]
+    fn protected_pdf_password_roundtrip() {
+        let path =
+            std::path::PathBuf::from(std::env::var("SONARPAD_TEST_PDF_PATH").expect("PDF path"));
+        let password = std::env::var("SONARPAD_TEST_PDF_PASSWORD").expect("PDF password");
+        let before = std::fs::read(&path).expect("read encrypted PDF");
+        assert!(matches!(
+            super::read_pdf_text_with_status(&path, Language::English),
+            Ok(super::PdfTextResult::PasswordRequired { incorrect: false })
+        ));
+        assert!(matches!(
+            super::read_pdf_text_with_password(
+                &path,
+                Language::English,
+                Some("incorrect-test-password")
+            ),
+            Ok(super::PdfTextResult::PasswordRequired { incorrect: true })
+        ));
+        assert!(matches!(
+            super::read_pdf_text_with_password(&path, Language::English, Some(&password)),
+            Ok(super::PdfTextResult::Text(text)) if !text.trim().is_empty()
+        ));
+        let directory =
+            std::env::temp_dir().join(format!("sonarpad-pdf-copy-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let output = directory.join("copy.pdf");
+        assert!(
+            super::save_pdf_without_password(&path, &path, &password, Language::English).is_err()
+        );
+        std::fs::write(&output, b"existing destination").unwrap();
+        assert!(
+            super::save_pdf_without_password(
+                &path,
+                &output,
+                "incorrect-test-password",
+                Language::English
+            )
+            .is_err()
+        );
+        assert!(std::fs::read(&output).unwrap() == b"existing destination");
+        super::save_pdf_without_password(&path, &output, &password, Language::English).unwrap();
+        let copy = super::LoDocument::load(&output).unwrap();
+        assert!(!copy.is_encrypted());
+        assert!(copy.trailer.get(b"Encrypt").is_err());
+        let visual_check = || {
+            use pdfium_render::prelude::*;
+            let bindings =
+                Pdfium::bind_to_library(crate::settings::settings_dir().join("pdfium.dll"))
+                    .unwrap();
+            let pdfium = Pdfium::new(bindings);
+            let original = pdfium.load_pdf_from_file(&path, Some(&password)).unwrap();
+            let exported = pdfium.load_pdf_from_file(&output, None).unwrap();
+            assert_eq!(original.pages().len(), exported.pages().len());
+            for (a, b) in original.pages().iter().zip(exported.pages().iter()) {
+                assert_eq!(a.width(), b.width());
+                assert_eq!(a.height(), b.height());
+                assert!(a.text().unwrap().all() == b.text().unwrap().all());
+                let config = PdfRenderConfig::new().set_target_width(1000);
+                assert!(
+                    a.render_with_config(&config).unwrap().as_raw_bytes()
+                        == b.render_with_config(&config).unwrap().as_raw_bytes()
+                );
+            }
+        };
+        let checked = std::panic::catch_unwind(visual_check);
+        std::fs::remove_file(&output).unwrap();
+        std::fs::remove_dir(&directory).unwrap();
+        assert!(checked.is_ok(), "PDF content or rendering changed");
+        assert!(std::fs::read(&path).expect("read unchanged encrypted PDF") == before);
+    }
+
+    #[test]
     fn japanese_pdf_lines_are_not_flattened() {
         let input = "Ai: こんにちは\nJean: こんばんは\nThird line";
         let result = super::normalize_pdf_paragraphs(input);
@@ -3043,7 +3115,10 @@ pub fn write_docx_text(path: &Path, text: &str, language: Language) -> Result<()
 pub enum PdfTextResult {
     Text(String),
     NoText,
+    PasswordRequired { incorrect: bool },
 }
+
+const PDF_PASSWORD_REQUIRED: &str = "PDF_PASSWORD_REQUIRED";
 
 const PDF_FORM_SECTION_TITLE: &str = "=== SONARPAD PDF FORM FIELDS ===";
 const PDF_FORM_SECTION_BEGIN: &str = "\n\n=== SONARPAD PDF FORM FIELDS ===\n";
@@ -3063,6 +3138,14 @@ struct PdfFormField {
 static PDF_EXTRACT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 pub fn read_pdf_text_with_status(path: &Path, language: Language) -> Result<PdfTextResult, String> {
+    read_pdf_text_with_password(path, language, None)
+}
+
+pub fn read_pdf_text_with_password(
+    path: &Path,
+    language: Language,
+    password: Option<&str>,
+) -> Result<PdfTextResult, String> {
     let start = std::time::Instant::now();
     let lock = PDF_EXTRACT_LOCK.get_or_init(|| Mutex::new(()));
     let guard = match lock.lock() {
@@ -3076,7 +3159,11 @@ pub fn read_pdf_text_with_status(path: &Path, language: Language) -> Result<PdfT
         crate::sentry_integration::with_suppressed_panic_reporting(|| {
             let _guard = guard;
             crate::log_debug(&format!("PDF: Starting extraction for {:?}", path));
-            let text = extract_pdf_text_with_fallback(path, language)?;
+            let text = if password.is_some() {
+                extract_pdf_text_pdfium_with_password(path, password)?
+            } else {
+                extract_pdf_text_with_fallback(path, language)?
+            };
             crate::log_debug(&format!(
                 "PDF: Raw extraction completed in {:?}, length={}",
                 start.elapsed(),
@@ -3090,7 +3177,7 @@ pub fn read_pdf_text_with_status(path: &Path, language: Language) -> Result<PdfT
             } else {
                 normalize_pdf_paragraphs(&text)
             };
-            let normalized = append_pdf_form_fields_if_any(path, normalized, language);
+            let normalized = append_pdf_form_fields_if_any(path, normalized, language, password);
             let normalized = strip_embedded_nuls(normalized, "normalized PDF output");
             crate::log_debug(&format!(
                 "PDF: Normalization completed in {:?}, final length={}",
@@ -3107,11 +3194,14 @@ pub fn read_pdf_text_with_status(path: &Path, language: Language) -> Result<PdfT
     }));
 
     match result {
+        Ok(Err(error)) if error == PDF_PASSWORD_REQUIRED => Ok(PdfTextResult::PasswordRequired {
+            incorrect: password.is_some(),
+        }),
         Ok(result) => result,
         Err(panic) => {
             let panic_msg = panic_payload_to_string(&panic);
             crate::log_debug(&format!("PDF: Panic during extraction: {}", panic_msg));
-            match extract_pdf_text_pdfium(path) {
+            match extract_pdf_text_pdfium_with_password(path, password) {
                 Ok(text) => {
                     crate::log_debug("PDF: pdfium extraction succeeded after panic.");
                     let normalized = if text.trim().is_empty() {
@@ -3119,7 +3209,8 @@ pub fn read_pdf_text_with_status(path: &Path, language: Language) -> Result<PdfT
                     } else {
                         normalize_pdf_paragraphs(&text)
                     };
-                    let normalized = append_pdf_form_fields_if_any(path, normalized, language);
+                    let normalized =
+                        append_pdf_form_fields_if_any(path, normalized, language, password);
                     let normalized =
                         strip_embedded_nuls(normalized, "PDFium panic fallback output");
                     if normalized.trim().is_empty() {
@@ -3127,6 +3218,11 @@ pub fn read_pdf_text_with_status(path: &Path, language: Language) -> Result<PdfT
                     } else {
                         Ok(PdfTextResult::Text(normalized))
                     }
+                }
+                Err(pdfium_err) if pdfium_err == PDF_PASSWORD_REQUIRED => {
+                    Ok(PdfTextResult::PasswordRequired {
+                        incorrect: password.is_some(),
+                    })
                 }
                 Err(pdfium_err) => {
                     crate::log_debug(&format!(
@@ -3148,11 +3244,19 @@ pub fn read_pdf_text(path: &Path, language: Language) -> Result<String, String> 
     match read_pdf_text_with_status(path, language)? {
         PdfTextResult::Text(text) => Ok(text),
         PdfTextResult::NoText => Ok(i18n::tr(language, "file_handler.pdf_no_text")),
+        PdfTextResult::PasswordRequired { .. } => {
+            Err(i18n::tr(language, "app.pdf_password_prompt"))
+        }
     }
 }
 
-fn append_pdf_form_fields_if_any(path: &Path, mut text: String, language: Language) -> String {
-    match read_pdf_form_fields(path) {
+fn append_pdf_form_fields_if_any(
+    path: &Path,
+    mut text: String,
+    language: Language,
+    password: Option<&str>,
+) -> String {
+    match read_pdf_form_fields(path, password) {
         Ok(fields) if !fields.is_empty() => {
             crate::log_debug(&format!(
                 "PDF form: found {} AcroForm field(s) in {}",
@@ -3386,40 +3490,135 @@ fn fill_pdf_form_field_recursive(
     changed
 }
 
+pub fn save_pdf_without_password(
+    source: &Path,
+    output: &Path,
+    password: &str,
+    language: Language,
+) -> Result<(), String> {
+    let source_path = source.canonicalize().map_err(|e| e.to_string())?;
+    if output.canonicalize().is_ok_and(|path| path == source_path) {
+        return Err(i18n::tr(language, "app.pdf_copy_different_path"));
+    }
+    // Use the same PDFium engine that successfully authenticated the original.
+    // Saving with FPDF_REMOVE_SECURITY retains PDF objects; it does not render or
+    // recreate pages from the extracted editor text.
+    use pdfium_render::prelude::FPDF_FILEWRITE;
+    #[repr(C)]
+    struct PdfCopyWriter {
+        interface: FPDF_FILEWRITE,
+        data: Vec<u8>,
+    }
+    unsafe extern "C" fn write_block(
+        this: *mut FPDF_FILEWRITE,
+        data: *const std::ffi::c_void,
+        size: std::os::raw::c_ulong,
+    ) -> std::os::raw::c_int {
+        // PDFium passes the address of our first repr(C) field synchronously.
+        let writer = unsafe { &mut *this.cast::<PdfCopyWriter>() };
+        let bytes = unsafe { std::slice::from_raw_parts(data.cast::<u8>(), size as usize) };
+        writer.data.extend_from_slice(bytes);
+        1
+    }
+    let bindings = Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path(
+        &crate::settings::settings_dir(),
+    ))
+    .or_else(|_| Pdfium::bind_to_system_library())
+    .map_err(|error| error.to_string())?;
+    let pdfium = Pdfium::new(bindings);
+    let bytes = std::fs::read(source).map_err(|error| error.to_string())?;
+    let document = pdfium
+        .bindings()
+        .FPDF_LoadMemDocument64(&bytes, Some(password));
+    if document.is_null() {
+        return Err(i18n::tr(language, "app.pdf_password_incorrect"));
+    }
+    let mut writer = PdfCopyWriter {
+        interface: FPDF_FILEWRITE {
+            version: 1,
+            WriteBlock: Some(write_block),
+        },
+        data: Vec::new(),
+    };
+    const FPDF_REMOVE_SECURITY: u32 = 3;
+    let saved =
+        pdfium
+            .bindings()
+            .FPDF_SaveAsCopy(document, &mut writer.interface, FPDF_REMOVE_SECURITY);
+    pdfium.bindings().FPDF_CloseDocument(document);
+    if saved == 0 {
+        return Err(i18n::tr_f(
+            language,
+            "file_handler.file_save_error",
+            &[("err", "PDFium save failed")],
+        ));
+    }
+    // Validate before replacing any destination file.
+    let verified = pdfium
+        .load_pdf_from_byte_slice(&writer.data, None)
+        .map_err(|error| error.to_string())?;
+    if verified.pages().is_empty() {
+        return Err(i18n::tr_f(
+            language,
+            "file_handler.file_save_error",
+            &[("err", "PDF contains no pages")],
+        ));
+    }
+    save_pdf_atomically(output, language, |file| {
+        std::io::Write::write_all(file, &writer.data)
+    })
+}
+
 fn save_pdf_document_atomically(
     doc: &mut LoDocument,
     output_path: &Path,
     language: Language,
 ) -> Result<(), String> {
-    let tmp_path = output_path.with_extension("pdf.sonarpad.tmp");
-    doc.save(&tmp_path).map_err(|err| {
-        i18n::tr_f(
-            language,
-            "file_handler.file_save_error",
-            &[("err", &format!("PDF form save failed: {err}"))],
-        )
-    })?;
-    let copy_result = std::fs::copy(&tmp_path, output_path);
-    let cleanup_result = std::fs::remove_file(&tmp_path);
-    if let Err(err) = cleanup_result {
-        crate::log_debug(&format!(
-            "PDF form: failed to remove temporary file {}: {}",
-            tmp_path.display(),
-            err
-        ));
+    save_pdf_atomically(output_path, language, |file| doc.save_to(file))
+}
+
+fn save_pdf_atomically(
+    output_path: &Path,
+    language: Language,
+    write: impl FnOnce(&mut std::fs::File) -> std::io::Result<()>,
+) -> Result<(), String> {
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let tmp_path = output_path.with_extension(format!("pdf.{}.{nonce}.tmp", std::process::id()));
+    let mut created = false;
+    let result = (|| -> std::io::Result<()> {
+        {
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&tmp_path)?;
+            created = true;
+            write(&mut file)?;
+            file.sync_all()?;
+        }
+        // Replacing the directory entry also avoids writing through a hard link.
+        std::fs::rename(&tmp_path, output_path)
+    })();
+    if created && tmp_path.exists() {
+        crate::log_if_err!(std::fs::remove_file(&tmp_path));
     }
-    copy_result.map_err(|err| {
+    result.map_err(|err| {
         i18n::tr_f(
             language,
             "file_handler.file_save_error",
             &[("err", &err.to_string())],
         )
-    })?;
-    Ok(())
+    })
 }
 
-fn read_pdf_form_fields(path: &Path) -> Result<Vec<PdfFormField>, String> {
-    let doc = LoDocument::load(path).map_err(|err| format!("PDF form load failed: {err}"))?;
+fn read_pdf_form_fields(path: &Path, password: Option<&str>) -> Result<Vec<PdfFormField>, String> {
+    let mut doc = LoDocument::load(path).map_err(|err| format!("PDF form load failed: {err}"))?;
+    if doc.is_encrypted() {
+        doc.decrypt(password.unwrap_or(""))
+            .map_err(|_| "PDF form authentication failed".to_string())?;
+    }
     let catalog = doc
         .catalog()
         .map_err(|err| format!("PDF form catalog failed: {err}"))?;
@@ -3571,6 +3770,7 @@ fn extract_pdf_text_with_fallback(path: &Path, language: Language) -> Result<Str
                     );
                     Ok(sanitized_pdf_extract)
                 }
+                Err(pdfium_err) if pdfium_err == PDF_PASSWORD_REQUIRED => Err(pdfium_err),
                 Err(pdfium_err) => {
                     crate::log_debug(&format!(
                         "PDF: PDFium fallback after embedded NUL detection failed: {pdfium_err}; using sanitized pdf_extract text."
@@ -3587,6 +3787,7 @@ fn extract_pdf_text_with_fallback(path: &Path, language: Language) -> Result<Str
                     crate::log_debug("PDF: pdfium extraction succeeded after pdf_extract failure.");
                     Ok(text)
                 }
+                Err(pdfium_err) if pdfium_err == PDF_PASSWORD_REQUIRED => Err(pdfium_err),
                 Err(pdfium_err) => {
                     crate::log_debug(&format!("PDF: pdfium extraction failed: {}", pdfium_err));
                     if is_pdf_parse_error(&err_str) {
@@ -3609,6 +3810,7 @@ fn extract_pdf_text_with_fallback(path: &Path, language: Language) -> Result<Str
                     crate::log_debug("PDF: pdfium extraction succeeded after pdf_extract panic.");
                     Ok(text)
                 }
+                Err(pdfium_err) if pdfium_err == PDF_PASSWORD_REQUIRED => Err(pdfium_err),
                 Err(pdfium_err) => {
                     crate::log_debug(&format!("PDF: pdfium extraction failed: {}", pdfium_err));
                     Err(i18n::tr_f(
@@ -3623,6 +3825,13 @@ fn extract_pdf_text_with_fallback(path: &Path, language: Language) -> Result<Str
 }
 
 fn extract_pdf_text_pdfium(path: &Path) -> Result<String, String> {
+    extract_pdf_text_pdfium_with_password(path, None)
+}
+
+fn extract_pdf_text_pdfium_with_password(
+    path: &Path,
+    password: Option<&str>,
+) -> Result<String, String> {
     let deps_dir = crate::settings::settings_dir();
     let pdfium_path = Pdfium::pdfium_platform_library_name_at_path(&deps_dir);
     if !pdfium_path.exists() {
@@ -3636,8 +3845,13 @@ fn extract_pdf_text_pdfium(path: &Path) -> Result<String, String> {
         .map_err(|err| format!("pdfium bind failed: {err}"))?;
     let pdfium = Pdfium::new(bindings);
     let document = pdfium
-        .load_pdf_from_file(path, None)
-        .map_err(|err| format!("pdfium load failed: {err}"))?;
+        .load_pdf_from_file(path, password)
+        .map_err(|err| match err {
+            PdfiumError::PdfiumLibraryInternalError(PdfiumInternalError::PasswordError) => {
+                PDF_PASSWORD_REQUIRED.to_string()
+            }
+            _ => format!("pdfium load failed: {err}"),
+        })?;
     let mut out = String::new();
     for page in document.pages().iter() {
         let page_text = page

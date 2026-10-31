@@ -1,5 +1,11 @@
 # Pakeitimų žurnalas
 
+Version 0.9.24 – 2026-10-31
+
+1. YouTube transliacijų atkūrimas: ištaisyta klaida, kai vaizdo įrašai atsidarydavo be garso, nes tiesioginis srautas baigdavosi nepateikęs atkuriamų garso duomenų. Sonarpad dabar aptinka šią klaidą ir automatiškai bando dar kartą per yt-dlp/HLS.
+2. Slaptažodžiu apsaugoti PDF: Sonarpad dabar prašo slaptažodžio prieinamame įvesties lauke ir, jį patikrinusi, atveria dokumentą.
+3. Meniu Failas pridėta parinktis „Išsaugoti PDF be slaptažodžio“: atvėrę dokumentą teisingu slaptažodžiu galite išsaugoti neapsaugotą kopiją, išlaikydami maketą ir turinį bei nekeisdami originalo. Atvėrus dokumentą ekrano skaitytuvas praneša apie šią galimybę.
+
 Version 0.9.23 – 2026-10-30
 
 1. YouTube garsinis vaizdavimas: ištaisyta srauto atsisiuntimo klaida, pasirodydavusi beveik baigus siuntimą, kai garsas ir vaizdas buvo atsisiųsti atskirai, bet nesujungti. Sonarpad dabar sujungia visas atsisiųstas takelių dalis naudodamas integruotas bibliotekas, be pakartotinio kodavimo.

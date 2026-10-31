@@ -2411,5 +2411,12 @@
   "media_join.failed": "无法合并文件。",
   "stream_audio.player_loading": "正在加载流媒体音轨…",
   "stream_audio.player_load_timeout": "播放器未能在60秒内加载任何音轨。请稍后重试，或保存视频后在本地播放。",
-  "stream_audio.player_exited_before_load": "播放器在加载音轨前已关闭。"
+  "stream_audio.player_exited_before_load": "播放器在加载音轨前已关闭。",
+  "app.pdf_password_title": "受保护的 PDF",
+  "app.pdf_password_prompt": "请输入 PDF 密码：",
+  "app.pdf_password_incorrect": "密码错误。请重新输入 PDF 密码：",
+  "file.save_pdf_without_password": "保存无密码 PDF…",
+  "app.pdf_copy_different_path": "请选择其他名称，原始 PDF 必须保持不变。",
+  "app.pdf_copy_saved": "已保存无密码 PDF 副本。",
+  "app.pdf_unlocked_hint": "您可以在“文件”菜单中选择“保存无密码 PDF”，将 PDF 保存为无需密码的副本。"
 }

@@ -2411,5 +2411,12 @@
   "media_join.failed": "No se pudieron unir los archivos.",
   "stream_audio.player_loading": "Cargando las pistas de audio de la transmisión…",
   "stream_audio.player_load_timeout": "El reproductor no cargó ninguna pista de audio en 60 segundos. Inténtalo más tarde o guarda el vídeo y reprodúcelo localmente.",
-  "stream_audio.player_exited_before_load": "El reproductor se cerró antes de cargar las pistas de audio."
+  "stream_audio.player_exited_before_load": "El reproductor se cerró antes de cargar las pistas de audio.",
+  "app.pdf_password_title": "PDF protegido",
+  "app.pdf_password_prompt": "Introduce la contraseña del PDF:",
+  "app.pdf_password_incorrect": "Contraseña incorrecta. Introduce de nuevo la contraseña del PDF:",
+  "file.save_pdf_without_password": "Guardar PDF sin contraseña…",
+  "app.pdf_copy_different_path": "Elige otro nombre: el PDF original debe permanecer intacto.",
+  "app.pdf_copy_saved": "Copia del PDF sin contraseña guardada.",
+  "app.pdf_unlocked_hint": "Puedes guardar el PDF sin contraseña desde el menú Archivo, eligiendo Guardar PDF sin contraseña."
 }
