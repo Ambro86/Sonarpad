@@ -640,6 +640,10 @@ fn route_player_keyboard(
         return RadioLoopAction::NotHandled;
     }
     let stop = matches!(command, PlayerCommand::Stop);
+    if stop && !crate::confirm_media_exit_on_escape(parent, hwnd) {
+        // Keep the radio/player and its playback running when No is selected.
+        return RadioLoopAction::Handled;
+    }
     crate::handle_player_command(parent, command);
     if stop {
         crate::log_debug(

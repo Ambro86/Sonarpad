@@ -26,10 +26,20 @@ pub(crate) struct MixPreview {
     cancel: Option<Arc<AtomicBool>>,
     cache: Arc<Mutex<Option<AudioDescriptionMixPreviewCache>>>,
     status: Arc<Mutex<Option<String>>>,
+    playing: Option<Arc<AtomicBool>>,
 }
 
 impl MixPreview {
+    pub(crate) fn is_playing(&self) -> bool {
+        self.playing
+            .as_ref()
+            .is_some_and(|playing| playing.load(Ordering::Relaxed))
+    }
+
     pub(crate) fn stop(&mut self) {
+        if let Some(playing) = self.playing.take() {
+            playing.store(false, Ordering::Relaxed);
+        }
         if let Some(cancel) = self.cancel.take() {
             cancel.store(true, Ordering::Relaxed);
         }
@@ -53,6 +63,8 @@ impl MixPreview {
         self.cancel = Some(cancel.clone());
         let cache = self.cache.clone();
         let status = self.status.clone();
+        let playing = Arc::new(AtomicBool::new(false));
+        self.playing = Some(playing.clone());
         if let Ok(mut status) = status.lock() {
             *status = Some(crate::i18n::tr(
                 language,
@@ -93,6 +105,7 @@ impl MixPreview {
                     player.stop();
                     return Err("playback failed".to_string());
                 }
+                playing.store(true, Ordering::Relaxed);
                 if let Ok(mut status) = status.lock()
                     && !cancel.load(Ordering::Relaxed)
                 {
@@ -112,6 +125,7 @@ impl MixPreview {
                 player.stop();
                 Ok(())
             })();
+            playing.store(false, Ordering::Relaxed);
             if let Ok(mut status) = status.lock()
                 && !cancel.load(Ordering::Relaxed)
             {

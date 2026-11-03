@@ -246,6 +246,7 @@ struct WindowState {
     cancel: Option<Arc<AtomicBool>>,
     preview_cancel: Option<Arc<AtomicBool>>,
     preview_generation: Arc<AtomicU64>,
+    preview_playing: Arc<AtomicBool>,
 }
 
 fn post_boxed_message<T>(hwnd: HWND, message: u32, wparam: WPARAM, payload: Box<T>) {
@@ -690,6 +691,20 @@ pub fn handle_export_progress_tab_early(
         && podcast_save_window::handle_navigation(dialog, msg)
 }
 
+/// Avoid closing the editor when Esc would interrupt an audible preview.
+fn confirm_preview_escape(hwnd: HWND) -> bool {
+    let pointer = unsafe {
+        GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+            as *const WindowState
+    };
+    if pointer.is_null() {
+        return true;
+    }
+    let state = unsafe { &*pointer };
+    !(state.mix_preview.is_playing() || state.preview_playing.load(Ordering::Relaxed))
+        || crate::confirm_media_exit_on_escape(state.parent, hwnd)
+}
+
 pub fn handle_navigation(hwnd: HWND, msg: &windows::Win32::UI::WindowsAndMessaging::MSG) -> bool {
     // The export progress dialog is owned by the project editor but it is a
     // separate top-level window, not a child. Route keyboard accessibility to
@@ -746,6 +761,9 @@ pub fn handle_navigation(hwnd: HWND, msg: &windows::Win32::UI::WindowsAndMessagi
         return true;
     }
     if key == VK_ESCAPE.0 as u32 {
+        if !confirm_preview_escape(hwnd) {
+            return true;
+        }
         crate::log_if_err!(
             crate::post_message_w_safe(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0)),
             "Audio description project: PostMessageW failed"
@@ -1224,6 +1242,7 @@ fn request_project_mix_preview(state: &mut WindowState) {
 }
 
 fn stop_preview(state: &mut WindowState) {
+    state.preview_playing.store(false, Ordering::Relaxed);
     state.mix_preview.stop();
     if let Some(cancel) = state.preview_cancel.take() {
         cancel.store(true, Ordering::Relaxed);
@@ -1276,6 +1295,8 @@ fn play_exported_description(
         .output_end_sec
         .max(description.output_start_sec + 0.050);
     let generation_state = state.preview_generation.clone();
+    let preview_playing = state.preview_playing.clone();
+    preview_playing.store(true, Ordering::Relaxed);
     thread::spawn(move || {
         loop {
             if generation_state.load(Ordering::Relaxed) != generation {
@@ -1288,6 +1309,9 @@ fn play_exported_description(
                     .is_some_and(|position| position + 0.010 >= stop_at)
             {
                 preview.stop();
+                if generation_state.load(Ordering::Relaxed) == generation {
+                    preview_playing.store(false, Ordering::Relaxed);
+                }
                 return;
             }
             thread::sleep(std::time::Duration::from_millis(20));
@@ -1383,6 +1407,8 @@ fn play_modified_preview(
 
     let generation = state.preview_generation.load(Ordering::Relaxed);
     let generation_state = state.preview_generation.clone();
+    let preview_playing = state.preview_playing.clone();
+    preview_playing.store(true, Ordering::Relaxed);
     let duration_sec = preview_audio.duration_sec().max(0.050);
     set_text(state.status, &labels(state.language).ready);
     thread::spawn(move || {
@@ -1397,6 +1423,9 @@ fn play_modified_preview(
                 voice.stop();
                 if let Some(source) = source.as_ref() {
                     source.stop();
+                }
+                if generation_state.load(Ordering::Relaxed) == generation {
+                    preview_playing.store(false, Ordering::Relaxed);
                 }
                 return;
             }
@@ -3174,6 +3203,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     cancel: None,
                     preview_cancel: None,
                     preview_generation: Arc::new(AtomicU64::new(0)),
+                    preview_playing: Arc::new(AtomicBool::new(false)),
                 });
                 refill_list(&mut state, 0);
                 let project_engine = state.project.tts_engine;
@@ -3860,6 +3890,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
             }
             WM_KEYDOWN => {
                 if wparam.0 as u32 == VK_ESCAPE.0 as u32 {
+                    if !confirm_preview_escape(hwnd) {
+                        return LRESULT(0);
+                    }
                     crate::log_if_err!(
                         PostMessageW(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0)),
                         "Audio description project: PostMessageW failed"

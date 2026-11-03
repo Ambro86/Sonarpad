@@ -688,11 +688,28 @@ pub fn handle_progress_tab_early(
     true
 }
 
+// Esc must not discard an audible mix preview without confirmation when enabled.
+// No application-state borrow is held across the modal dialog.
+fn confirm_preview_escape(hwnd: HWND) -> bool {
+    let pointer = unsafe {
+        GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+            as *const WindowState
+    };
+    if pointer.is_null() {
+        return true;
+    }
+    let state = unsafe { &*pointer };
+    !state.mix_preview.is_playing() || crate::confirm_media_exit_on_escape(state.parent, hwnd)
+}
+
 pub fn handle_navigation(hwnd: HWND, msg: &windows::Win32::UI::WindowsAndMessaging::MSG) -> bool {
     if !unsafe { IsWindowVisible(hwnd).as_bool() } {
         return false;
     }
     if msg.message == WM_KEYDOWN && msg.wParam.0 as u32 == VK_ESCAPE.0 as u32 {
+        if !confirm_preview_escape(hwnd) {
+            return true;
+        }
         crate::log_if_err!(
             crate::post_message_w_safe(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0)),
             "Audio description: PostMessageW failed"
@@ -5035,6 +5052,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
             }
             WM_KEYDOWN => {
                 if wparam.0 as u32 == VK_ESCAPE.0 as u32 {
+                    if !confirm_preview_escape(hwnd) {
+                        return LRESULT(0);
+                    }
                     crate::log_if_err!(
                         PostMessageW(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0)),
                         "Audio description: PostMessageW failed"

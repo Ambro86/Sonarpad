@@ -169,18 +169,18 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GetWindowLongPtrW, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, HACCEL,
     HCURSOR, HICON, HMENU, HWND_NOTOPMOST, HWND_TOPMOST, IDC_ARROW, IDI_APPLICATION, IDYES,
     InsertMenuW, IsChild, IsDialogMessageW, IsIconic, IsWindow, IsWindowVisible, KillTimer,
-    LoadCursorW, LoadIconW, MB_ICONASTERISK, MB_ICONERROR, MB_ICONINFORMATION, MB_ICONWARNING,
-    MB_OK, MB_YESNO, MENU_ITEM_FLAGS, MESSAGEBOX_RESULT, MESSAGEBOX_STYLE, MF_BYCOMMAND,
-    MF_BYPOSITION, MF_CHECKED, MF_ENABLED, MF_GRAYED, MF_POPUP, MF_SEPARATOR, MF_STRING,
-    MF_UNCHECKED, MSG, MessageBoxW, ModifyMenuW, MoveWindow, OBJID_CLIENT, PostMessageW,
-    PostQuitMessage, RegisterClassW, RegisterWindowMessageW, SC_KEYMENU, SW_HIDE, SW_RESTORE,
-    SW_SHOW, SW_SHOWMAXIMIZED, SW_SHOWNORMAL, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW, SendMessageW,
-    SetForegroundWindow, SetMenu, SetTimer, SetWindowLongPtrW, SetWindowPos, SetWindowTextW,
-    ShowWindow, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, TranslateAcceleratorW,
-    TranslateMessage, WINDOW_STYLE, WM_ACTIVATE, WM_APP, WM_APPCOMMAND, WM_CANCELMODE, WM_CHAR,
-    WM_CLOSE, WM_COMMAND, WM_CONTEXTMENU, WM_COPY, WM_COPYDATA, WM_CREATE, WM_CUT, WM_DESTROY,
-    WM_DROPFILES, WM_GETFONT, WM_GETTEXTLENGTH, WM_INITMENUPOPUP, WM_KEYDOWN, WM_KEYUP,
-    WM_MOUSEMOVE, WM_NCDESTROY, WM_NEXTDLGCTL, WM_NOTIFY, WM_NULL, WM_PASTE, WM_SETFOCUS,
+    LoadCursorW, LoadIconW, MB_DEFBUTTON2, MB_ICONASTERISK, MB_ICONERROR, MB_ICONINFORMATION,
+    MB_ICONQUESTION, MB_ICONWARNING, MB_OK, MB_YESNO, MENU_ITEM_FLAGS, MESSAGEBOX_RESULT,
+    MESSAGEBOX_STYLE, MF_BYCOMMAND, MF_BYPOSITION, MF_CHECKED, MF_ENABLED, MF_GRAYED, MF_POPUP,
+    MF_SEPARATOR, MF_STRING, MF_UNCHECKED, MSG, MessageBoxW, ModifyMenuW, MoveWindow, OBJID_CLIENT,
+    PostMessageW, PostQuitMessage, RegisterClassW, RegisterWindowMessageW, SC_KEYMENU, SW_HIDE,
+    SW_RESTORE, SW_SHOW, SW_SHOWMAXIMIZED, SW_SHOWNORMAL, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
+    SendMessageW, SetForegroundWindow, SetMenu, SetTimer, SetWindowLongPtrW, SetWindowPos,
+    SetWindowTextW, ShowWindow, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu,
+    TranslateAcceleratorW, TranslateMessage, WINDOW_STYLE, WM_ACTIVATE, WM_APP, WM_APPCOMMAND,
+    WM_CANCELMODE, WM_CHAR, WM_CLOSE, WM_COMMAND, WM_CONTEXTMENU, WM_COPY, WM_COPYDATA, WM_CREATE,
+    WM_CUT, WM_DESTROY, WM_DROPFILES, WM_GETFONT, WM_GETTEXTLENGTH, WM_INITMENUPOPUP, WM_KEYDOWN,
+    WM_KEYUP, WM_MOUSEMOVE, WM_NCDESTROY, WM_NEXTDLGCTL, WM_NOTIFY, WM_NULL, WM_PASTE, WM_SETFOCUS,
     WM_SETFONT, WM_SETREDRAW, WM_SIZE, WM_SYSCHAR, WM_SYSCOMMAND, WM_SYSKEYDOWN, WM_SYSKEYUP,
     WM_TIMER, WNDCLASSW, WNDPROC, WS_CHILD, WS_CLIPCHILDREN, WS_EX_CLIENTEDGE, WS_OVERLAPPEDWINDOW,
     WS_TABSTOP, WS_VISIBLE,
@@ -4474,6 +4474,32 @@ fn is_remote_mpv_player_document(doc: &editor_manager::Document) -> bool {
     matches!(doc.format, FileFormat::Audiobook)
         && doc.prefer_mpv_playback
         && doc.path.as_deref().is_some_and(is_direct_stream_url_path)
+}
+
+/// Returns true when the user allows Esc to stop playback.
+/// The setting and language are copied before showing the modal message box,
+/// so no AppState borrow is held while Windows runs the dialog message loop.
+pub(crate) fn confirm_media_exit_on_escape(parent: HWND, owner: HWND) -> bool {
+    let (enabled, language) = with_state(parent, |state| {
+        (
+            state.settings.confirm_media_exit_on_escape,
+            state.settings.language,
+        )
+    })
+    .unwrap_or((false, Language::default()));
+    if !enabled {
+        return true;
+    }
+    let title = i18n::tr(language, "player.confirm_media_exit_title");
+    let question = i18n::tr(language, "player.confirm_media_exit_question");
+    unsafe {
+        MessageBoxW(
+            owner,
+            PCWSTR(to_wide(&question).as_ptr()),
+            PCWSTR(to_wide(&title).as_ptr()),
+            MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2,
+        ) == IDYES
+    }
 }
 
 fn is_current_player_focus_mode_active(hwnd: HWND) -> bool {
@@ -11741,6 +11767,48 @@ fn run_app(
                     if let Some(hwnd_edit) = get_active_edit(hwnd) {
                         set_focus_safe(hwnd_edit);
                     }
+                    continue;
+                }
+            }
+
+            // Intercept only Esc that will stop the currently active media-player tab.
+            // Do this outside with_state: MessageBoxW runs a nested modal message loop.
+            if msg.message == WM_KEYDOWN
+                && msg.wParam.0 as u32 == VK_ESCAPE.0 as u32
+                && (msg.hwnd == hwnd || IsChild(hwnd, msg.hwnd).as_bool())
+            {
+                let should_confirm = with_state(hwnd, |state| {
+                    let current_is_media = state
+                        .docs
+                        .get(state.current)
+                        .is_some_and(|doc| matches!(doc.format, FileFormat::Audiobook));
+                    let player_running =
+                        state.active_audiobook.is_some() || state.active_mpv_session.is_some();
+                    let secondary_open = state.bookmarks_window.0 != 0
+                        || state.options_dialog.0 != 0
+                        || state.help_window.0 != 0
+                        || state.changelog_window.0 != 0
+                        || state.donations_window.0 != 0
+                        || state.feedback_window.0 != 0
+                        || state.dictionary_window.0 != 0
+                        || state.dictionary_entry_dialog.0 != 0
+                        || state.go_to_time_dialog.0 != 0
+                        || state.podcasts_add_dialog.0 != 0
+                        || state.podcasts_categories_dialog.0 != 0
+                        || state.podcasts_description_dialog.0 != 0
+                        || app_windows::audio_description_window::blocks_parent_focus(
+                            hwnd,
+                            state.audio_description_window,
+                        )
+                        || (state.audio_description_project_window.0 != 0
+                            && IsWindowVisible(state.audio_description_project_window).as_bool());
+                    state.settings.confirm_media_exit_on_escape
+                        && current_is_media
+                        && player_running
+                        && !secondary_open
+                })
+                .unwrap_or(false);
+                if should_confirm && !confirm_media_exit_on_escape(hwnd, hwnd) {
                     continue;
                 }
             }

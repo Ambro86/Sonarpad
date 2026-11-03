@@ -766,6 +766,9 @@ pub struct AppSettings {
     pub audiobook_skip_seconds: u32,
     #[serde(default)]
     pub auto_advance_folder_media: bool,
+    /// Ask before Esc stops an active media player. Disabled by default.
+    #[serde(default)]
+    pub confirm_media_exit_on_escape: bool,
     /// Global reading and media sleep timer; 0 disables it.
     #[serde(default)]
     pub sleep_timer_minutes: u32,
@@ -1341,6 +1344,7 @@ impl Default for AppSettings {
             move_cursor_during_reading: false,
             audiobook_skip_seconds: 60,
             auto_advance_folder_media: false,
+            confirm_media_exit_on_escape: false,
             sleep_timer_minutes: 0,
             audiobook_playback_speed: 1.0,
             audiobook_playback_pitch: 0.0,
@@ -3922,6 +3926,16 @@ mod audio_description_save_folder_tests {
             settings.audio_description_save_folder,
             default_audio_description_save_folder()
         );
+    }
+
+    #[test]
+    fn confirm_media_exit_on_escape_uses_backward_compatible_disabled_default() {
+        assert!(!AppSettings::default().confirm_media_exit_on_escape);
+        let legacy: AppSettings = serde_json::from_str("{}").expect("legacy settings");
+        assert!(!legacy.confirm_media_exit_on_escape);
+        let enabled: AppSettings = serde_json::from_str(r#"{"confirm_media_exit_on_escape":true}"#)
+            .expect("enabled setting");
+        assert!(enabled.confirm_media_exit_on_escape);
     }
 
     #[test]
