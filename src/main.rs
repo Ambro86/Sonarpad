@@ -22651,6 +22651,10 @@ fn handle_custom_shortcuts(hwnd: HWND, msg: &MSG) -> bool {
         dispatch_shortcut_command(hwnd, IDM_TOOLS_OPTIONS);
         return true;
     }
+    if shortcuts.sleep_timer.key != 0 && shortcut_matches_message(shortcuts.sleep_timer, msg) {
+        app_windows::options_window::open_sleep_timer(hwnd);
+        return true;
+    }
     if shortcut_matches_message(shortcuts.open_terminal, msg) {
         dispatch_shortcut_command(hwnd, IDM_TOOLS_PROMPT);
         return true;

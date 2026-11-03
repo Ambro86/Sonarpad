@@ -899,6 +899,47 @@ mod ytdlp_command_tests {
     }
 
     #[test]
+    fn playlist_youtube_verification_tries_one_other_client_then_stops() {
+        let error = "ERROR: [youtube] abc: Please sign in. This helps protect our community. Use --cookies-from-browser or --cookies for the authentication.";
+        assert!(super::is_youtube_sign_in_verification_error(error));
+        assert!(super::playlist_download_error_is_permanent(error));
+        assert!(!super::should_retry_youtube_download_failure(error, false));
+        assert!(!super::is_youtube_sign_in_verification_error(
+            "HTTP Error 503"
+        ));
+        let mut normal = ytdlp_command(Path::new("yt-dlp.exe"));
+        let mut fallback = ytdlp_command(Path::new("yt-dlp.exe"));
+        let url = "https://www.youtube.com/watch?v=4qUccV3MB0k";
+        for (command, alternate) in [(&mut normal, false), (&mut fallback, true)] {
+            super::configure_ytdlp_stream_download_command_with_client(
+                command,
+                url,
+                Path::new("output.%(ext)s"),
+                &dialog(StreamOutputFormat::Auto),
+                None,
+                true,
+                None,
+                alternate,
+            );
+        }
+        let args = |cmd: &std::process::Command| {
+            cmd.get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+        };
+        assert!(
+            !args(&normal)
+                .iter()
+                .any(|a| a == "youtube:player_client=android")
+        );
+        assert!(
+            args(&fallback)
+                .iter()
+                .any(|a| a == "youtube:player_client=android")
+        );
+    }
+
+    #[test]
     fn youtube_navigation_filters_video_without_view_count() {
         let entry = serde_json::json!({
             "url": "abcdefghijk",
@@ -10480,10 +10521,15 @@ fn configure_ytdlp_stream_download_command_with_client(
     // In automatic video mode, leave format selection and extractor profile
     // to yt-dlp, just like running yt-dlp URL from a console.
     let native_video_selection = dialog_data.format == StreamOutputFormat::Auto && prefer_video;
-    if !automatic_youtube_client
-        && dialog_data.format != StreamOutputFormat::Webm
-        && !native_video_selection
-    {
+    // Native video initially uses yt-dlp's default client. On a verification
+    // failure, use Android for a single genuinely different fallback attempt.
+    // Other formats initially use Android and can fall back to yt-dlp defaults.
+    let use_android_client = if native_video_selection {
+        automatic_youtube_client
+    } else {
+        !automatic_youtube_client && dialog_data.format != StreamOutputFormat::Webm
+    };
+    if use_android_client {
         configure_ytdlp_standard_youtube_client(cmd, url);
     }
     cmd.arg("--no-playlist")
@@ -12185,8 +12231,18 @@ fn should_retry_youtube_download_failure(error: &str, stalled: bool) -> bool {
         .any(|needle| lower.contains(needle))
 }
 
+fn is_youtube_sign_in_verification_error(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    lower.contains("please sign in. this helps protect our community")
+        || lower.contains("sign in to confirm you're not a bot")
+        || lower.contains("sign in to confirm you’re not a bot")
+}
+
 fn playlist_download_error_is_permanent(error: &str) -> bool {
-    if is_drm_not_supported_stream_error(error) || is_login_required_stream_error(error) {
+    if is_drm_not_supported_stream_error(error)
+        || is_login_required_stream_error(error)
+        || is_youtube_sign_in_verification_error(error)
+    {
         return true;
     }
     let lower = error.to_ascii_lowercase();
@@ -12294,7 +12350,16 @@ fn download_playlist_entry_with_retries(
             attempt.stalled,
             truncate_debug_text(&error, 1500)
         ));
-        if attempt_number == PLAYLIST_DOWNLOAD_MAX_ATTEMPTS
+        if !automatic_youtube_client
+            && attempt_number < PLAYLIST_DOWNLOAD_MAX_ATTEMPTS
+            && is_youtube_stream_url(&entry.url)
+            && is_youtube_sign_in_verification_error(&error)
+        {
+            automatic_youtube_client = true;
+            crate::log_debug(
+                "YouTube playlist: verification requested; trying alternate extractor client once",
+            );
+        } else if attempt_number == PLAYLIST_DOWNLOAD_MAX_ATTEMPTS
             || playlist_download_error_is_permanent(&error)
         {
             return Err(error);

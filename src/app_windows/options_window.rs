@@ -342,6 +342,7 @@ enum ShortcutAction {
     OpenCinema,
     OpenDictionary,
     OpenOptions,
+    SleepTimer,
     OpenTerminal,
     ImportWikipedia,
     ImportYoutube,
@@ -355,7 +356,7 @@ enum ShortcutAction {
 }
 
 impl ShortcutAction {
-    const ALL: [ShortcutAction; 30] = [
+    const ALL: [ShortcutAction; 31] = [
         ShortcutAction::ReadPauseResume,
         ShortcutAction::ReadStart,
         ShortcutAction::ReadPreviousSentence,
@@ -376,6 +377,7 @@ impl ShortcutAction {
         ShortcutAction::OpenCinema,
         ShortcutAction::OpenDictionary,
         ShortcutAction::OpenOptions,
+        ShortcutAction::SleepTimer,
         ShortcutAction::OpenTerminal,
         ShortcutAction::ImportWikipedia,
         ShortcutAction::ImportYoutube,
@@ -399,6 +401,9 @@ fn shortcut_action_label(language: Language, action: ShortcutAction) -> String {
         ShortcutAction::ChapterNext => {
             plain_shortcut_action_label(&i18n::tr(language, "playback.chapter_next"))
         }
+        ShortcutAction::SleepTimer => i18n::tr(language, "options.label.sleep_timer")
+            .trim_end_matches(':')
+            .to_string(),
         _ => i18n::tr(language, shortcut_action_i18n_key(action)),
     }
 }
@@ -449,6 +454,7 @@ fn shortcut_action_i18n_key(action: ShortcutAction) -> &'static str {
         ShortcutAction::OpenCinema => "options.shortcuts.action.open_cinema",
         ShortcutAction::OpenDictionary => "options.shortcuts.action.open_dictionary",
         ShortcutAction::OpenOptions => "options.shortcuts.action.open_options",
+        ShortcutAction::SleepTimer => "options.label.sleep_timer",
         ShortcutAction::OpenTerminal => "options.shortcuts.action.open_terminal",
         ShortcutAction::ImportWikipedia => "options.shortcuts.action.import_wikipedia",
         ShortcutAction::ImportYoutube => "options.shortcuts.action.import_youtube",
@@ -511,6 +517,7 @@ fn shortcut_binding_for_action(
         ShortcutAction::OpenCinema => settings.open_cinema,
         ShortcutAction::OpenDictionary => settings.open_dictionary,
         ShortcutAction::OpenOptions => settings.open_options,
+        ShortcutAction::SleepTimer => settings.sleep_timer,
         ShortcutAction::OpenTerminal => settings.open_terminal,
         ShortcutAction::ImportWikipedia => settings.import_wikipedia,
         ShortcutAction::ImportYoutube => settings.import_youtube,
@@ -550,6 +557,7 @@ fn set_shortcut_binding_for_action(
         ShortcutAction::OpenCinema => settings.open_cinema = binding,
         ShortcutAction::OpenDictionary => settings.open_dictionary = binding,
         ShortcutAction::OpenOptions => settings.open_options = binding,
+        ShortcutAction::SleepTimer => settings.sleep_timer = binding,
         ShortcutAction::OpenTerminal => settings.open_terminal = binding,
         ShortcutAction::ImportWikipedia => settings.import_wikipedia = binding,
         ShortcutAction::ImportYoutube => settings.import_youtube = binding,
@@ -2700,6 +2708,36 @@ fn delete_selected_voice_profile(hwnd: HWND) {
     );
     screen_reader_speak(&message);
 }
+/// Open the Audio tab directly at the NVDA/JAWS-accessible sleep timer control.
+pub fn open_sleep_timer(parent: HWND) {
+    open(parent);
+    let dialog = with_state(parent, |state| state.options_dialog).unwrap_or(HWND(0));
+    if dialog.0 == 0 {
+        return;
+    }
+    let Some((tabs, combo)) =
+        with_options_state(dialog, |state| (state.hwnd_tabs, state.combo_sleep_timer))
+    else {
+        return;
+    };
+    unsafe {
+        SendMessageW(
+            tabs,
+            TCM_SETCURSEL,
+            WPARAM(OPTIONS_TAB_AUDIO as usize),
+            LPARAM(0),
+        );
+    }
+    set_active_tab(dialog, OPTIONS_TAB_AUDIO);
+    crate::set_focus_safe(combo);
+    crate::log_if_err!(crate::post_message_w_safe(
+        dialog,
+        WM_NEXTDLGCTL,
+        WPARAM(combo.0 as usize),
+        LPARAM(1),
+    ));
+}
+
 pub fn open(parent: HWND) {
     unsafe {
         let existing = with_state(parent, |state| state.options_dialog).unwrap_or(HWND(0));
@@ -10228,6 +10266,8 @@ fn update_shortcut_binding_text(hwnd: HWND) {
     }
     let text = if waiting {
         i18n::tr(language, "options.shortcuts.capture_hint")
+    } else if binding.key == 0 {
+        i18n::tr(language, "options.shortcuts.unassigned")
     } else {
         format_shortcut(binding)
     };
