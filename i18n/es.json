@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Exportar el archivo como vídeo",
+  "media_cutter.export_video_no": "No",
+  "media_cutter.export_video_black": "Sí, con una imagen negra",
+  "media_cutter.export_video_image": "Sí, con una imagen elegida",
+  "media_cutter.choose_image": "Elegir imagen…",
   "stream_audio.playlist_label": "Lista de reproducción",
   "media_cutter.open_project": "Abrir proyecto Sonarpad…",
   "media_cutter.save_project": "Guardar proyecto…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "Marcador ya presente en esta posición.",
   "bookmarks.automatic_bookmark": "Ma&rcador automático",
   "bookmarks.delete": "Eliminar",
+  "bookmarks.empty_document": "No hay marcadores para el documento actual",
   "bookmarks.goto": "Ir a",
   "bookmarks.title": "Gestionar marcadores",
   "bookmark_manager.all": "Todos",

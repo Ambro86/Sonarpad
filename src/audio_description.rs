@@ -2439,6 +2439,11 @@ fn normalize_audio_description_pronunciation(text: &str) -> String {
                 "dr"
             } else if part.eq_ignore_ascii_case("mr.") {
                 "mr"
+            } else if let Some(initial) = part.strip_suffix('.')
+                && initial.chars().count() == 1
+                && initial.chars().all(char::is_alphabetic)
+            {
+                initial
             } else {
                 part
             }
@@ -2448,7 +2453,7 @@ fn normalize_audio_description_pronunciation(text: &str) -> String {
 
 fn audio_description_tts_chunks(text: &str, job: &AudioDescriptionJob) -> Vec<TtsChunk> {
     // Pronunciation-only normalization: keep the generated description and the
-    // scheduling pipeline untouched; avoid underscores and pauses after Dr./Mr.
+    // scheduling pipeline untouched; avoid underscores and pauses after Dr./Mr. or initials.
     let pronunciation_text = normalize_audio_description_pronunciation(text);
     split_into_tts_chunks(&pronunciation_text, false, &job.dictionary, job.tts_engine)
 }

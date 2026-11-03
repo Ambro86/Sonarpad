@@ -1,5 +1,11 @@
 # Journal des modifications
 
+Version 0.9.25 – 2026-10-31
+
+1. Téléchargements en streaming : correction des blocages avant la fin grâce à l’activation des délais d’attente réseau et de la reconnexion. Les erreurs de lecture sont désormais signalées au lieu de considérer un fichier incomplet comme un téléchargement réussi.
+
+2. SonarTube et SonarMusic : correction de la commande Aller au signet. Les vidéos et les morceaux se rouvrent avec la même sélection de qualité du flux et les mêmes solutions de repli automatiques que lors de la lecture normale, puis reprennent à la position enregistrée. La compatibilité avec les anciens signets a également été améliorée lorsque le lien d’origine peut être retrouvé.
+
 Version 0.9.24 – 2026-10-31
 
 1. Lecture en streaming depuis YouTube : correction des vidéos qui s’ouvraient sans son lorsque le flux direct se terminait sans données audio lisibles. Sonarpad détecte désormais cette erreur et réessaie automatiquement via yt-dlp/HLS.

@@ -309,11 +309,52 @@ fn open_selected(hwnd: HWND) {
     let Some(row) = chosen else {
         return;
     };
+    let stream_source = with_state(parent, |app| {
+        let url = crate::bookmarks::bookmark_stream_url(&app.bookmarks, &row.key, row.index)?;
+        let bookmarks = app.bookmarks.files.get(&row.key)?;
+        let selected = bookmarks.get(row.index)?;
+        let from_sonarmusic = selected.from_sonarmusic
+            || (selected.source_url.is_none()
+                && bookmarks.iter().any(|entry| {
+                    entry.from_sonarmusic
+                        && entry
+                            .source_url
+                            .as_deref()
+                            .and_then(|source| crate::sonartube::direct_watch_url(source, false))
+                            .as_deref()
+                            == Some(url.as_str())
+                }));
+        Some((url, from_sonarmusic))
+    })
+    .flatten();
+    if let Some((url, from_sonarmusic)) = stream_source {
+        crate::record_bookmark_open(parent, &row.key);
+        let title = row.key.strip_prefix("__stream_title__:").map(str::to_owned);
+        crate::log_if_err!(crate::destroy_window_safe(hwnd));
+        super::youtube_transcript_window::reopen_stream_bookmark(
+            parent,
+            url,
+            title,
+            row.position.max(0) as u64,
+            from_sonarmusic,
+        );
+        return;
+    }
     if !is_local_file(&row.key) || row.missing {
         alert(hwnd, language, "bookmark_manager.cannot_open");
         return;
     }
     let path = PathBuf::from(&row.key);
+    // Close the modal before opening or selecting a document. In particular,
+    // starting an audio player while its parent is still disabled lets the
+    // modal's WM_DESTROY restore focus to the hidden media editor after the
+    // player has already focused its tab, causing repeated NVDA announcements.
+    if let Err(error) = crate::destroy_window_safe(hwnd) {
+        crate::log_debug(&format!(
+            "Cannot close bookmark manager before opening file: {error}"
+        ));
+        return;
+    }
     let existing = with_state(parent, |app| {
         app.docs.iter().enumerate().find_map(|(index, doc)| {
             doc.path
@@ -339,7 +380,6 @@ fn open_selected(hwnd: HWND) {
         }
         crate::editor_manager::open_document(parent, &path);
     }
-    crate::log_if_err!(crate::destroy_window_safe(hwnd));
 }
 
 fn delete_selected(hwnd: HWND) {
@@ -753,10 +793,9 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
             if let Some(parent) = state(hwnd, |s| s.parent) {
                 crate::enable_window_safe(parent, true);
                 with_state(parent, |s| s.bookmark_manager_window = HWND(0));
-                crate::set_foreground_window_safe(parent);
-                if let Some(edit) = crate::get_active_edit(parent) {
-                    crate::set_focus_safe(edit);
-                }
+                // An audiobook's editor is deliberately hidden: restore focus
+                // through the normal player-aware path (tab for media, edit for text).
+                crate::focus_editor(parent);
             }
             LRESULT(0)
         }

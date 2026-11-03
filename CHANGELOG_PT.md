@@ -1,5 +1,11 @@
 # Changelog
 
+Version 0.9.25 – 2026-10-31
+
+1. Transferências em streaming: corrigido o bloqueio antes da conclusão, ativando limites de tempo de rede e a reconexão. Os erros de leitura são agora comunicados, em vez de considerar um ficheiro incompleto como uma transferência concluída com sucesso.
+
+2. SonarTube e SonarMusic: corrigida a opção Ir para o marcador. Os vídeos e as músicas voltam a abrir com a mesma seleção de qualidade do fluxo e os mesmos métodos alternativos automáticos da reprodução normal, retomando na posição guardada. Foi também melhorada a compatibilidade com marcadores antigos quando é possível recuperar a ligação original.
+
 Version 0.9.24 – 2026-10-31
 
 1. Reprodução em streaming do YouTube: corrigidos os vídeos que abriam sem som quando o fluxo direto terminava sem dados de áudio reproduzíveis. O Sonarpad deteta agora este erro e tenta novamente de forma automática através de yt-dlp/HLS.

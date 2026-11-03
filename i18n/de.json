@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Datei als Video exportieren",
+  "media_cutter.export_video_no": "Nein",
+  "media_cutter.export_video_black": "Ja, mit einem schwarzen Bild",
+  "media_cutter.export_video_image": "Ja, mit einem ausgewählten Bild",
+  "media_cutter.choose_image": "Bild auswählen…",
   "stream_audio.playlist_label": "Playlist",
   "media_cutter.open_project": "Sonarpad-Projekt öffnen…",
   "media_cutter.save_project": "Projekt speichern…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "An dieser Position ist bereits ein Lesezeichen vorhanden.",
   "bookmarks.automatic_bookmark": "&Automatisches Lesezeichen",
   "bookmarks.delete": "Löschen",
+  "bookmarks.empty_document": "Keine Lesezeichen für das aktuelle Dokument",
   "bookmarks.goto": "Gehe zu",
   "bookmarks.title": "Lesezeichen verwalten",
   "bookmark_manager.all": "Alle",

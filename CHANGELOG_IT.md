@@ -2,7 +2,11 @@
 
 Version 0.9.25 – 2026-10-31
 
-SonarTube è il nuovo nome di Riproduci audio da streaming e mantiene le stesse funzionalità già conosciute. Nelle ricerche YouTube è possibile scegliere Tutti, Video, Playlist, Canali, Corsi o Podcast; la scelta viene ricordata e non modifica l’apertura degli indirizzi diretti.
+1. SonarTube è il nuovo nome di Riproduci audio da streaming e mantiene le stesse funzionalità già conosciute. Nelle ricerche YouTube è possibile scegliere Tutti, Video, Playlist, Canali, Corsi o Podcast; la scelta viene ricordata e non modifica l’apertura degli indirizzi diretti.
+
+2. Download in streaming: corretto il blocco prima del completamento attivando timeout di rete e riconnessione. Gli errori di lettura vengono ora segnalati, evitando di considerare completato un file incompleto.
+
+3. SonarTube e SonarMusic: corretto Vai al segnalibro. Video e brani vengono riaperti con la stessa selezione della qualità e le stesse strategie automatiche di ripiego della riproduzione normale, riprendendo dalla posizione salvata. Migliorata anche la compatibilità con i vecchi segnalibri quando è possibile recuperare il collegamento originale.
 
 Version 0.9.24 – 2026-10-31
 

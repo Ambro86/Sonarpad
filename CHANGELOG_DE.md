@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+Version 0.9.25 – 2026-10-31
+
+1. Streaming-Downloads: Hängenbleiben vor dem Abschluss durch Aktivierung von Netzwerk-Zeitlimits und erneuter Verbindung behoben. Lesefehler werden jetzt gemeldet, statt eine unvollständige Datei als erfolgreichen Download zu behandeln.
+
+2. SonarTube und SonarMusic: „Zum Lesezeichen springen“ korrigiert. Videos und Titel werden mit derselben Auswahl der Streamqualität und denselben automatischen Ausweichverfahren wie bei der normalen Wiedergabe erneut geöffnet und ab der gespeicherten Position fortgesetzt. Auch ältere Lesezeichen werden besser unterstützt, sofern sich der ursprüngliche Videolink wiederherstellen lässt.
+
 Version 0.9.24 – 2026-10-31
 
 1. YouTube-Streaming: Videos wurden ohne Ton geöffnet, wenn der direkte Stream ohne abspielbare Audiodaten endete. Sonarpad erkennt diesen Fehler jetzt und versucht die Wiedergabe automatisch erneut über yt-dlp/HLS.

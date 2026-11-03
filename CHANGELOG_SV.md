@@ -1,5 +1,11 @@
 # Ändringslogg
 
+Version 0.9.25 – 2026-10-31
+
+1. Nedladdning av strömmat innehåll: åtgärdat att nedladdningar fastnar före slutförandet genom att aktivera nätverkstidsgränser och återanslutning. Läsfel rapporteras nu i stället för att en ofullständig fil räknas som en lyckad nedladdning.
+
+2. SonarTube och SonarMusic: rättat funktionen Gå till bokmärke. Videor och låtar öppnas igen med samma val av strömkvalitet och automatiska reservlösningar som vid vanlig uppspelning och fortsätter från den sparade positionen. Stödet för äldre bokmärken har också förbättrats när den ursprungliga länken kan återställas.
+
 Version 0.9.24 – 2026-10-31
 
 1. Strömning från YouTube: åtgärdat att videor öppnades utan ljud när direktströmmen avslutades utan spelbara ljuddata. Sonarpad upptäcker nu felet och försöker automatiskt igen via yt-dlp/HLS.

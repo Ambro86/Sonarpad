@@ -1,5 +1,11 @@
 # Catatan perubahan
 
+Version 0.9.25 – 2026-10-31
+
+1. Unduhan streaming: memperbaiki unduhan yang macet sebelum selesai dengan mengaktifkan batas waktu jaringan dan koneksi ulang. Kesalahan pembacaan kini dilaporkan, bukan menganggap berkas yang belum lengkap sebagai unduhan yang berhasil.
+
+2. SonarTube dan SonarMusic: memperbaiki fitur Buka penanda. Video dan lagu kini dibuka kembali dengan pemilihan kualitas streaming dan metode cadangan otomatis yang sama seperti pemutaran biasa, lalu dilanjutkan dari posisi yang disimpan. Kompatibilitas dengan penanda lama juga ditingkatkan jika tautan video aslinya dapat dipulihkan.
+
 Version 0.9.24 – 2026-10-31
 
 1. Streaming YouTube: memperbaiki video yang terbuka tanpa suara ketika aliran langsung berakhir tanpa data audio yang dapat diputar. Sonarpad kini mendeteksi kesalahan ini dan otomatis mencoba lagi melalui yt-dlp/HLS.

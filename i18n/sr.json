@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Извези датотеку као видео",
+  "media_cutter.export_video_no": "Не",
+  "media_cutter.export_video_black": "Да, са црном сликом",
+  "media_cutter.export_video_image": "Да, са изабраном сликом",
+  "media_cutter.choose_image": "Изабери слику…",
   "stream_audio.playlist_label": "Листа за репродукцију",
   "media_cutter.open_project": "Отвори Sonarpad пројекат…",
   "media_cutter.save_project": "Сачувај пројекат…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "Obeleživač je već prisutan na ovoj poziciji.",
   "bookmarks.automatic_bookmark": "&Automatski obeleživač",
   "bookmarks.delete": "Obriši",
+  "bookmarks.empty_document": "Nema obeleživača za trenutni dokument",
   "bookmarks.goto": "Idi na",
   "bookmarks.title": "Upravljanje obeleživačima",
   "bookmark_manager.all": "Svi",

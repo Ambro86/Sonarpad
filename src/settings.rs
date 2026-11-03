@@ -915,6 +915,10 @@ pub struct AppSettings {
     #[serde(default)]
     pub media_cutter_overwrite_original: bool,
     #[serde(default)]
+    pub media_cutter_export_video: u8,
+    #[serde(default)]
+    pub media_cutter_export_image: Option<PathBuf>,
+    #[serde(default)]
     pub sonarmusic_search_type: String,
     #[serde(default)]
     pub sonarmusic_favorites: Vec<serde_json::Value>,
@@ -1423,6 +1427,8 @@ impl Default for AppSettings {
             youtube_include_timestamps: true,
             media_cutter_goldwave_keys: false,
             media_cutter_overwrite_original: false,
+            media_cutter_export_video: 0,
+            media_cutter_export_image: None,
             sonarmusic_search_type: String::new(),
             sonarmusic_favorites: Vec::new(),
             stream_audio_default_format: default_stream_audio_output_format(),
@@ -3880,15 +3886,24 @@ mod audio_description_save_folder_tests {
         let defaults: AppSettings = serde_json::from_str("{}").unwrap();
         assert!(!defaults.media_cutter_goldwave_keys);
         assert!(!defaults.media_cutter_overwrite_original);
+        assert_eq!(defaults.media_cutter_export_video, 0);
+        assert!(defaults.media_cutter_export_image.is_none());
         let settings = AppSettings {
             media_cutter_goldwave_keys: true,
             media_cutter_overwrite_original: true,
+            media_cutter_export_video: 1,
+            media_cutter_export_image: Some(PathBuf::from("cover.png")),
             ..Default::default()
         };
         let restored: AppSettings =
             serde_json::from_value(serde_json::to_value(settings).unwrap()).unwrap();
         assert!(restored.media_cutter_goldwave_keys);
         assert!(restored.media_cutter_overwrite_original);
+        assert_eq!(restored.media_cutter_export_video, 1);
+        assert_eq!(
+            restored.media_cutter_export_image,
+            Some(PathBuf::from("cover.png"))
+        );
     }
 
     #[test]

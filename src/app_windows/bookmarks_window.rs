@@ -13,10 +13,11 @@ use windows::Win32::UI::WindowsAndMessaging::{
     BS_DEFPUSHBUTTON, CREATESTRUCTW, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW,
     EVENT_OBJECT_FOCUS, GWLP_USERDATA, HMENU, IDC_ARROW, IDCANCEL, LB_ADDSTRING, LB_GETCOUNT,
     LB_GETCURSEL, LB_RESETCONTENT, LB_SETCURSEL, LBN_DBLCLK, LBS_HASSTRINGS, LBS_NOTIFY,
-    LoadCursorW, MSG, OBJID_CLIENT, RegisterClassW, SendMessageW, SetForegroundWindow,
-    WINDOW_STYLE, WM_CLOSE, WM_COMMAND, WM_CREATE, WM_DESTROY, WM_KEYDOWN, WM_NCDESTROY,
-    WM_NEXTDLGCTL, WM_SETFOCUS, WM_SETFONT, WNDCLASSW, WS_CAPTION, WS_CHILD, WS_EX_CLIENTEDGE,
-    WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_SYSMENU, WS_TABSTOP, WS_VISIBLE, WS_VSCROLL,
+    LoadCursorW, MSG, OBJID_CLIENT, RegisterClassW, SW_HIDE, SW_SHOW, SendMessageW,
+    SetForegroundWindow, ShowWindow, WINDOW_STYLE, WM_CLOSE, WM_COMMAND, WM_CREATE, WM_DESTROY,
+    WM_KEYDOWN, WM_NCDESTROY, WM_NEXTDLGCTL, WM_SETFOCUS, WM_SETFONT, WNDCLASSW, WS_CAPTION,
+    WS_CHILD, WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_SYSMENU, WS_TABSTOP,
+    WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::PCWSTR;
 
@@ -25,6 +26,7 @@ const BOOKMARKS_ID_LIST: usize = 9001;
 const BOOKMARKS_ID_DELETE: usize = 9002;
 const BOOKMARKS_ID_GOTO: usize = 9003;
 const BOOKMARKS_ID_OK: usize = 9004;
+const BOOKMARKS_ID_ALL: usize = 9005;
 fn runtime_bookmark_storage_key(
     path: Option<&std::path::Path>,
     hwnd_edit: HWND,
@@ -82,6 +84,8 @@ struct BookmarksWindowState {
     parent: HWND,
     hwnd_list: HWND,
     hwnd_goto: HWND,
+    hwnd_delete: HWND,
+    hwnd_all: HWND,
 }
 
 pub fn open(parent: HWND) {
@@ -219,6 +223,24 @@ fn bookmarks_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM)
                 )
             };
 
+            let btn_all_text = i18n::tr(language, "bookmark_manager.title");
+            let hwnd_all = unsafe {
+                CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&btn_all_text).as_ptr()),
+                    WS_CHILD | WS_TABSTOP,
+                    10,
+                    360,
+                    350,
+                    30,
+                    hwnd,
+                    HMENU(BOOKMARKS_ID_ALL as isize),
+                    HINSTANCE(0),
+                    None,
+                )
+            };
+
             let btn_ok_text = i18n::tr(language, "options.ok");
             let hwnd_ok = unsafe {
                 CreateWindowExW(
@@ -237,7 +259,7 @@ fn bookmarks_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM)
                 )
             };
 
-            for ctrl in [hwnd_list, hwnd_goto, hwnd_delete, hwnd_ok] {
+            for ctrl in [hwnd_list, hwnd_goto, hwnd_delete, hwnd_all, hwnd_ok] {
                 if ctrl.0 != 0 && hfont.0 != 0 {
                     crate::send_message_w_safe(
                         ctrl,
@@ -252,6 +274,8 @@ fn bookmarks_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM)
                 parent,
                 hwnd_list,
                 hwnd_goto,
+                hwnd_delete,
+                hwnd_all,
             });
             crate::set_window_long_ptr_w_safe(hwnd, GWLP_USERDATA, Box::into_raw(state) as isize);
 
@@ -274,6 +298,15 @@ fn bookmarks_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM)
                 }
                 BOOKMARKS_ID_DELETE => {
                     delete_selected(hwnd);
+                    LRESULT(0)
+                }
+                BOOKMARKS_ID_ALL => {
+                    let parent = with_bookmarks_state(hwnd, |s| s.parent).unwrap_or(HWND(0));
+                    let closed = crate::destroy_window_safe(hwnd);
+                    if closed.is_ok() && parent.0 != 0 {
+                        super::bookmark_manager_window::open(parent);
+                    }
+                    crate::log_if_err!(closed);
                     LRESULT(0)
                 }
                 BOOKMARKS_ID_OK => {
@@ -333,10 +366,19 @@ where
 }
 
 pub fn refresh_bookmarks_list(hwnd: HWND) {
-    let (parent, hwnd_list) = match with_bookmarks_state(hwnd, |s| (s.parent, s.hwnd_list)) {
-        Some(v) => v,
-        None => return,
-    };
+    let (parent, hwnd_list, hwnd_goto, hwnd_delete, hwnd_all) =
+        match with_bookmarks_state(hwnd, |s| {
+            (
+                s.parent,
+                s.hwnd_list,
+                s.hwnd_goto,
+                s.hwnd_delete,
+                s.hwnd_all,
+            )
+        }) {
+            Some(v) => v,
+            None => return,
+        };
 
     let (path, hwnd_edit, format, title) = {
         with_state(parent, |state| {
@@ -352,16 +394,17 @@ pub fn refresh_bookmarks_list(hwnd: HWND) {
     }
     .flatten()
     .unwrap_or((None, HWND(0), FileFormat::default(), String::new()));
-    if hwnd_edit.0 == 0 {
-        return;
-    }
-    let (storage_key, _) = runtime_bookmark_storage_key(path.as_deref(), hwnd_edit, &title, format);
+    let storage_key = (hwnd_edit.0 != 0)
+        .then(|| runtime_bookmark_storage_key(path.as_deref(), hwnd_edit, &title, format).0);
 
     crate::send_message_w_safe(hwnd_list, LB_RESETCONTENT, WPARAM(0), LPARAM(0));
 
     if unsafe {
         with_state(parent, |state| {
-            if let Some(list) = state.bookmarks.files.get(&storage_key) {
+            if let Some(list) = storage_key
+                .as_ref()
+                .and_then(|key| state.bookmarks.files.get(key))
+            {
                 for bm in list
                     .iter()
                     .filter(|bookmark| bookmark.is_visible(state.settings.automatic_bookmark))
@@ -384,9 +427,23 @@ pub fn refresh_bookmarks_list(hwnd: HWND) {
     }
 
     let count = crate::send_message_w_safe(hwnd_list, LB_GETCOUNT, WPARAM(0), LPARAM(0)).0 as i32;
-    if count > 0
-        && crate::send_message_w_safe(hwnd_list, LB_GETCURSEL, WPARAM(0), LPARAM(0)).0 as i32 == -1
-    {
+    let has_bookmarks = count > 0;
+    if !has_bookmarks {
+        let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
+        let placeholder = to_wide(&i18n::tr(language, "bookmarks.empty_document"));
+        crate::send_message_w_safe(
+            hwnd_list,
+            LB_ADDSTRING,
+            WPARAM(0),
+            LPARAM(placeholder.as_ptr() as isize),
+        );
+    }
+    unsafe {
+        EnableWindow(hwnd_goto, has_bookmarks);
+        EnableWindow(hwnd_delete, has_bookmarks);
+        ShowWindow(hwnd_all, if has_bookmarks { SW_HIDE } else { SW_SHOW });
+    }
+    if crate::send_message_w_safe(hwnd_list, LB_GETCURSEL, WPARAM(0), LPARAM(0)).0 as i32 == -1 {
         crate::send_message_w_safe(hwnd_list, LB_SETCURSEL, WPARAM(0), LPARAM(0));
     }
 }
@@ -422,40 +479,72 @@ pub fn goto_selected(hwnd: HWND) {
     }
     let (storage_key, _) = runtime_bookmark_storage_key(path.as_deref(), hwnd_edit, &title, format);
 
-    if unsafe {
-        with_state(parent, |state| {
-            if let Some(list) = state.bookmarks.files.get(&storage_key)
-                && let Some(bm) = list
-                    .iter()
-                    .filter(|bookmark| bookmark.is_visible(state.settings.automatic_bookmark))
-                    .nth(sel as usize)
-            {
-                if matches!(format, FileFormat::Audiobook) {
-                    if let Some(path) = path.as_ref() {
-                        crate::jump_audiobook_to_position(parent, path, bm.position as u64);
-                    }
-                } else {
-                    let mut cr = CHARRANGE {
-                        cpMin: bm.position,
-                        cpMax: bm.position,
-                    };
-                    SendMessageW(
-                        hwnd_edit,
-                        crate::accessibility::EM_EXSETSEL,
-                        WPARAM(0),
-                        LPARAM(&mut cr as *mut _ as isize),
-                    );
-                    SendMessageW(hwnd_edit, EM_SCROLLCARET, WPARAM(0), LPARAM(0));
-                }
-                force_focus_editor_on_parent(parent)
-            }
-        })
-    }
-    .is_none()
-    {
-        crate::log_debug("Failed to access bookmarks state");
-    }
+    let selected = with_state(parent, |state| {
+        let list = state.bookmarks.files.get(&storage_key)?;
+        let (index, bookmark) = list
+            .iter()
+            .enumerate()
+            .filter(|(_, bookmark)| bookmark.is_visible(state.settings.automatic_bookmark))
+            .nth(sel as usize)?;
+        let stream_url =
+            crate::bookmarks::bookmark_stream_url(&state.bookmarks, &storage_key, index).or_else(
+                || {
+                    path.as_ref().and_then(|p| {
+                        crate::sonartube::direct_watch_url(&p.to_string_lossy(), false)
+                    })
+                },
+            );
+        let from_sonarmusic = bookmark.from_sonarmusic
+            || (bookmark.source_url.is_none()
+                && stream_url.as_ref().is_some_and(|url| {
+                    list.iter().any(|entry| {
+                        entry.from_sonarmusic
+                            && entry
+                                .source_url
+                                .as_deref()
+                                .and_then(|source| {
+                                    crate::sonartube::direct_watch_url(source, false)
+                                })
+                                .as_deref()
+                                == Some(url.as_str())
+                    })
+                }));
+        Some((bookmark.position.max(0), stream_url, from_sonarmusic))
+    })
+    .flatten();
+    let Some((position, stream_url, from_sonarmusic)) = selected else {
+        return;
+    };
+    crate::record_bookmark_open(parent, &storage_key);
     crate::log_if_err!(crate::destroy_window_safe(hwnd));
+    if matches!(format, FileFormat::Audiobook) {
+        if let Some(url) = stream_url {
+            super::youtube_transcript_window::reopen_stream_bookmark(
+                parent,
+                url,
+                Some(title),
+                position as u64,
+                from_sonarmusic,
+            );
+        } else if let Some(path) = path.as_ref() {
+            crate::jump_audiobook_to_position(parent, path, position as u64);
+        }
+    } else {
+        let mut cr = CHARRANGE {
+            cpMin: position,
+            cpMax: position,
+        };
+        unsafe {
+            SendMessageW(
+                hwnd_edit,
+                crate::accessibility::EM_EXSETSEL,
+                WPARAM(0),
+                LPARAM(&mut cr as *mut _ as isize),
+            );
+            SendMessageW(hwnd_edit, EM_SCROLLCARET, WPARAM(0), LPARAM(0));
+        }
+        force_focus_editor_on_parent(parent);
+    }
 }
 
 pub fn delete_selected(hwnd: HWND) {

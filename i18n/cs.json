@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Exportovat soubor jako video",
+  "media_cutter.export_video_no": "Ne",
+  "media_cutter.export_video_black": "Ano, s černým obrázkem",
+  "media_cutter.export_video_image": "Ano, s vybraným obrázkem",
+  "media_cutter.choose_image": "Vybrat obrázek…",
   "stream_audio.playlist_label": "Seznam skladeb",
   "media_cutter.open_project": "Otevřít projekt Sonarpad…",
   "media_cutter.save_project": "Uložit projekt…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "Záložka je na této pozici již přítomna.",
   "bookmarks.automatic_bookmark": "&Automatická záložka",
   "bookmarks.delete": "Smazat",
+  "bookmarks.empty_document": "Žádné záložky pro aktuální dokument",
   "bookmarks.goto": "Přejít",
   "bookmarks.title": "Spravovat záložky",
   "bookmark_manager.all": "Vše",

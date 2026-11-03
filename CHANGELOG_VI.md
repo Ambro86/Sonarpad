@@ -1,5 +1,11 @@
 # Nhật ký thay đổi
 
+Version 0.9.25 – 2026-10-31
+
+1. Tải xuống nội dung phát trực tuyến: khắc phục tình trạng bị treo trước khi hoàn tất bằng cách bật thời gian chờ mạng và kết nối lại. Lỗi đọc giờ được thông báo thay vì coi tệp chưa hoàn chỉnh là đã tải xuống thành công.
+
+2. SonarTube và SonarMusic: đã sửa chức năng Đi tới dấu trang. Video và bài hát được mở lại với cách chọn chất lượng luồng phát và các phương án dự phòng tự động giống như khi phát thông thường, sau đó tiếp tục từ vị trí đã lưu. Khả năng tương thích với dấu trang cũ cũng được cải thiện khi có thể khôi phục liên kết gốc.
+
 Version 0.9.24 – 2026-10-31
 
 1. Phát trực tuyến từ YouTube: sửa lỗi video mở nhưng không có tiếng khi luồng trực tiếp kết thúc mà không có dữ liệu âm thanh phát được. Sonarpad nay nhận diện lỗi này và tự động thử lại qua yt-dlp/HLS.

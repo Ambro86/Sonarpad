@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Exportera filen som video",
+  "media_cutter.export_video_no": "Nej",
+  "media_cutter.export_video_black": "Ja, med en svart bild",
+  "media_cutter.export_video_image": "Ja, med en vald bild",
+  "media_cutter.choose_image": "Välj bild…",
   "stream_audio.playlist_label": "Spellista",
   "media_cutter.open_project": "Öppna Sonarpad-projekt…",
   "media_cutter.save_project": "Spara projekt…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "Bokmärke finns redan på denna position.",
   "bookmarks.automatic_bookmark": "&Automatiskt bokmärke",
   "bookmarks.delete": "Ta bort",
+  "bookmarks.empty_document": "Inga bokmärken för det aktuella dokumentet",
   "bookmarks.goto": "Gå till",
   "bookmarks.title": "Hantera bokmärken",
   "bookmark_manager.all": "Alla",

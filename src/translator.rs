@@ -80,7 +80,77 @@ pub struct TranslatorGoogleFree {
 const GOOGLE_TRANSLATE_URL: &str = "https://translate-pa.googleapis.com/v1/translate";
 const GOOGLE_TRANSLATE_API_KEY: &str = "AIzaSyDLEeFI5OtFBwYBIoK_jj5m32rZK5CkCXA";
 
+#[cfg(test)]
+mod google_sentence_tests {
+    use super::TranslatorGoogleFree;
+
+    #[test]
+    fn preserves_sentences_and_separators() {
+        let text = "Prima frase, lunga.\nSeconda: Terza? Quarta! Fine";
+        let chunks = TranslatorGoogleFree::split_translation_chunks(text, 12);
+        assert_eq!(chunks.concat(), text);
+        assert_eq!(chunks[0], "Prima frase, lunga.");
+        for chunk in &chunks[..chunks.len() - 1] {
+            assert!(chunk.ends_with(['.', ':', '?', '!']));
+        }
+    }
+
+    #[test]
+    fn keeps_long_sentences_and_unicode() {
+        let text = format!("{}! Fine.", "è".repeat(2000));
+        let chunks = TranslatorGoogleFree::split_translation_chunks(&text, 1500);
+        assert_eq!(chunks.concat(), text);
+        assert_eq!(chunks[0].chars().count(), 2001);
+        assert_eq!(
+            TranslatorGoogleFree::split_translation_chunks("senza punteggiatura", 3),
+            vec!["senza punteggiatura"]
+        );
+    }
+
+    #[test]
+    fn keeps_decimals_urls_and_empty_text() {
+        let text = "Costa 3.14: visita https://example.com/path! Bene?";
+        let chunks = TranslatorGoogleFree::split_translation_chunks(text, 10);
+        assert_eq!(chunks.concat(), text);
+        assert!(
+            chunks
+                .iter()
+                .any(|c| c.contains("https://example.com/path!"))
+        );
+        assert_eq!(
+            TranslatorGoogleFree::split_translation_chunks("", 1500),
+            vec![""]
+        );
+    }
+}
+
 impl TranslatorGoogleFree {
+    // A soft limit: an entire sentence may exceed it, but is never truncated.
+    fn split_translation_chunks(text: &str, max_chars: usize) -> Vec<String> {
+        let mut chunks = Vec::new();
+        let mut start = 0;
+        let mut sentence_start = 0;
+        let mut count = 0;
+        for (offset, ch) in text.char_indices() {
+            let end = offset + ch.len_utf8();
+            let boundary = matches!(ch, '.' | ':' | '?' | '!' | '。' | '：' | '？' | '！')
+                && (end == text.len() || text[end..].starts_with(char::is_whitespace));
+            if !boundary && end != text.len() {
+                continue;
+            }
+            let sentence_count = text[sentence_start..end].chars().count();
+            if count > 0 && count + sentence_count > max_chars {
+                chunks.push(text[start..sentence_start].to_string());
+                start = sentence_start;
+                count = 0;
+            }
+            count += sentence_count;
+            sentence_start = end;
+        }
+        chunks.push(text[start..].to_string());
+        chunks
+    }
+
     pub fn new(
         target_lang: impl Into<String>,
         source_lang: impl Into<String>,
@@ -193,7 +263,7 @@ impl TranslatorGoogleFree {
         const MAX_CHUNK_CHARS: usize = 1_500;
         const MAX_CHUNK_ATTEMPTS: usize = 3;
 
-        let chunks = TranslatorDeepLFree::split_translation_chunks(text, MAX_CHUNK_CHARS);
+        let chunks = Self::split_translation_chunks(text, MAX_CHUNK_CHARS);
         if chunks.len() == 1 {
             if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
                 return Err(TranslatorError::Cancelled);
@@ -227,7 +297,12 @@ impl TranslatorGoogleFree {
                 }
                 match self.translate(chunk).await {
                     Ok(translated_chunk) => {
-                        translated_text.push_str(&translated_chunk);
+                        // Preserve separators even if Google trims the response.
+                        let leading = chunk.len() - chunk.trim_start().len();
+                        let trailing = chunk.trim_end().len();
+                        translated_text.push_str(&chunk[..leading]);
+                        translated_text.push_str(translated_chunk.trim());
+                        translated_text.push_str(&chunk[trailing..]);
                         progress(index + 1, chunks.len());
                         last_error = None;
                         break;

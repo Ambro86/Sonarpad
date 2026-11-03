@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Eksportuoti failą kaip vaizdo įrašą",
+  "media_cutter.export_video_no": "Ne",
+  "media_cutter.export_video_black": "Taip, su juodu vaizdu",
+  "media_cutter.export_video_image": "Taip, su pasirinktu paveikslėliu",
+  "media_cutter.choose_image": "Pasirinkti paveikslėlį…",
   "stream_audio.playlist_label": "Grojaraštis",
   "media_cutter.open_project": "Atverti Sonarpad projektą…",
   "media_cutter.save_project": "Išsaugoti projektą…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "Žymė šioje pozicijoje jau yra.",
   "bookmarks.automatic_bookmark": "&Automatinė žymelė",
   "bookmarks.delete": "Ištrinti",
+  "bookmarks.empty_document": "Dabartiniame dokumente nėra žymių",
   "bookmarks.goto": "Eiti į",
   "bookmarks.title": "Tvarkyti žymes",
   "bookmark_manager.all": "Visos",

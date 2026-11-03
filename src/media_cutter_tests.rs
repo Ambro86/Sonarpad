@@ -75,6 +75,7 @@ fn fixtures() -> (PathBuf, PathBuf, PathBuf) {
 }
 fn plan(input: &Path, output: &Path) -> ExportPlan {
     ExportPlan {
+        still_video: None,
         input: input.into(),
         sources: vec![],
         output: output.into(),
@@ -760,5 +761,25 @@ fn cutter_output_format_matrix() -> Result<(), String> {
         );
     }
     std::fs::remove_dir_all(dir).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[test]
+fn still_image_video_keeps_edited_audio_and_supports_black_or_chosen_image() -> Result<(), String> {
+    let (dir, input, _) = fixtures();
+    let cover = dir.join("chosen.bmp");
+    timeline_video::write_black_image(&cover)?;
+    for image in [None, Some(cover.clone())] {
+        let output = dir.join(if image.is_some() {
+            "chosen.mp4"
+        } else {
+            "black.mp4"
+        });
+        let mut p = plan(&input, &output);
+        p.still_video = Some(image);
+        export(&p, Arc::new(AtomicBool::new(false)), &mut |_| {})?;
+        assert!(crate::ffmpeg_source::has_real_video_stream(&output)?);
+        tones(&output);
+    }
     Ok(())
 }

@@ -464,7 +464,7 @@ fn dict_set_str(
     Ok(())
 }
 
-fn open_input_with_network_options(
+pub(crate) fn open_input_with_network_options(
     api: &FfmpegApi,
     input: *const i8,
     context: *mut *mut AVFormatContext,
@@ -1565,10 +1565,21 @@ fn read_next_packet_for_stream(
     ctx: *mut AVFormatContext,
     pkt: *mut AVPacket,
     stream_idx: i32,
+    read_error: &mut Option<String>,
 ) -> bool {
     loop {
         let ret = crate::ffmpeg_source::av_read_frame_safe(api, ctx, pkt);
         if ret < 0 {
+            if ret != AVERROR_EOF_FALLBACK {
+                let error = format!(
+                    "FFmpeg: stream {} read failed: {} ({})",
+                    stream_idx,
+                    ffmpeg_error_text(api, ret),
+                    ret
+                );
+                log_debug(&error);
+                read_error.get_or_insert(error);
+            }
             return false;
         }
         let idx = crate::ffmpeg_source::av_packet_stream_index_safe(pkt);
@@ -3089,7 +3100,9 @@ fn mux_video_with_audio(
         &mut in_video,
         input_user_agent,
         input_referer,
-        graceful_stop,
+        graceful_stop
+            || video_c.as_bytes().starts_with(b"http://")
+            || video_c.as_bytes().starts_with(b"https://"),
     );
     if open_vid < 0 || in_video.is_null() {
         return Err(format!(
@@ -3104,7 +3117,9 @@ fn mux_video_with_audio(
         &mut in_audio,
         input_user_agent,
         input_referer,
-        graceful_stop,
+        graceful_stop
+            || audio_c.as_bytes().starts_with(b"http://")
+            || audio_c.as_bytes().starts_with(b"https://"),
     );
     if open_aud < 0 || in_audio.is_null() {
         crate::ffmpeg_source::avformat_close_input_safe(api, &mut in_video);
@@ -3317,8 +3332,11 @@ fn mux_video_with_audio(
         }
         return Err("FFmpeg: packet allocation failed while starting recording".to_string());
     }
-    let mut has_v = read_next_packet_for_stream(api, in_video, pkt_v, video_stream_idx);
-    let mut has_a = read_next_packet_for_stream(api, in_audio, pkt_a, audio_stream_idx);
+    let mut read_error = None;
+    let mut has_v =
+        read_next_packet_for_stream(api, in_video, pkt_v, video_stream_idx, &mut read_error);
+    let mut has_a = read_error.is_none()
+        && read_next_packet_for_stream(api, in_audio, pkt_a, audio_stream_idx, &mut read_error);
     let video_timestamp_origin = if graceful_stop && has_v {
         packet_reference_timestamp(pkt_v)
     } else {
@@ -3358,7 +3376,7 @@ fn mux_video_with_audio(
     };
     let mut write_error: Option<String> = None;
 
-    'mux_loop: while has_v || has_a {
+    'mux_loop: while read_error.is_none() && (has_v || has_a) {
         if cancel
             .as_ref()
             .map(|flag| flag.load(Ordering::Relaxed))
@@ -3441,7 +3459,13 @@ fn mux_video_with_audio(
                 }
                 crate::ffmpeg_source::av_packet_unref_safe(api, pkt_v);
             }
-            has_v = read_next_packet_for_stream(api, in_video, pkt_v, video_stream_idx);
+            has_v = read_next_packet_for_stream(
+                api,
+                in_video,
+                pkt_v,
+                video_stream_idx,
+                &mut read_error,
+            );
         } else {
             normalize_live_packet_timestamps(pkt_a, audio_timestamp_origin);
             let input_progress_sample = unsafe {
@@ -3528,10 +3552,19 @@ fn mux_video_with_audio(
                     &mut progress_state,
                 );
             }
-            has_a = read_next_packet_for_stream(api, in_audio, pkt_a, audio_stream_idx);
+            has_a = read_next_packet_for_stream(
+                api,
+                in_audio,
+                pkt_a,
+                audio_stream_idx,
+                &mut read_error,
+            );
         }
     }
 
+    if write_error.is_none() {
+        write_error = read_error;
+    }
     if write_error.is_none()
         && let Some(filter) = aac_filter.as_mut()
     {
@@ -5262,6 +5295,11 @@ fn convert_audio_file_with_stream_index(
         (api.avformat_free_context)(out_ctx);
         (api.av_channel_layout_uninit)(&mut in_layout);
         (api.av_channel_layout_uninit)(&mut out_layout);
+    }
+
+    if let Some(error) = source.decoding_failure() {
+        log_debug(&format!("FFmpeg conversion failed: {error}"));
+        return Err(error.to_string());
     }
 
     if let Some(cb) = progress.as_mut() {

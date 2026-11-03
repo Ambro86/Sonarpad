@@ -914,12 +914,13 @@ pub fn list_audio_streams(path: &Path) -> Result<Vec<AudioStreamInfo>, String> {
         .map_err(|_| "FFmpeg: invalid path".to_string())?;
 
     let mut fmt_ctx: *mut AVFormatContext = ptr::null_mut();
-    let open_ret = crate::ffmpeg_source::avformat_open_input_safe(
+    let open_ret = crate::ffmpeg_export::open_input_with_network_options(
         api,
-        &mut fmt_ctx,
         path_c.as_ptr(),
-        ptr::null_mut(),
-        ptr::null_mut(),
+        &mut fmt_ctx,
+        None,
+        None,
+        path_c.as_bytes().starts_with(b"http://") || path_c.as_bytes().starts_with(b"https://"),
     );
     if open_ret < 0 || fmt_ctx.is_null() {
         return Err(format!(
@@ -1131,12 +1132,13 @@ impl FfmpegSource {
             .map_err(|_| "FFmpeg: invalid path".to_string())?;
 
         let mut fmt_ctx: *mut AVFormatContext = ptr::null_mut();
-        let open_ret = crate::ffmpeg_source::avformat_open_input_safe(
+        let open_ret = crate::ffmpeg_export::open_input_with_network_options(
             api,
-            &mut fmt_ctx,
             path_c.as_ptr(),
-            ptr::null_mut(),
-            ptr::null_mut(),
+            &mut fmt_ctx,
+            None,
+            None,
+            path_c.as_bytes().starts_with(b"http://") || path_c.as_bytes().starts_with(b"https://"),
         );
         if open_ret < 0 || fmt_ctx.is_null() {
             return Err(format!(
@@ -1727,6 +1729,13 @@ impl FfmpegSource {
                     "FFmpeg refill: av_read_frame returned {}",
                     read_ret
                 ));
+                if read_ret != AVERROR_EOF_FALLBACK {
+                    self.decoding_failure = Some(format!(
+                        "FFmpeg: audio read failed: {} ({})",
+                        ffmpeg_err(self.api, read_ret),
+                        read_ret
+                    ));
+                }
                 self.sent_eof = true;
                 let send_ret =
                     unsafe { (self.api.avcodec_send_packet)(self.codec_ctx, ptr::null()) };

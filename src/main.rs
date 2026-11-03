@@ -3824,7 +3824,6 @@ fn monitor_youtube_mpv_progress(hwnd: HWND, process_id: u32, generation: u64) {
         let hwnd = HWND(hwnd_raw);
         let mut last_position: Option<f64> = None;
         let mut last_progress = Instant::now();
-        let mut has_played = false;
         loop {
             std::thread::sleep(Duration::from_secs(3));
             let is_current = with_state(hwnd, |state| {
@@ -3856,13 +3855,10 @@ fn monitor_youtube_mpv_progress(hwnd: HWND, process_id: u32, generation: u64) {
             let advanced =
                 last_position.is_some_and(|previous| youtube_position_advanced(previous, position));
             if advanced {
-                has_played = true;
                 last_progress = Instant::now();
             }
             last_position = Some(position);
-            if !has_played
-                || last_progress.elapsed() < Duration::from_secs(YOUTUBE_PLAYBACK_STALL_SECS)
-            {
+            if last_progress.elapsed() < Duration::from_secs(YOUTUBE_PLAYBACK_STALL_SECS) {
                 continue;
             }
             // The end of a normal video is not a network stall. Never retry a paused video.
@@ -4629,9 +4625,55 @@ pub(crate) fn jump_audiobook_to_position(hwnd: HWND, path: &Path, seconds: u64) 
     }
 }
 
+fn same_bookmark_stream_url(left: &str, right: &str) -> bool {
+    left == right
+        || match (
+            sonartube::direct_watch_url(left, false),
+            sonartube::direct_watch_url(right, false),
+        ) {
+            (Some(left), Some(right)) => left == right,
+            _ => false,
+        }
+}
+
+fn pending_stream_bookmark_matches(hwnd: HWND, url: &str) -> bool {
+    with_state(hwnd, |state| {
+        state
+            .pending_stream_bookmark
+            .as_ref()
+            .is_some_and(|(saved_url, _)| same_bookmark_stream_url(saved_url, url))
+    })
+    .unwrap_or(false)
+}
+
+pub(crate) fn mark_sonarmusic_stream(hwnd: HWND, url: &str) {
+    with_state(hwnd, |state| {
+        state.active_sonarmusic_stream_url = Some(url.to_owned());
+    });
+}
+
+fn is_sonarmusic_bookmark(hwnd: HWND, path: Option<&Path>) -> bool {
+    let Some(path) = path else {
+        return false;
+    };
+    let url = path.to_string_lossy();
+    with_state(hwnd, |state| {
+        state
+            .active_sonarmusic_stream_url
+            .as_deref()
+            .is_some_and(|saved_url| same_bookmark_stream_url(saved_url, &url))
+    })
+    .unwrap_or(false)
+}
+
 fn saved_audio_bookmark_position_secs(hwnd: HWND, path: &Path, title: Option<&str>) -> u64 {
     with_state(hwnd, |state| {
         let path_key = path.to_string_lossy().to_string();
+        if let Some((url, seconds)) = &state.pending_stream_bookmark
+            && same_bookmark_stream_url(&path_key, url)
+        {
+            return *seconds;
+        }
         let title_key = title
             .map(str::trim)
             .filter(|title| !title.is_empty())
@@ -5268,16 +5310,7 @@ pub(crate) fn launch_stream_url_in_mpv(
                         log_debug(
                             "SonarTube direct stream has no playable audio; retrying with yt-dlp HLS",
                         );
-                        return launch_stream_url_in_mpv_with_input(
-                            hwnd,
-                            url,
-                            StreamMpvOptions {
-                                ytdl_format: Some(YOUTUBE_HTTP_500_HLS_FORMAT),
-                                ..direct_options
-                            },
-                            None,
-                            true,
-                        );
+                        return launch_youtube_hls_with_startup_retry(hwnd, url, direct_options);
                     }
                     Err(_) => log_debug("SonarTube direct playback failed; fallback to yt-dlp"),
                 }
@@ -5371,7 +5404,7 @@ pub(crate) fn launch_video_stream_in_mpv(
             ytdlp_credentials,
             user_agent: None,
             prefer_audio_description: false,
-            allow_bookmark_resume: false,
+            allow_bookmark_resume: pending_stream_bookmark_matches(hwnd, url),
             force_video: true,
             live_tv: false,
             configure_tv_tracks_async: true,
@@ -5401,7 +5434,7 @@ pub(crate) fn try_launch_sonarmusic_direct_in_mpv(
                     ytdlp_credentials: None,
                     user_agent: None,
                     prefer_audio_description: false,
-                    allow_bookmark_resume: false,
+                    allow_bookmark_resume: pending_stream_bookmark_matches(hwnd, url),
                     force_video: true,
                     live_tv: false,
                     configure_tv_tracks_async: true,
@@ -5765,22 +5798,37 @@ fn launch_stream_url_in_mpv_with_options(
         );
         // Retry eligible HTTP 403/500 and unavailable-format failures once,
         // preserving the player, UI, bookmarks and video settings.
-        let retry = launch_stream_url_in_mpv_with_input(
-            hwnd,
-            url,
-            StreamMpvOptions {
-                ytdl_format: Some(YOUTUBE_HTTP_500_HLS_FORMAT),
-                ..options
-            },
-            None,
-            true,
-        );
+        let retry = launch_youtube_hls_with_startup_retry(hwnd, url, options);
         log_debug(if retry.is_ok() {
             "Managed mpv YouTube transport HLS recovery succeeded"
         } else {
             "Managed mpv YouTube transport HLS recovery failed"
         });
         return retry;
+    }
+    result
+}
+
+fn launch_youtube_hls_with_startup_retry(
+    hwnd: HWND,
+    url: &str,
+    options: StreamMpvOptions<'_>,
+) -> Result<(), String> {
+    let options = StreamMpvOptions {
+        ytdl_format: Some(YOUTUBE_HTTP_500_HLS_FORMAT),
+        ..options
+    };
+    let language = with_state(hwnd, |state| state.settings.language).unwrap_or_default();
+    let result = launch_stream_url_in_mpv_with_input(hwnd, url, options, None, true);
+    if result
+        .as_ref()
+        .err()
+        .is_some_and(|error| error == &i18n::tr(language, "stream_audio.player_load_timeout"))
+    {
+        // The failed player has already been stopped. Resolve fresh HLS URLs once;
+        // cancellation and permanent errors must not start another player.
+        log_debug("Managed mpv YouTube HLS startup timed out; retrying once with fresh URLs");
+        return launch_stream_url_in_mpv_with_input(hwnd, url, options, None, true);
     }
     result
 }
@@ -6052,6 +6100,15 @@ fn launch_stream_url_in_mpv_with_input(
                     ));
                 }
                 set_local_mpv_video_mode(hwnd, false);
+                if !with_state(hwnd, |state| {
+                    state.active_mpv_playback_generation == mpv_generation
+                })
+                .unwrap_or(false)
+                {
+                    return Err(
+                        "Riproduzione mpv annullata da una richiesta più recente.".to_string()
+                    );
+                }
                 return Err(detail);
             }
             if stop_obsolete_mpv_child(hwnd, mpv_generation, &mut child, "stream tracks ready") {
@@ -6087,6 +6144,7 @@ fn launch_stream_url_in_mpv_with_input(
                 });
                 state.active_podcast_episode_url = Some(url.to_string());
                 state.active_podcast_episode_media_url = Some(url.to_string());
+                state.active_sonarmusic_stream_url = None;
                 state.active_podcast_title = None;
                 state.active_podcast_episode_title = title.map(ToOwned::to_owned);
                 state.active_podcast_episode_cache = None;
@@ -10534,6 +10592,10 @@ pub(crate) struct AppState {
     bookmark_cleanup_suppressed: HashSet<String>,
     /// Requested offset when opening a document from the global bookmark manager.
     pending_global_bookmark: Option<(PathBuf, i32)>,
+    /// Explicit bookmark position retained through SonarTube startup retries.
+    pending_stream_bookmark: Option<(String, u64)>,
+    /// Original watch URL of the most recently opened SonarMusic stream.
+    active_sonarmusic_stream_url: Option<String>,
     find_dialog: HWND,
     replace_dialog: HWND,
     options_dialog: HWND,
@@ -11469,7 +11531,9 @@ fn run_app(
                 }
                 let save_hwnd =
                     with_state(hwnd, |state| state.podcast_save_window).unwrap_or(HWND(0));
-                if save_hwnd.0 != 0 {
+                if save_hwnd.0 != 0
+                    && (msg.hwnd == save_hwnd || crate::is_child_safe(save_hwnd, msg.hwnd))
+                {
                     crate::log_if_err!(PostMessageW(save_hwnd, WM_COMMAND, WPARAM(2), LPARAM(0)));
                     continue;
                 }
@@ -12713,6 +12777,8 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     bookmarks,
                     bookmark_cleanup_suppressed: HashSet::new(),
                     pending_global_bookmark: None,
+                    pending_stream_bookmark: None,
+                    active_sonarmusic_stream_url: None,
                     find_dialog: HWND(0),
                     replace_dialog: HWND(0),
                     options_dialog: HWND(0),
@@ -14209,11 +14275,22 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     cancel_whisper_transcription(hwnd);
                 }
                 if is_podcast_save {
-                    with_state(hwnd, |state| {
+                    let has_worker = with_state(hwnd, |state| {
                         if let Some(token) = state.podcast_save_cancel_token.as_ref() {
                             token.store(true, std::sync::atomic::Ordering::Relaxed);
+                            Arc::strong_count(token) > 1
+                        } else {
+                            false
                         }
-                    });
+                    })
+                    .unwrap_or(false);
+                    log_debug(&format!(
+                        "Save cancellation: dialog={:?} worker_present={}",
+                        source_hwnd, has_worker
+                    ));
+                    if !has_worker {
+                        close_podcast_save_progress_window(hwnd);
+                    }
                 }
                 if is_editor_translation {
                     with_state(hwnd, |state| {
@@ -14228,6 +14305,20 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                             );
                         }
                     });
+                }
+                if !is_podcast_save && !is_replace && !is_whisper && !is_editor_translation {
+                    log_debug(&format!(
+                        "Closing orphaned save progress dialog after cancellation: {:?}",
+                        source_hwnd
+                    ));
+                    if source_hwnd.0 != 0 && crate::get_parent_safe(source_hwnd) == hwnd {
+                        crate::send_message_w_safe(
+                            source_hwnd,
+                            app_windows::podcast_save_window::WM_PODCAST_SAVE_DONE,
+                            WPARAM(0),
+                            LPARAM(0),
+                        );
+                    }
                 }
                 LRESULT(0)
             }
@@ -23145,7 +23236,7 @@ pub(crate) fn save_automatic_bookmark_for_document(hwnd: HWND, doc_index: usize)
         return false;
     }
 
-    let bookmark = if matches!(format, FileFormat::Audiobook) {
+    let mut bookmark = if matches!(format, FileFormat::Audiobook) {
         let mpv_position_secs = path
             .as_deref()
             .and_then(|bookmark_path| local_mpv_position_secs_for_path(hwnd, bookmark_path));
@@ -23221,12 +23312,27 @@ pub(crate) fn save_automatic_bookmark_for_document(hwnd: HWND, doc_index: usize)
         )
     };
 
+    if matches!(format, FileFormat::Audiobook) {
+        bookmark.source_url = path
+            .as_ref()
+            .and_then(|path| crate::sonartube::direct_watch_url(&path.to_string_lossy(), false));
+        bookmark.from_sonarmusic = is_sonarmusic_bookmark(hwnd, path.as_deref());
+    }
+
     let bookmarks_window = with_state(hwnd, |state| {
         let list = state
             .bookmarks
             .files
             .entry(storage_key.clone())
             .or_default();
+        if let Some(url) = &bookmark.source_url {
+            for existing in list.iter_mut() {
+                if existing.source_url.is_none() {
+                    existing.source_url = Some(url.clone());
+                    existing.from_sonarmusic = bookmark.from_sonarmusic;
+                }
+            }
+        }
         // Automatic updates must not discard manually inserted bookmarks.
         list.retain(|existing| !existing.automatic);
         list.push(bookmark);
@@ -23311,11 +23417,16 @@ fn insert_bookmark(hwnd: HWND) {
         })
         .unwrap_or((0, String::new()));
 
-        let bookmark = Bookmark::manual(
+        let mut bookmark = Bookmark::manual(
             pos,
             snippet,
             Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         );
+
+        bookmark.source_url = path
+            .as_ref()
+            .and_then(|path| crate::sonartube::direct_watch_url(&path.to_string_lossy(), false));
+        bookmark.from_sonarmusic = is_sonarmusic_bookmark(hwnd, path.as_deref());
 
         let (bookmarks_window, inserted) = with_state(hwnd, |state| {
             let automatic_bookmark_enabled = state.settings.automatic_bookmark;
@@ -23324,18 +23435,36 @@ fn insert_bookmark(hwnd: HWND) {
                 .files
                 .entry(storage_key.clone())
                 .or_default();
-            if list.iter().any(|existing| {
+            // Backfill the stable watch URL and playback origin of older
+            // bookmarks when the same media is bookmarked again.
+            let mut source_updated = false;
+            if let Some(source_url) = bookmark.source_url.as_ref() {
+                for existing in list.iter_mut() {
+                    if existing.source_url.is_none() {
+                        existing.source_url = Some(source_url.clone());
+                        existing.from_sonarmusic = bookmark.from_sonarmusic;
+                        source_updated = true;
+                    } else if bookmark.from_sonarmusic
+                        && !existing.from_sonarmusic
+                        && existing.source_url.as_deref() == Some(source_url.as_str())
+                    {
+                        existing.from_sonarmusic = true;
+                        source_updated = true;
+                    }
+                }
+            }
+            let duplicate = list.iter().any(|existing| {
                 existing.position == bookmark.position
                     && existing.is_visible(automatic_bookmark_enabled)
-            }) {
-                return (state.bookmarks_window, false);
+            });
+            if !duplicate {
+                list.push(bookmark);
+                crate::bookmarks::sort_bookmarks(list);
             }
-            list.push(bookmark);
-            crate::bookmarks::sort_bookmarks(list);
-            if persist_to_disk {
+            if persist_to_disk && (!duplicate || source_updated) {
                 save_bookmarks(&state.bookmarks);
             }
-            (state.bookmarks_window, true)
+            (state.bookmarks_window, !duplicate)
         })
         .unwrap_or((HWND(0), false));
 

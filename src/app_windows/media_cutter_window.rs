@@ -83,6 +83,9 @@ const GOLDWAVE_END: usize = 9851;
 const GOLDWAVE_DELETE: usize = 9852;
 const OVERWRITE_ORIGINAL: usize = 9853;
 const CLEAR_MARKERS: usize = 9854;
+const EXPORT_VIDEO: usize = 9855;
+const EXPORT_IMAGE: usize = 9856;
+const EXPORT_VIDEO_LABEL: usize = 9857;
 const TICK: usize = 1;
 const WM_RESTORE_CUTTER_FOCUS: u32 = WM_APP + 212;
 #[derive(Default)]
@@ -141,6 +144,7 @@ struct State {
     end: Option<f64>,
     dirty: bool,
     track: Option<PathBuf>,
+    export_image: Option<PathBuf>,
     player: Option<Player>,
     job: Option<Arc<Mutex<Job>>>,
     cancel: Arc<AtomicBool>,
@@ -372,7 +376,23 @@ impl State {
             self.set(LISTEN, &self.tr(self.listen_key()));
         }
         unsafe {
-            let overwrite_available = self.can_overwrite_original();
+            let still_available = self.input.is_some() && !self.has_video && self.job.is_none();
+            for id in [EXPORT_VIDEO_LABEL, EXPORT_VIDEO] {
+                ShowWindow(
+                    self.ctrl(id),
+                    if still_available { SW_SHOW } else { SW_HIDE },
+                );
+            }
+            ShowWindow(
+                self.ctrl(EXPORT_IMAGE),
+                if still_available && self.selected(EXPORT_VIDEO) == 2 {
+                    SW_SHOW
+                } else {
+                    SW_HIDE
+                },
+            );
+            let overwrite_available = self.can_overwrite_original()
+                && (self.has_video || self.selected(EXPORT_VIDEO) == 0);
             SendMessageW(
                 self.ctrl(OVERWRITE_ORIGINAL),
                 BM_SETCHECK,
@@ -1284,6 +1304,43 @@ impl State {
                 }
                 self.visibility();
             }
+            EXPORT_VIDEO if notification == CBN_SELCHANGE => {
+                let mode = self.selected(EXPORT_VIDEO).min(2) as u8;
+                if let Some(settings) = crate::with_state(self.parent, |state| {
+                    state.settings.media_cutter_export_video = mode;
+                    state.settings.clone()
+                }) {
+                    crate::settings::save_settings(settings);
+                }
+                self.visibility();
+            }
+            EXPORT_IMAGE => {
+                if let Some(path) = choose_kind(
+                    self.hwnd,
+                    false,
+                    false,
+                    &self.tr("choose_image"),
+                    None,
+                    true,
+                    false,
+                ) {
+                    self.set(
+                        EXPORT_IMAGE,
+                        &format!(
+                            "{} {}",
+                            self.tr("choose_image"),
+                            path.file_name().unwrap_or_default().to_string_lossy()
+                        ),
+                    );
+                    self.export_image = Some(path.clone());
+                    if let Some(settings) = crate::with_state(self.parent, |state| {
+                        state.settings.media_cutter_export_image = Some(path);
+                        state.settings.clone()
+                    }) {
+                        crate::settings::save_settings(settings);
+                    }
+                }
+            }
             SAVE => {
                 self.stop();
                 let input = self.input.clone().ok_or_else(|| self.tr("no_file"))?;
@@ -1310,7 +1367,20 @@ impl State {
                 } else {
                     None
                 };
-                let overwrite_original = self.checked(OVERWRITE_ORIGINAL);
+                let still_video = if self.has_video {
+                    None
+                } else {
+                    match self.selected(EXPORT_VIDEO) {
+                        1 => Some(None),
+                        2 => Some(Some(
+                            self.export_image
+                                .clone()
+                                .ok_or_else(|| self.tr("choose_image"))?,
+                        )),
+                        _ => None,
+                    }
+                };
+                let overwrite_original = self.checked(OVERWRITE_ORIGINAL) && still_video.is_none();
                 if overwrite_original && !self.can_overwrite_original() {
                     return Err(self.tr("overwrite_unavailable"));
                 }
@@ -1323,16 +1393,19 @@ impl State {
                     let stem = input.file_stem().unwrap_or_default().to_string_lossy();
                     let suggested =
                         input.with_file_name(format!("{stem} {}", self.tr("output_suffix")));
-                    choose(
+                    choose_kind(
                         self.hwnd,
                         true,
-                        self.has_video,
+                        self.has_video || still_video.is_some(),
                         &self.tr("save"),
                         Some(&suggested),
+                        false,
+                        still_video.is_some(),
                     )
                 };
                 if let Some(output) = output {
                     let plan = ExportPlan {
+                        still_video,
                         input,
                         output,
                         parts: self.parts.clone(),
@@ -1598,6 +1671,17 @@ fn choose(
     title: &str,
     suggested: Option<&std::path::Path>,
 ) -> Option<PathBuf> {
+    choose_kind(hwnd, save, video, title, suggested, false, false)
+}
+fn choose_kind(
+    hwnd: HWND,
+    save: bool,
+    video: bool,
+    title: &str,
+    suggested: Option<&std::path::Path>,
+    image: bool,
+    video_only: bool,
+) -> Option<PathBuf> {
     unsafe {
         let mut path = vec![0u16; 32768];
         if let Some(suggested) = suggested {
@@ -1609,8 +1693,14 @@ fn choose(
         if video {
             formats.extend_from_slice(media_cutter_export::VIDEO_EXTENSIONS);
         }
-        formats.extend_from_slice(media_cutter_export::AUDIO_EXTENSIONS);
-        let filter_text = if save {
+        if video_only {
+            formats = vec!["mp4"];
+        } else {
+            formats.extend_from_slice(media_cutter_export::AUDIO_EXTENSIONS);
+        }
+        let filter_text = if image {
+            "Images\0*.png;*.jpg;*.jpeg;*.bmp\0\0".into()
+        } else if save {
             let mut text = String::new();
             for ext in &formats {
                 text.push_str(&format!("{}\0*.{}\0", ext.to_uppercase(), ext));
@@ -1771,6 +1861,10 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         end: None,
         dirty: false,
         track: None,
+        export_image: crate::with_state(parent, |state| {
+            state.settings.media_cutter_export_image.clone()
+        })
+        .flatten(),
         player: None,
         job: None,
         cancel: Arc::new(AtomicBool::new(false)),
@@ -1920,16 +2014,62 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         [12, 560, 750, 26],
         WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
     );
-    button(&mut s, "save", SAVE, 12, 593, 200);
-    button(&mut s, "save_project", SAVE_PROJECT, 230, 593, 245);
-    button(&mut s, "close", CLOSE, 492, 593, 180);
+    let label = s.tr("export_video");
+    control(
+        &mut s,
+        "STATIC",
+        &label,
+        EXPORT_VIDEO_LABEL,
+        [12, 590, 430, 20],
+        WINDOW_STYLE(0),
+    );
+    let choice = control(
+        &mut s,
+        "COMBOBOX",
+        "",
+        EXPORT_VIDEO,
+        [12, 612, 430, 180],
+        WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32) | WS_VSCROLL,
+    );
+    unsafe {
+        for key in [
+            "export_video_no",
+            "export_video_black",
+            "export_video_image",
+        ] {
+            SendMessageW(
+                choice,
+                CB_ADDSTRING,
+                WPARAM(0),
+                LPARAM(to_wide(&s.tr(key)).as_ptr() as isize),
+            );
+        }
+        let mode = crate::with_state(parent, |state| state.settings.media_cutter_export_video)
+            .unwrap_or(0)
+            .min(2);
+        SendMessageW(choice, CB_SETCURSEL, WPARAM(mode as usize), LPARAM(0));
+    }
+    button(&mut s, "choose_image", EXPORT_IMAGE, 452, 610, 290);
+    if let Some(path) = &s.export_image {
+        s.set(
+            EXPORT_IMAGE,
+            &format!(
+                "{} {}",
+                s.tr("choose_image"),
+                path.file_name().unwrap_or_default().to_string_lossy()
+            ),
+        );
+    }
+    button(&mut s, "save", SAVE, 12, 650, 200);
+    button(&mut s, "save_project", SAVE_PROJECT, 230, 650, 245);
+    button(&mut s, "close", CLOSE, 492, 650, 180);
     let label = s.tr("ready");
     s.status = control(
         &mut s,
         "STATIC",
         &label,
         0,
-        [12, 636, 750, 24],
+        [12, 692, 750, 24],
         WINDOW_STYLE(0),
     );
     s.controls.pop();
@@ -2262,7 +2402,7 @@ pub fn open(parent: HWND) {
             80,
             30,
             805,
-            700,
+            760,
             parent,
             HMENU(0),
             instance,
@@ -2614,7 +2754,7 @@ mod tests {
                 0,
                 0,
                 805,
-                700,
+                760,
                 HWND(0),
                 HMENU(0),
                 instance,
@@ -2624,6 +2764,36 @@ mod tests {
             let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
             assert!(!ptr.is_null());
             (*ptr).input = Some(PathBuf::from("test-podcast.mp3"));
+            for mode in [0, 1] {
+                SendMessageW((*ptr).ctrl(MODE), CB_SETCURSEL, WPARAM(mode), LPARAM(0));
+                (*ptr).visibility();
+                assert_ne!(
+                    GetWindowLongW((*ptr).ctrl(EXPORT_VIDEO), GWL_STYLE) as u32 & WS_VISIBLE.0,
+                    0
+                );
+                assert_eq!(
+                    GetWindowLongW((*ptr).ctrl(EXPORT_IMAGE), GWL_STYLE) as u32 & WS_VISIBLE.0,
+                    0
+                );
+                SendMessageW(
+                    (*ptr).ctrl(EXPORT_VIDEO),
+                    CB_SETCURSEL,
+                    WPARAM(2),
+                    LPARAM(0),
+                );
+                (*ptr).visibility();
+                assert_ne!(
+                    GetWindowLongW((*ptr).ctrl(EXPORT_IMAGE), GWL_STYLE) as u32 & WS_VISIBLE.0,
+                    0
+                );
+                assert!(!IsWindowEnabled((*ptr).ctrl(OVERWRITE_ORIGINAL)).as_bool());
+                SendMessageW(
+                    (*ptr).ctrl(EXPORT_VIDEO),
+                    CB_SETCURSEL,
+                    WPARAM(0),
+                    LPARAM(0),
+                );
+            }
             (*ptr).duration = 10.0;
             (*ptr).parts = vec![MediaPart {
                 start: 0.0,
@@ -2697,7 +2867,7 @@ mod tests {
                 0,
                 0,
                 805,
-                700,
+                760,
                 HWND(0),
                 HMENU(0),
                 instance,
@@ -2860,6 +3030,10 @@ mod tests {
             assert!(IsWindowEnabled((*ptr).ctrl(OVERWRITE_ORIGINAL)).as_bool());
             assert_eq!(
                 GetNextDlgTabItem(hwnd, (*ptr).ctrl(OVERWRITE_ORIGINAL), false),
+                (*ptr).ctrl(EXPORT_VIDEO)
+            );
+            assert_eq!(
+                GetNextDlgTabItem(hwnd, (*ptr).ctrl(EXPORT_VIDEO), false),
                 (*ptr).ctrl(SAVE)
             );
             SendMessageW(

@@ -1,5 +1,11 @@
 # Pakeitimų žurnalas
 
+Version 0.9.25 – 2026-10-31
+
+1. Srautinio turinio atsisiuntimai: įjungus tinklo skirtąjį laiką ir pakartotinį prisijungimą, ištaisytas strigimas prieš atsisiuntimo pabaigą. Dabar pranešama apie skaitymo klaidas, užuot nepilną failą laikius sėkmingai atsisiųstu.
+
+2. SonarTube ir SonarMusic: ištaisyta funkcija Pereiti prie žymelės. Vaizdo įrašai ir dainos vėl atidaromi naudojant tokį pat srauto kokybės parinkimą ir automatinius atsarginius būdus kaip įprasto atkūrimo metu, o atkūrimas tęsiamas nuo išsaugotos vietos. Taip pat pagerintas senų žymelių palaikymas, kai galima atkurti pradinę vaizdo įrašo nuorodą.
+
 Version 0.9.24 – 2026-10-31
 
 1. YouTube transliacijų atkūrimas: ištaisyta klaida, kai vaizdo įrašai atsidarydavo be garso, nes tiesioginis srautas baigdavosi nepateikęs atkuriamų garso duomenų. Sonarpad dabar aptinka šią klaidą ir automatiškai bando dar kartą per yt-dlp/HLS.

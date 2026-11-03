@@ -70,16 +70,7 @@ pub(super) fn prepare(
     };
     // Small black BMP, resized by the library. No generated executable or external process.
     let black = work.join("black.bmp");
-    let mut bitmap = vec![0_u8; 70];
-    bitmap[..2].copy_from_slice(b"BM");
-    bitmap[2..6].copy_from_slice(&70_u32.to_le_bytes());
-    bitmap[10..14].copy_from_slice(&54_u32.to_le_bytes());
-    bitmap[14..18].copy_from_slice(&40_u32.to_le_bytes());
-    bitmap[18..22].copy_from_slice(&2_i32.to_le_bytes());
-    bitmap[22..26].copy_from_slice(&2_i32.to_le_bytes());
-    bitmap[26..28].copy_from_slice(&1_u16.to_le_bytes());
-    bitmap[28..30].copy_from_slice(&24_u16.to_le_bytes());
-    std::fs::write(&black, bitmap).map_err(|e| e.to_string())?;
+    write_black_image(&black)?;
     let total: f64 = clips.iter().map(|c| c.end - c.start).sum();
     let mut done = 0.0;
     let mut list = String::from("ffconcat version 1.0\n");
@@ -119,4 +110,17 @@ pub(super) fn prepare(
     }
     std::fs::write(manifest, list).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+pub(super) fn write_black_image(black: &Path) -> Result<(), String> {
+    let mut bitmap = vec![0_u8; 70];
+    bitmap[..2].copy_from_slice(b"BM");
+    bitmap[2..6].copy_from_slice(&70_u32.to_le_bytes());
+    bitmap[10..14].copy_from_slice(&54_u32.to_le_bytes());
+    bitmap[14..18].copy_from_slice(&40_u32.to_le_bytes());
+    bitmap[18..22].copy_from_slice(&2_i32.to_le_bytes());
+    bitmap[22..26].copy_from_slice(&2_i32.to_le_bytes());
+    bitmap[26..28].copy_from_slice(&1_u16.to_le_bytes());
+    bitmap[28..30].copy_from_slice(&24_u16.to_le_bytes());
+    std::fs::write(black, bitmap).map_err(|e| e.to_string())
 }

@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Xuất tệp dưới dạng video",
+  "media_cutter.export_video_no": "Không",
+  "media_cutter.export_video_black": "Có, với hình ảnh màu đen",
+  "media_cutter.export_video_image": "Có, với hình ảnh đã chọn",
+  "media_cutter.choose_image": "Chọn hình ảnh…",
   "stream_audio.playlist_label": "Danh sách phát",
   "media_cutter.open_project": "Mở dự án Sonarpad…",
   "media_cutter.save_project": "Lưu dự án…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "Dấu trang đã tồn tại ở vị trí này.",
   "bookmarks.automatic_bookmark": "Dấ&u trang tự động",
   "bookmarks.delete": "Xóa",
+  "bookmarks.empty_document": "Không có dấu trang nào cho tài liệu hiện tại",
   "bookmarks.goto": "Đi tới",
   "bookmarks.title": "Quản lý dấu trang",
   "bookmark_manager.all": "Tất cả",

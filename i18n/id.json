@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Ekspor berkas sebagai video",
+  "media_cutter.export_video_no": "Tidak",
+  "media_cutter.export_video_black": "Ya, dengan gambar hitam",
+  "media_cutter.export_video_image": "Ya, dengan gambar pilihan",
+  "media_cutter.choose_image": "Pilih gambar…",
   "stream_audio.playlist_label": "Daftar putar",
   "media_cutter.open_project": "Buka proyek Sonarpad…",
   "media_cutter.save_project": "Simpan proyek…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "Penanda sudah ada pada posisi ini.",
   "bookmarks.automatic_bookmark": "Penanda &otomatis",
   "bookmarks.delete": "Hapus",
+  "bookmarks.empty_document": "Tidak ada penanda untuk dokumen saat ini",
   "bookmarks.goto": "Buka penanda",
   "bookmarks.title": "Kelola Penanda",
   "bookmark_manager.all": "Semua",

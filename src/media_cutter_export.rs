@@ -24,6 +24,7 @@ pub struct AddedTrack {
 }
 #[derive(Clone, Debug)]
 pub struct ExportPlan {
+    pub still_video: Option<Option<PathBuf>>,
     pub input: PathBuf,
     pub output: PathBuf,
     pub parts: Vec<MediaPart>,
@@ -68,7 +69,12 @@ pub fn export(
     progress: &mut dyn FnMut(u32),
 ) -> Result<(), String> {
     check_cancel(&cancel)?;
-    if crate::media_conversion::same_file(&plan.input, &plan.output)
+    if plan
+        .still_video
+        .as_ref()
+        .and_then(|p| p.as_ref())
+        .is_some_and(|p| crate::media_conversion::same_file(p, &plan.output))
+        || crate::media_conversion::same_file(&plan.input, &plan.output)
         || plan
             .sources
             .iter()
@@ -147,9 +153,12 @@ pub fn export(
         .and_then(|v| v.to_str())
         .unwrap_or("")
         .to_ascii_lowercase();
+    if plan.still_video.is_some() && extension != "mp4" {
+        return Err("Still image video must be saved as MP4".into());
+    }
     let settings = output_settings(&extension)?;
     let output_video = VIDEO_EXTENSIONS.contains(&extension.as_str());
-    if output_video && !has_video && plan.sources.is_empty() {
+    if output_video && !has_video && plan.sources.is_empty() && plan.still_video.is_none() {
         return Err("Input has no video stream".into());
     }
     if !output_video && !has_audio && plan.track.is_none() {
@@ -174,7 +183,7 @@ pub fn export(
             &extension
         };
         let encoded_audio = work.join(format!("audio.{audio_extension}"));
-        let encoded_video = if plan.sources.is_empty() {
+        let encoded_video = if plan.sources.is_empty() || plan.still_video.is_some() {
             work.join(format!("video.{extension}"))
         } else {
             work.join("video.ffconcat")
@@ -266,7 +275,30 @@ pub fn export(
             )?;
         }
         if output_video {
-            if plan.sources.is_empty() {
+            if let Some(image) = &plan.still_video {
+                if has_video {
+                    return Err("Still image export requires audio-only input".into());
+                }
+                let black = work.join("black.bmp");
+                let image = if let Some(image) = image {
+                    image.as_path()
+                } else {
+                    timeline_video::write_black_image(&black)?;
+                    black.as_path()
+                };
+                crate::media_conversion::encode_video_sized(
+                    image,
+                    &encoded_video,
+                    Some(total),
+                    if plan.still_video == Some(None) {
+                        Some((1280, 720))
+                    } else {
+                        None
+                    },
+                    &cancel,
+                    &mut |p| report(45 + p.min(100) * 45 / 100),
+                )?;
+            } else if plan.sources.is_empty() {
                 video::encode_video(
                     &plan.input,
                     &encoded_video,

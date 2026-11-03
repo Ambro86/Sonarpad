@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Экспортировать файл как видео",
+  "media_cutter.export_video_no": "Нет",
+  "media_cutter.export_video_black": "Да, с чёрным изображением",
+  "media_cutter.export_video_image": "Да, с выбранным изображением",
+  "media_cutter.choose_image": "Выбрать изображение…",
   "stream_audio.playlist_label": "Плейлист",
   "media_cutter.open_project": "Открыть проект Sonarpad…",
   "media_cutter.save_project": "Сохранить проект…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "Закладка уже присутствует в этой позиции.",
   "bookmarks.automatic_bookmark": "&Автоматическая закладка",
   "bookmarks.delete": "Удалить",
+  "bookmarks.empty_document": "Нет закладок для текущего документа",
   "bookmarks.goto": "Перейти",
   "bookmarks.title": "Управление закладками",
   "bookmark_manager.all": "Все",

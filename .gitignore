@@ -65,3 +65,11 @@ bridge/build/
 bridge/dist/ 
 *.BAC 
 *.bac
+
+# Generated test and research output (large temporary media and binaries)
+/artifacts/
+/NOTE_CORREZIONI_CLIENT_20261010.txt
+/NOTE_INSTALLAZIONE_OCR_GIAPPONESE_20261010.txt
+/NOTE_PDF_GIAPPONESE_20261010.txt
+/guida.zip
+/dll/audio_description_bridge.exe

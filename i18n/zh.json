@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "将文件导出为视频",
+  "media_cutter.export_video_no": "否",
+  "media_cutter.export_video_black": "是，使用黑色画面",
+  "media_cutter.export_video_image": "是，使用所选图片",
+  "media_cutter.choose_image": "选择图片…",
   "stream_audio.playlist_label": "播放列表",
   "media_cutter.open_project": "打开 Sonarpad 项目…",
   "media_cutter.save_project": "保存项目…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "该位置已存在书签。",
   "bookmarks.automatic_bookmark": "&自动书签",
   "bookmarks.delete": "删除",
+  "bookmarks.empty_document": "当前文档没有书签",
   "bookmarks.goto": "前往",
   "bookmarks.title": "管理书签",
   "bookmark_manager.all": "全部",

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+Version 0.9.25 – 2026-10-31
+
+1. Pobieranie strumieni: naprawiono zatrzymywanie się przed ukończeniem przez włączenie limitów czasu połączeń sieciowych i ponownego łączenia. Błędy odczytu są teraz zgłaszane, zamiast uznawać niekompletny plik za poprawnie pobrany.
+
+2. SonarTube i SonarMusic: poprawiono funkcję Przejdź do zakładki. Filmy i utwory są ponownie otwierane z takim samym wyborem jakości strumienia i automatycznymi metodami awaryjnymi jak podczas zwykłego odtwarzania, a odtwarzanie jest wznawiane od zapisanej pozycji. Ulepszono też obsługę starszych zakładek, jeśli można odzyskać oryginalny link.
+
 Version 0.9.24 – 2026-10-31
 
 1. Odtwarzanie strumieniowe z YouTube: naprawiono otwieranie filmów bez dźwięku, gdy bezpośredni strumień kończył się bez danych audio możliwych do odtworzenia. Sonarpad wykrywa teraz ten błąd i automatycznie ponawia próbę przez yt-dlp/HLS.

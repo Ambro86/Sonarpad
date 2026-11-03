@@ -2,7 +2,11 @@
 
 Version 0.9.25 – 2026-10-31
 
-SonarTube is the new name for Play audio from streaming, with the same familiar features. YouTube searches can now show All, Videos, Playlists, Channels, Courses or Podcasts. The selection is remembered and does not affect direct links.
+1. SonarTube is the new name for Play audio from streaming, with the same familiar features. YouTube searches can now show All, Videos, Playlists, Channels, Courses or Podcasts. The selection is remembered and does not affect direct links.
+
+2. Streaming downloads: fixed downloads stalling before completion by enabling network timeouts and reconnection. Read errors are now reported instead of treating an incomplete file as a successful download.
+
+3. SonarTube and SonarMusic: fixed Go to bookmark so videos and songs reopen using the same stream-quality selection and automatic fallback strategies as normal playback, resuming from the saved position. Improved compatibility with older bookmarks when their original video URL can be recovered.
 
 Version 0.9.24 – 2026-10-31
 

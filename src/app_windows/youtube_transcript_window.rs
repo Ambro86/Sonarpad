@@ -522,6 +522,7 @@ pub(crate) fn sonarmusic_action(
             action_started.elapsed().as_millis()
         ));
         set_active_stream_save_context(context);
+        crate::mark_sonarmusic_stream(parent, url);
         crate::menu::update_playback_menu(parent, true);
     } else {
         let actions = youtube_video_context_actions(
@@ -9617,6 +9618,36 @@ fn update_youtube_return_context_from_selection(
     {
         crate::log_debug("Failed to update YouTube return context from selection");
     }
+}
+
+/// Reuse SonarTube's complete opening path, including resolution and all player fallbacks.
+pub(crate) fn reopen_stream_bookmark(
+    parent: HWND,
+    url: String,
+    title: Option<String>,
+    seconds: u64,
+    from_sonarmusic: bool,
+) {
+    with_state(parent, |state| {
+        state.pending_stream_bookmark = Some((url.clone(), seconds))
+    });
+    if from_sonarmusic {
+        let title = title.as_deref().unwrap_or("SonarMusic");
+        if let Err(error) = sonarmusic_action(parent, &url, title, 0) {
+            let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
+            show_error(parent, language, &error);
+        }
+    } else {
+        reopen_stream_selection(
+            parent,
+            crate::YouTubeReturnContext {
+                input: Some(url),
+                selected_label: title,
+                ..Default::default()
+            },
+        );
+    }
+    with_state(parent, |state| state.pending_stream_bookmark = None);
 }
 
 pub(crate) fn reopen_stream_selection(parent: HWND, context: crate::YouTubeReturnContext) {

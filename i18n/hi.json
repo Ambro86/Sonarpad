@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "फ़ाइल को वीडियो के रूप में निर्यात करें",
+  "media_cutter.export_video_no": "नहीं",
+  "media_cutter.export_video_black": "हाँ, काली छवि के साथ",
+  "media_cutter.export_video_image": "हाँ, चुनी हुई छवि के साथ",
+  "media_cutter.choose_image": "छवि चुनें…",
   "stream_audio.playlist_label": "प्लेलिस्ट",
   "media_cutter.open_project": "Sonarpad प्रोजेक्ट खोलें…",
   "media_cutter.save_project": "प्रोजेक्ट सहेजें…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "इस स्थिति पर बुकमार्क पहले से मौजूद है।",
   "bookmarks.automatic_bookmark": "&स्वचालित बुकमार्क",
   "bookmarks.delete": "हटाएँ",
+  "bookmarks.empty_document": "वर्तमान दस्तावेज़ के लिए कोई बुकमार्क नहीं है",
   "bookmarks.goto": "पर जाएँ",
   "bookmarks.title": "बुकमार्क प्रबंधित करें",
   "bookmark_manager.all": "सभी",

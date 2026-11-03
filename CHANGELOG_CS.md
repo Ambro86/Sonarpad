@@ -1,5 +1,11 @@
 # Přehled změn
 
+Version 0.9.25 – 2026-10-31
+
+1. Stahování streamů: opraveno zaseknutí před dokončením zapnutím síťových časových limitů a opětovného připojení. Chyby čtení jsou nyní hlášeny místo toho, aby byl neúplný soubor považován za úspěšně stažený.
+
+2. SonarTube a SonarMusic: opravena funkce Přejít na záložku. Videa a skladby se znovu otevírají se stejnou volbou kvality streamu a automatickými záložními postupy jako při běžném přehrávání a pokračují od uložené pozice. Zlepšena také podpora starších záložek, pokud lze obnovit původní odkaz.
+
 Version 0.9.24 – 2026-10-31
 
 1. Streamování z YouTube: opraveno otevírání videí bez zvuku, když přímý stream skončil bez přehratelných zvukových dat. Sonarpad nyní tuto chybu rozpozná a automaticky zopakuje pokus pomocí yt-dlp/HLS.

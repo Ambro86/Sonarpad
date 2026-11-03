@@ -1,4 +1,9 @@
 {
+  "media_cutter.export_video": "Експортувати файл як відео",
+  "media_cutter.export_video_no": "Ні",
+  "media_cutter.export_video_black": "Так, із чорним зображенням",
+  "media_cutter.export_video_image": "Так, із вибраним зображенням",
+  "media_cutter.choose_image": "Вибрати зображення…",
   "stream_audio.playlist_label": "Список відтворення",
   "media_cutter.open_project": "Відкрити проєкт Sonarpad…",
   "media_cutter.save_project": "Зберегти проєкт…",
@@ -342,6 +347,7 @@
   "bookmark.already_present": "Закладка вже присутня на цій позиції.",
   "bookmarks.automatic_bookmark": "&Автоматична закладка",
   "bookmarks.delete": "Видалити",
+  "bookmarks.empty_document": "Немає закладок для поточного документа",
   "bookmarks.goto": "Перейти",
   "bookmarks.title": "Керування закладками",
   "bookmark_manager.all": "Усі",

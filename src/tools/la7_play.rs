@@ -5,9 +5,9 @@ use std::collections::HashSet;
 use std::time::Duration;
 use url::Url;
 
-const BASE: &str = "https://www.la7.it";
-const RIVEDI: &str = "https://www.la7.it/rivedila7/0/la7";
-const PROGRAMMI: &str = "https://www.la7.it/programmi";
+const BASE: &str = "https://www.la7play.it";
+const RIVEDI: &str = "https://www.la7play.it/guida-tv-rivedi/la7";
+const PROGRAMMI: &str = "https://www.la7play.it/programmi";
 const TUTTI_PROGRAMMI: &str = "https://www.la7.it/tutti-i-programmi";
 const UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const PROGRAM_EXCLUSIONS: &[&str] = &[
@@ -101,6 +101,9 @@ pub(crate) fn search(query: &str) -> Result<BrowsePage, String> {
 
 pub(crate) fn resolve_vod(page_url: &str) -> Result<String, String> {
     let html = get(page_url)?;
+    if let Some(result) = structured_vod(&html) {
+        return result;
+    }
     let content =
         Regex::new(r#"\.net/i/.*?content/(.*?)(?:\.mp4)"#).map_err(|err| err.to_string())?;
     if let Some(captures) = content.captures(&html).map_err(|err| err.to_string())?
@@ -126,8 +129,171 @@ pub(crate) fn resolve_vod(page_url: &str) -> Result<String, String> {
     Err(tr("la7.no_media"))
 }
 
+// The new site renders its catalogue and player configuration as JSON in HTML.
+// Read that data directly, retaining the legacy HTML parsers below.
+fn site_data(html: &str) -> Vec<serde_json::Value> {
+    let document = Html::parse_document(html);
+    let mut values = Vec::new();
+    let mut flight = String::new();
+    for script in document.select(&selector("script")) {
+        let text = script.inner_html();
+        if script.value().attr("type") == Some("application/ld+json") {
+            if let Ok(value) = serde_json::from_str(&text) {
+                values.push(value);
+            }
+        } else if let Some(body) = text
+            .trim()
+            .strip_prefix("self.__next_f.push(")
+            .and_then(|s| s.trim_end_matches(';').strip_suffix(')'))
+            && let Ok(value) = serde_json::from_str::<serde_json::Value>(body)
+            && let Some(chunk) = value.get(1).and_then(|v| v.as_str())
+        {
+            flight.push_str(chunk);
+        }
+    }
+    // Chunks may split a record (including in the middle of a JSON string).
+    for line in flight.lines() {
+        if let Some((_, body)) = line.split_once(':')
+            && let Ok(value) = serde_json::from_str(body)
+        {
+            values.push(value);
+        }
+    }
+    values
+}
+
+fn find_field<'a>(value: &'a serde_json::Value, key: &str) -> Option<&'a serde_json::Value> {
+    match value {
+        serde_json::Value::Object(map) => map
+            .get(key)
+            .or_else(|| map.values().find_map(|v| find_field(v, key))),
+        serde_json::Value::Array(items) => items.iter().find_map(|v| find_field(v, key)),
+        _ => None,
+    }
+}
+
+fn structured_items(html: &str, types: &[&str]) -> Vec<(String, String)> {
+    fn collect(value: &serde_json::Value, types: &[&str], out: &mut Vec<(String, String)>) {
+        if value["@type"] == "ItemList" {
+            if let Some(items) = value["itemListElement"].as_array() {
+                for item in items {
+                    let item = &item["item"];
+                    if types.contains(&item["@type"].as_str().unwrap_or(""))
+                        && let (Some(title), Some(url)) =
+                            (item["name"].as_str(), item["url"].as_str())
+                        && !title.is_empty()
+                        && !url.is_empty()
+                    {
+                        out.push((title.to_string(), url.to_string()));
+                    }
+                }
+            }
+        } else if let Some(map) = value.as_object() {
+            for v in map.values() {
+                collect(v, types, out);
+            }
+        } else if let Some(items) = value.as_array() {
+            for v in items {
+                collect(v, types, out);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for value in site_data(html) {
+        collect(&value, types, &mut out);
+    }
+    let mut seen = HashSet::new();
+    out.retain(|(_, url)| seen.insert(url.clone()));
+    out
+}
+
+fn guide_days(html: &str) -> Vec<serde_json::Value> {
+    site_data(html)
+        .iter()
+        .find_map(|value| {
+            find_field(value, "giorno")
+                .and_then(|v| v.as_array())
+                .cloned()
+        })
+        .unwrap_or_default()
+}
+
+fn playable_guide_entry(entry: &serde_json::Value) -> bool {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    entry["pathname"]
+        .as_str()
+        .is_some_and(|path| !path.is_empty())
+        && entry["timestamp"]
+            .as_str()
+            .and_then(|s| s.parse::<u64>().ok())
+            .is_some_and(|t| t <= now)
+}
+
+fn structured_vod(html: &str) -> Option<Result<String, String>> {
+    let data = site_data(html);
+    let video = data.iter().find_map(|v| find_field(v, "videoData"))?;
+    let settings = data.iter().find_map(|v| find_field(v, "playerSettings"))?;
+    if video["drm"] == true && settings["abilitaDrm"] == true {
+        return Some(Err(tr("la7.drm")));
+    }
+    let remote = video["uploadVideo"]["cf_remote_url"].as_str()?;
+    let host = settings["hostnameCdn"].as_str()?;
+    if remote.is_empty() || !host.starts_with("https://") {
+        return None;
+    }
+    let new_storage = video["uploadVideo"]["cf_old_entry_id"]
+        .as_str()
+        .is_none_or(|s| s.is_empty());
+    let remote = format!("/{}", remote.trim_start_matches('/')).replace(".mp4", "");
+    let paths = remote
+        .split(',')
+        .map(|part| {
+            let part = part.trim();
+            if new_storage && !part.is_empty() && !part.starts_with("/nk/") {
+                format!("/nk/{}", part.trim_start_matches('/'))
+            } else {
+                part.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    Some(Ok(format!(
+        "{}/local/hls/,{paths},.mp4.urlset/master.m3u8",
+        host.trim_end_matches('/')
+    )))
+}
+
 fn rivedi_days() -> Result<BrowsePage, String> {
     let html = get(RIVEDI)?;
+    let days = guide_days(&html);
+    if !days.is_empty() {
+        let mut items = Vec::new();
+        for (index, day) in days.iter().enumerate() {
+            if day["programma"]
+                .as_array()
+                .is_none_or(|entries| !entries.iter().any(playable_guide_entry))
+            {
+                continue;
+            }
+            if let Some(date) = day["@attributes"]["data"].as_str() {
+                items.push(page(
+                    &format!("day-{index}"),
+                    &date.replace('-', "/"),
+                    &format!("day:{RIVEDI}#{date}"),
+                ));
+            }
+        }
+        items.reverse();
+        return Ok(BrowsePage {
+            title: tr("la7.catchup"),
+            source: "rivedi".into(),
+            items,
+        });
+    }
+
     let document = Html::parse_document(&html);
     let rows = selector("div.item--menu-guida-tv, div.item.item--menu-guida-tv");
     let links = selector("a");
@@ -170,6 +336,37 @@ fn rivedi_days() -> Result<BrowsePage, String> {
 
 fn rivedi_day(url: &str) -> Result<BrowsePage, String> {
     let html = get(url)?;
+    let days = guide_days(&html);
+    if !days.is_empty() {
+        let date = url.split_once('#').map(|(_, date)| date).unwrap_or("");
+        let mut items = Vec::new();
+        for day in &days {
+            if day["@attributes"]["data"].as_str() != Some(date) {
+                continue;
+            }
+            if let Some(entries) = day["programma"].as_array() {
+                for entry in entries.iter().filter(|e| playable_guide_entry(e)) {
+                    let title = format!(
+                        "{} — {}",
+                        entry["ora"].as_str().unwrap_or(""),
+                        entry["titolo"].as_str().unwrap_or("")
+                    );
+                    items.push(media(
+                        &format!("episode-{}", items.len()),
+                        &title,
+                        &absolute(entry["pathname"].as_str().unwrap_or("")),
+                        entry["sinossi"].as_str().map(str::to_string),
+                    ));
+                }
+            }
+        }
+        return Ok(BrowsePage {
+            title: tr("la7.catchup"),
+            source: format!("day:{url}"),
+            items,
+        });
+    }
+
     let document = Html::parse_document(&html);
     let rows = selector("#content_guida_tv_rivedi div.item--guida-tv");
     let links = selector("a");
@@ -217,6 +414,11 @@ fn programs_page(query: Option<&str>) -> Result<BrowsePage, String> {
         let Ok(html) = get(url) else {
             continue;
         };
+        let listed = structured_items(&html, &["TVSeries"]);
+        if !listed.is_empty() {
+            programs.extend(listed);
+            break;
+        }
         let document = Html::parse_document(&html);
         let rows = selector("#container-programmi-list div.list-item, div.list-item");
         let links = selector("a");
@@ -257,9 +459,10 @@ fn programs_page(query: Option<&str>) -> Result<BrowsePage, String> {
         }
     }
 
-    if !seen
-        .iter()
-        .any(|key| key.starts_with("la mala educaxxxion 2|"))
+    if !programs.iter().any(|(_, url)| url.contains("la7play.it"))
+        && !seen
+            .iter()
+            .any(|key| key.starts_with("la mala educaxxxion 2|"))
     {
         programs.push((
             "LA MALA EDUCAXXXION 2".to_string(),
@@ -327,6 +530,15 @@ fn program_search_clips(program_url: &str) -> Vec<BrowseItem> {
     let Ok(html) = get(program_url) else {
         return Vec::new();
     };
+    let listed = structured_items(&html, &["VideoObject", "TVEpisode", "TVClip"]);
+    if !listed.is_empty() {
+        return listed
+            .into_iter()
+            .filter(|(_, url)| !is_program_episode_url(url))
+            .enumerate()
+            .map(|(index, (title, url))| media(&format!("clip-{index}"), &title, &url, None))
+            .collect();
+    }
     let document = Html::parse_document(&html);
     let rows = selector(".home-block__content-inner div.item");
     let links = selector("a");
@@ -378,6 +590,20 @@ fn program_episodes(url: &str) -> Result<BrowsePage, String> {
     // Le altre card sono clip editoriali e vengono mostrate separatamente nei
     // risultati della ricerca, non dentro l'archivio del programma.
     if let Ok(html) = get(url) {
+        let listed = structured_items(&html, &["TVEpisode", "VideoObject"]);
+        if !listed.is_empty() {
+            let items = listed
+                .into_iter()
+                .filter(|(_, link)| is_program_episode_url(link))
+                .enumerate()
+                .map(|(index, (title, link))| media(&format!("media-{index}"), &title, &link, None))
+                .collect();
+            return Ok(BrowsePage {
+                title: program_title_from_href(url),
+                source: format!("program:{url}"),
+                items,
+            });
+        }
         let document = Html::parse_document(&html);
         let latest = selector(".ultima_puntata");
         for row in document.select(&latest) {
@@ -457,7 +683,10 @@ fn push_program_episode(
 fn is_program_episode_url(url: &str) -> bool {
     Url::parse(url)
         .ok()
-        .map(|parsed| parsed.path().to_ascii_lowercase().contains("/rivedila7/"))
+        .map(|parsed| {
+            let path = parsed.path().to_ascii_lowercase();
+            path.contains("/rivedila7/") || path.contains("/puntate/")
+        })
         .unwrap_or_else(|| url.to_ascii_lowercase().contains("/rivedila7/"))
 }
 
@@ -725,5 +954,76 @@ mod tests {
     fn la7_program_title_falls_back_to_slug() {
         assert_eq!(program_title_from_href("/laria-che-tira"), "Laria Che Tira");
         assert_eq!(normalize_search_text("L’Aria che Tira"), "laria che tira");
+    }
+}
+
+#[cfg(test)]
+mod new_site_tests {
+    use super::*;
+    const PROGRAMS: &str = include_str!("../../tests/fixtures/la7play/programs.html");
+    const PROGRAM: &str = include_str!("../../tests/fixtures/la7play/prop.html");
+    const GUIDE: &str = include_str!("../../tests/fixtures/la7play/guide.html");
+    const FREE: &str = include_str!("../../tests/fixtures/la7play/free-episode.html");
+    const DRM: &str = include_str!("../../tests/fixtures/la7play/episode.html");
+
+    #[test]
+    fn new_catalogue_lists_programs_and_separates_full_episodes() {
+        let programs = structured_items(PROGRAMS, &["TVSeries"]);
+        assert_eq!(programs.len(), 58);
+        assert!(programs.iter().any(|(title, _)| title == "Otto e mezzo"));
+        let episodes = structured_items(PROGRAM, &["TVEpisode", "VideoObject"]);
+        assert!(!episodes.is_empty());
+        assert_eq!(structured_items(PROGRAM, &["TVClip"]).len(), 20);
+        assert!(episodes.iter().any(|(_, url)| is_program_episode_url(url)));
+        assert!(!is_program_episode_url(
+            "https://www.la7play.it/otto-e-mezzo/video/clip"
+        ));
+    }
+
+    #[test]
+    fn new_guide_decodes_split_chunks_and_keeps_playable_replays() {
+        let days = guide_days(GUIDE);
+        assert_eq!(days.len(), 2);
+        assert_eq!(days[0]["@attributes"]["data"], "26-10-2026");
+        assert!(playable_guide_entry(&days[0]["programma"][0]));
+        assert!(!playable_guide_entry(
+            &serde_json::json!({"timestamp":"1792994400"})
+        ));
+        assert!(!playable_guide_entry(
+            &serde_json::json!({"timestamp":"9999999999", "pathname":"/future"})
+        ));
+    }
+
+    #[test]
+    fn new_player_uses_actual_storage_and_does_not_confuse_drm_settings_with_drm_content() {
+        let url = structured_vod(FREE).unwrap().unwrap();
+        assert!(url.starts_with("https://awsvodpkg.iltrovatore.it/local/hls/,/nk/content/"));
+        assert!(url.ends_with(",.mp4.urlset/master.m3u8"));
+        assert!(!url.contains("/nk/nk/"));
+        assert!(structured_vod(DRM).unwrap().is_err());
+        assert!(
+            structured_vod("<script>var player={m3u8:'https://example.test/a.m3u8'}</script>")
+                .is_none()
+        );
+    }
+
+    #[test]
+    #[ignore = "Requests the public LA7 Play catalogue and a free HLS manifest"]
+    fn live_new_site_catalogue_and_free_manifest() {
+        let programs = load_page("programs").unwrap();
+        assert!(programs.items.len() > 10);
+        let program = programs
+            .items
+            .iter()
+            .find(|p| p.title == "Otto e mezzo")
+            .unwrap();
+        let episodes = load_page(&program.target).unwrap();
+        assert!(!episodes.items.is_empty());
+        let stream = resolve_vod(&episodes.items[0].target).unwrap();
+        assert!(get(&stream).unwrap().starts_with("#EXTM3U"));
+        let days = load_page("rivedi").unwrap();
+        assert!(!days.items.is_empty());
+        let day = load_page(&days.items[0].target).unwrap();
+        assert!(!day.items.is_empty());
     }
 }
