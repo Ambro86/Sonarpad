@@ -227,27 +227,6 @@ pub fn try_save_bookmarks(store: &BookmarkStore) -> std::io::Result<()> {
     result
 }
 
-/// Preserve the original file before any user-initiated batch cleanup.
-pub fn backup_before_cleanup() -> std::io::Result<()> {
-    let Some(path) = bookmark_store_path() else {
-        return Ok(());
-    };
-    if !path.is_file() {
-        return Ok(());
-    }
-    let backup_dir = path
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."))
-        .join("bookmarks-backups");
-    std::fs::create_dir_all(&backup_dir)?;
-    let suffix = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-    std::fs::copy(&path, backup_dir.join(format!("bookmarks-{suffix}.json")))?;
-    Ok(())
-}
-
 pub fn save_bookmarks(store: &BookmarkStore) {
     crate::log_if_err!(try_save_bookmarks(store));
 }

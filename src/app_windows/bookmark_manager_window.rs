@@ -426,7 +426,6 @@ fn delete_selected(hwnd: HWND) {
         if removed == 0 {
             return Ok(0);
         }
-        crate::bookmarks::backup_before_cleanup()?;
         crate::bookmarks::try_save_bookmarks(&updated)?;
         app.bookmarks = updated;
         // An already-open document must not recreate a bookmark when it closes.
