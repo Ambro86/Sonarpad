@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Artiklar...\tCtrl+Shift+U",
   "menu.screen_record": "&Starta skärminspelning...",
   "menu.stop_record": "S&toppa skärminspelning",
-  "menu.stream_audio": "&Spela strömmande ljud...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Verktyg",
   "menu.tools_category.multimedia": "&Multimedia",
   "menu.tools_category.reading_content": "&Läsning och innehåll",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Laddar ner stream...",
   "stream_audio.progress_title": "Nedladdning av stream",
   "stream_audio.prompt_body": "Ange en URL, en YouTube-sökning eller en länk till en YouTube-kanal:",
-  "stream_audio.prompt_title": "Spela strömmande ljud",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Hög kvalitet",
   "stream_audio.quality.low": "Låg kvalitet",
   "stream_audio.quality.medium": "Medelhög kvalitet",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Spara PDF utan lösenord…",
   "app.pdf_copy_different_path": "Välj ett annat namn: den ursprungliga PDF-filen ska förbli oförändrad.",
   "app.pdf_copy_saved": "PDF-kopia utan lösenord sparad.",
-  "app.pdf_unlocked_hint": "Du kan spara PDF-filen utan lösenord genom att välja Spara PDF utan lösenord i menyn Arkiv."
+  "app.pdf_unlocked_hint": "Du kan spara PDF-filen utan lösenord genom att välja Spara PDF utan lösenord i menyn Arkiv.",
+  "stream_audio.search_type": "Söktyp",
+  "stream_audio.search_all": "Alla",
+  "stream_audio.search_videos": "Videor",
+  "stream_audio.search_playlists": "Spellistor",
+  "stream_audio.search_channels": "Kanaler",
+  "stream_audio.search_courses": "Kurser",
+  "stream_audio.search_podcasts": "Poddar"
 }

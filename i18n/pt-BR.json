@@ -884,7 +884,7 @@
   "menu.rss": "R&SS / Artigos...\tCtrl+Shift+U",
   "menu.screen_record": "&Iniciar gravação de tela...",
   "menu.stop_record": "&Parar gravação de tela",
-  "menu.stream_audio": "Reproduzir &áudio em streaming...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Ferramentas",
   "menu.tools_category.multimedia": "&Multimídia",
   "menu.tools_category.reading_content": "&Leitura e conteúdos",
@@ -1958,7 +1958,7 @@
   "stream_audio.progress_downloading": "Transferindo o streaming...",
   "stream_audio.progress_title": "Download de streaming",
   "stream_audio.prompt_body": "Insira um URL, uma pesquisa do YouTube ou o link de um canal do YouTube:",
-  "stream_audio.prompt_title": "Reproduzir áudio em streaming",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Alta qualidade",
   "stream_audio.quality.low": "Baixa qualidade",
   "stream_audio.quality.medium": "Qualidade média",
@@ -2470,5 +2470,12 @@
   "file.save_pdf_without_password": "Salvar PDF sem senha…",
   "app.pdf_copy_different_path": "Escolha outro nome: o PDF original deve permanecer inalterado.",
   "app.pdf_copy_saved": "Cópia do PDF sem senha salva.",
-  "app.pdf_unlocked_hint": "Você pode salvar o PDF sem senha pelo menu Arquivo, escolhendo Salvar PDF sem senha."
+  "app.pdf_unlocked_hint": "Você pode salvar o PDF sem senha pelo menu Arquivo, escolhendo Salvar PDF sem senha.",
+  "stream_audio.search_type": "Tipo de pesquisa",
+  "stream_audio.search_all": "Todos",
+  "stream_audio.search_videos": "Vídeos",
+  "stream_audio.search_playlists": "Listas de reprodução",
+  "stream_audio.search_channels": "Canais",
+  "stream_audio.search_courses": "Cursos",
+  "stream_audio.search_podcasts": "Podcasts"
 }

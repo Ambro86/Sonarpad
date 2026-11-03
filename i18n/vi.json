@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Bài viết...\tCtrl+Shift+U",
   "menu.screen_record": "&Bắt đầu quay màn hình...",
   "menu.stop_record": "&Dừng quay màn hình",
-  "menu.stream_audio": "Phát &âm thanh trực tuyến...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "C&ông cụ",
   "menu.tools_category.multimedia": "&Đa phương tiện",
   "menu.tools_category.reading_content": "Đọc và &nội dung",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Đang tải luồng...",
   "stream_audio.progress_title": "Tải phát trực tuyến",
   "stream_audio.prompt_body": "Nhập URL, từ khóa tìm kiếm YouTube hoặc liên kết kênh YouTube:",
-  "stream_audio.prompt_title": "Phát âm thanh trực tuyến",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Chất lượng cao",
   "stream_audio.quality.low": "Chất lượng thấp",
   "stream_audio.quality.medium": "Chất lượng trung bình",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Lưu PDF không có mật khẩu…",
   "app.pdf_copy_different_path": "Chọn tên khác: PDF gốc phải được giữ nguyên.",
   "app.pdf_copy_saved": "Đã lưu bản sao PDF không có mật khẩu.",
-  "app.pdf_unlocked_hint": "Bạn có thể lưu PDF không có mật khẩu từ trình đơn Tệp bằng cách chọn Lưu PDF không có mật khẩu."
+  "app.pdf_unlocked_hint": "Bạn có thể lưu PDF không có mật khẩu từ trình đơn Tệp bằng cách chọn Lưu PDF không có mật khẩu.",
+  "stream_audio.search_type": "Loại tìm kiếm",
+  "stream_audio.search_all": "Tất cả",
+  "stream_audio.search_videos": "Video",
+  "stream_audio.search_playlists": "Danh sách phát",
+  "stream_audio.search_channels": "Kênh",
+  "stream_audio.search_courses": "Khóa học",
+  "stream_audio.search_podcasts": "Podcast"
 }

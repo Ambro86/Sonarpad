@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Artikel...\tCtrl+Shift+U",
   "menu.screen_record": "&Mulai Perekaman Layar...",
   "menu.stop_record": "&Hentikan Perekaman Layar",
-  "menu.stream_audio": "P&utar Audio Streaming...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Alat",
   "menu.tools_category.multimedia": "&Multimedia",
   "menu.tools_category.reading_content": "&Bacaan dan konten",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Mengunduh stream...",
   "stream_audio.progress_title": "Mengunduh stream",
   "stream_audio.prompt_body": "Masukkan URL, kata kunci pencarian YouTube, atau tautan saluran YouTube:",
-  "stream_audio.prompt_title": "Putar Audio Streaming",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Kualitas Tinggi",
   "stream_audio.quality.low": "Kualitas Rendah",
   "stream_audio.quality.medium": "Kualitas Sedang",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Simpan PDF tanpa kata sandi…",
   "app.pdf_copy_different_path": "Pilih nama lain: PDF asli harus tetap tidak berubah.",
   "app.pdf_copy_saved": "Salinan PDF tanpa kata sandi disimpan.",
-  "app.pdf_unlocked_hint": "Anda dapat menyimpan PDF tanpa kata sandi melalui menu Berkas dengan memilih Simpan PDF tanpa kata sandi."
+  "app.pdf_unlocked_hint": "Anda dapat menyimpan PDF tanpa kata sandi melalui menu Berkas dengan memilih Simpan PDF tanpa kata sandi.",
+  "stream_audio.search_type": "Jenis pencarian",
+  "stream_audio.search_all": "Semua",
+  "stream_audio.search_videos": "Video",
+  "stream_audio.search_playlists": "Playlist",
+  "stream_audio.search_channels": "Channel",
+  "stream_audio.search_courses": "Kursus",
+  "stream_audio.search_podcasts": "Podcast"
 }

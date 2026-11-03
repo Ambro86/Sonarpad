@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / 文章... Ctrl+Shift+U",
   "menu.screen_record": "&开始屏幕录制...",
   "menu.stop_record": "停止屏幕录制",
-  "menu.stream_audio": "播&放流媒体音频... Alt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&工具",
   "menu.tools_category.multimedia": "&多媒体",
   "menu.tools_category.reading_content": "&阅读和内容",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "正在下载流...",
   "stream_audio.progress_title": "流媒体下载",
   "stream_audio.prompt_body": "输入 URL、YouTube 搜索内容或频道链接：",
-  "stream_audio.prompt_title": "播放流媒体音频",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "高品质",
   "stream_audio.quality.low": "低质量",
   "stream_audio.quality.medium": "中等质量",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "保存无密码 PDF…",
   "app.pdf_copy_different_path": "请选择其他名称，原始 PDF 必须保持不变。",
   "app.pdf_copy_saved": "已保存无密码 PDF 副本。",
-  "app.pdf_unlocked_hint": "您可以在“文件”菜单中选择“保存无密码 PDF”，将 PDF 保存为无需密码的副本。"
+  "app.pdf_unlocked_hint": "您可以在“文件”菜单中选择“保存无密码 PDF”，将 PDF 保存为无需密码的副本。",
+  "stream_audio.search_type": "搜索类型",
+  "stream_audio.search_all": "全部",
+  "stream_audio.search_videos": "视频",
+  "stream_audio.search_playlists": "播放列表",
+  "stream_audio.search_channels": "频道",
+  "stream_audio.search_courses": "课程",
+  "stream_audio.search_podcasts": "播客"
 }

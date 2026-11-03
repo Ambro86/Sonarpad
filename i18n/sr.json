@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / članci...",
   "menu.screen_record": "&Pokreni snimanje ekrana...",
   "menu.stop_record": "Z&ustavi snimanje ekrana",
-  "menu.stream_audio": "Reprodukuj &striming audio...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Alati",
   "menu.tools_category.multimedia": "&Multimedija",
   "menu.tools_category.reading_content": "&Čitanje i sadržaj",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Preuzimanje striminga...",
   "stream_audio.progress_title": "Preuzimanje striminga",
   "stream_audio.prompt_body": "Unesite URL, YouTube pretragu ili link ka YouTube kanalu:",
-  "stream_audio.prompt_title": "Reprodukcija striming zvuka",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Visok kvalitet",
   "stream_audio.quality.low": "Nizak kvalitet",
   "stream_audio.quality.medium": "Srednji kvalitet",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Сачувај PDF без лозинке…",
   "app.pdf_copy_different_path": "Изаберите друго име: оригинални PDF мора остати непромењен.",
   "app.pdf_copy_saved": "Копија PDF-а без лозинке је сачувана.",
-  "app.pdf_unlocked_hint": "PDF можете сачувати без лозинке избором ставке Сачувај PDF без лозинке у менију Датотека."
+  "app.pdf_unlocked_hint": "PDF можете сачувати без лозинке избором ставке Сачувај PDF без лозинке у менију Датотека.",
+  "stream_audio.search_type": "Tip pretrage",
+  "stream_audio.search_all": "Sve",
+  "stream_audio.search_videos": "Video snimci",
+  "stream_audio.search_playlists": "Plejliste",
+  "stream_audio.search_channels": "Kanali",
+  "stream_audio.search_courses": "Kursevi",
+  "stream_audio.search_podcasts": "Podkasti"
 }

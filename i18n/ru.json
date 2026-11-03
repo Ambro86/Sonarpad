@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Статьи...\tCtrl+Shift+U",
   "menu.screen_record": "&Начать запись экрана...",
   "menu.stop_record": "О&становить запись экрана",
-  "menu.stream_audio": "Воспроизвести потоковое &аудио...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Инструменты",
   "menu.tools_category.multimedia": "&Мультимедиа",
   "menu.tools_category.reading_content": "&Чтение и содержимое",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Загрузка потока...",
   "stream_audio.progress_title": "Загрузка потока",
   "stream_audio.prompt_body": "Введите URL, поисковый запрос YouTube или ссылку на канал YouTube:",
-  "stream_audio.prompt_title": "Воспроизвести потоковое аудио",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Высокое качество",
   "stream_audio.quality.low": "Низкое качество",
   "stream_audio.quality.medium": "Среднее качество",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Сохранить PDF без пароля…",
   "app.pdf_copy_different_path": "Выберите другое имя: исходный PDF должен остаться неизменным.",
   "app.pdf_copy_saved": "Копия PDF без пароля сохранена.",
-  "app.pdf_unlocked_hint": "Чтобы сохранить PDF без пароля, выберите «Сохранить PDF без пароля» в меню «Файл»."
+  "app.pdf_unlocked_hint": "Чтобы сохранить PDF без пароля, выберите «Сохранить PDF без пароля» в меню «Файл».",
+  "stream_audio.search_type": "Тип поиска",
+  "stream_audio.search_all": "Все",
+  "stream_audio.search_videos": "Видео",
+  "stream_audio.search_playlists": "Плейлисты",
+  "stream_audio.search_channels": "Каналы",
+  "stream_audio.search_courses": "Курсы",
+  "stream_audio.search_podcasts": "Подкасты"
 }

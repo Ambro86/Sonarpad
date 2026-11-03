@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Straipsniai... Ctrl+Shift+U",
   "menu.screen_record": "&Pradėti ekrano įrašymą...",
   "menu.stop_record": "S&top ekrano įrašymas",
-  "menu.stream_audio": "Palei&sti srautinį garso įrašą... Alt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Įrankiai",
   "menu.tools_category.multimedia": "&Multimedija",
   "menu.tools_category.reading_content": "&Skaitymas ir turinys",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Atsisiunčiama transliacija...",
   "stream_audio.progress_title": "Srauto atsisiuntimas",
   "stream_audio.prompt_body": "Įveskite URL, „YouTube“ paieškos užklausą arba „YouTube“ kanalo nuorodą:",
-  "stream_audio.prompt_title": "Leisti transliuojamą garso įrašą",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Aukšta kokybė",
   "stream_audio.quality.low": "Žema kokybė",
   "stream_audio.quality.medium": "Vidutinė kokybė",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Išsaugoti PDF be slaptažodžio…",
   "app.pdf_copy_different_path": "Pasirinkite kitą pavadinimą: originalus PDF turi likti nepakeistas.",
   "app.pdf_copy_saved": "PDF kopija be slaptažodžio išsaugota.",
-  "app.pdf_unlocked_hint": "PDF be slaptažodžio galite išsaugoti meniu Failas pasirinkę Išsaugoti PDF be slaptažodžio."
+  "app.pdf_unlocked_hint": "PDF be slaptažodžio galite išsaugoti meniu Failas pasirinkę Išsaugoti PDF be slaptažodžio.",
+  "stream_audio.search_type": "Paieškos tipas",
+  "stream_audio.search_all": "Visi",
+  "stream_audio.search_videos": "Vaizdo įrašai",
+  "stream_audio.search_playlists": "Grojaraščiai",
+  "stream_audio.search_channels": "Kanalai",
+  "stream_audio.search_courses": "Kursai",
+  "stream_audio.search_podcasts": "Tinklalaidės"
 }

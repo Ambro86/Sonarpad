@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Články...\tCtrl+Shift+U",
   "menu.screen_record": "&Spustit záznam obrazovky...",
   "menu.stop_record": "Zas&tavit záznam obrazovky",
-  "menu.stream_audio": "Přehrát stre&amované audio...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "Nás&troje",
   "menu.tools_category.multimedia": "M&ultimédia",
   "menu.tools_category.reading_content": "Čtení a &obsah",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Stahování streamu...",
   "stream_audio.progress_title": "Stahování streamu",
   "stream_audio.prompt_body": "Zadejte URL, vyhledávací dotaz YouTube nebo odkaz na kanál YouTube:",
-  "stream_audio.prompt_title": "Přehrát streamované audio",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Vysoká kvalita",
   "stream_audio.quality.low": "Nízká kvalita",
   "stream_audio.quality.medium": "Střední kvalita",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Uložit PDF bez hesla…",
   "app.pdf_copy_different_path": "Vyberte jiný název: původní PDF musí zůstat nezměněné.",
   "app.pdf_copy_saved": "Kopie PDF bez hesla byla uložena.",
-  "app.pdf_unlocked_hint": "PDF můžete uložit bez hesla v nabídce Soubor pomocí položky Uložit PDF bez hesla."
+  "app.pdf_unlocked_hint": "PDF můžete uložit bez hesla v nabídce Soubor pomocí položky Uložit PDF bez hesla.",
+  "stream_audio.search_type": "Typ hledání",
+  "stream_audio.search_all": "Vše",
+  "stream_audio.search_videos": "Videa",
+  "stream_audio.search_playlists": "Playlisty",
+  "stream_audio.search_channels": "Kanály",
+  "stream_audio.search_courses": "Kurzy",
+  "stream_audio.search_podcasts": "Podcasty"
 }

@@ -921,6 +921,8 @@ pub struct AppSettings {
     #[serde(default = "default_stream_audio_output_format")]
     pub stream_audio_default_format: String,
     #[serde(default)]
+    pub sonartube_search_type: u8,
+    #[serde(default)]
     pub stream_favorites: Vec<StreamFavorite>,
     #[serde(default)]
     pub whisper_model_profile: String,
@@ -1424,6 +1426,7 @@ impl Default for AppSettings {
             sonarmusic_search_type: String::new(),
             sonarmusic_favorites: Vec::new(),
             stream_audio_default_format: default_stream_audio_output_format(),
+            sonartube_search_type: 0,
             stream_favorites: Vec::new(),
             whisper_model_profile: String::new(),
             whisper_cuda_enabled: false,

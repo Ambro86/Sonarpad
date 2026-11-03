@@ -85,7 +85,7 @@ fn parse_page(data: &Value, collection: bool) -> Result<Page, String> {
             continue;
         }
         entries.push(json!({"id":id,"kind":kind,"url":url,"title":text(item,"title"),"channel":text(item,"channel"),
-            "duration_string":text(item,"duration"),"view_count":text(item,"views"),"subscriber_count":text(item,"subscribers")}));
+            "duration_string":text(item,"duration"),"view_count":text(item,"views"),"subscriber_count":text(item,"subscribers"),"collection_type":text(item,"collection_type")}));
     }
     let next = data["next_token"]
         .as_str()
@@ -181,6 +181,59 @@ struct Session {
     updated: Instant,
     pages: Pages,
 }
+pub fn matches_search_type(entry: &Value, kind: u8) -> bool {
+    match kind {
+        1 => entry["kind"] == "video",
+        2 => entry["kind"] == "playlist",
+        3 => entry["kind"] == "channel",
+        4 => entry["kind"] == "playlist" && entry["collection_type"] == "course",
+        5 => entry["kind"] == "playlist" && entry["collection_type"] == "podcast",
+        _ => true,
+    }
+}
+pub fn search_filter(kind: u8) -> &'static str {
+    match kind {
+        1 => "EgIQAQ==",
+        2 | 4 | 5 => "EgIQAw==",
+        3 => "EgIQAg==",
+        _ => "",
+    }
+}
+pub fn search_page(
+    input: &str,
+    locale: &str,
+    index: usize,
+    kind: u8,
+) -> Result<Option<Page>, String> {
+    let base = vec![
+        ("q".into(), input.trim().into()),
+        (
+            "type".into(),
+            match kind {
+                1 => "video",
+                2 => "playlist",
+                3 => "channel",
+                4 => "course",
+                5 => "podcast",
+                _ => "all",
+            }
+            .into(),
+        ),
+    ];
+    let mut page = page_with_token(
+        input,
+        false,
+        locale,
+        index,
+        base,
+        option_env!("SONARPAD_ROUTE_CLIENT_TOKEN").unwrap_or(""),
+    )?;
+    if let Some(page) = &mut page {
+        page.entries
+            .retain(|entry| matches_search_type(entry, kind));
+    }
+    Ok(page)
+}
 pub fn page(
     input: &str,
     collection: bool,
@@ -206,7 +259,7 @@ fn page_with_token(
         .get_or_init(|| Mutex::new(HashMap::new()))
         .lock()
         .map_err(|_| "SonarTube cache unavailable")?;
-    let key = format!("{locale}:{collection}:{input}");
+    let key = format!("{locale}:{collection}:{input}:{base:?}");
     cache.retain(|_, s| s.updated.elapsed() < Duration::from_secs(900));
     if cache.len() >= 32 && !cache.contains_key(&key) {
         cache.clear();
@@ -272,6 +325,63 @@ fn page_with_token(
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    #[test]
+    fn search_category_settings_roundtrip() {
+        for kind in 0..=5 {
+            let mut settings = crate::settings::AppSettings::default();
+            settings.sonartube_search_type = kind;
+            let saved = serde_json::to_string(&settings).unwrap();
+            let restored: crate::settings::AppSettings = serde_json::from_str(&saved).unwrap();
+            assert_eq!(restored.sonartube_search_type, kind);
+        }
+    }
+    #[test]
+    fn search_categories_filter_mixed_results() {
+        let items = [
+            json!({"kind":"video"}),
+            json!({"kind":"playlist"}),
+            json!({"kind":"channel"}),
+            json!({"kind":"playlist","collection_type":"course"}),
+            json!({"kind":"playlist","collection_type":"podcast"}),
+        ];
+        for (kind, expected) in [(0, 5), (1, 1), (2, 3), (3, 1), (4, 1), (5, 1)] {
+            assert_eq!(
+                items
+                    .iter()
+                    .filter(|v| matches_search_type(v, kind))
+                    .count(),
+                expected
+            );
+        }
+    }
+    #[test]
+    #[ignore = "Requires live YouTube searches"]
+    fn live_sonartube_search_categories() {
+        for (kind, query) in [
+            (0, "Pink Floyd"),
+            (1, "Pink Floyd"),
+            (2, "Pink Floyd"),
+            (3, "Pink Floyd"),
+            (4, "python course"),
+            (5, "podcast italiano"),
+        ] {
+            let page = search_page(query, "it", 0, kind)
+                .unwrap()
+                .expect("catalog unavailable");
+            println!("category {kind}: {} results", page.entries.len());
+            assert!(!page.entries.is_empty(), "empty category {kind}");
+            assert!(page.entries.iter().all(|v| matches_search_type(v, kind)));
+            if page.next.is_some() {
+                let next = search_page(query, "it", 1, kind)
+                    .unwrap()
+                    .expect("continuation unavailable");
+                println!("category {kind}, page 2: {} results", next.entries.len());
+                assert!(next.entries.iter().all(|v| matches_search_type(v, kind)));
+                let back = search_page(query, "it", 0, kind).unwrap().unwrap();
+                assert_eq!(back.entries, page.entries);
+            }
+        }
+    }
     fn video() -> Value {
         json!({"kind":"video","id":"4K6cvc27_CE","title":"Wish","views":"12 views","duration":"5:34"})
     }

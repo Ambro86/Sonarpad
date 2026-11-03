@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Статті...\tCtrl+Shift+U",
   "menu.screen_record": "&Почати запис екрана...",
   "menu.stop_record": "З&упинити запис екрана",
-  "menu.stream_audio": "&Відтворити потокове аудіо...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Інструменти",
   "menu.tools_category.multimedia": "&Мультимедіа",
   "menu.tools_category.reading_content": "&Читання та вміст",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Завантаження потоку...",
   "stream_audio.progress_title": "Завантаження потоку",
   "stream_audio.prompt_body": "Введіть URL, пошуковий запит YouTube або посилання на канал YouTube:",
-  "stream_audio.prompt_title": "Відтворення потокового аудіо",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Висока якість",
   "stream_audio.quality.low": "Низька якість",
   "stream_audio.quality.medium": "Середня якість",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Зберегти PDF без пароля…",
   "app.pdf_copy_different_path": "Виберіть іншу назву: оригінальний PDF має залишитися незмінним.",
   "app.pdf_copy_saved": "Копію PDF без пароля збережено.",
-  "app.pdf_unlocked_hint": "Щоб зберегти PDF без пароля, виберіть «Зберегти PDF без пароля» в меню «Файл»."
+  "app.pdf_unlocked_hint": "Щоб зберегти PDF без пароля, виберіть «Зберегти PDF без пароля» в меню «Файл».",
+  "stream_audio.search_type": "Тип пошуку",
+  "stream_audio.search_all": "Усі",
+  "stream_audio.search_videos": "Відео",
+  "stream_audio.search_playlists": "Списки відтворення",
+  "stream_audio.search_channels": "Канали",
+  "stream_audio.search_courses": "Курси",
+  "stream_audio.search_podcasts": "Подкасти"
 }

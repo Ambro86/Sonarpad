@@ -832,7 +832,7 @@
   "menu.rss": "R&SS / Artículos...\tCtrl+Shift+U",
   "menu.screen_record": "&Iniciar grabación de pantalla...",
   "menu.stop_record": "&Detener grabación de pantalla",
-  "menu.stream_audio": "&Reproducir streaming de audio...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Herramientas",
   "menu.tools_category.multimedia": "&Multimedia",
   "menu.tools_category.reading_content": "&Lectura y contenidos",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Descargando el audio en streaming...",
   "stream_audio.progress_title": "Descarga de streaming",
   "stream_audio.prompt_body": "Introduce una URL, una búsqueda de YouTube o el enlace de un canal de YouTube:",
-  "stream_audio.prompt_title": "Reproducir audio en streaming",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Alta calidad",
   "stream_audio.quality.low": "Calidad baja",
   "stream_audio.quality.medium": "Calidad media",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Guardar PDF sin contraseña…",
   "app.pdf_copy_different_path": "Elige otro nombre: el PDF original debe permanecer intacto.",
   "app.pdf_copy_saved": "Copia del PDF sin contraseña guardada.",
-  "app.pdf_unlocked_hint": "Puedes guardar el PDF sin contraseña desde el menú Archivo, eligiendo Guardar PDF sin contraseña."
+  "app.pdf_unlocked_hint": "Puedes guardar el PDF sin contraseña desde el menú Archivo, eligiendo Guardar PDF sin contraseña.",
+  "stream_audio.search_type": "Tipo de búsqueda",
+  "stream_audio.search_all": "Todos",
+  "stream_audio.search_videos": "Vídeos",
+  "stream_audio.search_playlists": "Listas de reproducción",
+  "stream_audio.search_channels": "Canales",
+  "stream_audio.search_courses": "Cursos",
+  "stream_audio.search_podcasts": "Pódcasts"
 }

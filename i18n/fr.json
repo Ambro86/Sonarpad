@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Articles...\tCtrl+Shift+U",
   "menu.screen_record": "&Démarrer l'enregistrement d'écran...",
   "menu.stop_record": "Arrê&ter l'enregistrement d'écran",
-  "menu.stream_audio": "Lire &un flux audio...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Outils",
   "menu.tools_category.multimedia": "&Multimédia",
   "menu.tools_category.reading_content": "&Lecture et contenus",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Téléchargement du flux...",
   "stream_audio.progress_title": "Téléchargement du flux",
   "stream_audio.prompt_body": "Entrez une URL, une recherche YouTube ou le lien d’une chaîne YouTube :",
-  "stream_audio.prompt_title": "Lire un flux audio",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Haute qualité",
   "stream_audio.quality.low": "Basse qualité",
   "stream_audio.quality.medium": "Qualité moyenne",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Enregistrer le PDF sans mot de passe…",
   "app.pdf_copy_different_path": "Choisissez un autre nom : le PDF original doit rester inchangé.",
   "app.pdf_copy_saved": "Copie du PDF sans mot de passe enregistrée.",
-  "app.pdf_unlocked_hint": "Vous pouvez enregistrer le PDF sans mot de passe depuis le menu Fichier, en choisissant Enregistrer le PDF sans mot de passe."
+  "app.pdf_unlocked_hint": "Vous pouvez enregistrer le PDF sans mot de passe depuis le menu Fichier, en choisissant Enregistrer le PDF sans mot de passe.",
+  "stream_audio.search_type": "Type de recherche",
+  "stream_audio.search_all": "Tous",
+  "stream_audio.search_videos": "Vidéos",
+  "stream_audio.search_playlists": "Playlists",
+  "stream_audio.search_channels": "Chaînes",
+  "stream_audio.search_courses": "Cours",
+  "stream_audio.search_podcasts": "Podcasts"
 }

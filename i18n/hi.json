@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / लेख...\tCtrl+Shift+U",
   "menu.screen_record": "स्क्रीन रिकॉर्डिंग शुरू करें...",
   "menu.stop_record": "स्क्रीन रिकॉर्डिंग रोकें",
-  "menu.stream_audio": "&स्ट्रीमिंग ऑडियो चलाएँ...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&उपकरण",
   "menu.tools_category.multimedia": "&मल्टीमीडिया",
   "menu.tools_category.reading_content": "&पठन और सामग्री",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "स्ट्रीम डाउनलोड की जा रही है...",
   "stream_audio.progress_title": "स्ट्रीम डाउनलोड की जा रही है",
   "stream_audio.prompt_body": "एक URL, YouTube खोज क्वेरी, या YouTube चैनल लिंक दर्ज करें:",
-  "stream_audio.prompt_title": "स्ट्रीमिंग ऑडियो चलाएँ",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "उच्च गुणवत्ता",
   "stream_audio.quality.low": "कम गुणवत्ता",
   "stream_audio.quality.medium": "मध्यम गुणवत्ता",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "बिना पासवर्ड के PDF सहेजें…",
   "app.pdf_copy_different_path": "दूसरा नाम चुनें: मूल PDF में बदलाव नहीं होना चाहिए।",
   "app.pdf_copy_saved": "बिना पासवर्ड वाली PDF प्रति सहेजी गई।",
-  "app.pdf_unlocked_hint": "आप फ़ाइल मेनू में पासवर्ड के बिना PDF सहेजें चुनकर PDF को बिना पासवर्ड सहेज सकते हैं।"
+  "app.pdf_unlocked_hint": "आप फ़ाइल मेनू में पासवर्ड के बिना PDF सहेजें चुनकर PDF को बिना पासवर्ड सहेज सकते हैं।",
+  "stream_audio.search_type": "खोज प्रकार",
+  "stream_audio.search_all": "सभी",
+  "stream_audio.search_videos": "वीडियो",
+  "stream_audio.search_playlists": "प्लेलिस्ट",
+  "stream_audio.search_channels": "चैनल",
+  "stream_audio.search_courses": "पाठ्यक्रम",
+  "stream_audio.search_podcasts": "पॉडकास्ट"
 }

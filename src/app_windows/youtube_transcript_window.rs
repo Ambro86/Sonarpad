@@ -3122,11 +3122,12 @@ fn probe_youtube_search_entries(
     query: &str,
     language: Language,
     page: usize,
+    search_type: u8,
 ) -> Result<(Vec<StreamCollectionEntry>, bool), String> {
     type SearchCache = HashMap<String, (std::time::Instant, Vec<StreamCollectionEntry>, bool)>;
     static CACHE: OnceLock<Mutex<SearchCache>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-    let key = format!("{language:?}:{page}:{query}");
+    let key = format!("{language:?}:{page}:{query}:{search_type}");
     {
         let mut guard = cache.lock().unwrap_or_else(|error| error.into_inner());
         guard
@@ -3139,7 +3140,8 @@ fn probe_youtube_search_entries(
             return Ok((entries.clone(), *has_more));
         }
     }
-    let result = probe_youtube_search_entries_uncached(ytdlp_path, query, language, page)?;
+    let result =
+        probe_youtube_search_entries_uncached(ytdlp_path, query, language, page, search_type)?;
     let mut guard = cache.lock().unwrap_or_else(|error| error.into_inner());
     if guard.len() >= 96 {
         guard.clear();
@@ -3153,12 +3155,13 @@ fn probe_youtube_search_entries_uncached(
     query: &str,
     language: Language,
     page: usize,
+    search_type: u8,
 ) -> Result<(Vec<StreamCollectionEntry>, bool), String> {
     let locale = serde_json::to_value(language)
         .ok()
         .and_then(|v| v.as_str().map(str::to_owned))
         .unwrap_or_else(|| "en".into());
-    if let Some(page_data) = crate::sonartube::page(query, false, &locale, page)? {
+    if let Some(page_data) = crate::sonartube::search_page(query, &locale, page, search_type)? {
         crate::log_debug(&format!(
             "SonarTube service navigation: collection=false page={} entries={}",
             page,
@@ -3167,10 +3170,19 @@ fn probe_youtube_search_entries_uncached(
         let entries = collect_stream_collection_entries(&page_data.entries, language, true);
         return Ok((entries, page_data.next.is_some()));
     }
+    if search_type >= 4 {
+        return Ok((Vec::new(), false));
+    }
     crate::log_debug("SonarTube navigation fallback: yt-dlp");
     let limit = (page + 1) * STREAM_SELECTION_PAGE_SIZE + 1;
     let encoded_query: String = url::form_urlencoded::byte_serialize(query.as_bytes()).collect();
-    let search_url = format!("https://www.youtube.com/results?search_query={encoded_query}");
+    let search_url = format!(
+        "https://www.youtube.com/results?search_query={encoded_query}&sp={}",
+        url::form_urlencoded::byte_serialize(
+            crate::sonartube::search_filter(search_type).as_bytes()
+        )
+        .collect::<String>()
+    );
     let extractor_args = youtube_flat_playlist_extractor_args(language);
     crate::log_debug(&format!(
         "yt-dlp search probe extractor args: {}",
@@ -6967,6 +6979,9 @@ fn choose_youtube_search_entry(
         playlist_download_options,
         ..
     } = options;
+    let search_type = with_state(parent, |state| state.settings.sonartube_search_type)
+        .unwrap_or(0)
+        .min(5);
     let initial_page = initial_collection_page.unwrap_or(0);
     let mut page = initial_page;
     let mut shared_progress = initial_progress;
@@ -6987,7 +7002,7 @@ fn choose_youtube_search_entry(
         let ytdlp = ytdlp_path.to_path_buf();
         let query_owned = query.to_string();
         let worker = std::thread::spawn(move || {
-            probe_youtube_search_entries(&ytdlp, &query_owned, language, page)
+            probe_youtube_search_entries(&ytdlp, &query_owned, language, page, search_type)
         });
         let mut last_focus_keepalive = std::time::Instant::now();
         while !worker.is_finished() {
@@ -7464,7 +7479,10 @@ struct StreamDialogInit {
     result: Arc<Mutex<Option<StreamDialogResult>>>,
 }
 
+const STREAM_ID_SEARCH_TYPE: usize = 8910;
+
 struct StreamDialogState {
+    search_type_combo: HWND,
     parent: HWND,
     language: Language,
     url_edit: HWND,
@@ -9005,6 +9023,65 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                     HINSTANCE(0),
                     None,
                 );
+                let search_type_label = CreateWindowExW(
+                    Default::default(),
+                    WC_STATIC,
+                    PCWSTR(to_wide(&i18n::tr(init.language, "stream_audio.search_type")).as_ptr()),
+                    WS_CHILD | WS_VISIBLE,
+                    16,
+                    84,
+                    90,
+                    28,
+                    hwnd,
+                    HMENU(0),
+                    HINSTANCE(0),
+                    None,
+                );
+                let search_type_combo = CreateWindowExW(
+                    Default::default(),
+                    WC_COMBOBOXW,
+                    PCWSTR::null(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                    110,
+                    82,
+                    330,
+                    180,
+                    hwnd,
+                    HMENU(STREAM_ID_SEARCH_TYPE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                for key in [
+                    "all",
+                    "videos",
+                    "playlists",
+                    "channels",
+                    "courses",
+                    "podcasts",
+                ] {
+                    SendMessageW(
+                        search_type_combo,
+                        CB_ADDSTRING,
+                        WPARAM(0),
+                        LPARAM(
+                            to_wide(&i18n::tr(
+                                init.language,
+                                &format!("stream_audio.search_{key}"),
+                            ))
+                            .as_ptr() as isize,
+                        ),
+                    );
+                }
+                let selected_type =
+                    with_state(init.parent, |state| state.settings.sonartube_search_type)
+                        .unwrap_or(0)
+                        .min(5);
+                SendMessageW(
+                    search_type_combo,
+                    CB_SETCURSEL,
+                    WPARAM(selected_type as usize),
+                    LPARAM(0),
+                );
                 let open_comments_button = CreateWindowExW(
                     Default::default(),
                     WC_BUTTON,
@@ -9013,7 +9090,7 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                     ),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     110,
-                    82,
+                    120,
                     160,
                     28,
                     hwnd,
@@ -9027,7 +9104,7 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                     PCWSTR(to_wide(&i18n::tr(init.language, "youtube.ok")).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_DEFPUSHBUTTON as u32),
                     350,
-                    82,
+                    120,
                     90,
                     28,
                     hwnd,
@@ -9041,7 +9118,7 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                     PCWSTR(to_wide(&i18n::tr(init.language, "youtube.cancel")).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     350,
-                    114,
+                    152,
                     90,
                     28,
                     hwnd,
@@ -9055,6 +9132,8 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                     url_edit,
                     favorites_label,
                     favorites_combo,
+                    search_type_label,
+                    search_type_combo,
                     open_comments_button,
                     ok_button,
                     cancel_button,
@@ -9067,6 +9146,7 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                 let favorites = load_stream_favorites(init.parent);
 
                 let state = Box::new(StreamDialogState {
+                    search_type_combo,
                     parent: init.parent,
                     language: init.language,
                     url_edit,
@@ -9175,6 +9255,23 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
             WM_COMMAND => {
                 let cmd_id = wparam.0 & 0xffff;
                 let notify_code = (wparam.0 >> 16) & 0xffff;
+                if cmd_id == STREAM_ID_SEARCH_TYPE && notify_code == CBN_SELCHANGE as usize {
+                    with_stream_dialog_state(hwnd, |state| {
+                        let selected = SendMessageW(
+                            state.search_type_combo,
+                            CB_GETCURSEL,
+                            WPARAM(0),
+                            LPARAM(0),
+                        )
+                        .0
+                        .clamp(0, 5) as u8;
+                        with_state(state.parent, |app| {
+                            app.settings.sonartube_search_type = selected;
+                            save_settings(app.settings.clone());
+                        });
+                    });
+                    return LRESULT(0);
+                }
                 if cmd_id == STREAM_ID_URL && notify_code == EN_CHANGE as usize {
                     if with_stream_dialog_state(hwnd, |state| {
                         update_stream_open_comments_button(state);
@@ -9416,7 +9513,7 @@ fn show_stream_dialog(
             CW_USEDEFAULT,
             CW_USEDEFAULT,
             470,
-            225,
+            265,
             parent,
             HMENU(0),
             hinstance,
@@ -15954,5 +16051,71 @@ mod webm_download_tests {
             1
         );
         println!("WEBM saved without re-encoding: {}", target.display());
+    }
+}
+
+#[cfg(test)]
+mod stream_search_keyboard_tests {
+    use super::*;
+    use windows::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled;
+    use windows::Win32::UI::WindowsAndMessaging::{GetNextDlgTabItem, WM_SETTEXT, WNDCLASSW};
+    #[test]
+    fn search_category_is_tabbable_with_empty_query_and_url() {
+        unsafe {
+            let class = to_wide("SonarTubeKeyboardTest");
+            let instance = HINSTANCE(crate::get_module_handle_raw_default());
+            RegisterClassW(&WNDCLASSW {
+                hInstance: instance,
+                lpszClassName: PCWSTR(class.as_ptr()),
+                lpfnWndProc: Some(stream_dialog_wndproc),
+                ..Default::default()
+            });
+            let init = Box::new(StreamDialogInit {
+                parent: HWND(0),
+                language: Language::Italian,
+                default_format: StreamOutputFormat::Auto,
+                result: Arc::new(Mutex::new(None)),
+            });
+            let hwnd = CreateWindowExW(
+                WS_EX_CONTROLPARENT,
+                PCWSTR(class.as_ptr()),
+                PCWSTR::null(),
+                WS_CAPTION,
+                0,
+                0,
+                470,
+                265,
+                HWND(0),
+                HMENU(0),
+                instance,
+                Some(Box::into_raw(init) as *const _),
+            );
+            assert_ne!(hwnd.0, 0);
+            let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut StreamDialogState;
+            assert!(!ptr.is_null());
+            for input in [
+                "",
+                "Pink Floyd",
+                "https://www.youtube.com/watch?v=jQ-fv86Cz5g",
+            ] {
+                SendMessageW(
+                    (*ptr).url_edit,
+                    WM_SETTEXT,
+                    WPARAM(0),
+                    LPARAM(to_wide(input).as_ptr() as isize),
+                );
+                update_stream_open_comments_button(&*ptr);
+                assert!(IsWindowEnabled((*ptr).search_type_combo).as_bool());
+                assert_eq!(
+                    GetNextDlgTabItem(hwnd, (*ptr).favorites_combo, false),
+                    (*ptr).search_type_combo
+                );
+                assert_eq!(
+                    GetNextDlgTabItem(hwnd, (*ptr).search_type_combo, true),
+                    (*ptr).favorites_combo
+                );
+            }
+            crate::destroy_window_safe(hwnd).unwrap();
+        }
     }
 }

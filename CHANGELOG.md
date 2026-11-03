@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.25 – 2026-10-31
+
+SonarTube is the new name for Play audio from streaming, with the same familiar features. YouTube searches can now show All, Videos, Playlists, Channels, Courses or Podcasts. The selection is remembered and does not affect direct links.
+
 Version 0.9.24 – 2026-10-31
 
 1. YouTube streaming: fixed videos opening without sound when the direct stream ends without playable audio data. Sonarpad now detects this failure and automatically retries using yt-dlp/HLS.

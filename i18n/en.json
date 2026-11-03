@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Articles...\tCtrl+Shift+U",
   "menu.screen_record": "&Start Screen Recording...",
   "menu.stop_record": "S&top Screen Recording",
-  "menu.stream_audio": "Play &Streaming Audio...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Tools",
   "menu.tools_category.multimedia": "&Multimedia",
   "menu.tools_category.reading_content": "&Reading and content",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Downloading stream...",
   "stream_audio.progress_title": "Downloading stream",
   "stream_audio.prompt_body": "Enter a URL, a YouTube search query, or a YouTube channel link:",
-  "stream_audio.prompt_title": "Play Streaming Audio",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "High Quality",
   "stream_audio.quality.low": "Low Quality",
   "stream_audio.quality.medium": "Medium Quality",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Save PDF without password…",
   "app.pdf_copy_different_path": "Choose a different name: the original PDF must remain unchanged.",
   "app.pdf_copy_saved": "PDF copy without password saved.",
-  "app.pdf_unlocked_hint": "You can save the PDF without a password from the File menu by choosing Save PDF without password."
+  "app.pdf_unlocked_hint": "You can save the PDF without a password from the File menu by choosing Save PDF without password.",
+  "stream_audio.search_type": "Search type",
+  "stream_audio.search_all": "All",
+  "stream_audio.search_videos": "Videos",
+  "stream_audio.search_playlists": "Playlists",
+  "stream_audio.search_channels": "Channels",
+  "stream_audio.search_courses": "Courses",
+  "stream_audio.search_podcasts": "Podcasts"
 }

@@ -129,7 +129,9 @@ pub fn youtube(
     };
     let browse = get("browse");
     let mut body = if browse.is_empty() {
-        json!({"query":get("q")})
+        json!({"query":get("q"), "params": crate::sonartube::search_filter(match get("type") {
+            "video" => 1, "playlist" | "course" | "podcast" => 2, "channel" => 3, _ => 0,
+        })})
     } else {
         json!({"browseId":if get("kind")=="playlist" {format!("VL{browse}")} else {browse.into()},"params":if get("kind")=="channel" {"EgZ2aWRlb3PyBgQKAjoA"} else {""}})
     };
@@ -165,7 +167,9 @@ pub fn youtube(
         let r = &n["lockupViewModel"];
         if r.is_object() {
             let kind = match s(&r["contentType"]) {
-                "LOCKUP_CONTENT_TYPE_PLAYLIST" => "playlist",
+                "LOCKUP_CONTENT_TYPE_PLAYLIST"
+                | "LOCKUP_CONTENT_TYPE_COURSE"
+                | "LOCKUP_CONTENT_TYPE_PODCAST" => "playlist",
                 "LOCKUP_CONTENT_TYPE_VIDEO" => "video",
                 _ => return false,
             };
@@ -174,7 +178,7 @@ pub fn youtube(
             if kind == "video" && views.trim().is_empty() {
                 return false;
             }
-            items.push(json!({"kind":kind,"id":r["contentId"],"title":meta["title"]["content"],"views":views}));
+            items.push(json!({"kind":kind,"id":r["contentId"],"title":meta["title"]["content"],"views":views,"collection_type":match s(&r["contentType"]) { "LOCKUP_CONTENT_TYPE_COURSE" => "course", "LOCKUP_CONTENT_TYPE_PODCAST" => "podcast", _ => "" }}));
             return false;
         }
         true

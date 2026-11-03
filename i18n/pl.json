@@ -832,7 +832,7 @@
   "menu.rss": "&RSS / Artykuły...\tCtrl+Shift+U",
   "menu.screen_record": "&Rozpocznij nagrywanie ekranu...",
   "menu.stop_record": "Za&trzymaj nagrywanie ekranu",
-  "menu.stream_audio": "Odtw&arzaj strumieniowe audio...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Narzędzia",
   "menu.tools_category.multimedia": "&Multimedia",
   "menu.tools_category.reading_content": "&Czytanie i treści",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "Pobieranie strumienia...",
   "stream_audio.progress_title": "Pobieranie strumienia",
   "stream_audio.prompt_body": "Wprowadź URL, zapytanie wyszukiwania YouTube lub link do kanału YouTube:",
-  "stream_audio.prompt_title": "Odtwarzaj strumieniowe audio",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Wysoka jakość",
   "stream_audio.quality.low": "Niska jakość",
   "stream_audio.quality.medium": "Średnia jakość",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Zapisz PDF bez hasła…",
   "app.pdf_copy_different_path": "Wybierz inną nazwę: oryginalny PDF musi pozostać niezmieniony.",
   "app.pdf_copy_saved": "Zapisano kopię PDF bez hasła.",
-  "app.pdf_unlocked_hint": "Możesz zapisać PDF bez hasła, wybierając Zapisz PDF bez hasła w menu Plik."
+  "app.pdf_unlocked_hint": "Możesz zapisać PDF bez hasła, wybierając Zapisz PDF bez hasła w menu Plik.",
+  "stream_audio.search_type": "Typ wyszukiwania",
+  "stream_audio.search_all": "Wszystkie",
+  "stream_audio.search_videos": "Filmy",
+  "stream_audio.search_playlists": "Playlisty",
+  "stream_audio.search_channels": "Kanały",
+  "stream_audio.search_courses": "Kursy",
+  "stream_audio.search_podcasts": "Podcasty"
 }

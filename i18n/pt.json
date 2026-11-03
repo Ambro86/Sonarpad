@@ -832,7 +832,7 @@
   "menu.rss": "R&SS / Artigos...\tCtrl+Shift+U",
   "menu.screen_record": "&Iniciar gravação de ecrã...",
   "menu.stop_record": "&Parar gravação de ecrã",
-  "menu.stream_audio": "Reproduzir &áudio em streaming...\tAlt+Shift+S",
+  "menu.stream_audio": "Sonar&Tube...\tAlt+Shift+S",
   "menu.tools": "&Ferramentas",
   "menu.tools_category.multimedia": "&Multimídia",
   "menu.tools_category.reading_content": "&Leitura e conteúdos",
@@ -1906,7 +1906,7 @@
   "stream_audio.progress_downloading": "A transferir o streaming...",
   "stream_audio.progress_title": "Transferência de streaming",
   "stream_audio.prompt_body": "Insira um URL, uma pesquisa do YouTube ou o link de um canal do YouTube:",
-  "stream_audio.prompt_title": "Reproduzir áudio em streaming",
+  "stream_audio.prompt_title": "SonarTube",
   "stream_audio.quality.high": "Alta qualidade",
   "stream_audio.quality.low": "Baixa qualidade",
   "stream_audio.quality.medium": "Qualidade média",
@@ -2418,5 +2418,12 @@
   "file.save_pdf_without_password": "Guardar PDF sem palavra-passe…",
   "app.pdf_copy_different_path": "Escolha outro nome: o PDF original deve permanecer inalterado.",
   "app.pdf_copy_saved": "Cópia do PDF sem palavra-passe guardada.",
-  "app.pdf_unlocked_hint": "Pode guardar o PDF sem palavra-passe no menu Ficheiro, escolhendo Guardar PDF sem palavra-passe."
+  "app.pdf_unlocked_hint": "Pode guardar o PDF sem palavra-passe no menu Ficheiro, escolhendo Guardar PDF sem palavra-passe.",
+  "stream_audio.search_type": "Tipo de pesquisa",
+  "stream_audio.search_all": "Todos",
+  "stream_audio.search_videos": "Vídeos",
+  "stream_audio.search_playlists": "Listas de reprodução",
+  "stream_audio.search_channels": "Canais",
+  "stream_audio.search_courses": "Cursos",
+  "stream_audio.search_podcasts": "Podcasts"
 }

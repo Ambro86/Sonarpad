@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.25 – 2026-10-31
+
+SonarTube è il nuovo nome di Riproduci audio da streaming e mantiene le stesse funzionalità già conosciute. Nelle ricerche YouTube è possibile scegliere Tutti, Video, Playlist, Canali, Corsi o Podcast; la scelta viene ricordata e non modifica l’apertura degli indirizzi diretti.
+
 Version 0.9.24 – 2026-10-31
 
 1. Riproduzione streaming da YouTube: corretto il problema dei video che si aprivano senza audio quando il flusso diretto terminava senza dati audio riproducibili. Sonarpad ora riconosce questo errore e riprova automaticamente tramite yt-dlp/HLS.
