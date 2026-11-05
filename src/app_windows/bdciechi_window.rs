@@ -11,7 +11,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Gdi::{COLOR_WINDOW, HBRUSH};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
@@ -54,6 +54,7 @@ const WM_BDC_LOGIN_DONE: u32 = WM_APP + 240;
 const BDCIECHI_CREDENTIAL_MAX_AGE_SECS: i64 = 30 * 24 * 60 * 60;
 
 struct LoginDonePayload {
+    request_stop: Arc<AtomicBool>,
     username: String,
     password: String,
     nprov: String,
@@ -759,18 +760,59 @@ fn do_login_impl(hwnd: HWND, auto_login: bool) {
                 std::thread::sleep(Duration::from_secs(2));
             }
         });
-        state.login_announce_stop = Some(stop_flag);
+        state.login_announce_stop = Some(Arc::clone(&stop_flag));
         crate::enable_window_safe(state.user, false);
         crate::enable_window_safe(state.pass, false);
         crate::enable_window_safe(state.login, false);
 
         let hwnd_val = hwnd.0;
         std::thread::spawn(move || {
-            let payload = match bdciechi::identify(&username, &password).and_then(|id| {
+            let started = Instant::now();
+            crate::log_debug("bdciechi: login identify started");
+            let result = bdciechi::identify(&username, &password)
+                .inspect(|_| {
+                    crate::log_debug(&format!(
+                        "bdciechi: login identify completed elapsed_ms={}",
+                        started.elapsed().as_millis()
+                    ));
+                })
+                .inspect_err(|_| {
+                    crate::log_debug(&format!(
+                        "bdciechi: login identify failed elapsed_ms={}",
+                        started.elapsed().as_millis()
+                    ));
+                });
+            if stop_flag.load(Ordering::Relaxed) {
+                crate::log_debug("bdciechi: login abandoned after identify; catalog not requested");
+                return;
+            }
+            let result = result.and_then(|id| {
                 let quota = id.quota.clone();
-                bdciechi::fetch_catalog_list(&id.nprov).map(|c| (id.nprov, quota, c))
-            }) {
+                let catalog_started = Instant::now();
+                crate::log_debug("bdciechi: login catalog started");
+                bdciechi::fetch_catalog_list(&id.nprov)
+                    .inspect(|catalog| {
+                        crate::log_debug(&format!(
+                            "bdciechi: login catalog completed elapsed_ms={} bytes={}",
+                            catalog_started.elapsed().as_millis(),
+                            catalog.len()
+                        ));
+                    })
+                    .inspect_err(|_| {
+                        crate::log_debug(&format!(
+                            "bdciechi: login catalog failed elapsed_ms={}",
+                            catalog_started.elapsed().as_millis()
+                        ));
+                    })
+                    .map(|catalog| (id.nprov, quota, catalog))
+            });
+            if stop_flag.load(Ordering::Relaxed) {
+                crate::log_debug("bdciechi: login abandoned; result discarded");
+                return;
+            }
+            let payload = match result {
                 Ok((nprov, quota, catalog_raw)) => LoginDonePayload {
+                    request_stop: Arc::clone(&stop_flag),
                     username,
                     password,
                     nprov,
@@ -780,6 +822,7 @@ fn do_login_impl(hwnd: HWND, auto_login: bool) {
                     error: None,
                 },
                 Err(err) => LoginDonePayload {
+                    request_stop: Arc::clone(&stop_flag),
                     username,
                     password,
                     nprov: String::new(),
@@ -796,6 +839,7 @@ fn do_login_impl(hwnd: HWND, auto_login: bool) {
                 WPARAM(0),
                 LPARAM(payload_ptr as isize),
             ) {
+                stop_flag.store(true, Ordering::Relaxed);
                 crate::log_debug(&format!("bdciechi login post message failed: {}", err));
                 let _unused_box = unsafe { Box::from_raw(payload_ptr) };
             }
@@ -1960,6 +2004,17 @@ fn bdc_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 }
                 let payload = Box::from_raw(payload_ptr);
                 with_window_state(hwnd, |state| {
+                    // A closed window's handle can be reused by a new login window.
+                    if payload.request_stop.load(Ordering::Relaxed)
+                        || !state
+                            .login_announce_stop
+                            .as_ref()
+                            .is_some_and(|active| Arc::ptr_eq(active, &payload.request_stop))
+                    {
+                        crate::log_debug("bdciechi: stale login result ignored");
+                        return;
+                    }
+                    crate::log_debug("bdciechi: login result received by window");
                     stop_login_announcer(state);
                     crate::enable_window_safe(state.user, true);
                     crate::enable_window_safe(state.pass, true);

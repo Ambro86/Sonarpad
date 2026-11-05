@@ -60,6 +60,7 @@ pub(crate) struct SearchQuery {
     pub(crate) what: String,
     pub(crate) where_: String,
     pub(crate) page: usize,
+    pub(crate) reverse: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -124,6 +125,33 @@ struct SearchAccumulator {
     places: Vec<String>,
 }
 
+pub(crate) fn normalize_phone(input: &str) -> Result<String, String> {
+    let input = input.trim();
+    if input.chars().enumerate().any(|(i, c)| {
+        !c.is_ascii_digit() && !c.is_whitespace() && !"()-./".contains(c) && !(c == '+' && i == 0)
+    }) {
+        return Err("Inserisci un numero di telefono italiano valido.".into());
+    }
+    let compact: String = input
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '+')
+        .collect();
+    let number = if let Some(v) = compact
+        .strip_prefix("+39")
+        .or_else(|| compact.strip_prefix("0039"))
+    {
+        v
+    } else if compact.starts_with('+') || compact.starts_with("00") {
+        return Err("Inserisci un numero italiano, con prefisso +39 facoltativo.".into());
+    } else {
+        &compact
+    };
+    if !(5..=15).contains(&number.len()) {
+        return Err("Inserisci un numero di telefono completo di prefisso.".into());
+    }
+    Ok(number.into())
+}
+
 pub(crate) fn search(query: &SearchQuery) -> Result<SearchOutcome, String> {
     let trimmed_what = query.what.trim();
     if trimmed_what.is_empty() {
@@ -138,10 +166,80 @@ pub(crate) fn search(query: &SearchQuery) -> Result<SearchOutcome, String> {
         .map_err(|err| format!("Impossibile cercare in {}: {err}", query.kind.label()))?;
     let xml = String::from_utf8(bytes)
         .map_err(|err| format!("Risposta XML {} non valida: {err}", query.kind.label()))?;
-    parse_search_response(&xml, query.kind)
+    let mut outcome = parse_search_response(&xml, query.kind)?;
+    if query.reverse {
+        let number = normalize_phone(&query.what)?;
+        if matches!(outcome, SearchOutcome::AmbiguousAddress(_)) {
+            return Err("Ricerca per numero non disponibile. Verifica il numero e riprova.".into());
+        }
+        if let SearchOutcome::Results(ref mut response) = outcome {
+            response.results.retain(|r| {
+                r.phones
+                    .iter()
+                    .any(|p| normalize_phone(p).ok().as_deref() == Some(number.as_str()))
+            });
+        }
+    }
+    Ok(outcome)
+}
+
+// Keep the source in combined result IDs so details use the matching directory.
+pub(crate) fn search_phone(query: &SearchQuery) -> Result<SearchOutcome, String> {
+    let mut combined = SearchResponse {
+        display_where: None,
+        current_page: query.page,
+        is_last_page: true,
+        results: Vec::new(),
+    };
+    let mut succeeded = false;
+    let mut errors = Vec::new();
+    for (kind, prefix) in [
+        (DirectoryKind::PagineBianche, "pb:"),
+        (DirectoryKind::PagineGialle, "pg:"),
+    ] {
+        match search(&SearchQuery {
+            kind,
+            reverse: true,
+            where_: String::new(),
+            ..query.clone()
+        }) {
+            Ok(SearchOutcome::Results(response)) => {
+                succeeded = true;
+                combined.is_last_page &= response.is_last_page;
+                combined
+                    .results
+                    .extend(response.results.into_iter().map(|mut item| {
+                        item.id = format!("{prefix}{}", item.id);
+                        item
+                    }));
+            }
+            Ok(_) => errors.push("Ricerca per numero non disponibile.".to_string()),
+            Err(error) => errors.push(error),
+        }
+    }
+    if !succeeded || (combined.results.is_empty() && !errors.is_empty()) {
+        return Err(errors.join("\n"));
+    }
+    Ok(SearchOutcome::Results(combined))
 }
 
 pub(crate) fn load_detail(query: &SearchQuery, id: &str) -> Result<DetailResponse, String> {
+    if query.reverse {
+        for (prefix, kind) in [
+            ("pb:", DirectoryKind::PagineBianche),
+            ("pg:", DirectoryKind::PagineGialle),
+        ] {
+            if let Some(id) = id.strip_prefix(prefix) {
+                return load_detail(
+                    &SearchQuery {
+                        kind,
+                        ..query.clone()
+                    },
+                    id,
+                );
+            }
+        }
+    }
     let trimmed_id = id.trim();
     if trimmed_id.is_empty() {
         return Err("Risultato non valido: identificativo mancante.".to_string());
@@ -167,8 +265,13 @@ fn build_search_url(query: &SearchQuery) -> Result<String, String> {
     let mut serializer = Serializer::new(String::new());
     serializer.append_pair("client", &italiaonline_client()?);
     serializer.append_pair("version", &italiaonline_version()?);
-    serializer.append_pair("what", query.what.trim());
-    if !query.where_.trim().is_empty() {
+    let what = if query.reverse {
+        normalize_phone(&query.what)?
+    } else {
+        query.what.trim().to_string()
+    };
+    serializer.append_pair("what", &what);
+    if !query.reverse && !query.where_.trim().is_empty() {
         serializer.append_pair("where", query.where_.trim());
     }
     if query.page > 1 {
@@ -187,8 +290,13 @@ fn build_detail_url(query: &SearchQuery, id: &str) -> Result<String, String> {
     serializer.append_pair("client", &italiaonline_client()?);
     serializer.append_pair("version", &italiaonline_version()?);
     serializer.append_pair("id", id);
-    serializer.append_pair("what", query.what.trim());
-    if !query.where_.trim().is_empty() {
+    let what = if query.reverse {
+        normalize_phone(&query.what)?
+    } else {
+        query.what.trim().to_string()
+    };
+    serializer.append_pair("what", &what);
+    if !query.reverse && !query.where_.trim().is_empty() {
         serializer.append_pair("where", query.where_.trim());
     }
     Ok(format!(
@@ -683,4 +791,39 @@ fn resolve_italiaonline_secret_key() -> Result<Vec<u8>, String> {
         }
     }
     Err("Chiave Luce mancante: inserisci il codice nelle impostazioni RSS/Podcast.".to_string())
+}
+
+#[cfg(test)]
+mod reverse_tests {
+    use super::*;
+    #[test]
+    fn reverse_number_normalization_and_url() {
+        for number in ["02 02 02", "+39 (02) 02-02", "0039 02.02.02"] {
+            assert_eq!(normalize_phone(number).unwrap(), "020202");
+        }
+        for invalid in ["", "123", "Milano", "+33 123456789", "02+0202"] {
+            assert!(normalize_phone(invalid).is_err());
+        }
+        let query = SearchQuery {
+            kind: DirectoryKind::PagineBianche,
+            what: "+39 (02) 0202".into(),
+            where_: "Roma".into(),
+            page: 2,
+            reverse: true,
+        };
+        let url = Url::parse(&build_search_url(&query).unwrap()).unwrap();
+        let params: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
+        assert_eq!(params.get("what").unwrap(), "020202");
+        assert_eq!(params.get("page").unwrap(), "2");
+        assert!(!params.contains_key("where"));
+        let detail = Url::parse(&build_detail_url(&query, "sample").unwrap()).unwrap();
+        assert!(!detail.query_pairs().any(|(k, _)| k == "where"));
+        let normal = SearchQuery {
+            reverse: false,
+            what: "Comune".into(),
+            ..query
+        };
+        let url = Url::parse(&build_search_url(&normal).unwrap()).unwrap();
+        assert!(url.query_pairs().any(|(k, v)| k == "where" && v == "Roma"));
+    }
 }

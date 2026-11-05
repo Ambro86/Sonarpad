@@ -32,6 +32,7 @@ pub fn open(parent: HWND) {
         what: String::new(),
         where_: String::new(),
         page: 1,
+        reverse: false,
     };
     run_search_flow(parent, language, initial_query);
 }
@@ -58,7 +59,14 @@ pub fn reopen_last(parent: HWND) {
         open(parent);
         return;
     };
-    crate::screen_reader_speak(&format!("Ricerca {} in corso", query.kind.label()));
+    crate::screen_reader_speak(&format!(
+        "Ricerca {} in corso",
+        if query.reverse {
+            "numero di telefono"
+        } else {
+            query.kind.label()
+        }
+    ));
     let resolved = match resolve_search_outcome(parent, language, query.clone()) {
         Ok(Some(resolved)) => resolved,
         Ok(None) => return,
@@ -95,7 +103,14 @@ fn run_search_flow(parent: HWND, language: Language, mut initial_query: SearchQu
             return;
         };
         initial_query = query.clone();
-        crate::screen_reader_speak(&format!("Ricerca {} in corso", query.kind.label()));
+        crate::screen_reader_speak(&format!(
+            "Ricerca {} in corso",
+            if query.reverse {
+                "numero di telefono"
+            } else {
+                query.kind.label()
+            }
+        ));
         let resolved = match resolve_search_outcome(parent, language, query.clone()) {
             Ok(Some(resolved)) => resolved,
             Ok(None) => continue,
@@ -132,7 +147,62 @@ fn prompt_search_query(
     language: Language,
     initial: &SearchQuery,
 ) -> Option<SearchQuery> {
-    prompt_search_query_with_focus(parent, language, initial, false)
+    let selection = choose_combo_option_dialog(
+        parent,
+        language,
+        "Ricerca nominativi".into(),
+        "Tipo di ricerca".into(),
+        vec![
+            "Pagine Bianche".into(),
+            "Pagine Gialle".into(),
+            "Cerca un numero di telefono".into(),
+        ],
+        if initial.reverse {
+            2
+        } else if initial.kind == DirectoryKind::PagineGialle {
+            1
+        } else {
+            0
+        },
+    )?;
+    if selection == 2 {
+        let mut value = if initial.reverse {
+            initial.what.clone()
+        } else {
+            String::new()
+        };
+        loop {
+            value = prompt_window::prompt_user(
+                parent,
+                "Cerca un numero di telefono",
+                "Inserisci il numero di telefono",
+                &value,
+                language,
+            )?;
+            match italiaonline::normalize_phone(&value) {
+                Ok(what) => {
+                    return Some(SearchQuery {
+                        kind: DirectoryKind::PagineBianche,
+                        what,
+                        where_: String::new(),
+                        page: 1,
+                        reverse: true,
+                    });
+                }
+                Err(error) => show_error(parent, language, &error),
+            }
+        }
+    }
+    let initial = SearchQuery {
+        kind: if selection == 0 {
+            DirectoryKind::PagineBianche
+        } else {
+            DirectoryKind::PagineGialle
+        },
+        reverse: false,
+        ..initial.clone()
+    };
+    prompt_search_query_with_focus(parent, language, &initial, false)
 }
 
 fn prompt_search_query_with_focus(
@@ -207,14 +277,17 @@ fn prompt_search_query_with_focus(
                 what: prompt.primary_value,
                 where_: compose_where_value(&prompt.secondary_value, &prompt.tertiary_value),
                 page: 1,
+                reverse: false,
             },
             true,
         );
     }
 
+    let what = trimmed_what.to_string();
     Some(SearchQuery {
         kind,
-        what: trimmed_what.to_string(),
+        what,
+        reverse: false,
         where_: compose_where_value(&prompt.secondary_value, &prompt.tertiary_value),
         page: 1,
     })
@@ -248,7 +321,12 @@ fn resolve_search_outcome(
     mut query: SearchQuery,
 ) -> Result<Option<ResolvedSearch>, String> {
     loop {
-        match italiaonline::search(&query)? {
+        let outcome = if query.reverse {
+            italiaonline::search_phone(&query)?
+        } else {
+            italiaonline::search(&query)?
+        };
+        match outcome {
             SearchOutcome::Results(response) => {
                 return Ok(Some(ResolvedSearch { query, response }));
             }
@@ -419,7 +497,12 @@ fn browse_results(
 }
 
 fn results_title(query: &SearchQuery, response: &SearchResponse) -> String {
-    let mut title = format!("{} - {}", query.kind.label(), query.what.trim());
+    let label = if query.reverse {
+        "Numero di telefono"
+    } else {
+        query.kind.label()
+    };
+    let mut title = format!("{} - {}", label, query.what.trim());
     let where_display = response
         .display_where
         .as_deref()
@@ -532,4 +615,31 @@ fn open_results_document(
         return Err("Impossibile creare il documento con tutti i risultati.".to_string());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod reverse_live_tests {
+    use super::*;
+    #[test]
+    #[ignore = "Public directory network check, run explicitly"]
+    fn reverse_public_institution_lookup() {
+        for kind in [DirectoryKind::PagineBianche, DirectoryKind::PagineGialle] {
+            let query = SearchQuery {
+                kind,
+                what: "+39 02 0202".into(),
+                where_: String::new(),
+                page: 1,
+                reverse: true,
+            };
+            let resolved = resolve_search_outcome(HWND(0), Language::Italian, query)
+                .unwrap()
+                .unwrap();
+            assert!(!resolved.response.results.is_empty());
+            assert!(resolved.response.results.iter().all(|r| {
+                r.phones
+                    .iter()
+                    .any(|p| italiaonline::normalize_phone(p).ok().as_deref() == Some("020202"))
+            }));
+        }
+    }
 }

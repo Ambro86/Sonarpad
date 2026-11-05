@@ -918,6 +918,29 @@ pub struct AppSettings {
     #[serde(default)]
     pub media_cutter_goldwave_keys: bool,
     #[serde(default)]
+    pub media_cutter_advanced_mode: bool,
+    #[serde(default)]
+    pub weather_city_query: String,
+    #[serde(default = "default_sync_media_cutter_seek_step_ms")]
+    pub media_cutter_seek_step_ms: u32,
+    #[serde(default = "default_sync_radio_search_language")]
+    pub radio_search_language: String,
+    #[serde(default = "default_sync_radio_search_country")]
+    pub radio_search_country: String,
+    #[serde(default = "default_sync_radio_search_genre")]
+    pub radio_search_genre: String,
+    #[serde(default = "default_sync_converter_format")]
+    pub converter_format: String,
+    #[serde(default = "default_sync_converter_bitrate")]
+    pub converter_bitrate: u32,
+    #[serde(default = "default_sync_converter_wav_depth")]
+    pub converter_wav_depth: String,
+    #[serde(default = "default_sync_converter_ogg_quality")]
+    pub converter_ogg_quality: u32,
+    #[serde(default = "default_sync_converter_flac_compression")]
+    pub converter_flac_compression: u32,
+
+    #[serde(default)]
     pub media_cutter_overwrite_original: bool,
     #[serde(default)]
     pub media_cutter_export_video: u8,
@@ -1432,6 +1455,18 @@ impl Default for AppSettings {
             audio_description_after_tv_recording: false,
             youtube_include_timestamps: true,
             media_cutter_goldwave_keys: false,
+            media_cutter_advanced_mode: false,
+            weather_city_query: String::new(),
+            media_cutter_seek_step_ms: default_sync_media_cutter_seek_step_ms(),
+            radio_search_language: default_sync_radio_search_language(),
+            radio_search_country: default_sync_radio_search_country(),
+            radio_search_genre: default_sync_radio_search_genre(),
+            converter_format: default_sync_converter_format(),
+            converter_bitrate: default_sync_converter_bitrate(),
+            converter_wav_depth: default_sync_converter_wav_depth(),
+            converter_ogg_quality: default_sync_converter_ogg_quality(),
+            converter_flac_compression: default_sync_converter_flac_compression(),
+
             media_cutter_overwrite_original: false,
             media_cutter_export_video: 0,
             media_cutter_export_image: None,
@@ -3985,4 +4020,32 @@ mod audio_description_save_folder_tests {
         assert!(!settings.audio_description_keep_character_catalog);
         assert_eq!(settings.audio_description_character_catalog, "Series");
     }
+}
+
+fn default_sync_media_cutter_seek_step_ms() -> u32 {
+    5000
+}
+fn default_sync_radio_search_language() -> String {
+    String::new()
+}
+fn default_sync_radio_search_country() -> String {
+    String::new()
+}
+fn default_sync_radio_search_genre() -> String {
+    String::new()
+}
+fn default_sync_converter_format() -> String {
+    "mp3".into()
+}
+fn default_sync_converter_bitrate() -> u32 {
+    192
+}
+fn default_sync_converter_wav_depth() -> String {
+    "pcm16".into()
+}
+fn default_sync_converter_ogg_quality() -> u32 {
+    5
+}
+fn default_sync_converter_flac_compression() -> u32 {
+    5
 }

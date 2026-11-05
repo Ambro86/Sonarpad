@@ -73,6 +73,19 @@ fn decode_server_text(bytes: &[u8]) -> String {
     }
 }
 
+fn login_request_error(stage: &str, err: reqwest::Error) -> String {
+    crate::log_debug(&format!(
+        "bdciechi: {} HTTP error timeout={} connect={} body={} status={:?}",
+        stage,
+        err.is_timeout(),
+        err.is_connect(),
+        err.is_body(),
+        err.status()
+    ));
+    // Login URLs contain reversibly encoded credentials or a session identifier.
+    err.without_url().to_string()
+}
+
 pub fn identify(username: &str, password: &str) -> Result<IdentifyResponse, String> {
     let query_plain = format!("{};{};{};*;{}", IDEN_SP, username, password, rnd());
     let query_enc = cifra(&query_plain);
@@ -82,9 +95,9 @@ pub fn identify(username: &str, password: &str) -> Result<IdentifyResponse, Stri
         .get(&url)
         .send()
         .and_then(|resp| resp.error_for_status())
-        .map_err(|err| err.to_string())?
+        .map_err(|err| login_request_error("identify", err))?
         .bytes()
-        .map_err(|err| err.to_string())?;
+        .map_err(|err| login_request_error("identify", err))?;
     let body = decode_server_text(&bytes);
 
     if is_protocol_error(&body) {
@@ -142,9 +155,9 @@ pub fn fetch_catalog_list(nprov: &str) -> Result<String, String> {
         .get(&url)
         .send()
         .and_then(|resp| resp.error_for_status())
-        .map_err(|err| err.to_string())?
+        .map_err(|err| login_request_error("catalog", err))?
         .bytes()
-        .map_err(|err| err.to_string())?;
+        .map_err(|err| login_request_error("catalog", err))?;
     let body = decode_server_text(&bytes);
     if is_protocol_error(&body) {
         return Err(body);
@@ -262,6 +275,39 @@ pub fn download_work(
 #[cfg(test)]
 mod tests {
     use super::{UtcCatalogResponse, decode_server_text};
+
+    #[test]
+    fn login_http_errors_preserve_status_without_credential_url() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                .unwrap();
+            let mut request = [0; 2048];
+            assert!(stream.read(&mut request).unwrap() > 0);
+            stream.write_all(b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").unwrap();
+        });
+        let response = reqwest::blocking::Client::builder()
+            .no_proxy()
+            .timeout(std::time::Duration::from_secs(5))
+            .build()
+            .unwrap()
+            .get(format!("http://{address}/route.php?private-login-data"))
+            .send()
+            .unwrap();
+        let error =
+            super::login_request_error("identify", response.error_for_status().unwrap_err());
+        server.join().unwrap();
+        assert!(error.contains("503"));
+        assert!(!error.contains("private-login-data"));
+        assert!(!error.contains("route.php"));
+        assert!(!error.contains(&address.to_string()));
+    }
 
     #[test]
     fn decode_server_text_preserves_cp1252_accents() {

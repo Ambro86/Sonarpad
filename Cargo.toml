@@ -249,6 +249,7 @@ sentry = { version = "0.35", default-features = false, features = [
 ] }
 webview2 = "0.1.4"
 winapi = { version = "0.3", features = ["winuser"] }
+keyring = { version = "3", features = ["windows-native", "apple-native"] }
 
 [build-dependencies]
 bindgen = { version = "0.70", default-features = false, features = ["runtime"] }

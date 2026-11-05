@@ -493,7 +493,14 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     WPARAM(0),
                     LPARAM(to_wide(&labels.format_aiff).as_ptr() as isize),
                 );
-                SendMessageW(format_combo, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+                let saved = crate::settings::load_settings();
+                let index = [
+                    "mp3", "aac", "m4b", "opus", "ogg", "flac", "wav", "aiff", "mp4", "avi", "mov",
+                ]
+                .iter()
+                .position(|v| *v == saved.converter_format)
+                .unwrap_or(0);
+                SendMessageW(format_combo, CB_SETCURSEL, WPARAM(index), LPARAM(0));
 
                 let quality_label = CreateWindowExW(
                     Default::default(),
@@ -706,11 +713,8 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     running: false,
                 });
 
-                update_quality_controls(&mut state, MediaFormat::Mp3, &labels);
-                ShowWindow(
-                    state.quality_combo,
-                    windows::Win32::UI::WindowsAndMessaging::SW_HIDE,
-                );
+                let initial_format = current_format(state.format_combo);
+                update_quality_controls(&mut state, initial_format, &labels);
                 if !folder_mode
                     && !join_mode
                     && let Some(path) = current_media_path(parent)
@@ -905,6 +909,7 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     {
                         let format = current_format(state.format_combo);
                         update_quality_controls(state, format, &labels);
+                        remember_conversion(state, &labels);
                         let current_output = get_edit_text(state.output_edit);
                         if !state.folder_mode && !current_output.is_empty() {
                             let mut path = PathBuf::from(current_output);
@@ -913,6 +918,11 @@ fn convert_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                         }
                     }
                     CONVERT_ID_FORMAT => {}
+                    CONVERT_ID_QUALITY_EDIT | CONVERT_ID_QUALITY_COMBO
+                        if [1, 5].contains(&notify) =>
+                    {
+                        remember_conversion(state, &labels);
+                    }
                     CONVERT_ID_CONVERT => {
                         if state.running {
                             return LRESULT(0);
@@ -1723,6 +1733,43 @@ fn build_default_output_path(input: &Path, format: MediaFormat) -> Option<PathBu
     Some(parent.join(file_name))
 }
 
+fn remember_conversion(state: &ConvertWindowState, labels: &ConvertLabels) {
+    let format = current_format(state.format_combo);
+    let mut saved = crate::settings::load_settings();
+    saved.converter_format = if format == MediaFormat::Aac {
+        "aac"
+    } else {
+        extension_for_format(format)
+    }
+    .into();
+    if let Ok(quality) = read_quality(state, format, labels) {
+        match quality {
+            ConvertAudioQuality::BitrateKbps(n) if (64..=320).contains(&n) => {
+                saved.converter_bitrate = n
+            }
+            ConvertAudioQuality::OggQuality(n) => saved.converter_ogg_quality = u32::from(n),
+            ConvertAudioQuality::FlacCompression(n) => {
+                saved.converter_flac_compression = u32::from(n)
+            }
+            ConvertAudioQuality::WavPcm24 => saved.converter_wav_depth = "pcm24".into(),
+            ConvertAudioQuality::WavPcm32 => saved.converter_wav_depth = "pcm32".into(),
+            ConvertAudioQuality::WavFloat32 => saved.converter_wav_depth = "float32".into(),
+            ConvertAudioQuality::None if format == MediaFormat::Wav => {
+                saved.converter_wav_depth = "pcm16".into()
+            }
+            _ => {}
+        }
+    }
+    with_state(state.parent, |main| {
+        main.settings.converter_format = saved.converter_format.clone();
+        main.settings.converter_bitrate = saved.converter_bitrate;
+        main.settings.converter_ogg_quality = saved.converter_ogg_quality;
+        main.settings.converter_flac_compression = saved.converter_flac_compression;
+        main.settings.converter_wav_depth = saved.converter_wav_depth.clone();
+    });
+    crate::settings::save_settings(saved);
+}
+
 fn read_quality(
     state: &ConvertWindowState,
     format: MediaFormat,
@@ -1924,6 +1971,7 @@ fn update_quality_controls(
         );
     }
 
+    let saved = crate::settings::load_settings();
     if show_edit {
         set_combo_items(
             state.quality_edit_combo,
@@ -1931,9 +1979,10 @@ fn update_quality_controls(
                 "64", "80", "96", "112", "128", "160", "192", "224", "256", "320",
             ],
         );
-        if get_combo_text(state.quality_edit_combo).is_empty() {
-            set_combo_text(state.quality_edit_combo, "192");
-        }
+        set_combo_text(
+            state.quality_edit_combo,
+            &saved.converter_bitrate.clamp(64, 320).to_string(),
+        );
     }
     if show_combo {
         let items: Vec<&str> = match format {
@@ -1946,8 +1995,12 @@ fn update_quality_controls(
             ],
             MediaFormat::Wav => vec!["16-bit", "24-bit", "32-bit", &labels.wav_float],
             MediaFormat::Opus => vec!["64", "96", "128", "160"],
-            MediaFormat::Ogg => vec!["q3", "q4", "q5", "q6", "q7", "q8"],
-            MediaFormat::Flac => vec!["0", "1", "2", "3", "4", "5", "6", "7", "8"],
+            MediaFormat::Ogg => vec![
+                "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10",
+            ],
+            MediaFormat::Flac => vec![
+                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12",
+            ],
             _ => Vec::new(),
         };
         set_combo_items(state.quality_combo, &items);
@@ -1958,10 +2011,25 @@ fn update_quality_controls(
             | MediaFormat::Avi
             | MediaFormat::Mov => 4,
             MediaFormat::Opus => 2,
-            MediaFormat::Ogg => 2,
+            MediaFormat::Ogg => 5,
             MediaFormat::Flac => 5,
             _ => 0,
         };
+        let saved_label = match format {
+            MediaFormat::Wav => match saved.converter_wav_depth.as_str() {
+                "pcm24" => "24-bit".into(),
+                "pcm32" => "32-bit".into(),
+                "float32" => labels.wav_float.clone(),
+                _ => "16-bit".into(),
+            },
+            MediaFormat::Ogg => format!("q{}", saved.converter_ogg_quality),
+            MediaFormat::Flac => saved.converter_flac_compression.to_string(),
+            _ => saved.converter_bitrate.to_string(),
+        };
+        let default_index = items
+            .iter()
+            .position(|v| *v == saved_label)
+            .unwrap_or(default_index);
         crate::send_message_w_safe(
             state.quality_combo,
             CB_SETCURSEL,

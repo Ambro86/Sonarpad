@@ -15,6 +15,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::PCWSTR;
 
 pub const IDM_FILE_NEW: usize = 1001;
+pub const IDM_FILE_CLOUD_SYNC: usize = 1098;
 pub const IDM_FILE_OPEN: usize = 1002;
 pub const IDM_FILE_SAVE: usize = 1003;
 pub const IDM_FILE_SAVE_AS: usize = 1004;
@@ -1186,6 +1187,16 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
             &labels.file_save_all,
         );
         append_menu_string(file_menu, MF_STRING, IDM_FILE_PRINT, &labels.file_print);
+        append_menu_string(
+            file_menu,
+            MF_STRING,
+            IDM_FILE_CLOUD_SYNC,
+            if language == Language::Italian {
+                "Sincronizzazione cloud..."
+            } else {
+                "Cloud sync..."
+            },
+        );
         crate::log_if_err!(AppendMenuW(file_menu, MF_SEPARATOR, 0, PCWSTR::null()));
         append_menu_string(
             file_menu,

@@ -12,6 +12,7 @@ pub mod bookmarks_window;
 pub mod calendar_window;
 pub mod cinema_service;
 pub mod cinema_window;
+pub mod cloud_sync_window;
 pub mod convert_audio_window;
 pub mod diagnostics_window;
 pub mod dictionary_window;

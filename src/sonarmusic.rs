@@ -739,6 +739,22 @@ mod tests {
         );
     }
     #[test]
+    fn full_album_link_has_explicit_label_without_changing_navigation() {
+        let link = Item::parse(&json!({"id":"MPAD123", "kind":"collection",
+            "title":"Album", "browse_params":"albums"}))
+        .unwrap();
+        assert_eq!(link.display("it"), "Tutti gli album");
+        assert_eq!(link.title, "Album");
+        assert!(
+            link.browse_request()
+                .unwrap()
+                .parameters(None, 1)
+                .contains(&("params".into(), "albums".into()))
+        );
+        let album = Item::parse(&json!({"id":"MPRE123", "kind":"album", "title":"Album"})).unwrap();
+        assert!(!album.display("it").contains("Tutti"));
+    }
+    #[test]
     fn discography_params_are_retained() {
         let i = Item::parse(&json!({"id":"MPAD123","kind":"collection","browse_params":"albums"}))
             .unwrap();

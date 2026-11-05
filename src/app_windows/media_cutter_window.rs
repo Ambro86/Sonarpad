@@ -86,6 +86,7 @@ const CLEAR_MARKERS: usize = 9854;
 const EXPORT_VIDEO: usize = 9855;
 const EXPORT_IMAGE: usize = 9856;
 const EXPORT_VIDEO_LABEL: usize = 9857;
+const SAVE_SCOPE: usize = 9858;
 const TICK: usize = 1;
 const WM_RESTORE_CUTTER_FOCUS: u32 = WM_APP + 212;
 #[derive(Default)]
@@ -314,6 +315,39 @@ impl State {
     }
     fn refresh_parts(&self) {
         unsafe {
+            let scope = self.ctrl(SAVE_SCOPE);
+            SendMessageW(scope, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
+            SendMessageW(
+                scope,
+                CB_ADDSTRING,
+                WPARAM(0),
+                LPARAM(to_wide(&self.tr("save_all")).as_ptr() as isize),
+            );
+            if self.parts.len() > 1 {
+                for (index, part) in self.parts.iter().enumerate().filter(|(_, p)| p.keep) {
+                    let label = format!(
+                        "{}: {} – {}",
+                        self.tr("save_only_part")
+                            .replace("{part}", &(index + 1).to_string()),
+                        spoken_time(part.start, self.language),
+                        spoken_time(part.end, self.language),
+                    );
+                    let item = SendMessageW(
+                        scope,
+                        CB_ADDSTRING,
+                        WPARAM(0),
+                        LPARAM(to_wide(&label).as_ptr() as isize),
+                    );
+                    SendMessageW(
+                        scope,
+                        CB_SETITEMDATA,
+                        WPARAM(item.0 as usize),
+                        LPARAM((index + 1) as isize),
+                    );
+                }
+            }
+            // Editing the timeline must not silently select a different numbered part.
+            SendMessageW(scope, CB_SETCURSEL, WPARAM(0), LPARAM(0));
             SendMessageW(self.ctrl(PARTS), CB_RESETCONTENT, WPARAM(0), LPARAM(0));
             for (i, p) in self.parts.iter().enumerate() {
                 let label = format!(
@@ -338,6 +372,25 @@ impl State {
             SendMessageW(self.ctrl(PARTS), CB_SETCURSEL, WPARAM(0), LPARAM(0));
         }
         self.show_bounds();
+    }
+    fn parts_to_save(&self) -> Vec<MediaPart> {
+        let selection = self.selected(SAVE_SCOPE);
+        let mut parts = self.parts.clone();
+        if selection > 0 {
+            let part_number = unsafe {
+                SendMessageW(
+                    self.ctrl(SAVE_SCOPE),
+                    CB_GETITEMDATA,
+                    WPARAM(selection),
+                    LPARAM(0),
+                )
+                .0
+            };
+            for (index, part) in parts.iter_mut().enumerate() {
+                part.keep = part.keep && (index + 1) as isize == part_number;
+            }
+        }
+        parts
     }
     fn show_bounds(&self) {
         let bounds = if self.selected(MODE) == 0
@@ -967,6 +1020,16 @@ impl State {
                 self.visibility();
                 self.say(&self.tr("cut_applied"));
             }
+            MOVE if notification == CBN_SELCHANGE => {
+                let step = [1000, 5000, 10000, 30000, 60000, 120000, 300000, 600000]
+                    [self.selected(MOVE).min(7)];
+                let mut saved = crate::settings::load_settings();
+                saved.media_cutter_seek_step_ms = step;
+                crate::with_state(self.parent, |state| {
+                    state.settings.media_cutter_seek_step_ms = step
+                });
+                crate::settings::save_settings(saved);
+            }
             MODE if notification == CBN_SELCHANGE => {
                 if self.start.is_some() && !self.confirm("discard_pending_cut") {
                     unsafe {
@@ -976,6 +1039,13 @@ impl State {
                 }
                 self.start = None;
                 self.end = None;
+                let advanced = self.selected(MODE) == 1;
+                if let Some(settings) = crate::with_state(self.parent, |state| {
+                    state.settings.media_cutter_advanced_mode = advanced;
+                    state.settings.clone()
+                }) {
+                    crate::settings::save_settings(settings);
+                }
                 self.set(PRIMARY, &self.tr("set_start"));
                 self.visibility();
                 self.show_bounds();
@@ -993,7 +1063,8 @@ impl State {
                 let step = match id {
                     BACK_FIVE | NEXT_FIVE => 5.0,
                     BACK_TEN | NEXT_TEN => 10.0,
-                    _ => [1.0, 5.0, 10.0, 30.0, 60.0][self.selected(MOVE).min(4)],
+                    _ => [1.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, 600.0]
+                        [self.selected(MOVE).min(7)],
                 };
                 self.position = kept_seek_position(
                     &self.parts,
@@ -1347,7 +1418,8 @@ impl State {
                 if self.start.is_some() {
                     return Err(self.tr("guide_review"));
                 }
-                if kept_duration(&self.parts) < MIN_PART_SECONDS {
+                let parts = self.parts_to_save();
+                if kept_duration(&parts) < MIN_PART_SECONDS {
                     return Err(self.tr("nothing_to_save"));
                 }
                 let track = if let Some(path) = self.track.clone() {
@@ -1408,7 +1480,7 @@ impl State {
                         still_video,
                         input,
                         output,
-                        parts: self.parts.clone(),
+                        parts,
                         sources: self.sources.clone(),
                         rotation: [0, 90, 270, 180][self.selected(ROTATE).min(3)],
                         track,
@@ -1573,7 +1645,7 @@ impl State {
                 self.visibility();
                 match result {
                     Ok(backup) => {
-                        if self.project_path.is_none() {
+                        if self.project_path.is_none() && self.selected(SAVE_SCOPE) == 0 {
                             self.dirty = false;
                         }
                         let message = if let Some(path) = backup {
@@ -1886,6 +1958,17 @@ fn create(hwnd: HWND, parent: HWND) -> State {
     s.restore_checkbox(GOLDWAVE);
     let modes = [s.tr("guided"), s.tr("advanced")];
     combo(&mut s, "mode", MODE, &modes, 12, 48, 250);
+    let advanced = crate::with_state(s.parent, |state| state.settings.media_cutter_advanced_mode)
+        .unwrap_or(false);
+    unsafe {
+        SendMessageW(
+            s.ctrl(MODE),
+            CB_SETCURSEL,
+            WPARAM(usize::from(advanced)),
+            LPARAM(0),
+        );
+    }
+
     combo(
         &mut s,
         "movement",
@@ -1896,11 +1979,22 @@ fn create(hwnd: HWND, parent: HWND) -> State {
             "10 s".into(),
             "30 s".into(),
             "60 s".into(),
+            "120 s".into(),
+            "300 s".into(),
+            "600 s".into(),
         ],
         280,
         48,
         130,
     );
+    let saved_step = crate::settings::load_settings().media_cutter_seek_step_ms;
+    let step_index = [1000, 5000, 10000, 30000, 60000, 120000, 300000, 600000]
+        .iter()
+        .position(|v| *v == saved_step)
+        .unwrap_or(1);
+    unsafe {
+        SendMessageW(s.ctrl(MOVE), CB_SETCURSEL, WPARAM(step_index), LPARAM(0));
+    }
     button(&mut s, "back", BACK, 12, 105, 120);
     button(&mut s, "play", PLAY, 140, 105, 120);
     button(&mut s, "forward", NEXT, 268, 105, 120);
@@ -2005,6 +2099,8 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
     );
     s.track_controls = s.controls[track_start..].to_vec();
+    let scopes = [s.tr("save_all")];
+    combo(&mut s, "save_scope", SAVE_SCOPE, &scopes, 490, 478, 280);
     let label = s.tr("overwrite_original");
     control(
         &mut s,
@@ -2569,6 +2665,73 @@ fn inner(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn save_scope_exports_one_part_without_changing_timeline_in_both_modes() {
+        unsafe {
+            let class = to_wide("SonarpadCutterSaveScopeTest");
+            let instance = HINSTANCE(crate::get_module_handle_raw_default());
+            crate::register_class_w_safe(&WNDCLASSW {
+                hInstance: instance,
+                lpszClassName: PCWSTR(class.as_ptr()),
+                lpfnWndProc: Some(wndproc),
+                ..Default::default()
+            });
+            let hwnd = CreateWindowExW(
+                WS_EX_CONTROLPARENT,
+                PCWSTR(class.as_ptr()),
+                PCWSTR::null(),
+                WS_CAPTION,
+                0,
+                0,
+                805,
+                760,
+                HWND(0),
+                HMENU(0),
+                instance,
+                None,
+            );
+            assert_ne!(hwnd.0, 0);
+            let state = &mut *(GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State);
+            let scope = state.ctrl(SAVE_SCOPE);
+            assert_eq!(SendMessageW(scope, CB_GETCOUNT, WPARAM(0), LPARAM(0)).0, 1);
+            state.parts = vec![MediaPart {
+                start: 0.0,
+                end: 2400.0,
+                keep: true,
+            }];
+            split_part_at(&mut state.parts, 1200.0).unwrap();
+            split_part_at(&mut state.parts, 1230.0).unwrap();
+            state.refresh_parts();
+            assert_eq!(SendMessageW(scope, CB_GETCOUNT, WPARAM(0), LPARAM(0)).0, 4);
+            let original = state.parts.clone();
+            for mode in [0, 1] {
+                SendMessageW(state.ctrl(MODE), CB_SETCURSEL, WPARAM(mode), LPARAM(0));
+                state.visibility();
+                assert_ne!(GetWindowLongW(scope, GWL_STYLE) as u32 & WS_VISIBLE.0, 0);
+                SendMessageW(scope, CB_SETCURSEL, WPARAM(2), LPARAM(0));
+                let parts = state.parts_to_save();
+                assert_eq!(kept_duration(&parts), 30.0);
+                assert_eq!(
+                    parts.iter().filter(|p| p.keep).collect::<Vec<_>>(),
+                    vec![&original[1]]
+                );
+                assert_eq!(state.parts, original);
+                SendMessageW(scope, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+                assert_eq!(state.parts_to_save(), original);
+            }
+            state.parts[0].keep = false;
+            state.refresh_parts();
+            assert_eq!(state.selected(SAVE_SCOPE), 0);
+            assert_eq!(SendMessageW(scope, CB_GETCOUNT, WPARAM(0), LPARAM(0)).0, 3);
+            SendMessageW(scope, CB_SETCURSEL, WPARAM(1), LPARAM(0));
+            assert_eq!(kept_duration(&state.parts_to_save()), 30.0);
+            state.parts = vec![original[0].clone()];
+            state.refresh_parts();
+            assert_eq!(state.selected(SAVE_SCOPE), 0);
+            assert_eq!(SendMessageW(scope, CB_GETCOUNT, WPARAM(0), LPARAM(0)).0, 1);
+            DestroyWindow(hwnd).unwrap();
+        }
+    }
     #[test]
     fn spoken_command_help_has_clean_punctuation_and_no_duplicate_shortcuts() {
         let clear = crate::i18n::tr(Language::Italian, "media_cutter.clear_markers");

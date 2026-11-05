@@ -418,7 +418,10 @@ fn create_controls(hwnd: HWND, parent: HWND) {
     set_forecast_text(hwnd, &tr(language, "weather.enter_city"));
     layout(hwnd);
 
-    if let Some(city) = settings.weather_city {
+    if settings.weather_city.is_none() && !settings.weather_city_query.is_empty() {
+        set_control_text(edit_city, &settings.weather_city_query);
+        search_city(hwnd);
+    } else if let Some(city) = settings.weather_city {
         set_control_text(edit_city, &city.name);
         fetch_forecast(hwnd, city);
     } else {
@@ -840,6 +843,7 @@ fn save_selected_unit(hwnd: HWND) {
 fn save_city_and_recent(city: &WeatherCity) {
     let mut settings = load_settings();
     settings.weather_city = Some(city.clone());
+    settings.weather_city_query = city.name.clone();
     settings
         .weather_recent_cities
         .retain(|existing| !same_city(existing, city));

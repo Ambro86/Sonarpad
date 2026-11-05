@@ -191,7 +191,7 @@ impl TvCatalog {
             TvPage::Favorites => load_settings()
                 .tv_favorites
                 .iter()
-                .map(channel_from_favorite)
+                .map(|favorite| channel_from_favorite(favorite, &self.channels))
                 .collect(),
             TvPage::Search(query) => self
                 .channels
@@ -330,7 +330,7 @@ impl TvCatalog {
             .into_iter()
             .enumerate()
             .map(|(index, favorite)| {
-                let channel = channel_from_favorite(&favorite);
+                let channel = channel_from_favorite(&favorite, &self.channels);
                 TvEntry {
                     id: format!("favorite:{index}"),
                     title: self.channel_accessible_title(&channel),
@@ -546,7 +546,7 @@ fn browse_catalog(parent: HWND, language: Language, catalog: Arc<TvCatalog>) {
                 play_channel(parent, language, channel);
             }
             TvEntryKind::Favorite(favorite) => {
-                let channel = channel_from_favorite(favorite.as_ref());
+                let channel = channel_from_favorite(favorite.as_ref(), &catalog.channels);
                 play_channel(parent, language, &channel);
             }
             TvEntryKind::Recordings => {
@@ -577,7 +577,14 @@ fn favorite_from_channel(channel: &TvChannel) -> TvFavorite {
     }
 }
 
-fn channel_from_favorite(favorite: &TvFavorite) -> TvChannel {
+fn channel_from_favorite(favorite: &TvFavorite, channels: &[TvChannel]) -> TvChannel {
+    if favorite.url.trim().is_empty()
+        && let Some(channel) = channels
+            .iter()
+            .find(|c| c.name.trim().eq_ignore_ascii_case(favorite.name.trim()))
+    {
+        return channel.clone();
+    }
     TvChannel {
         name: favorite.name.clone(),
         url: favorite.url.clone(),
@@ -605,14 +612,15 @@ fn selected_channel_from_id(catalog: &TvCatalog, id: &str) -> Option<TvChannel> 
         return load_settings()
             .tv_favorites
             .get(index)
-            .map(channel_from_favorite);
+            .map(|favorite| channel_from_favorite(favorite, &catalog.channels));
     }
     None
 }
 
 fn tv_favorite_matches_channel(favorite: &TvFavorite, channel: &TvChannel) -> bool {
     favorite.name.eq_ignore_ascii_case(&channel.name)
-        && (favorite.url == channel.url
+        && (favorite.url.trim().is_empty()
+            || favorite.url == channel.url
             || (!favorite.tvg_id.trim().is_empty()
                 && favorite.tvg_id.eq_ignore_ascii_case(&channel.tvg_id)))
 }

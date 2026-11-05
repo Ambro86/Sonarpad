@@ -972,6 +972,11 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             WM_COMMAND => {
                 let id = wparam.0 & 0xffff;
                 let notification = (wparam.0 >> 16) & 0xffff;
+                if [ID_COMBO_LANGUAGE, ID_COMBO_COUNTRY, ID_COMBO_GENRE].contains(&id)
+                    && [1, 5].contains(&notification)
+                {
+                    remember_radio_filters(hwnd);
+                }
                 if id == ID_COMBO_BROWSE_MODE && notification == 1 {
                     update_browse_filter_visibility(hwnd);
                     layout(hwnd);
@@ -1662,7 +1667,12 @@ fn create_controls(hwnd: HWND, parent: HWND) {
             LPARAM(wide.as_ptr() as isize),
         );
     }
-    let current_code = app_language_code(language);
+    let saved_filters = load_settings();
+    let current_code = if saved_filters.radio_search_language.is_empty() {
+        app_language_code(language)
+    } else {
+        &saved_filters.radio_search_language
+    };
     let default_language_index = languages
         .iter()
         .position(|(code, _)| code == current_code)
@@ -1683,7 +1693,11 @@ fn create_controls(hwnd: HWND, parent: HWND) {
             LPARAM(wide.as_ptr() as isize),
         );
     }
-    let default_country = default_country_code(language);
+    let default_country = if saved_filters.radio_search_country.is_empty() {
+        default_country_code(language)
+    } else {
+        &saved_filters.radio_search_country
+    };
     let default_country_index = countries
         .iter()
         .position(|(code, _)| code == default_country)
@@ -1704,7 +1718,11 @@ fn create_controls(hwnd: HWND, parent: HWND) {
             LPARAM(wide.as_ptr() as isize),
         );
     }
-    crate::send_message_w_safe(combo_genre, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+    let genre_index = GENRE_OPTIONS
+        .iter()
+        .position(|g| g.value == saved_filters.radio_search_genre)
+        .unwrap_or(0);
+    crate::send_message_w_safe(combo_genre, CB_SETCURSEL, WPARAM(genre_index), LPARAM(0));
 
     let mut state = Box::new(RadioDialogState {
         parent,
@@ -2657,6 +2675,31 @@ fn search(hwnd: HWND) {
     start_radio_search(hwnd, name_query);
 }
 
+fn remember_radio_filters(hwnd: HWND) {
+    with_radio_state(hwnd, |state| {
+        let mut saved = load_settings();
+        saved.radio_search_language = selected_language_code(state);
+        saved.radio_search_country = selected_country_code(state);
+        let index =
+            crate::send_message_w_safe(state.combo_genre, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
+        saved.radio_search_genre = if index >= 0 {
+            GENRE_OPTIONS
+                .get(index as usize)
+                .map(|g| g.value)
+                .unwrap_or("all")
+                .into()
+        } else {
+            get_edit_text(state.combo_genre)
+        };
+        crate::with_state(state.parent, |main| {
+            main.settings.radio_search_language = saved.radio_search_language.clone();
+            main.settings.radio_search_country = saved.radio_search_country.clone();
+            main.settings.radio_search_genre = saved.radio_search_genre.clone();
+        });
+        save_settings(saved);
+    });
+}
+
 fn reset_filters(hwnd: HWND) {
     with_radio_state(hwnd, |state| {
         crate::send_message_w_safe(state.combo_browse_mode, CB_SETCURSEL, WPARAM(0), LPARAM(0));
@@ -2693,6 +2736,7 @@ fn reset_filters(hwnd: HWND) {
             PCWSTR(empty.as_ptr())
         ));
     });
+    remember_radio_filters(hwnd);
     update_browse_filter_visibility(hwnd);
     layout(hwnd);
     show_all(hwnd);

@@ -4489,6 +4489,12 @@ unsafe extern "system" fn community_add_wndproc(
                 SetFocus(edit_name);
                 LRESULT(0)
             }
+            WM_SETFOCUS => {
+                if let Some(edit_name) = with_community_add_state(hwnd, |state| state.edit_name) {
+                    SetFocus(edit_name);
+                }
+                LRESULT(0)
+            }
             WM_COMMAND => {
                 let id = wparam.0 & 0xffff;
                 match id {
@@ -4549,6 +4555,8 @@ unsafe extern "system" fn community_add_wndproc(
                             ),
                             MB_OK | MB_ICONINFORMATION,
                         );
+                        crate::log_if_err!(crate::destroy_window_safe(hwnd));
+                        focus_library(parent);
                     }
                 }
                 LRESULT(0)

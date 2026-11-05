@@ -923,6 +923,15 @@ fn decode_tv_guide_channel_url() -> Result<String, String> {
 fn decode_tv_guide_payload(payload_json: &str) -> Result<String, String> {
     let secret = crate::settings::load_saved_rai_luce_code()
         .ok_or_else(|| crate::i18n::tr_tv("tv.error.guide_code_missing"))?;
+    decode_tv_guide_payload_with_code(payload_json, &secret)
+}
+
+pub(crate) fn is_activation_code_valid(code: &str) -> bool {
+    code.len() <= 256
+        && decode_tv_guide_payload_with_code(TV_GUIDE_TIMELINE_PAYLOAD_JSON, code).is_ok()
+}
+
+fn decode_tv_guide_payload_with_code(payload_json: &str, secret: &str) -> Result<String, String> {
     let secret = secret.trim();
     if secret.is_empty() {
         return Err(crate::i18n::tr_tv("tv.error.guide_code_invalid"));

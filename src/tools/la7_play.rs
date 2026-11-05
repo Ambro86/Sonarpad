@@ -1019,7 +1019,19 @@ mod new_site_tests {
             .unwrap();
         let episodes = load_page(&program.target).unwrap();
         assert!(!episodes.items.is_empty());
-        let stream = resolve_vod(&episodes.items[0].target).unwrap();
+        // The newest episode can be protected; find a free item explicitly.
+        let mut free_stream = None;
+        for episode in episodes.items.iter().take(12) {
+            match resolve_vod(&episode.target) {
+                Ok(stream) => {
+                    free_stream = Some(stream);
+                    break;
+                }
+                Err(error) if error == tr("la7.drm") => continue,
+                Err(error) => panic!("VOD resolution failed: {error}"),
+            }
+        }
+        let stream = free_stream.expect("No free episode in the sampled catalogue");
         assert!(get(&stream).unwrap().starts_with("#EXTM3U"));
         let days = load_page("rivedi").unwrap();
         assert!(!days.items.is_empty());

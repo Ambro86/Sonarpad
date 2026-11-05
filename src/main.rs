@@ -6,6 +6,8 @@
 
 mod accessibility;
 mod audio_description;
+mod cloud_sync;
+mod cloud_sync_preferences;
 mod com_guard;
 mod curl_client;
 mod direct_catalog;
@@ -12427,6 +12429,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
         }
 
         match msg {
+            app_windows::cloud_sync_window::COMPLETE => {
+                app_windows::cloud_sync_window::complete(hwnd, lparam);
+                LRESULT(0)
+            }
             WM_CREATE => {
                 let icc = INITCOMMONCONTROLSEX {
                     dwSize: size_of::<INITCOMMONCONTROLSEX>() as u32,
@@ -13038,6 +13044,9 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     large_text_editors: HashSet::new(),
                 });
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, Box::into_raw(state) as isize);
+                if SetTimer(hwnd, app_windows::cloud_sync_window::TIMER, 10000, None) == 0 {
+                    log_debug("Failed to set cloud sync timer");
+                }
                 if SetTimer(hwnd, AUDIO_PLAYLIST_TIMER_ID, 700, None) == 0 {
                     log_debug("Failed to set AUDIO_PLAYLIST_TIMER");
                 }
@@ -13481,6 +13490,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 LRESULT(0)
             }
             WM_TIMER => {
+                if wparam.0 == app_windows::cloud_sync_window::TIMER {
+                    app_windows::cloud_sync_window::tick(hwnd);
+                    return LRESULT(0);
+                }
                 if wparam.0 == app_windows::youtube_transcript_window::YTDLP_UPDATE_TIMER_ID {
                     app_windows::youtube_transcript_window::poll_ytdlp_update_check(hwnd);
                     return LRESULT(0);
@@ -15101,6 +15114,10 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     IDM_FILE_PRINT => {
                         log_debug("Menu: Print document");
                         print_current_document(hwnd);
+                        LRESULT(0)
+                    }
+                    IDM_FILE_CLOUD_SYNC => {
+                        app_windows::cloud_sync_window::open(hwnd);
                         LRESULT(0)
                     }
                     IDM_FILE_SAVE_IMAGE => {

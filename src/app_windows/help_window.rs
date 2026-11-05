@@ -8,7 +8,8 @@ use windows::Win32::Graphics::Gdi::{COLOR_WINDOW, HBRUSH, HFONT};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Controls::WC_BUTTON;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetFocus, GetKeyState, SetFocus, VK_ESCAPE, VK_RETURN, VK_SHIFT, VK_TAB,
+    EnableWindow, GetFocus, GetKeyState, IsWindowEnabled, SetFocus, VK_ESCAPE, VK_RETURN, VK_SHIFT,
+    VK_TAB,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     BS_DEFPUSHBUTTON, CREATESTRUCTW, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW,
@@ -92,10 +93,12 @@ struct HelpWindowState {
 
 struct ReadonlyTextInit {
     content: String,
+    restore_parent: bool,
 }
 
 struct ReadonlyTextState {
     parent: HWND,
+    restore_parent: bool,
     edit: HWND,
     ok_button: HWND,
 }
@@ -201,6 +204,14 @@ pub fn open_donations(parent: HWND) {
 }
 
 pub fn open_readonly_text(parent: HWND, title: &str, content: &str) {
+    open_readonly_text_internal(parent, title, content, false);
+}
+
+pub fn open_readonly_text_modal(parent: HWND, title: &str, content: &str) {
+    open_readonly_text_internal(parent, title, content, true);
+}
+
+fn open_readonly_text_internal(parent: HWND, title: &str, content: &str, modal: bool) {
     unsafe {
         let hinstance = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
         let class_name = to_wide(READONLY_TEXT_CLASS_NAME);
@@ -218,6 +229,7 @@ pub fn open_readonly_text(parent: HWND, title: &str, content: &str) {
 
         let init = Box::new(ReadonlyTextInit {
             content: normalize_to_crlf(content),
+            restore_parent: modal && parent.0 != 0 && IsWindowEnabled(parent).as_bool(),
         });
         let init_ptr = Box::into_raw(init);
         let title_wide = to_wide(title);
@@ -236,6 +248,9 @@ pub fn open_readonly_text(parent: HWND, title: &str, content: &str) {
             Some(init_ptr as *const std::ffi::c_void),
         );
         if hwnd.0 != 0 {
+            if modal && parent.0 != 0 {
+                EnableWindow(parent, false);
+            }
             register_readonly_text_window(hwnd);
             SetForegroundWindow(hwnd);
         } else if !init_ptr.is_null() {
@@ -740,14 +755,14 @@ fn readonly_text_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
 
             let content_wide = to_wide(&init.content);
             let _res = crate::set_window_text_w_safe(edit, PCWSTR(content_wide.as_ptr()));
-            crate::set_focus_safe(edit);
-
             let state = Box::new(ReadonlyTextState {
                 parent: unsafe { (*create_struct).hwndParent },
+                restore_parent: init.restore_parent,
                 edit,
                 ok_button,
             });
             crate::set_window_long_ptr_w_safe(hwnd, GWLP_USERDATA, Box::into_raw(state) as isize);
+            crate::set_focus_safe(edit);
             LRESULT(0)
         }
         WM_SETFOCUS => {
@@ -806,6 +821,11 @@ fn readonly_text_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
             if !ptr.is_null() {
                 let state = crate::box_from_raw_safe(ptr);
                 if state.parent.0 != 0 {
+                    if state.restore_parent {
+                        unsafe {
+                            EnableWindow(state.parent, true);
+                        }
+                    }
                     crate::set_foreground_window_safe(state.parent);
                     crate::app_windows::podcasts_window::focus_library(state.parent);
                     crate::app_windows::rss_window::focus_library(state.parent);
@@ -842,4 +862,64 @@ where
 {
     let ptr = crate::get_window_long_ptr_w_safe(hwnd, GWLP_USERDATA) as *mut ReadonlyTextState;
     crate::with_raw_mut_ptr_safe(ptr, f)
+}
+
+#[cfg(test)]
+mod readonly_modal_tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "Creates a native test window; run explicitly on Windows"]
+    fn readonly_modal_preserves_focus_and_tab_cycle() {
+        unsafe {
+            let parent = CreateWindowExW(
+                Default::default(),
+                w!("STATIC"),
+                w!("Sonarpad focus test"),
+                WS_OVERLAPPEDWINDOW,
+                0,
+                0,
+                400,
+                300,
+                None,
+                None,
+                HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0),
+                None,
+            );
+            assert_ne!(parent.0, 0);
+            open_readonly_text_modal(parent, "Cloud focus test", "Codice di prova");
+            let child = *readonly_text_windows().lock().unwrap().last().unwrap();
+            let (edit, button) =
+                with_readonly_text_state(child, |s| (s.edit, s.ok_button)).unwrap();
+            let disabled = !IsWindowEnabled(parent).as_bool();
+            let restored = crate::reactivate_modal_child_while_main_disabled(parent);
+            SetFocus(edit);
+            let first = handle_readonly_navigation(&MSG {
+                hwnd: edit,
+                message: WM_KEYDOWN,
+                wParam: WPARAM(VK_TAB.0 as usize),
+                ..Default::default()
+            });
+            let button_focused = GetFocus() == button;
+            let second = handle_readonly_navigation(&MSG {
+                hwnd: button,
+                message: WM_KEYDOWN,
+                wParam: WPARAM(VK_TAB.0 as usize),
+                ..Default::default()
+            });
+            let edit_focused = GetFocus() == edit;
+            SendMessageW(child, WM_COMMAND, WPARAM(READONLY_TEXT_ID_OK), LPARAM(0));
+            let enabled = IsWindowEnabled(parent).as_bool();
+            crate::destroy_window_safe(parent).unwrap();
+            assert!(
+                disabled
+                    && restored
+                    && first
+                    && button_focused
+                    && second
+                    && edit_focused
+                    && enabled
+            );
+        }
+    }
 }

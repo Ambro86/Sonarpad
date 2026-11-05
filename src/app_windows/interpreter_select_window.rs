@@ -1722,7 +1722,7 @@ fn matches_filter(text: &str, filter_text: &str) -> bool {
     if filter_text.is_empty() {
         return true;
     }
-    text.trim_start().to_lowercase().starts_with(filter_text)
+    text.trim_start().to_lowercase().contains(filter_text)
 }
 
 fn read_window_text(hwnd: HWND) -> String {
