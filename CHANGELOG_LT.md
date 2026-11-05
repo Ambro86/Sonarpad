@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Įprastas ir išplėstinis karpymas: pridėtas sąrašas visam redaguotam failui arba vienai daliai išsaugoti nepašalinant kitų dalių.
 
-6. Skyriuje Pagine Bianche pridėta paieška pagal telefono numerį.
-
-7. DI garsinis vaizdavimas: pridėtas paskutinis atsarginis perkodavimas į H.264/AAC, kai Gemini atmeta vaizdo įrašą ir MP4 paruošimas nepavyksta dėl nesuderinamo kodeko, pavyzdžiui, DIV3 senuose AVI failuose. Pirmiausia atliekami esami bandymai; originalus failas nekeičiamas.
+6. DI garsinis vaizdavimas: pridėtas paskutinis atsarginis perkodavimas į H.264/AAC, kai Gemini atmeta vaizdo įrašą ir MP4 paruošimas nepavyksta dėl nesuderinamo kodeko, pavyzdžiui, DIV3 senuose AVI failuose. Pirmiausia atliekami esami bandymai; originalus failas nekeičiamas.
 
 Version 0.9.24 – 2026-10-31
 

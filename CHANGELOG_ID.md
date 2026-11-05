@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Pemotongan normal dan lanjutan: ditambahkan daftar untuk menyimpan seluruh berkas yang diedit atau satu bagian tanpa menghapus bagian lainnya.
 
-6. Menambahkan pencarian berdasarkan nomor telepon di bagian Pagine Bianche.
-
-7. Deskripsi audio AI: menambahkan pengodean ulang H.264/AAC sebagai upaya terakhir jika Gemini menolak video dan persiapan MP4 juga gagal karena codec tidak kompatibel, seperti DIV3 pada AVI lama. Upaya yang ada dijalankan terlebih dahulu; berkas asli tidak diubah.
+6. Deskripsi audio AI: menambahkan pengodean ulang H.264/AAC sebagai upaya terakhir jika Gemini menolak video dan persiapan MP4 juga gagal karena codec tidak kompatibel, seperti DIV3 pada AVI lama. Upaya yang ada dijalankan terlebih dahulu; berkas asli tidak diubah.
 
 Version 0.9.24 – 2026-10-31
 

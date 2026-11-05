@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Zwykłe i zaawansowane przycinanie: dodano listę pozwalającą zapisać cały edytowany plik lub jedną część bez usuwania pozostałych.
 
-6. Dodano wyszukiwanie według numeru telefonu w sekcji Pagine Bianche.
-
-7. Audiodeskrypcja AI: dodano końcowe kodowanie awaryjne H.264/AAC, gdy Gemini odrzuca film, a przygotowanie MP4 również zawodzi z powodu niezgodnego kodeka, np. DIV3 w starszych plikach AVI. Najpierw wykonywane są dotychczasowe próby; oryginał pozostaje bez zmian.
+6. Audiodeskrypcja AI: dodano końcowe kodowanie awaryjne H.264/AAC, gdy Gemini odrzuca film, a przygotowanie MP4 również zawodzi z powodu niezgodnego kodeka, np. DIV3 w starszych plikach AVI. Najpierw wykonywane są dotychczasowe próby; oryginał pozostaje bez zmian.
 
 Version 0.9.24 – 2026-10-31
 

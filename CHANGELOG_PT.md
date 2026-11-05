@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Corte normal e avançado: adicionada uma lista para guardar todo o ficheiro editado ou uma única parte sem eliminar as restantes.
 
-6. Adicionada pesquisa por número de telefone na secção Pagine Bianche.
-
-7. Audiodescrições com IA: adicionada recodificação H.264/AAC como último recurso quando o Gemini rejeita o vídeo e a preparação MP4 também falha devido a um codec incompatível, como DIV3 em ficheiros AVI antigos. As tentativas existentes têm prioridade; o original não é alterado.
+6. Audiodescrições com IA: adicionada recodificação H.264/AAC como último recurso quando o Gemini rejeita o vídeo e a preparação MP4 também falha devido a um codec incompatível, como DIV3 em ficheiros AVI antigos. As tentativas existentes têm prioridade; o original não é alterado.
 
 Version 0.9.24 – 2026-10-31
 

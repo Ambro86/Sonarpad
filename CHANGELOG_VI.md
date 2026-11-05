@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Cắt thông thường và nâng cao: thêm danh sách để lưu toàn bộ tệp đã chỉnh sửa hoặc một phần riêng lẻ mà không xóa các phần khác.
 
-6. Thêm tìm kiếm theo số điện thoại trong mục Pagine Bianche.
-
-7. Mô tả âm thanh AI: thêm mã hóa lại H.264/AAC làm phương án cuối cùng khi Gemini từ chối video và việc chuẩn bị MP4 cũng thất bại do codec không tương thích, như DIV3 trong AVI cũ. Các phương án hiện có được thử trước; tệp gốc không bị thay đổi.
+6. Mô tả âm thanh AI: thêm mã hóa lại H.264/AAC làm phương án cuối cùng khi Gemini từ chối video và việc chuẩn bị MP4 cũng thất bại do codec không tương thích, như DIV3 trong AVI cũ. Các phương án hiện có được thử trước; tệp gốc không bị thay đổi.
 
 Version 0.9.24 – 2026-10-31
 

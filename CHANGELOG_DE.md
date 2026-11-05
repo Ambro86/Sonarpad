@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Normaler und erweiterter Schnitt: Neue Auswahlliste zum Speichern der gesamten bearbeiteten Datei oder eines einzelnen Teils, ohne die anderen zu löschen.
 
-6. Telefonnummernsuche im Bereich Pagine Bianche hinzugefügt.
-
-7. KI-Audiodeskription: H.264/AAC-Neukodierung als letzter Ausweichversuch hinzugefügt, wenn Gemini das Video ablehnt und auch die MP4-Vorbereitung an einem inkompatiblen Codec wie DIV3 in älteren AVI-Dateien scheitert. Bestehende Versuche haben Vorrang; die Originaldatei bleibt unverändert.
+6. KI-Audiodeskription: H.264/AAC-Neukodierung als letzter Ausweichversuch hinzugefügt, wenn Gemini das Video ablehnt und auch die MP4-Vorbereitung an einem inkompatiblen Codec wie DIV3 in älteren AVI-Dateien scheitert. Bestehende Versuche haben Vorrang; die Originaldatei bleibt unverändert.
 
 Version 0.9.24 – 2026-10-31
 

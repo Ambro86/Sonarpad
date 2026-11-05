@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Découpe normale et avancée : ajout d’une liste pour enregistrer tout le fichier modifié ou une seule partie sans supprimer les autres.
 
-6. Ajout de la recherche par numéro de téléphone dans la section Pagine Bianche.
-
-7. Audiodescription IA : ajout d’un réencodage H.264/AAC en dernier recours si Gemini refuse la vidéo et que la préparation MP4 échoue aussi à cause d’un codec incompatible, comme DIV3 dans les anciens AVI. Les tentatives existantes restent prioritaires ; le fichier original est conservé.
+6. Audiodescription IA : ajout d’un réencodage H.264/AAC en dernier recours si Gemini refuse la vidéo et que la préparation MP4 échoue aussi à cause d’un codec incompatible, comme DIV3 dans les anciens AVI. Les tentatives existantes restent prioritaires ; le fichier original est conservé.
 
 Version 0.9.24 – 2026-10-31
 

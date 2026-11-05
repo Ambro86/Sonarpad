@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Běžné a pokročilé stříhání: přidán seznam pro uložení celého upraveného souboru nebo jediné části bez odstranění ostatních.
 
-6. V sekci Pagine Bianche přidáno hledání podle telefonního čísla.
-
-7. AI audiopopis: přidán poslední záložní převod do H.264/AAC, pokud Gemini odmítne video a příprava MP4 selže kvůli nekompatibilnímu kodeku, například DIV3 ve starších AVI. Nejprve se provedou stávající pokusy; původní soubor zůstává beze změny.
+6. AI audiopopis: přidán poslední záložní převod do H.264/AAC, pokud Gemini odmítne video a příprava MP4 selže kvůli nekompatibilnímu kodeku, například DIV3 ve starších AVI. Nejprve se provedou stávající pokusy; původní soubor zůstává beze změny.
 
 Version 0.9.24 – 2026-10-31
 

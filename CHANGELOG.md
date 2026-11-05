@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Normal and advanced cutting: added a save selection list to export the entire edited file or a single part without deleting the others.
 
-6. Added phone-number search in the Pagine Bianche section.
-
-7. AI audio descriptions: added a final H.264/AAC re-encoding fallback when Gemini rejects the video and MP4 preparation also fails with an incompatible codec, such as DIV3 in older AVI files. Existing attempts run first; the original file is preserved.
+6. AI audio descriptions: added a final H.264/AAC re-encoding fallback when Gemini rejects the video and MP4 preparation also fails with an incompatible codec, such as DIV3 in older AVI files. Existing attempts run first; the original file is preserved.
 
 Version 0.9.24 – 2026-10-31
 

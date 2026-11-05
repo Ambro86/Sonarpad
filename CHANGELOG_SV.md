@@ -12,9 +12,7 @@ Version 0.9.25 – 2026-11-05
 
 5. Normal och avancerad klippning: en lista har lagts till för att spara hela den redigerade filen eller en enskild del utan att ta bort de andra.
 
-6. Lagt till sökning efter telefonnummer i avsnittet Pagine Bianche.
-
-7. AI-syntolkning: lagt till omkodning till H.264/AAC som sista reservlösning när Gemini avvisar videon och MP4-förberedelsen också misslyckas på grund av en inkompatibel kodek, som DIV3 i äldre AVI-filer. Befintliga försök körs först; originalfilen ändras inte.
+6. AI-syntolkning: lagt till omkodning till H.264/AAC som sista reservlösning när Gemini avvisar videon och MP4-förberedelsen också misslyckas på grund av en inkompatibel kodek, som DIV3 i äldre AVI-filer. Befintliga försök körs först; originalfilen ändras inte.
 
 Version 0.9.24 – 2026-10-31
 
