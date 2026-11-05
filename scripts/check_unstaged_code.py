@@ -40,11 +40,22 @@ def main():
     missing |= git_paths("ls-files", "--others", "--exclude-standard", "-z")
     missing = sorted(path for path in missing if is_code(path))
     if missing:
-        print("ERROR: code changes are missing from this commit:", file=sys.stderr)
+        print(
+            "ERRORE: l'autore, Ambrogio Riili, vuole esplicitamente che ogni "
+            "commit lato codice sia completo. Nessuna parte di codice deve "
+            "rimanere locale, a meno che non siano test temporanei, parti "
+            "private contenenti password o altri dati sensibili.",
+            file=sys.stderr,
+        )
+        print("File lato codice rimasti fuori dal commit:", file=sys.stderr)
         for path in missing:
             print("  " + path, file=sys.stderr)
-        print("Review and stage every intended code change before committing. "
-              "Do not add generated files or secrets.", file=sys.stderr)
+        print(
+            "Controlla e aggiungi all'indice tutto il codice da pubblicare. "
+            "Escludi esplicitamente tramite Git i test temporanei, gli artefatti "
+            "generati e i file privati: non committare password o dati sensibili.",
+            file=sys.stderr,
+        )
         return 1
     print("OK: no code changes left outside the index.")
     return 0
