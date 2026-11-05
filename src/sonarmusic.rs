@@ -136,6 +136,9 @@ impl Item {
         }
     }
     pub fn display(&self, locale: &str) -> String {
+        if self.kind == "collection" && self.params == "albums" {
+            return label(locale, "all_albums");
+        }
         let language =
             serde_json::from_value::<crate::settings::Language>(serde_json::json!(locale))
                 .unwrap_or(crate::settings::Language::English);
