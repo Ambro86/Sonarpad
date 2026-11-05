@@ -1,0 +1,75 @@
+#!/bin/sh
+set -e
+
+echo "[Pre-commit] Checking for code left outside the commit..."
+if command -v py >/dev/null 2>&1; then
+    py -3 scripts/check_unstaged_code.py
+elif command -v python3 >/dev/null 2>&1; then
+    python3 scripts/check_unstaged_code.py
+else
+    python scripts/check_unstaged_code.py
+fi
+
+echo "[Pre-commit] Verifying formatting..."
+cargo fmt --all -- --check
+
+echo "[Pre-commit] Checking for forbidden drop() calls..."
+# Forbids any drop() usage to prevent accidental error swallowing.
+paths=(src)
+[ -d "novapad/src" ] && paths+=(novapad/src)
+[ -d "sapi4_bridge/src" ] && paths+=(sapi4_bridge/src)
+
+drop_hits=""
+if command -v rg >/dev/null 2>&1; then
+    drop_hits="$(rg "\bdrop\s*\(" "${paths[@]}" -g "!*.bac" --type rust 2>/dev/null || true)"
+else
+    echo "[Pre-commit] rg not found, using grep fallback."
+    drop_hits="$(grep -R -n -E "\bdrop[[:space:]]*\(" "${paths[@]}" --include="*.rs" 2>/dev/null || true)"
+fi
+
+drop_hits="$(printf '%s\n' "$drop_hits" | grep -v "fn drop" | grep -v "//" || true)"
+if [ -n "$drop_hits" ]; then
+    printf '%s\n' "$drop_hits"
+    echo "ERROR: drop() is forbidden in this project. Use explicit error handling or logging."
+    exit 1
+fi
+
+
+echo "[Pre-commit] Checking for forbidden public unsafe functions..."
+if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File "./scripts/check_no_pub_unsafe.ps1"
+elif command -v powershell >/dev/null 2>&1; then
+    powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ".\scripts\check_no_pub_unsafe.ps1"
+else
+    pub_unsafe_hits=""
+    if command -v rg >/dev/null 2>&1; then
+        pub_unsafe_hits="$(rg -n -P "\bpub(?:\s*\([^)]*\))?\s+unsafe\s+fn\b" "${paths[@]}" -g "!*.bac" --type rust 2>/dev/null || true)"
+    else
+        pub_unsafe_hits="$(grep -R -n -E "\bpub([[:space:]]*\([^)]*\))?[[:space:]]+unsafe[[:space:]]+fn\b" "${paths[@]}" --include="*.rs" 2>/dev/null || true)"
+    fi
+    if [ -n "$pub_unsafe_hits" ]; then
+        printf '%s\n' "$pub_unsafe_hits"
+        echo "ERROR: public unsafe functions are forbidden. Use safe public wrappers with local unsafe blocks."
+        exit 1
+    fi
+fi
+
+echo "[Pre-commit] Checking for forbidden let _ = patterns..."
+let_ignore_hits=""
+if command -v rg >/dev/null 2>&1; then
+    let_ignore_hits="$(rg "\blet\s+_\s*=\s*" "${paths[@]}" -g "!*.bac" --type rust 2>/dev/null || true)"
+else
+    let_ignore_hits="$(grep -R -n -E "\blet[[:space:]]+_[[:space:]]*=[[:space:]]*" "${paths[@]}" --include="*.rs" 2>/dev/null || true)"
+fi
+let_ignore_hits="$(printf '%s\n' "$let_ignore_hits" | grep -v "//" || true)"
+if [ -n "$let_ignore_hits" ]; then
+    printf '%s\n' "$let_ignore_hits"
+    echo "ERROR: let _ = is forbidden. Handle results explicitly (propagate, fallback, or log)."
+    exit 1
+fi
+
+echo "[Pre-commit] Checking workspace (all crates)..."
+cargo check --workspace
+cargo clippy --workspace -- -D warnings
+
+echo "[Pre-commit] All checks passed!"

@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+echo '+cargo test --all'
+cargo test --all
+
+echo '+cargo fmt --all -- --check'
+cargo fmt --all -- --check
+
+echo '+cargo clippy --all'
+cargo clippy --all
+
+echo '+py bridge/run_audio_description_tests.py'
+py bridge/run_audio_description_tests.py
