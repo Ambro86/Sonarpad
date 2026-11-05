@@ -2,8 +2,6 @@
 
 Version 0.9.25 – 2026-11-05
 
-- AI audio descriptions: added a final H.264/AAC re-encoding fallback when Gemini rejects the video and MP4 preparation also fails with an incompatible codec, such as DIV3 in older AVI files. Existing attempts run first; the original file is preserved.
-
 - Automatic background sync at startup and while using the app, with batched updates after changes. The cloud window shows the status and last sync time. If the server is unavailable, the app stays usable: no automatic alerts, diagnostic logs and retries with increasing delays.
 - Added cloud sync across Windows, Mac and mobile for favorite radio and TV stations, personal news sources and folders, podcasts and SonarTube favorites, with a temporary pairing code. Favorite articles are preserved where supported. Manual sync handles deletions and includes diagnostic logs. Compatible module preferences also sync, including search type, weather city and cutting mode, with separate controls for collections and preferences and a 32 KB preference limit. Simplified setup: first choose whether to start or enter a code; connected devices show sync actions. Options are kept on a separate page. Fixed sync failures caused by the internal Favorite articles entry, which now stays local and is not treated as an RSS feed.
 
@@ -14,6 +12,8 @@ Version 0.9.25 – 2026-11-05
 3. SonarTube and SonarMusic: fixed Go to bookmark so videos and songs reopen using the same stream-quality selection and automatic fallback strategies as normal playback, resuming from the saved position. Improved compatibility with older bookmarks when their original video URL can be recovered.
 
 4. Normal and advanced cutting: added a save selection list to export the entire edited file or a single part without deleting the others.
+
+5. AI audio descriptions: added a final H.264/AAC re-encoding fallback when Gemini rejects the video and MP4 preparation also fails with an incompatible codec, such as DIV3 in older AVI files. Existing attempts run first; the original file is preserved.
 
 Version 0.9.24 – 2026-10-31
 

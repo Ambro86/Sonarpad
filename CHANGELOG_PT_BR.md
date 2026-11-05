@@ -2,8 +2,6 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Audiodescrições com IA: adicionada recodificação H.264/AAC como último recurso quando o Gemini rejeita o vídeo e a preparação MP4 também falha por um codec incompatível, como DIV3 em arquivos AVI antigos. As tentativas existentes têm prioridade; o original não é alterado.
-
 - Adicionada sincronização na nuvem entre Windows, Mac e dispositivos móveis: favoritos de rádio e TV, fontes e pastas pessoais de notícias, podcasts e favoritos do SonarTube. Ligação por código temporário. Os artigos favoritos são preservados quando suportados. Sincronização manual com eliminações e registos de diagnóstico. Também são sincronizadas as preferências compatíveis: tipo de pesquisa, cidade da meteorologia e modo de corte. Controlos separados para coleções e preferências, com um limite de 32 KB para estas últimas.
 
 1. Downloads em streaming: corrigido o travamento antes da conclusão, ativando limites de tempo de rede e reconexão. Os erros de leitura agora são informados, evitando que um arquivo incompleto seja considerado um download concluído com sucesso.
@@ -11,6 +9,8 @@ Version 0.9.25 – 2026-11-05
 2. SonarTube e SonarMusic: corrigida a opção Ir para o marcador. Vídeos e músicas agora são reabertos com a mesma seleção de qualidade do streaming e as mesmas alternativas automáticas da reprodução normal, retomando da posição salva. Também foi melhorada a compatibilidade com marcadores antigos quando é possível recuperar o link original.
 
 3. Corte normal e avançado: adicionada uma lista para salvar todo o arquivo editado ou uma única parte sem excluir as demais.
+
+4. Audiodescrições com IA: adicionada recodificação H.264/AAC como último recurso quando o Gemini rejeita o vídeo e a preparação MP4 também falha por um codec incompatível, como DIV3 em arquivos AVI antigos. As tentativas existentes têm prioridade; o original não é alterado.
 
 Version 0.9.24 – 2026-10-31
 

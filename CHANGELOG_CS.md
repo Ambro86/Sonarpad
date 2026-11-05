@@ -2,8 +2,6 @@
 
 Version 0.9.25 – 2026-11-05
 
-- AI audiopopis: přidán poslední záložní převod do H.264/AAC, pokud Gemini odmítne video a příprava MP4 selže kvůli nekompatibilnímu kodeku, například DIV3 ve starších AVI. Nejprve se provedou stávající pokusy; původní soubor zůstává beze změny.
-
 - Přidána cloudová synchronizace mezi Windows, Macem a mobilem pro oblíbená rádia a TV, vlastní zpravodajské zdroje a složky, podcasty a oblíbené položky SonarTube. Propojení dočasným kódem. Oblíbené články se zachovávají tam, kde jsou podporovány. Ruční synchronizace zahrnuje odstranění a diagnostické protokoly. Synchronizují se také kompatibilní předvolby modulů: typ hledání, město počasí a režim střihu. Samostatné ovládání sbírek a předvoleb s limitem 32 KB pro předvolby.
 
 1. Stahování streamů: opraveno zaseknutí před dokončením zapnutím síťových časových limitů a opětovného připojení. Chyby čtení jsou nyní hlášeny místo toho, aby byl neúplný soubor považován za úspěšně stažený.
@@ -11,6 +9,8 @@ Version 0.9.25 – 2026-11-05
 2. SonarTube a SonarMusic: opravena funkce Přejít na záložku. Videa a skladby se znovu otevírají se stejnou volbou kvality streamu a automatickými záložními postupy jako při běžném přehrávání a pokračují od uložené pozice. Zlepšena také podpora starších záložek, pokud lze obnovit původní odkaz.
 
 3. Běžné a pokročilé stříhání: přidán seznam pro uložení celého upraveného souboru nebo jediné části bez odstranění ostatních.
+
+4. AI audiopopis: přidán poslední záložní převod do H.264/AAC, pokud Gemini odmítne video a příprava MP4 selže kvůli nekompatibilnímu kodeku, například DIV3 ve starších AVI. Nejprve se provedou stávající pokusy; původní soubor zůstává beze změny.
 
 Version 0.9.24 – 2026-10-31
 

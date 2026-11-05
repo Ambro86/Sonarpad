@@ -2,8 +2,6 @@
 
 Version 0.9.25 – 2026-11-05
 
-- AI-syntolkning: lagt till omkodning till H.264/AAC som sista reservlösning när Gemini avvisar videon och MP4-förberedelsen också misslyckas på grund av en inkompatibel kodek, som DIV3 i äldre AVI-filer. Befintliga försök körs först; originalfilen ändras inte.
-
 - Molnsynkronisering mellan Windows, Mac och mobil har lagts till för radio- och TV-favoriter, egna nyhetskällor och mappar, poddar och SonarTube-favoriter. Anslut med en tillfällig kod. Favoritartiklar bevaras där de stöds. Manuell synkronisering hanterar borttagningar och diagnostikloggar. Även kompatibla modulinställningar synkroniseras, inklusive söktyp, väderort och klippläge. Separata kontroller för samlingar och inställningar, med en gräns på 32 KB för inställningar.
 
 1. Nedladdning av strömmat innehåll: åtgärdat att nedladdningar fastnar före slutförandet genom att aktivera nätverkstidsgränser och återanslutning. Läsfel rapporteras nu i stället för att en ofullständig fil räknas som en lyckad nedladdning.
@@ -11,6 +9,8 @@ Version 0.9.25 – 2026-11-05
 2. SonarTube och SonarMusic: rättat funktionen Gå till bokmärke. Videor och låtar öppnas igen med samma val av strömkvalitet och automatiska reservlösningar som vid vanlig uppspelning och fortsätter från den sparade positionen. Stödet för äldre bokmärken har också förbättrats när den ursprungliga länken kan återställas.
 
 3. Normal och avancerad klippning: en lista har lagts till för att spara hela den redigerade filen eller en enskild del utan att ta bort de andra.
+
+4. AI-syntolkning: lagt till omkodning till H.264/AAC som sista reservlösning när Gemini avvisar videon och MP4-förberedelsen också misslyckas på grund av en inkompatibel kodek, som DIV3 i äldre AVI-filer. Befintliga försök körs först; originalfilen ändras inte.
 
 Version 0.9.24 – 2026-10-31
 

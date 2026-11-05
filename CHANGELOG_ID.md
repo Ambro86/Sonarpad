@@ -2,8 +2,6 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Deskripsi audio AI: menambahkan pengodean ulang H.264/AAC sebagai upaya terakhir jika Gemini menolak video dan persiapan MP4 juga gagal karena codec tidak kompatibel, seperti DIV3 pada AVI lama. Upaya yang ada dijalankan terlebih dahulu; berkas asli tidak diubah.
-
 - Ditambahkan sinkronisasi cloud antara Windows, Mac, dan seluler: radio dan TV favorit, sumber dan folder berita pribadi, podcast, serta favorit SonarTube. Hubungkan dengan kode sementara. Artikel favorit dipertahankan jika didukung. Sinkronisasi manual menangani penghapusan dan log diagnostik. Preferensi modul yang kompatibel juga disinkronkan, termasuk jenis pencarian, kota cuaca, dan mode pemotongan. Kontrol terpisah untuk koleksi dan preferensi, dengan batas 32 KB untuk preferensi.
 
 1. Unduhan streaming: memperbaiki unduhan yang macet sebelum selesai dengan mengaktifkan batas waktu jaringan dan koneksi ulang. Kesalahan pembacaan kini dilaporkan, bukan menganggap berkas yang belum lengkap sebagai unduhan yang berhasil.
@@ -11,6 +9,8 @@ Version 0.9.25 – 2026-11-05
 2. SonarTube dan SonarMusic: memperbaiki fitur Buka penanda. Video dan lagu kini dibuka kembali dengan pemilihan kualitas streaming dan metode cadangan otomatis yang sama seperti pemutaran biasa, lalu dilanjutkan dari posisi yang disimpan. Kompatibilitas dengan penanda lama juga ditingkatkan jika tautan video aslinya dapat dipulihkan.
 
 3. Pemotongan normal dan lanjutan: ditambahkan daftar untuk menyimpan seluruh berkas yang diedit atau satu bagian tanpa menghapus bagian lainnya.
+
+4. Deskripsi audio AI: menambahkan pengodean ulang H.264/AAC sebagai upaya terakhir jika Gemini menolak video dan persiapan MP4 juga gagal karena codec tidak kompatibel, seperti DIV3 pada AVI lama. Upaya yang ada dijalankan terlebih dahulu; berkas asli tidak diubah.
 
 Version 0.9.24 – 2026-10-31
 
