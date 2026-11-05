@@ -1,10 +1,16 @@
 # Pakeitimų žurnalas
 
-Version 0.9.25 – 2026-10-31
+Version 0.9.25 – 2026-11-05
+
+- DI garsinis vaizdavimas: pridėtas paskutinis atsarginis perkodavimas į H.264/AAC, kai Gemini atmeta vaizdo įrašą ir MP4 paruošimas nepavyksta dėl nesuderinamo kodeko, pavyzdžiui, DIV3 senuose AVI failuose. Pirmiausia atliekami esami bandymai; originalus failas nekeičiamas.
+
+- Pridėtas debesies sinchronizavimas tarp Windows, Mac ir mobiliųjų įrenginių: mėgstamas radijas ir TV, asmeniniai naujienų šaltiniai ir aplankai, tinklalaidės bei SonarTube parankiniai. Susiejimas laikinu kodu. Mėgstami straipsniai išsaugomi ten, kur palaikomi. Rankinis sinchronizavimas apima šalinimą ir diagnostikos žurnalus. Taip pat sinchronizuojamos suderinamos modulių nuostatos: paieškos tipas, orų miestas ir kirpimo režimas. Atskiras rinkinių ir nuostatų valdymas; nuostatų dydžio riba – 32 KB.
 
 1. Srautinio turinio atsisiuntimai: įjungus tinklo skirtąjį laiką ir pakartotinį prisijungimą, ištaisytas strigimas prieš atsisiuntimo pabaigą. Dabar pranešama apie skaitymo klaidas, užuot nepilną failą laikius sėkmingai atsisiųstu.
 
 2. SonarTube ir SonarMusic: ištaisyta funkcija Pereiti prie žymelės. Vaizdo įrašai ir dainos vėl atidaromi naudojant tokį pat srauto kokybės parinkimą ir automatinius atsarginius būdus kaip įprasto atkūrimo metu, o atkūrimas tęsiamas nuo išsaugotos vietos. Taip pat pagerintas senų žymelių palaikymas, kai galima atkurti pradinę vaizdo įrašo nuorodą.
+
+3. Įprastas ir išplėstinis karpymas: pridėtas sąrašas visam redaguotam failui arba vienai daliai išsaugoti nepašalinant kitų dalių.
 
 Version 0.9.24 – 2026-10-31
 

@@ -1,10 +1,16 @@
 # Dziennik zmian
 
-Version 0.9.25 – 2026-10-31
+Version 0.9.25 – 2026-11-05
+
+- Audiodeskrypcja AI: dodano końcowe kodowanie awaryjne H.264/AAC, gdy Gemini odrzuca film, a przygotowanie MP4 również zawodzi z powodu niezgodnego kodeka, np. DIV3 w starszych plikach AVI. Najpierw wykonywane są dotychczasowe próby; oryginał pozostaje bez zmian.
+
+- Dodano synchronizację w chmurze między Windows, Mac i urządzeniami mobilnymi: ulubione radia i TV, własne źródła i foldery wiadomości, podcasty oraz ulubione SonarTube. Łączenie kodem tymczasowym. Ulubione artykuły są zachowywane tam, gdzie są obsługiwane. Synchronizacja ręczna uwzględnia usunięcia i dzienniki diagnostyczne. Synchronizowane są również zgodne preferencje modułów: typ wyszukiwania, miasto pogody i tryb przycinania. Oddzielne ustawienia dla kolekcji i preferencji, z limitem 32 KB dla preferencji.
 
 1. Pobieranie strumieni: naprawiono zatrzymywanie się przed ukończeniem przez włączenie limitów czasu połączeń sieciowych i ponownego łączenia. Błędy odczytu są teraz zgłaszane, zamiast uznawać niekompletny plik za poprawnie pobrany.
 
 2. SonarTube i SonarMusic: poprawiono funkcję Przejdź do zakładki. Filmy i utwory są ponownie otwierane z takim samym wyborem jakości strumienia i automatycznymi metodami awaryjnymi jak podczas zwykłego odtwarzania, a odtwarzanie jest wznawiane od zapisanej pozycji. Ulepszono też obsługę starszych zakładek, jeśli można odzyskać oryginalny link.
+
+3. Zwykłe i zaawansowane przycinanie: dodano listę pozwalającą zapisać cały edytowany plik lub jedną część bez usuwania pozostałych.
 
 Version 0.9.24 – 2026-10-31
 

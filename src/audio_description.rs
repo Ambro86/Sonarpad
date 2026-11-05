@@ -7368,7 +7368,50 @@ pub fn create_audio_description(
                 &cancel,
                 "mp4",
                 true,
-            ) {
+            )
+            .or_else(|mp4_error| {
+                // Recode only after Gemini rejection and both MP4 remux attempts
+                // (with audio and video-only) have failed at the container header.
+                if cancel.load(Ordering::Relaxed)
+                    || audio_description_source_is_recoded(&job.input_path)
+                    || !mp4_error.contains("FFmpeg: failed to write segment header:")
+                {
+                    return Err(mp4_error);
+                }
+                crate::log_debug(&format!(
+                    "Audio description: MP4 remux is incompatible with the source codec; trying the existing H.264/AAC recode as a final fallback. error={mp4_error}"
+                ));
+                if let Ok(mut callbacks) = callback_state.lock() {
+                    notify_status(
+                        &mut callbacks,
+                        "analysis_prepare",
+                        "The video codec is incompatible with MP4. Creating a normalized copy before retrying analysis...",
+                    );
+                }
+                let recovery = (|| {
+                    let recoded_path = recode_audio_description_source_for_invalid_timeline(
+                        &job.input_path,
+                        job.audio_stream_index,
+                        &cancel,
+                    )?;
+                    prepare_gemini_compatibility_chunks(
+                        &recoded_path,
+                        duration_sec,
+                        &fallback_dir,
+                        None,
+                        &cancel,
+                        "mp4",
+                        true,
+                    )
+                })();
+                recovery.map_err(|error| {
+                    if error == "cancelled" {
+                        error
+                    } else {
+                        format!("{mp4_error}\nH.264/AAC recode fallback failed: {error}")
+                    }
+                })
+            }) {
                 Ok(fallback_chunks) => {
                     crate::log_debug(
                         "Audio description: activating MP4 Gemini compatibility fallback after two rejected/failed media preparations.",

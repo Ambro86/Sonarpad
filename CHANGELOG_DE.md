@@ -1,10 +1,16 @@
 # Änderungsprotokoll
 
-Version 0.9.25 – 2026-10-31
+Version 0.9.25 – 2026-11-05
+
+- KI-Audiodeskription: H.264/AAC-Neukodierung als letzter Ausweichversuch hinzugefügt, wenn Gemini das Video ablehnt und auch die MP4-Vorbereitung an einem inkompatiblen Codec wie DIV3 in älteren AVI-Dateien scheitert. Bestehende Versuche haben Vorrang; die Originaldatei bleibt unverändert.
+
+- Cloud-Synchronisierung zwischen Windows, Mac und Mobilgeräten für Radio- und TV-Favoriten, eigene Nachrichtenquellen und Ordner, Podcasts und SonarTube-Favoriten hinzugefügt. Verbindung über einen temporären Code. Artikel-Favoriten bleiben erhalten, soweit unterstützt. Manuelle Synchronisierung mit Löschungen und Diagnoseprotokollen. Auch kompatible Moduleinstellungen werden synchronisiert, darunter Suchtyp, Wetterort und Schnittmodus. Separate Steuerung für Sammlungen und Einstellungen; Einstellungen sind auf 32 KB begrenzt.
 
 1. Streaming-Downloads: Hängenbleiben vor dem Abschluss durch Aktivierung von Netzwerk-Zeitlimits und erneuter Verbindung behoben. Lesefehler werden jetzt gemeldet, statt eine unvollständige Datei als erfolgreichen Download zu behandeln.
 
 2. SonarTube und SonarMusic: „Zum Lesezeichen springen“ korrigiert. Videos und Titel werden mit derselben Auswahl der Streamqualität und denselben automatischen Ausweichverfahren wie bei der normalen Wiedergabe erneut geöffnet und ab der gespeicherten Position fortgesetzt. Auch ältere Lesezeichen werden besser unterstützt, sofern sich der ursprüngliche Videolink wiederherstellen lässt.
+
+3. Normaler und erweiterter Schnitt: Neue Auswahlliste zum Speichern der gesamten bearbeiteten Datei oder eines einzelnen Teils, ohne die anderen zu löschen.
 
 Version 0.9.24 – 2026-10-31
 
