@@ -2,15 +2,19 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Cloud-Synchronisierung zwischen Windows, Mac und Mobilgeräten für Radio- und TV-Favoriten, eigene Nachrichtenquellen und Ordner, Podcasts und SonarTube-Favoriten hinzugefügt. Verbindung über einen temporären Code. Artikel-Favoriten bleiben erhalten, soweit unterstützt. Manuelle Synchronisierung mit Löschungen und Diagnoseprotokollen. Auch kompatible Moduleinstellungen werden synchronisiert, darunter Suchtyp, Wetterort und Schnittmodus. Separate Steuerung für Sammlungen und Einstellungen; Einstellungen sind auf 32 KB begrenzt.
+1. Cloud-Synchronisierung zwischen Windows, Mac und Mobilgeräten für Radio- und TV-Favoriten, eigene Nachrichtenquellen und Ordner, Podcasts und SonarTube-Favoriten hinzugefügt. Verbindung über einen temporären Code. Artikel-Favoriten bleiben erhalten, soweit unterstützt. Manuelle Synchronisierung mit Löschungen und Diagnoseprotokollen. Auch kompatible Moduleinstellungen werden synchronisiert, darunter Suchtyp, Wetterort und Schnittmodus. Separate Steuerung für Sammlungen und Einstellungen; Einstellungen sind auf 32 KB begrenzt. Vereinfachte Einrichtung: Beim ersten Aufruf starten oder einen Code eingeben; verbundene Geräte zeigen Synchronisierungsaktionen. Die Optionen sind getrennt. Ein Fehler durch den internen Eintrag Lieblingsartikel wurde behoben: Er bleibt lokal und wird nicht als RSS-Quelle behandelt. Automatische Hintergrundsynchronisierung beim Start und während der Nutzung fasst Änderungen zusammen. Das Cloud-Fenster zeigt Status und letzte Synchronisierung. Bei Serverausfall bleibt die App ohne automatische Warnungen nutzbar; Fehler werden protokolliert und Wiederholungen erfolgen mit steigenden Wartezeiten. Die Einstellungssynchronisierung überträgt auch die Sonarpad-Aktivierung ohne erneute Codeeingabe.
 
-1. Streaming-Downloads: Hängenbleiben vor dem Abschluss durch Aktivierung von Netzwerk-Zeitlimits und erneuter Verbindung behoben. Lesefehler werden jetzt gemeldet, statt eine unvollständige Datei als erfolgreichen Download zu behandeln.
+2. SonarTube ist der neue Name für die Audiowiedergabe aus Streams und behält die bekannten Funktionen. YouTube-Suchen bieten Alle, Videos, Playlists, Kanäle, Kurse oder Podcasts. Die Auswahl wird gespeichert und beeinflusst direkte Links nicht.
 
-2. SonarTube und SonarMusic: „Zum Lesezeichen springen“ korrigiert. Videos und Titel werden mit derselben Auswahl der Streamqualität und denselben automatischen Ausweichverfahren wie bei der normalen Wiedergabe erneut geöffnet und ab der gespeicherten Position fortgesetzt. Auch ältere Lesezeichen werden besser unterstützt, sofern sich der ursprüngliche Videolink wiederherstellen lässt.
+3. Streaming-Downloads: Hängenbleiben vor dem Abschluss durch Aktivierung von Netzwerk-Zeitlimits und erneuter Verbindung behoben. Lesefehler werden jetzt gemeldet, statt eine unvollständige Datei als erfolgreichen Download zu behandeln.
 
-3. Normaler und erweiterter Schnitt: Neue Auswahlliste zum Speichern der gesamten bearbeiteten Datei oder eines einzelnen Teils, ohne die anderen zu löschen.
+4. SonarTube und SonarMusic: „Zum Lesezeichen springen“ korrigiert. Videos und Titel werden mit derselben Auswahl der Streamqualität und denselben automatischen Ausweichverfahren wie bei der normalen Wiedergabe erneut geöffnet und ab der gespeicherten Position fortgesetzt. Auch ältere Lesezeichen werden besser unterstützt, sofern sich der ursprüngliche Videolink wiederherstellen lässt.
 
-4. KI-Audiodeskription: H.264/AAC-Neukodierung als letzter Ausweichversuch hinzugefügt, wenn Gemini das Video ablehnt und auch die MP4-Vorbereitung an einem inkompatiblen Codec wie DIV3 in älteren AVI-Dateien scheitert. Bestehende Versuche haben Vorrang; die Originaldatei bleibt unverändert.
+5. Normaler und erweiterter Schnitt: Neue Auswahlliste zum Speichern der gesamten bearbeiteten Datei oder eines einzelnen Teils, ohne die anderen zu löschen.
+
+6. Telefonnummernsuche im Bereich Pagine Bianche hinzugefügt.
+
+7. KI-Audiodeskription: H.264/AAC-Neukodierung als letzter Ausweichversuch hinzugefügt, wenn Gemini das Video ablehnt und auch die MP4-Vorbereitung an einem inkompatiblen Codec wie DIV3 in älteren AVI-Dateien scheitert. Bestehende Versuche haben Vorrang; die Originaldatei bleibt unverändert.
 
 Version 0.9.24 – 2026-10-31
 

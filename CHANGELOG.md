@@ -2,18 +2,19 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Automatic background sync at startup and while using the app, with batched updates after changes. The cloud window shows the status and last sync time. If the server is unavailable, the app stays usable: no automatic alerts, diagnostic logs and retries with increasing delays.
-- Added cloud sync across Windows, Mac and mobile for favorite radio and TV stations, personal news sources and folders, podcasts and SonarTube favorites, with a temporary pairing code. Favorite articles are preserved where supported. Manual sync handles deletions and includes diagnostic logs. Compatible module preferences also sync, including search type, weather city and cutting mode, with separate controls for collections and preferences and a 32 KB preference limit. Simplified setup: first choose whether to start or enter a code; connected devices show sync actions. Options are kept on a separate page. Fixed sync failures caused by the internal Favorite articles entry, which now stays local and is not treated as an RSS feed.
+1. Added cloud sync across Windows, Mac and mobile for favorite radio and TV stations, personal news sources and folders, podcasts and SonarTube favorites, with a temporary pairing code. Favorite articles are preserved where supported. Manual sync handles deletions and includes diagnostic logs. Compatible module preferences also sync, including search type, weather city and cutting mode, with separate controls for collections and preferences and a 32 KB preference limit. Simplified setup: first choose whether to start or enter a code; connected devices show sync actions. Options are kept on a separate page. Fixed sync failures caused by the internal Favorite articles entry, which now stays local and is not treated as an RSS feed. Automatic background sync at startup and while using the app, with batched updates after changes. The cloud window shows the status and last sync time. If the server is unavailable, the app stays usable: no automatic alerts, diagnostic logs and retries with increasing delays. Preference sync also transfers Sonarpad activation to linked devices without entering the code again.
 
-1. SonarTube is the new name for Play audio from streaming, with the same familiar features. YouTube searches can now show All, Videos, Playlists, Channels, Courses or Podcasts. The selection is remembered and does not affect direct links.
+2. SonarTube is the new name for Play audio from streaming, with the same familiar features. YouTube searches can now show All, Videos, Playlists, Channels, Courses or Podcasts. The selection is remembered and does not affect direct links.
 
-2. Streaming downloads: fixed downloads stalling before completion by enabling network timeouts and reconnection. Read errors are now reported instead of treating an incomplete file as a successful download.
+3. Streaming downloads: fixed downloads stalling before completion by enabling network timeouts and reconnection. Read errors are now reported instead of treating an incomplete file as a successful download.
 
-3. SonarTube and SonarMusic: fixed Go to bookmark so videos and songs reopen using the same stream-quality selection and automatic fallback strategies as normal playback, resuming from the saved position. Improved compatibility with older bookmarks when their original video URL can be recovered.
+4. SonarTube and SonarMusic: fixed Go to bookmark so videos and songs reopen using the same stream-quality selection and automatic fallback strategies as normal playback, resuming from the saved position. Improved compatibility with older bookmarks when their original video URL can be recovered.
 
-4. Normal and advanced cutting: added a save selection list to export the entire edited file or a single part without deleting the others.
+5. Normal and advanced cutting: added a save selection list to export the entire edited file or a single part without deleting the others.
 
-5. AI audio descriptions: added a final H.264/AAC re-encoding fallback when Gemini rejects the video and MP4 preparation also fails with an incompatible codec, such as DIV3 in older AVI files. Existing attempts run first; the original file is preserved.
+6. Added phone-number search in the Pagine Bianche section.
+
+7. AI audio descriptions: added a final H.264/AAC re-encoding fallback when Gemini rejects the video and MP4 preparation also fails with an incompatible codec, such as DIV3 in older AVI files. Existing attempts run first; the original file is preserved.
 
 Version 0.9.24 – 2026-10-31
 

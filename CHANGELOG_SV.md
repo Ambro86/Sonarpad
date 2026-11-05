@@ -2,15 +2,19 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Molnsynkronisering mellan Windows, Mac och mobil har lagts till för radio- och TV-favoriter, egna nyhetskällor och mappar, poddar och SonarTube-favoriter. Anslut med en tillfällig kod. Favoritartiklar bevaras där de stöds. Manuell synkronisering hanterar borttagningar och diagnostikloggar. Även kompatibla modulinställningar synkroniseras, inklusive söktyp, väderort och klippläge. Separata kontroller för samlingar och inställningar, med en gräns på 32 KB för inställningar.
+1. Molnsynkronisering mellan Windows, Mac och mobil har lagts till för radio- och TV-favoriter, egna nyhetskällor och mappar, poddar och SonarTube-favoriter. Anslut med en tillfällig kod. Favoritartiklar bevaras där de stöds. Manuell synkronisering hanterar borttagningar och diagnostikloggar. Även kompatibla modulinställningar synkroniseras, inklusive söktyp, väderort och klippläge. Separata kontroller för samlingar och inställningar, med en gräns på 32 KB för inställningar. Förenklad installation: välj att börja eller ange en kod vid första besöket; anslutna enheter visar synkroniseringsåtgärder. Alternativen är separata. Felet med den interna posten Favoritartiklar har rättats: den förblir lokal och behandlas inte som en RSS-källa. Automatisk bakgrundssynkronisering vid start och under användning samlar ändringar. Molnfönstret visar status och senaste synkronisering. Om servern inte svarar kan appen användas utan automatiska varningar; fel loggas och försöken upprepas med ökande väntetider. Inställningarna överför också Sonarpad-aktiveringen utan att koden behöver anges igen.
 
-1. Nedladdning av strömmat innehåll: åtgärdat att nedladdningar fastnar före slutförandet genom att aktivera nätverkstidsgränser och återanslutning. Läsfel rapporteras nu i stället för att en ofullständig fil räknas som en lyckad nedladdning.
+2. SonarTube är det nya namnet på uppspelning av strömmat ljud med samma välkända funktioner. YouTube-sökningar erbjuder Alla, Videor, Spellistor, Kanaler, Kurser eller Poddar. Valet sparas och påverkar inte direktlänkar.
 
-2. SonarTube och SonarMusic: rättat funktionen Gå till bokmärke. Videor och låtar öppnas igen med samma val av strömkvalitet och automatiska reservlösningar som vid vanlig uppspelning och fortsätter från den sparade positionen. Stödet för äldre bokmärken har också förbättrats när den ursprungliga länken kan återställas.
+3. Nedladdning av strömmat innehåll: åtgärdat att nedladdningar fastnar före slutförandet genom att aktivera nätverkstidsgränser och återanslutning. Läsfel rapporteras nu i stället för att en ofullständig fil räknas som en lyckad nedladdning.
 
-3. Normal och avancerad klippning: en lista har lagts till för att spara hela den redigerade filen eller en enskild del utan att ta bort de andra.
+4. SonarTube och SonarMusic: rättat funktionen Gå till bokmärke. Videor och låtar öppnas igen med samma val av strömkvalitet och automatiska reservlösningar som vid vanlig uppspelning och fortsätter från den sparade positionen. Stödet för äldre bokmärken har också förbättrats när den ursprungliga länken kan återställas.
 
-4. AI-syntolkning: lagt till omkodning till H.264/AAC som sista reservlösning när Gemini avvisar videon och MP4-förberedelsen också misslyckas på grund av en inkompatibel kodek, som DIV3 i äldre AVI-filer. Befintliga försök körs först; originalfilen ändras inte.
+5. Normal och avancerad klippning: en lista har lagts till för att spara hela den redigerade filen eller en enskild del utan att ta bort de andra.
+
+6. Lagt till sökning efter telefonnummer i avsnittet Pagine Bianche.
+
+7. AI-syntolkning: lagt till omkodning till H.264/AAC som sista reservlösning när Gemini avvisar videon och MP4-förberedelsen också misslyckas på grund av en inkompatibel kodek, som DIV3 i äldre AVI-filer. Befintliga försök körs först; originalfilen ändras inte.
 
 Version 0.9.24 – 2026-10-31
 

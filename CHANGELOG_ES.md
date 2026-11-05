@@ -2,15 +2,19 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Añadida la sincronización en la nube entre Windows, Mac y móvil: favoritos de radio y TV, fuentes y carpetas personales de noticias, podcasts y favoritos de SonarTube. Conexión mediante código temporal. Los artículos favoritos se conservan donde son compatibles. Sincronización manual con eliminaciones y registros de diagnóstico. También se sincronizan las preferencias compatibles: tipo de búsqueda, ciudad del tiempo y modo de corte. Controles separados para colecciones y preferencias, con un límite de 32 KB para estas últimas.
+1. Añadida la sincronización en la nube entre Windows, Mac y móvil: favoritos de radio y TV, fuentes y carpetas personales de noticias, podcasts y favoritos de SonarTube. Conexión mediante código temporal. Los artículos favoritos se conservan donde son compatibles. Sincronización manual con eliminaciones y registros de diagnóstico. También se sincronizan las preferencias compatibles: tipo de búsqueda, ciudad del tiempo y modo de corte. Controles separados para colecciones y preferencias, con un límite de 32 KB para estas últimas. Configuración simplificada: al entrar por primera vez se elige iniciar o introducir un código; los dispositivos vinculados muestran las acciones de sincronización. Las opciones están separadas. Corregido el error de la entrada interna Artículos favoritos, que permanece local y no se trata como fuente RSS. La sincronización automática en segundo plano al iniciar y durante el uso agrupa los cambios. La ventana de nube muestra el estado y la última sincronización. Si el servidor no responde, la aplicación sigue disponible sin avisos automáticos; registra el error y reintenta con esperas crecientes. Las preferencias también transfieren la activación de Sonarpad sin volver a introducir el código.
 
-1. Descargas en streaming: corregido el bloqueo antes de finalizar mediante la activación de tiempos de espera de red y reconexión. Ahora se notifican los errores de lectura en lugar de considerar un archivo incompleto como una descarga correcta.
+2. SonarTube es el nuevo nombre de Reproducir audio en streaming y mantiene las funciones conocidas. Las búsquedas de YouTube permiten elegir Todo, Vídeos, Listas, Canales, Cursos o Podcasts. La selección se recuerda y no afecta a los enlaces directos.
 
-2. SonarTube y SonarMusic: corregida la opción Ir al marcador. Los vídeos y las canciones vuelven a abrirse con la misma selección de calidad y las mismas alternativas automáticas que en la reproducción normal, y continúan desde la posición guardada. También se ha mejorado la compatibilidad con marcadores antiguos cuando es posible recuperar el enlace original.
+3. Descargas en streaming: corregido el bloqueo antes de finalizar mediante la activación de tiempos de espera de red y reconexión. Ahora se notifican los errores de lectura en lugar de considerar un archivo incompleto como una descarga correcta.
 
-3. Corte normal y avanzado: añadida una lista para guardar todo el archivo editado o una sola parte sin eliminar las demás.
+4. SonarTube y SonarMusic: corregida la opción Ir al marcador. Los vídeos y las canciones vuelven a abrirse con la misma selección de calidad y las mismas alternativas automáticas que en la reproducción normal, y continúan desde la posición guardada. También se ha mejorado la compatibilidad con marcadores antiguos cuando es posible recuperar el enlace original.
 
-4. Audiodescripciones con IA: añadida una recodificación H.264/AAC como último recurso si Gemini rechaza el vídeo y la preparación MP4 también falla por un códec incompatible, como DIV3 en archivos AVI antiguos. Primero se ejecutan los intentos existentes; el original no se modifica.
+5. Corte normal y avanzado: añadida una lista para guardar todo el archivo editado o una sola parte sin eliminar las demás.
+
+6. Añadida la búsqueda por número de teléfono en la sección Pagine Bianche.
+
+7. Audiodescripciones con IA: añadida una recodificación H.264/AAC como último recurso si Gemini rechaza el vídeo y la preparación MP4 también falla por un códec incompatible, como DIV3 en archivos AVI antiguos. Primero se ejecutan los intentos existentes; el original no se modifica.
 
 Version 0.9.24 – 2026-10-31
 

@@ -2,15 +2,19 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Đã thêm đồng bộ đám mây giữa Windows, Mac và di động: radio và TV yêu thích, nguồn tin và thư mục cá nhân, podcast và mục yêu thích SonarTube. Kết nối bằng mã tạm thời. Bài viết yêu thích được giữ lại trên nền tảng hỗ trợ. Đồng bộ thủ công xử lý việc xóa và có nhật ký chẩn đoán. Đồng bộ cả tùy chọn mô-đun tương thích: loại tìm kiếm, thành phố thời tiết và chế độ cắt. Điều khiển riêng cho bộ sưu tập và tùy chọn, với giới hạn 32 KB cho tùy chọn.
+1. Đã thêm đồng bộ đám mây giữa Windows, Mac và di động: radio và TV yêu thích, nguồn tin và thư mục cá nhân, podcast và mục yêu thích SonarTube. Kết nối bằng mã tạm thời. Bài viết yêu thích được giữ lại trên nền tảng hỗ trợ. Đồng bộ thủ công xử lý việc xóa và có nhật ký chẩn đoán. Đồng bộ cả tùy chọn mô-đun tương thích: loại tìm kiếm, thành phố thời tiết và chế độ cắt. Điều khiển riêng cho bộ sưu tập và tùy chọn, với giới hạn 32 KB cho tùy chọn. Đơn giản hóa thiết lập: lần đầu chọn bắt đầu hoặc nhập mã; thiết bị đã liên kết hiển thị thao tác đồng bộ. Các tùy chọn được tách riêng. Sửa lỗi mục nội bộ Bài viết yêu thích: mục này giữ cục bộ và không được coi là nguồn RSS. Đồng bộ nền tự động khi khởi động và trong lúc sử dụng gộp các thay đổi. Cửa sổ đám mây hiển thị trạng thái và lần đồng bộ gần nhất. Nếu máy chủ không phản hồi, ứng dụng vẫn dùng được mà không cảnh báo tự động; lỗi được ghi lại và thử lại với thời gian chờ tăng dần. Tùy chọn cũng chuyển kích hoạt Sonarpad mà không cần nhập lại mã.
 
-1. Tải xuống nội dung phát trực tuyến: khắc phục tình trạng bị treo trước khi hoàn tất bằng cách bật thời gian chờ mạng và kết nối lại. Lỗi đọc giờ được thông báo thay vì coi tệp chưa hoàn chỉnh là đã tải xuống thành công.
+2. SonarTube là tên mới của chức năng phát âm thanh trực tuyến, giữ nguyên các tính năng quen thuộc. Tìm kiếm YouTube cho phép chọn Tất cả, Video, Danh sách phát, Kênh, Khóa học hoặc Podcast. Lựa chọn được ghi nhớ và không ảnh hưởng đến liên kết trực tiếp.
 
-2. SonarTube và SonarMusic: đã sửa chức năng Đi tới dấu trang. Video và bài hát được mở lại với cách chọn chất lượng luồng phát và các phương án dự phòng tự động giống như khi phát thông thường, sau đó tiếp tục từ vị trí đã lưu. Khả năng tương thích với dấu trang cũ cũng được cải thiện khi có thể khôi phục liên kết gốc.
+3. Tải xuống nội dung phát trực tuyến: khắc phục tình trạng bị treo trước khi hoàn tất bằng cách bật thời gian chờ mạng và kết nối lại. Lỗi đọc giờ được thông báo thay vì coi tệp chưa hoàn chỉnh là đã tải xuống thành công.
 
-3. Cắt thông thường và nâng cao: thêm danh sách để lưu toàn bộ tệp đã chỉnh sửa hoặc một phần riêng lẻ mà không xóa các phần khác.
+4. SonarTube và SonarMusic: đã sửa chức năng Đi tới dấu trang. Video và bài hát được mở lại với cách chọn chất lượng luồng phát và các phương án dự phòng tự động giống như khi phát thông thường, sau đó tiếp tục từ vị trí đã lưu. Khả năng tương thích với dấu trang cũ cũng được cải thiện khi có thể khôi phục liên kết gốc.
 
-4. Mô tả âm thanh AI: thêm mã hóa lại H.264/AAC làm phương án cuối cùng khi Gemini từ chối video và việc chuẩn bị MP4 cũng thất bại do codec không tương thích, như DIV3 trong AVI cũ. Các phương án hiện có được thử trước; tệp gốc không bị thay đổi.
+5. Cắt thông thường và nâng cao: thêm danh sách để lưu toàn bộ tệp đã chỉnh sửa hoặc một phần riêng lẻ mà không xóa các phần khác.
+
+6. Thêm tìm kiếm theo số điện thoại trong mục Pagine Bianche.
+
+7. Mô tả âm thanh AI: thêm mã hóa lại H.264/AAC làm phương án cuối cùng khi Gemini từ chối video và việc chuẩn bị MP4 cũng thất bại do codec không tương thích, như DIV3 trong AVI cũ. Các phương án hiện có được thử trước; tệp gốc không bị thay đổi.
 
 Version 0.9.24 – 2026-10-31
 

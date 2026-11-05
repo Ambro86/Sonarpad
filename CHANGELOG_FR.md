@@ -2,15 +2,19 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Ajout de la synchronisation cloud entre Windows, Mac et mobile pour les favoris radio et TV, les sources et dossiers personnels d’actualités, les podcasts et les favoris SonarTube. Association par code temporaire. Les articles favoris sont conservés lorsque cette fonction est prise en charge. Synchronisation manuelle avec suppressions et journaux de diagnostic. Les préférences compatibles des modules sont également synchronisées : type de recherche, ville météo et mode de découpe. Commandes séparées pour les collections et les préférences, limitées à 32 Ko.
+1. Ajout de la synchronisation cloud entre Windows, Mac et mobile pour les favoris radio et TV, les sources et dossiers personnels d’actualités, les podcasts et les favoris SonarTube. Association par code temporaire. Les articles favoris sont conservés lorsque cette fonction est prise en charge. Synchronisation manuelle avec suppressions et journaux de diagnostic. Les préférences compatibles des modules sont également synchronisées : type de recherche, ville météo et mode de découpe. Commandes séparées pour les collections et les préférences, limitées à 32 Ko. Configuration simplifiée : au premier accès, choisir de démarrer ou de saisir un code ; les appareils associés affichent les actions de synchronisation. Les options sont séparées. Correction de l’erreur liée à l’entrée interne Articles favoris, désormais locale et non traitée comme source RSS. La synchronisation automatique en arrière-plan au démarrage et pendant l’utilisation regroupe les modifications. La fenêtre cloud affiche l’état et la dernière synchronisation. Si le serveur ne répond pas, l’application reste utilisable sans alerte automatique ; les erreurs sont journalisées et les tentatives espacées progressivement. Les préférences transfèrent aussi l’activation de Sonarpad sans ressaisir le code.
 
-1. Téléchargements en streaming : correction des blocages avant la fin grâce à l’activation des délais d’attente réseau et de la reconnexion. Les erreurs de lecture sont désormais signalées au lieu de considérer un fichier incomplet comme un téléchargement réussi.
+2. SonarTube remplace le nom Lire l’audio en streaming et conserve les fonctions connues. Les recherches YouTube proposent Tout, Vidéos, Playlists, Chaînes, Cours ou Podcasts. Le choix est mémorisé et ne modifie pas l’ouverture des liens directs.
 
-2. SonarTube et SonarMusic : correction de la commande Aller au signet. Les vidéos et les morceaux se rouvrent avec la même sélection de qualité du flux et les mêmes solutions de repli automatiques que lors de la lecture normale, puis reprennent à la position enregistrée. La compatibilité avec les anciens signets a également été améliorée lorsque le lien d’origine peut être retrouvé.
+3. Téléchargements en streaming : correction des blocages avant la fin grâce à l’activation des délais d’attente réseau et de la reconnexion. Les erreurs de lecture sont désormais signalées au lieu de considérer un fichier incomplet comme un téléchargement réussi.
 
-3. Découpe normale et avancée : ajout d’une liste pour enregistrer tout le fichier modifié ou une seule partie sans supprimer les autres.
+4. SonarTube et SonarMusic : correction de la commande Aller au signet. Les vidéos et les morceaux se rouvrent avec la même sélection de qualité du flux et les mêmes solutions de repli automatiques que lors de la lecture normale, puis reprennent à la position enregistrée. La compatibilité avec les anciens signets a également été améliorée lorsque le lien d’origine peut être retrouvé.
 
-4. Audiodescription IA : ajout d’un réencodage H.264/AAC en dernier recours si Gemini refuse la vidéo et que la préparation MP4 échoue aussi à cause d’un codec incompatible, comme DIV3 dans les anciens AVI. Les tentatives existantes restent prioritaires ; le fichier original est conservé.
+5. Découpe normale et avancée : ajout d’une liste pour enregistrer tout le fichier modifié ou une seule partie sans supprimer les autres.
+
+6. Ajout de la recherche par numéro de téléphone dans la section Pagine Bianche.
+
+7. Audiodescription IA : ajout d’un réencodage H.264/AAC en dernier recours si Gemini refuse la vidéo et que la préparation MP4 échoue aussi à cause d’un codec incompatible, comme DIV3 dans les anciens AVI. Les tentatives existantes restent prioritaires ; le fichier original est conservé.
 
 Version 0.9.24 – 2026-10-31
 

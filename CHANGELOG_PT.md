@@ -2,15 +2,19 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Adicionada sincronização na nuvem entre Windows, Mac e dispositivos móveis: favoritos de rádio e TV, fontes e pastas pessoais de notícias, podcasts e favoritos do SonarTube. Ligação por código temporário. Os artigos favoritos são preservados quando suportados. Sincronização manual com eliminações e registos de diagnóstico. Também são sincronizadas as preferências compatíveis: tipo de pesquisa, cidade da meteorologia e modo de corte. Controlos separados para coleções e preferências, com um limite de 32 KB para estas últimas.
+1. Adicionada sincronização na nuvem entre Windows, Mac e dispositivos móveis: favoritos de rádio e TV, fontes e pastas pessoais de notícias, podcasts e favoritos do SonarTube. Ligação por código temporário. Os artigos favoritos são preservados quando suportados. Sincronização manual com eliminações e registos de diagnóstico. Também são sincronizadas as preferências compatíveis: tipo de pesquisa, cidade da meteorologia e modo de corte. Controlos separados para coleções e preferências, com um limite de 32 KB para estas últimas. Configuração simplificada: no primeiro acesso, escolher iniciar ou introduzir um código; os dispositivos ligados mostram ações de sincronização. As opções estão separadas. Corrigido o erro da entrada interna Artigos favoritos, que fica local e não é uma fonte RSS. A sincronização automática em segundo plano ao iniciar e durante o uso agrupa alterações. A janela da nuvem mostra o estado e a última sincronização. Se o servidor não responder, a aplicação continua utilizável sem avisos automáticos; regista erros e repete tentativas com esperas crescentes. As preferências também transferem a ativação do Sonarpad sem voltar a introduzir o código.
 
-1. Transferências em streaming: corrigido o bloqueio antes da conclusão, ativando limites de tempo de rede e a reconexão. Os erros de leitura são agora comunicados, em vez de considerar um ficheiro incompleto como uma transferência concluída com sucesso.
+2. SonarTube é o novo nome de Reproduzir áudio em streaming, mantendo as funções conhecidas. A pesquisa do YouTube permite escolher Tudo, Vídeos, Listas, Canais, Cursos ou Podcasts. A escolha é guardada e não afeta as ligações diretas.
 
-2. SonarTube e SonarMusic: corrigida a opção Ir para o marcador. Os vídeos e as músicas voltam a abrir com a mesma seleção de qualidade do fluxo e os mesmos métodos alternativos automáticos da reprodução normal, retomando na posição guardada. Foi também melhorada a compatibilidade com marcadores antigos quando é possível recuperar a ligação original.
+3. Transferências em streaming: corrigido o bloqueio antes da conclusão, ativando limites de tempo de rede e a reconexão. Os erros de leitura são agora comunicados, em vez de considerar um ficheiro incompleto como uma transferência concluída com sucesso.
 
-3. Corte normal e avançado: adicionada uma lista para guardar todo o ficheiro editado ou uma única parte sem eliminar as restantes.
+4. SonarTube e SonarMusic: corrigida a opção Ir para o marcador. Os vídeos e as músicas voltam a abrir com a mesma seleção de qualidade do fluxo e os mesmos métodos alternativos automáticos da reprodução normal, retomando na posição guardada. Foi também melhorada a compatibilidade com marcadores antigos quando é possível recuperar a ligação original.
 
-4. Audiodescrições com IA: adicionada recodificação H.264/AAC como último recurso quando o Gemini rejeita o vídeo e a preparação MP4 também falha devido a um codec incompatível, como DIV3 em ficheiros AVI antigos. As tentativas existentes têm prioridade; o original não é alterado.
+5. Corte normal e avançado: adicionada uma lista para guardar todo o ficheiro editado ou uma única parte sem eliminar as restantes.
+
+6. Adicionada pesquisa por número de telefone na secção Pagine Bianche.
+
+7. Audiodescrições com IA: adicionada recodificação H.264/AAC como último recurso quando o Gemini rejeita o vídeo e a preparação MP4 também falha devido a um codec incompatível, como DIV3 em ficheiros AVI antigos. As tentativas existentes têm prioridade; o original não é alterado.
 
 Version 0.9.24 – 2026-10-31
 

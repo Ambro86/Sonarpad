@@ -2,15 +2,19 @@
 
 Version 0.9.25 – 2026-11-05
 
-- Adicionada sincronização na nuvem entre Windows, Mac e dispositivos móveis: favoritos de rádio e TV, fontes e pastas pessoais de notícias, podcasts e favoritos do SonarTube. Ligação por código temporário. Os artigos favoritos são preservados quando suportados. Sincronização manual com eliminações e registos de diagnóstico. Também são sincronizadas as preferências compatíveis: tipo de pesquisa, cidade da meteorologia e modo de corte. Controlos separados para coleções e preferências, com um limite de 32 KB para estas últimas.
+1. Adicionada sincronização na nuvem entre Windows, Mac e dispositivos móveis: favoritos de rádio e TV, fontes e pastas pessoais de notícias, podcasts e favoritos do SonarTube. Ligação por código temporário. Os artigos favoritos são preservados quando suportados. Sincronização manual com eliminações e registos de diagnóstico. Também são sincronizadas as preferências compatíveis: tipo de pesquisa, cidade da meteorologia e modo de corte. Controlos separados para coleções e preferências, com um limite de 32 KB para estas últimas. Configuração simplificada: no primeiro acesso, escolher iniciar ou inserir um código; os dispositivos vinculados mostram ações de sincronização. As opções ficam separadas. Corrigido o erro da entrada interna Artigos favoritos, que permanece local e não é tratada como fonte RSS. A sincronização automática em segundo plano ao iniciar e durante o uso agrupa alterações. A janela da nuvem mostra o estado e a última sincronização. Se o servidor não responder, o aplicativo continua utilizável sem alertas automáticos; registra erros e repete tentativas com intervalos crescentes. As preferências também transferem a ativação do Sonarpad sem inserir o código novamente.
 
-1. Downloads em streaming: corrigido o travamento antes da conclusão, ativando limites de tempo de rede e reconexão. Os erros de leitura agora são informados, evitando que um arquivo incompleto seja considerado um download concluído com sucesso.
+2. SonarTube é o novo nome de Reproduzir áudio em streaming e mantém as funções conhecidas. A pesquisa do YouTube permite escolher Tudo, Vídeos, Playlists, Canais, Cursos ou Podcasts. A seleção é lembrada e não afeta links diretos.
 
-2. SonarTube e SonarMusic: corrigida a opção Ir para o marcador. Vídeos e músicas agora são reabertos com a mesma seleção de qualidade do streaming e as mesmas alternativas automáticas da reprodução normal, retomando da posição salva. Também foi melhorada a compatibilidade com marcadores antigos quando é possível recuperar o link original.
+3. Downloads em streaming: corrigido o travamento antes da conclusão, ativando limites de tempo de rede e reconexão. Os erros de leitura agora são informados, evitando que um arquivo incompleto seja considerado um download concluído com sucesso.
 
-3. Corte normal e avançado: adicionada uma lista para salvar todo o arquivo editado ou uma única parte sem excluir as demais.
+4. SonarTube e SonarMusic: corrigida a opção Ir para o marcador. Vídeos e músicas agora são reabertos com a mesma seleção de qualidade do streaming e as mesmas alternativas automáticas da reprodução normal, retomando da posição salva. Também foi melhorada a compatibilidade com marcadores antigos quando é possível recuperar o link original.
 
-4. Audiodescrições com IA: adicionada recodificação H.264/AAC como último recurso quando o Gemini rejeita o vídeo e a preparação MP4 também falha por um codec incompatível, como DIV3 em arquivos AVI antigos. As tentativas existentes têm prioridade; o original não é alterado.
+5. Corte normal e avançado: adicionada uma lista para salvar todo o arquivo editado ou uma única parte sem excluir as demais.
+
+6. Adicionada pesquisa por número de telefone na seção Pagine Bianche.
+
+7. Audiodescrições com IA: adicionada recodificação H.264/AAC como último recurso quando o Gemini rejeita o vídeo e a preparação MP4 também falha por um codec incompatível, como DIV3 em arquivos AVI antigos. As tentativas existentes têm prioridade; o original não é alterado.
 
 Version 0.9.24 – 2026-10-31
 
