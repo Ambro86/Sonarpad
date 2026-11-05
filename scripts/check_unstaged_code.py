@@ -6,7 +6,7 @@ import sys
 
 CODE_ROOTS = {
     "src", "i18n", "bridge", "tests", "scripts", "sapi4_bridge",
-    ".github", ".cargo", ".githooks", "packager", "assets",
+    "novapad", ".github", ".cargo", ".githooks", "packager", "assets",
 }
 CODE_SUFFIXES = {
     ".rs", ".py", ".ps1", ".sh", ".bat", ".cmd", ".toml", ".lock",

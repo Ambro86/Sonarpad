@@ -16,6 +16,7 @@ cargo fmt --all -- --check
 echo "[Pre-commit] Checking for forbidden drop() calls..."
 # Forbids any drop() usage to prevent accidental error swallowing.
 paths=(src)
+[ -d "novapad/src" ] && paths+=(novapad/src)
 [ -d "sapi4_bridge/src" ] && paths+=(sapi4_bridge/src)
 
 drop_hits=""
