@@ -400,11 +400,7 @@ pub fn menu_labels(language: Language) -> MenuLabels {
         menu_weather: i18n::tr(language, "menu.weather"),
         menu_cinema: i18n::tr(language, "menu.cinema"),
         menu_calendar: i18n::tr(language, "menu.calendar"),
-        menu_italiaonline: if language == Language::Italian {
-            "Pa&gine Bianche e Gialle...\tAlt+Shift+G".to_string()
-        } else {
-            String::new()
-        },
+        menu_italiaonline: format!("{}...\tAlt+Shift+G", i18n::tr(language, "places.title")),
         menu_radio: i18n::tr(language, "menu.radio"),
         menu_prompt: i18n::tr(language, "menu.prompt"),
         menu_rss: i18n::tr(language, "menu.rss"),
@@ -1888,14 +1884,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                 IDM_TOOLS_PATHS_NAVIGATION,
                 &labels.menu_paths_navigation,
             );
-            if language == Language::Italian {
-                append_menu_string(
-                    utilities_menu,
-                    MF_STRING,
-                    IDM_TOOLS_ITALIAONLINE,
-                    &labels.menu_italiaonline,
-                );
-            }
+            append_menu_string(
+                utilities_menu,
+                MF_STRING,
+                IDM_TOOLS_ITALIAONLINE,
+                &labels.menu_italiaonline,
+            );
             append_menu_string(
                 tools_menu,
                 MF_POPUP,
@@ -2045,12 +2039,7 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                     &labels.menu_raiplaysound,
                 );
                 append_menu_string(tools_menu, MF_STRING, IDM_TOOLS_TV, &labels.menu_tv);
-                append_menu_string(
-                    tools_menu,
-                    MF_STRING,
-                    IDM_TOOLS_ITALIAONLINE,
-                    &labels.menu_italiaonline,
-                );
+
                 append_menu_string(
                     tools_menu,
                     MF_STRING,
@@ -2058,6 +2047,12 @@ pub fn create_menus(hwnd: HWND, language: Language) -> (HMENU, HMENU) {
                     &labels.menu_bdciechi,
                 );
             }
+            append_menu_string(
+                tools_menu,
+                MF_STRING,
+                IDM_TOOLS_ITALIAONLINE,
+                &labels.menu_italiaonline,
+            );
             append_menu_string(
                 tools_menu,
                 MF_STRING,

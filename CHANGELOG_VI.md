@@ -1,5 +1,11 @@
 # Nhật ký thay đổi
 
+Version 0.9.26 – 2026-11-06
+
+1. Phím tắt: sửa lỗi ứng dụng bị thoát sau cảnh báo tổ hợp phím đã được gán trong Tùy chọn. Khi đóng cảnh báo bằng OK, tiêu điểm trở về điều khiển trước đó và phím tắt hiện có không thay đổi.
+
+2. Thêm tìm kiếm địa điểm và doanh nghiệp cho mọi ngôn ngữ, với kết quả quốc tế, mô tả, điểm đánh giá, số lượt đánh giá, giờ mở cửa và trang web khi có. Trong giao diện tiếng Ý, tính năng này thay thế Trang Trắng và Trang Vàng nhưng vẫn giữ kết quả cũ cùng tìm kiếm theo tên và số điện thoại. Các ngôn ngữ khác chỉ có tìm kiếm địa điểm và doanh nghiệp.
+
 Version 0.9.25 – 2026-11-06
 
 1. Đã thêm đồng bộ đám mây giữa Windows, Mac và di động: radio và TV yêu thích, nguồn tin và thư mục cá nhân, podcast và mục yêu thích SonarTube. Kết nối bằng mã tạm thời. Bài viết yêu thích được giữ lại trên nền tảng hỗ trợ. Đồng bộ thủ công xử lý việc xóa và có nhật ký chẩn đoán. Đồng bộ cả tùy chọn mô-đun tương thích: loại tìm kiếm, thành phố thời tiết và chế độ cắt. Điều khiển riêng cho bộ sưu tập và tùy chọn, với giới hạn 32 KB cho tùy chọn. Đơn giản hóa thiết lập: lần đầu chọn bắt đầu hoặc nhập mã; thiết bị đã liên kết hiển thị thao tác đồng bộ. Các tùy chọn được tách riêng. Sửa lỗi mục nội bộ Bài viết yêu thích: mục này giữ cục bộ và không được coi là nguồn RSS. Đồng bộ nền tự động khi khởi động và trong lúc sử dụng gộp các thay đổi. Cửa sổ đám mây hiển thị trạng thái và lần đồng bộ gần nhất. Nếu máy chủ không phản hồi, ứng dụng vẫn dùng được mà không cảnh báo tự động; lỗi được ghi lại và thử lại với thời gian chờ tăng dần. Tùy chọn cũng chuyển kích hoạt Sonarpad mà không cần nhập lại mã.

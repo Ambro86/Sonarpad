@@ -1,5 +1,11 @@
 # Ändringslogg
 
+Version 0.9.26 – 2026-11-06
+
+1. Kortkommandon: åtgärdat en krasch efter varningen om en redan tilldelad tangentkombination i Alternativ. När varningen stängs med OK återgår fokus till föregående kontroll och det befintliga kortkommandot förblir oförändrat.
+
+2. Sökning efter platser och företag finns nu på alla språk, med internationella resultat, beskrivningar, betyg, antal recensioner, öppettider och webbplatser när uppgifterna finns. I det italienska gränssnittet ersätter den Vita och Gula sidorna, med deras resultat samt namn- och telefonnummersökning kvar. På andra språk finns endast sökning efter platser och företag.
+
 Version 0.9.25 – 2026-11-06
 
 1. Molnsynkronisering mellan Windows, Mac och mobil har lagts till för radio- och TV-favoriter, egna nyhetskällor och mappar, poddar och SonarTube-favoriter. Anslut med en tillfällig kod. Favoritartiklar bevaras där de stöds. Manuell synkronisering hanterar borttagningar och diagnostikloggar. Även kompatibla modulinställningar synkroniseras, inklusive söktyp, väderort och klippläge. Separata kontroller för samlingar och inställningar, med en gräns på 32 KB för inställningar. Förenklad installation: välj att börja eller ange en kod vid första besöket; anslutna enheter visar synkroniseringsåtgärder. Alternativen är separata. Felet med den interna posten Favoritartiklar har rättats: den förblir lokal och behandlas inte som en RSS-källa. Automatisk bakgrundssynkronisering vid start och under användning samlar ändringar. Molnfönstret visar status och senaste synkronisering. Om servern inte svarar kan appen användas utan automatiska varningar; fel loggas och försöken upprepas med ökande väntetider. Inställningarna överför också Sonarpad-aktiveringen utan att koden behöver anges igen.

@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+Version 0.9.26 – 2026-11-06
+
+1. Tastenkürzel: Absturz nach der Warnung vor einer bereits belegten Tastenkombination in den Optionen behoben. Nach Bestätigung mit OK kehrt der Fokus zum vorherigen Steuerelement zurück; das bestehende Tastenkürzel bleibt unverändert.
+
+2. Die Suche nach Orten und Unternehmen ist jetzt in allen Sprachen verfügbar, mit internationalen Ergebnissen, Beschreibungen, Bewertungen, Anzahl der Rezensionen, Öffnungszeiten und Websites, soweit vorhanden. In der italienischen Oberfläche ersetzt sie die Weißen und Gelben Seiten; deren Ergebnisse sowie die Namens- und Telefonnummernsuche bleiben erhalten. In anderen Sprachen ist nur die Suche nach Orten und Unternehmen verfügbar.
+
 Version 0.9.25 – 2026-11-06
 
 1. Cloud-Synchronisierung zwischen Windows, Mac und Mobilgeräten für Radio- und TV-Favoriten, eigene Nachrichtenquellen und Ordner, Podcasts und SonarTube-Favoriten hinzugefügt. Verbindung über einen temporären Code. Artikel-Favoriten bleiben erhalten, soweit unterstützt. Manuelle Synchronisierung mit Löschungen und Diagnoseprotokollen. Auch kompatible Moduleinstellungen werden synchronisiert, darunter Suchtyp, Wetterort und Schnittmodus. Separate Steuerung für Sammlungen und Einstellungen; Einstellungen sind auf 32 KB begrenzt. Vereinfachte Einrichtung: Beim ersten Aufruf starten oder einen Code eingeben; verbundene Geräte zeigen Synchronisierungsaktionen. Die Optionen sind getrennt. Ein Fehler durch den internen Eintrag Lieblingsartikel wurde behoben: Er bleibt lokal und wird nicht als RSS-Quelle behandelt. Automatische Hintergrundsynchronisierung beim Start und während der Nutzung fasst Änderungen zusammen. Das Cloud-Fenster zeigt Status und letzte Synchronisierung. Bei Serverausfall bleibt die App ohne automatische Warnungen nutzbar; Fehler werden protokolliert und Wiederholungen erfolgen mit steigenden Wartezeiten. Die Einstellungssynchronisierung überträgt auch die Sonarpad-Aktivierung ohne erneute Codeeingabe.

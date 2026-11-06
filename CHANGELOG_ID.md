@@ -1,5 +1,11 @@
 # Catatan perubahan
 
+Version 0.9.26 – 2026-11-06
+
+1. Pintasan keyboard: memperbaiki crash setelah peringatan kombinasi tombol yang sudah digunakan di Opsi. Menutup peringatan dengan OK mengembalikan fokus ke kontrol sebelumnya dan tidak mengubah pintasan yang ada.
+
+2. Pencarian tempat dan usaha tersedia dalam semua bahasa, dengan hasil internasional, deskripsi, penilaian, jumlah ulasan, jam buka, dan situs web jika tersedia. Di antarmuka Italia, fitur ini menggantikan Halaman Putih dan Kuning sambil mempertahankan hasil serta pencarian nama dan nomor telepon. Bahasa lain hanya menyediakan pencarian tempat dan usaha.
+
 Version 0.9.25 – 2026-11-06
 
 1. Ditambahkan sinkronisasi cloud antara Windows, Mac, dan seluler: radio dan TV favorit, sumber dan folder berita pribadi, podcast, serta favorit SonarTube. Hubungkan dengan kode sementara. Artikel favorit dipertahankan jika didukung. Sinkronisasi manual menangani penghapusan dan log diagnostik. Preferensi modul yang kompatibel juga disinkronkan, termasuk jenis pencarian, kota cuaca, dan mode pemotongan. Kontrol terpisah untuk koleksi dan preferensi, dengan batas 32 KB untuk preferensi. Penyiapan disederhanakan: saat pertama dibuka, pilih mulai atau masukkan kode; perangkat tertaut menampilkan tindakan sinkronisasi. Opsi dipisahkan. Kesalahan dari entri internal Artikel favorit diperbaiki: entri ini tetap lokal dan bukan sumber RSS. Sinkronisasi otomatis di latar belakang saat mulai dan selama penggunaan menggabungkan perubahan. Jendela cloud menampilkan status dan sinkronisasi terakhir. Jika server tidak merespons, aplikasi tetap dapat digunakan tanpa peringatan otomatis; kesalahan dicatat dan percobaan diulang dengan jeda bertambah. Preferensi juga mentransfer aktivasi Sonarpad tanpa memasukkan ulang kode.

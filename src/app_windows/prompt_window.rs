@@ -1478,7 +1478,8 @@ fn credentials_prompt_wndproc_inner(
                     let quaternary_type_label = &config.quaternary_type_label;
                     let quaternary_options = &config.quaternary_options;
                     let quaternary_selected_index = config.quaternary_selected_index;
-                    let focus_primary_field = config.focus_primary_field;
+                    let focus_primary_field = config.focus_primary_field
+                        || (options.is_empty() && secondary_options.is_empty());
                     let primary_label = &config.primary_label;
                     let primary_labels = &config.primary_labels;
                     let secondary_label = &config.secondary_label;
@@ -1529,7 +1530,15 @@ fn credentials_prompt_wndproc_inner(
                             None,
                         )
                     };
-                    y += 36;
+                    if options.is_empty() {
+                        unsafe {
+                            ShowWindow(kind_label, SW_HIDE);
+                            ShowWindow(kind_combo, SW_HIDE);
+                            EnableWindow(kind_combo, false);
+                        }
+                    } else {
+                        y += 36;
+                    }
                     let secondary_kind_label = unsafe {
                         CreateWindowExW(
                             Default::default(),
@@ -2006,6 +2015,8 @@ fn credentials_prompt_wndproc_inner(
                     unsafe {
                         if focus_primary_field {
                             SetFocus(user_edit);
+                        } else if options.is_empty() {
+                            SetFocus(secondary_kind_combo);
                         } else {
                             SetFocus(kind_combo);
                         }
@@ -2388,8 +2399,12 @@ fn focus_credentials_prompt_initial_control(hwnd: HWND, reason: &str) {
     let target = crate::with_raw_mut_ptr_safe(ptr, |data| match &data.mode {
         CredentialsPromptMode::Credentials => crate::get_dlg_item_safe(hwnd, 201),
         CredentialsPromptMode::DirectorySearch(config) => {
-            if config.focus_primary_field {
+            if config.focus_primary_field
+                || (config.options.is_empty() && config.secondary_options.is_empty())
+            {
                 crate::get_dlg_item_safe(hwnd, 201)
+            } else if config.options.is_empty() {
+                crate::get_dlg_item_safe(hwnd, 207)
             } else {
                 crate::get_dlg_item_safe(hwnd, 204)
             }

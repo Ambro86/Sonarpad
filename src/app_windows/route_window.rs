@@ -199,7 +199,7 @@ fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> 
     })
 }
 
-fn route_country_label(language: Language, code: &str, fallback: &str) -> String {
+pub(crate) fn route_country_label(language: Language, code: &str, fallback: &str) -> String {
     let key = format!("options.podcast_country.{code}");
     let label = i18n::tr(language, &key);
     if label == key {
@@ -209,14 +209,14 @@ fn route_country_label(language: Language, code: &str, fallback: &str) -> String
     }
 }
 
-fn normalize_route_country(country: &str) -> Option<&'static str> {
+pub(crate) fn normalize_route_country(country: &str) -> Option<&'static str> {
     let normalized = country.trim().to_ascii_lowercase();
     podcasts_window::podcast_directory_country_options()
         .iter()
         .find_map(|(code, _)| (*code == normalized).then_some(*code))
 }
 
-fn default_route_country(language: Language) -> &'static str {
+pub(crate) fn default_route_country(language: Language) -> &'static str {
     match language {
         Language::Italian => "it",
         Language::German => "de",

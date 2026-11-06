@@ -1,5 +1,11 @@
 # Journal des modifications
 
+Version 0.9.26 – 2026-11-06
+
+1. Raccourcis clavier : correction d’un plantage après l’avertissement signalant une combinaison déjà attribuée dans les Options. Fermer l’avertissement avec OK rétablit le focus sur le contrôle précédent sans modifier le raccourci existant.
+
+2. Ajout de la recherche de lieux et d’activités dans toutes les langues, avec des résultats internationaux, descriptions, notes, nombre d’avis, horaires et sites web lorsqu’ils sont disponibles. Dans l’interface italienne, elle remplace les Pages blanches et jaunes tout en conservant leurs résultats et les recherches par nom ou numéro de téléphone. Les autres langues proposent uniquement la recherche de lieux et d’activités.
+
 Version 0.9.25 – 2026-11-06
 
 1. Ajout de la synchronisation cloud entre Windows, Mac et mobile pour les favoris radio et TV, les sources et dossiers personnels d’actualités, les podcasts et les favoris SonarTube. Association par code temporaire. Les articles favoris sont conservés lorsque cette fonction est prise en charge. Synchronisation manuelle avec suppressions et journaux de diagnostic. Les préférences compatibles des modules sont également synchronisées : type de recherche, ville météo et mode de découpe. Commandes séparées pour les collections et les préférences, limitées à 32 Ko. Configuration simplifiée : au premier accès, choisir de démarrer ou de saisir un code ; les appareils associés affichent les actions de synchronisation. Les options sont séparées. Correction de l’erreur liée à l’entrée interne Articles favoris, désormais locale et non traitée comme source RSS. La synchronisation automatique en arrière-plan au démarrage et pendant l’utilisation regroupe les modifications. La fenêtre cloud affiche l’état et la dernière synchronisation. Si le serveur ne répond pas, l’application reste utilisable sans alerte automatique ; les erreurs sont journalisées et les tentatives espacées progressivement. Les préférences transfèrent aussi l’activation de Sonarpad sans ressaisir le code.

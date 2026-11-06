@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+Version 0.9.26 – 2026-11-06
+
+1. Skróty klawiaturowe: naprawiono awarię po ostrzeżeniu o już przypisanej kombinacji klawiszy w Opcjach. Zamknięcie ostrzeżenia przyciskiem OK przywraca fokus na poprzedni element sterujący i nie zmienia istniejącego skrótu.
+
+2. Dodano wyszukiwanie miejsc i firm we wszystkich językach, z wynikami międzynarodowymi, opisami, ocenami, liczbą opinii, godzinami otwarcia i stronami internetowymi, gdy są dostępne. We włoskim interfejsie zastępuje ono Białe i Żółte Strony, zachowując ich wyniki oraz wyszukiwanie nazwisk i numerów telefonu. W pozostałych językach dostępne jest tylko wyszukiwanie miejsc i firm.
+
 Version 0.9.25 – 2026-11-06
 
 1. Dodano synchronizację w chmurze między Windows, Mac i urządzeniami mobilnymi: ulubione radia i TV, własne źródła i foldery wiadomości, podcasty oraz ulubione SonarTube. Łączenie kodem tymczasowym. Ulubione artykuły są zachowywane tam, gdzie są obsługiwane. Synchronizacja ręczna uwzględnia usunięcia i dzienniki diagnostyczne. Synchronizowane są również zgodne preferencje modułów: typ wyszukiwania, miasto pogody i tryb przycinania. Oddzielne ustawienia dla kolekcji i preferencji, z limitem 32 KB dla preferencji. Uproszczona konfiguracja: przy pierwszym użyciu wybiera się rozpoczęcie lub wpisanie kodu; powiązane urządzenia pokazują działania synchronizacji. Opcje są oddzielone. Naprawiono błąd wewnętrznej pozycji Ulubione artykuły, która pozostaje lokalna i nie jest źródłem RSS. Automatyczna synchronizacja w tle przy uruchomieniu i podczas używania grupuje zmiany. Okno chmury pokazuje stan i ostatnią synchronizację. Gdy serwer nie odpowiada, aplikacja działa bez automatycznych alertów; błędy są zapisywane, a próby ponawiane z rosnącymi przerwami. Preferencje przenoszą również aktywację Sonarpad bez ponownego wpisywania kodu.

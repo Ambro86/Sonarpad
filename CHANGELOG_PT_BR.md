@@ -1,5 +1,11 @@
 # Changelog
 
+Version 0.9.26 – 2026-11-06
+
+1. Atalhos de teclado: corrigido um encerramento inesperado após o aviso de combinação já atribuída nas Opções. Ao fechar o aviso com OK, o foco retorna ao controle anterior e o atalho existente permanece inalterado.
+
+2. Adicionada a busca de lugares e empresas em todos os idiomas, com resultados internacionais, descrições, notas, quantidade de avaliações, horários e sites quando disponíveis. Na interface italiana substitui as Páginas Brancas e Amarelas, mantendo seus resultados e as buscas por nome e telefone. Nos demais idiomas está disponível apenas a busca de lugares e empresas.
+
 Version 0.9.25 – 2026-11-06
 
 1. Adicionada sincronização na nuvem entre Windows, Mac e dispositivos móveis: favoritos de rádio e TV, fontes e pastas pessoais de notícias, podcasts e favoritos do SonarTube. Ligação por código temporário. Os artigos favoritos são preservados quando suportados. Sincronização manual com eliminações e registos de diagnóstico. Também são sincronizadas as preferências compatíveis: tipo de pesquisa, cidade da meteorologia e modo de corte. Controlos separados para coleções e preferências, com um limite de 32 KB para estas últimas. Configuração simplificada: no primeiro acesso, escolher iniciar ou inserir um código; os dispositivos vinculados mostram ações de sincronização. As opções ficam separadas. Corrigido o erro da entrada interna Artigos favoritos, que permanece local e não é tratada como fonte RSS. A sincronização automática em segundo plano ao iniciar e durante o uso agrupa alterações. A janela da nuvem mostra o estado e a última sincronização. Se o servidor não responder, o aplicativo continua utilizável sem alertas automáticos; registra erros e repete tentativas com intervalos crescentes. As preferências também transferem a ativação do Sonarpad sem inserir o código novamente.

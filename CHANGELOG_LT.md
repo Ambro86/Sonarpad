@@ -1,5 +1,11 @@
 # Pakeitimų žurnalas
 
+Version 0.9.26 – 2026-11-06
+
+1. Spartieji klavišai: ištaisyta programos strigtis po įspėjimo apie jau priskirtą klavišų derinį Parinktyse. Uždarius įspėjimą mygtuku Gerai, fokusas grįžta į ankstesnį valdiklį, o esamas derinys nekeičiamas.
+
+2. Vietų ir įmonių paieška dabar prieinama visomis kalbomis: tarptautiniai rezultatai, aprašymai, įvertinimai, atsiliepimų skaičius, darbo laikas ir svetainės, kai šie duomenys pateikti. Itališkoje sąsajoje ji pakeičia Baltuosius ir Geltonuosius puslapius, išsaugodama jų rezultatus bei paiešką pagal vardą ir telefono numerį. Kitomis kalbomis galima tik vietų ir įmonių paieška.
+
 Version 0.9.25 – 2026-11-06
 
 1. Pridėtas debesies sinchronizavimas tarp Windows, Mac ir mobiliųjų įrenginių: mėgstamas radijas ir TV, asmeniniai naujienų šaltiniai ir aplankai, tinklalaidės bei SonarTube parankiniai. Susiejimas laikinu kodu. Mėgstami straipsniai išsaugomi ten, kur palaikomi. Rankinis sinchronizavimas apima šalinimą ir diagnostikos žurnalus. Taip pat sinchronizuojamos suderinamos modulių nuostatos: paieškos tipas, orų miestas ir kirpimo režimas. Atskiras rinkinių ir nuostatų valdymas; nuostatų dydžio riba – 32 KB. Supaprastinta sąranka: pirmą kartą pasirenkama pradėti arba įvesti kodą; susietuose įrenginiuose rodomi sinchronizavimo veiksmai. Parinktys atskirtos. Ištaisyta vidinio įrašo Mėgstami straipsniai klaida: jis lieka vietinis ir nelaikomas RSS šaltiniu. Automatinis sinchronizavimas fone paleidžiant ir naudojant programą sujungia pakeitimus. Debesijos lange rodomi būsena ir paskutinis sinchronizavimas. Serveriui neatsakant programa veikia be automatinių įspėjimų; klaidos registruojamos, bandymai kartojami didėjančiais intervalais. Nuostatos taip pat perduoda Sonarpad aktyvavimą, nereikalaujant vėl įvesti kodo.

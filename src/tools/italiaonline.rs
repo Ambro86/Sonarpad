@@ -1,3 +1,6 @@
+#[path = "places.rs"]
+mod places;
+
 use base64::Engine;
 use quick_xml::{Reader, events::Event};
 use std::collections::HashSet;
@@ -20,8 +23,8 @@ pub(crate) enum DirectoryKind {
 impl DirectoryKind {
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::PagineBianche => "Pagine Bianche",
-            Self::PagineGialle => "Pagine Gialle",
+            Self::PagineBianche => "Ricerca nominativi",
+            Self::PagineGialle => "Luoghi e attività",
         }
     }
 
@@ -42,7 +45,7 @@ impl DirectoryKind {
     pub(crate) fn primary_field_label(self) -> &'static str {
         match self {
             Self::PagineBianche => "Inserisci nome o cognome",
-            Self::PagineGialle => "Inserisci attività",
+            Self::PagineGialle => "Inserisci luogo o attività",
         }
     }
 
@@ -59,6 +62,8 @@ pub(crate) struct SearchQuery {
     pub(crate) kind: DirectoryKind,
     pub(crate) what: String,
     pub(crate) where_: String,
+    pub(crate) country: String,
+    pub(crate) language: String,
     pub(crate) page: usize,
     pub(crate) reverse: bool,
 }
@@ -72,6 +77,7 @@ pub(crate) struct SearchResult {
     pub(crate) province: Option<String>,
     pub(crate) category: Option<String>,
     pub(crate) phones: Vec<String>,
+    pub(crate) detail: Option<DetailResponse>,
 }
 
 #[derive(Clone, Debug)]
@@ -150,6 +156,110 @@ pub(crate) fn normalize_phone(input: &str) -> Result<String, String> {
         return Err("Inserisci un numero di telefono completo di prefisso.".into());
     }
     Ok(number.into())
+}
+
+pub(crate) fn search_places_only(query: &SearchQuery) -> Result<SearchOutcome, String> {
+    let primary = places::search(&query.what, &query.where_, &query.country, &query.language)?;
+    merge_activities(
+        query,
+        Ok(primary),
+        Ok(SearchOutcome::Results(SearchResponse {
+            display_where: Some(query.where_.clone()),
+            current_page: 1,
+            is_last_page: true,
+            results: Vec::new(),
+        })),
+    )
+}
+
+pub(crate) fn search_activities(query: &SearchQuery) -> Result<SearchOutcome, String> {
+    if !query.reverse && query.kind == DirectoryKind::PagineGialle && query.country != "it" {
+        return search_places_only(query);
+    }
+    if query.reverse || query.kind != DirectoryKind::PagineGialle || query.page > 1 {
+        return search(query);
+    }
+    let (primary, legacy) = std::thread::scope(|scope| {
+        let worker = scope
+            .spawn(|| places::search(&query.what, &query.where_, &query.country, &query.language));
+        let legacy = search(query);
+        (
+            worker
+                .join()
+                .unwrap_or_else(|_| Err("Ricerca luoghi interrotta.".into())),
+            legacy,
+        )
+    });
+    merge_activities(query, primary, legacy)
+}
+
+fn merge_activities(
+    query: &SearchQuery,
+    primary: Result<Vec<places::Place>, String>,
+    legacy: Result<SearchOutcome, String>,
+) -> Result<SearchOutcome, String> {
+    let primary = match primary {
+        Ok(items) if !items.is_empty() => items,
+        _ => return legacy,
+    };
+    let mut response = match legacy {
+        Ok(SearchOutcome::Results(response)) => response,
+        Ok(ambiguous) => return Ok(ambiguous),
+        Err(_) => SearchResponse {
+            display_where: Some(query.where_.clone()),
+            current_page: 1,
+            is_last_page: true,
+            results: Vec::new(),
+        },
+    };
+    response.results.retain(|item| {
+        !primary.iter().any(|place| {
+            places::same_place(
+                place,
+                &item.name,
+                item.address.as_deref(),
+                item.city.as_deref(),
+                &item.phones,
+            )
+        })
+    });
+    let mut results: Vec<_> = primary
+        .into_iter()
+        .map(|place| {
+            let detail = DetailResponse {
+                title: place.nome.clone(),
+                body: place.body(&places::PlaceText::new(|key| {
+                    let language =
+                        serde_json::from_value(serde_json::Value::String(query.language.clone()))
+                            .unwrap_or(crate::settings::Language::English);
+                    crate::i18n::tr(language, &format!("places.detail.{key}"))
+                })),
+            };
+            SearchResult {
+                id: format!("place:{}", place.id),
+                name: place.nome,
+                address: place.indirizzo,
+                city: None,
+                province: None,
+                category: (!place.categorie.is_empty()).then(|| place.categorie.join(", ")),
+                phones: place.telefoni,
+                detail: Some(detail),
+            }
+        })
+        .collect();
+    results.extend(response.results);
+    response.results = results;
+    Ok(SearchOutcome::Results(response))
+}
+
+pub(crate) fn load_result_detail(
+    query: &SearchQuery,
+    result: &SearchResult,
+) -> Result<DetailResponse, String> {
+    match &result.detail {
+        Some(detail) => Ok(detail.clone()),
+        None => load_detail(query, &result.id),
+    }
 }
 
 pub(crate) fn search(query: &SearchQuery) -> Result<SearchOutcome, String> {
@@ -335,6 +445,7 @@ fn parse_search_response(xml: &str, kind: DirectoryKind) -> Result<SearchOutcome
                         province: None,
                         category: None,
                         phones: Vec::new(),
+                        detail: None,
                     });
                 }
                 path.push(name);
@@ -798,6 +909,116 @@ fn resolve_italiaonline_secret_key() -> Result<Vec<u8>, String> {
 }
 
 #[cfg(test)]
+mod activities_tests {
+    use super::*;
+
+    fn query() -> SearchQuery {
+        SearchQuery {
+            kind: DirectoryKind::PagineGialle,
+            what: "bar".into(),
+            where_: "Torino".into(),
+            page: 1,
+            reverse: false,
+            country: "it".into(),
+            language: "it".into(),
+        }
+    }
+
+    fn place() -> places::Place {
+        serde_json::from_value(serde_json::json!({"id":"new","nome":"Bar Uno","indirizzo":"Via Roma, 12, Torino",
+            "telefoni":["01112345"],"categorie":["Bar"],"descrizione":null,"stelle":4.5,"numero_recensioni":23})).unwrap()
+    }
+
+    fn legacy() -> SearchOutcome {
+        SearchOutcome::Results(SearchResponse {
+            display_where: Some("Torino".into()),
+            current_page: 1,
+            is_last_page: false,
+            results: vec![
+                SearchResult {
+                    id: "old".into(),
+                    name: "Bar Uno".into(),
+                    address: Some("Via Roma 12".into()),
+                    city: Some("Torino".into()),
+                    province: None,
+                    category: None,
+                    phones: vec!["01112345".into()],
+                    detail: None,
+                },
+                SearchResult {
+                    id: "other".into(),
+                    name: "Bar Due".into(),
+                    address: None,
+                    city: None,
+                    province: None,
+                    category: None,
+                    phones: vec![],
+                    detail: None,
+                },
+            ],
+        })
+    }
+
+    #[test]
+    fn merge_preserves_legacy_pagination_and_uses_inline_details() {
+        let SearchOutcome::Results(response) =
+            merge_activities(&query(), Ok(vec![place()]), Ok(legacy())).unwrap()
+        else {
+            panic!("unexpected ambiguity");
+        };
+        assert_eq!(
+            response
+                .results
+                .iter()
+                .map(|r| r.id.as_str())
+                .collect::<Vec<_>>(),
+            ["place:new", "other"]
+        );
+        assert!(!response.is_last_page);
+        let detail = load_result_detail(&query(), &response.results[0]).unwrap();
+        assert!(detail.body.contains("4.5 su 5 stelle (23 recensioni)"));
+        assert!(response.results[1].detail.is_none());
+    }
+
+    #[test]
+    fn either_source_can_fail_without_losing_the_other() {
+        let SearchOutcome::Results(old) =
+            merge_activities(&query(), Err("unavailable".into()), Ok(legacy())).unwrap()
+        else {
+            panic!();
+        };
+        assert_eq!(old.results.len(), 2);
+        let SearchOutcome::Results(new) =
+            merge_activities(&query(), Ok(vec![place()]), Err("unavailable".into())).unwrap()
+        else {
+            panic!();
+        };
+        assert_eq!(new.results[0].id, "place:new");
+        assert!(
+            merge_activities(
+                &query(),
+                Err("unavailable".into()),
+                Err("unavailable".into())
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn ambiguous_legacy_address_still_requests_selection() {
+        let outcome = merge_activities(
+            &query(),
+            Ok(vec![place()]),
+            Ok(SearchOutcome::AmbiguousAddress(AmbiguousPlaceResponse {
+                places: vec!["Via Roma".into()],
+            })),
+        )
+        .unwrap();
+        assert!(matches!(outcome, SearchOutcome::AmbiguousAddress(_)));
+    }
+}
+
+#[cfg(test)]
 mod reverse_tests {
     use super::*;
 
@@ -821,6 +1042,8 @@ mod reverse_tests {
             where_: "Roma".into(),
             page: 2,
             reverse: true,
+            country: "it".into(),
+            language: "it".into(),
         };
         let url = query_url(&query, None);
         let params: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();

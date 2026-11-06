@@ -51,16 +51,17 @@ use windows::Win32::UI::WindowsAndMessaging::{
     CB_SETITEMDATA, CBN_SELCHANGE, CBS_DROPDOWNLIST, CREATESTRUCTW, CW_USEDEFAULT, CreatePopupMenu,
     CreateWindowExW, DefWindowProcW, ES_AUTOHSCROLL, ES_PASSWORD, ES_READONLY, GWLP_USERDATA,
     GetClassNameW, GetClientRect, GetCursorPos, GetParent, GetScrollInfo, GetWindowLongPtrW,
-    GetWindowTextLengthW, GetWindowTextW, HMENU, IDC_ARROW, IDYES, LoadCursorW, MB_ICONQUESTION,
-    MB_ICONWARNING, MB_OK, MB_YESNO, MSG, MessageBoxW, MoveWindow, PostMessageW, RegisterClassW,
-    SB_BOTTOM, SB_LINEDOWN, SB_LINEUP, SB_PAGEDOWN, SB_PAGEUP, SB_THUMBPOSITION, SB_THUMBTRACK,
-    SB_TOP, SB_VERT, SCROLLINFO, SIF_PAGE, SIF_POS, SIF_RANGE, SIF_TRACKPOS, SW_HIDE, SW_SHOW,
-    SW_SHOWNORMAL, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SendMessageW, SetForegroundWindow,
-    SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow, TPM_RETURNCMD, TPM_RIGHTBUTTON,
-    TrackPopupMenu, WINDOW_STYLE, WM_APP, WM_CLOSE, WM_COMMAND, WM_CREATE, WM_DESTROY, WM_GETFONT,
-    WM_KEYDOWN, WM_MOUSEWHEEL, WM_NCDESTROY, WM_NEXTDLGCTL, WM_NOTIFY, WM_NULL, WM_SETFOCUS,
-    WM_SETFONT, WM_VSCROLL, WNDCLASSW, WS_BORDER, WS_CAPTION, WS_CHILD, WS_EX_CLIENTEDGE,
-    WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_SYSMENU, WS_TABSTOP, WS_VISIBLE, WS_VSCROLL,
+    GetWindowTextLengthW, GetWindowTextW, HMENU, IDC_ARROW, IDYES, IsChild, LoadCursorW,
+    MB_ICONERROR, MB_ICONQUESTION, MB_ICONWARNING, MB_OK, MB_YESNO, MSG, MessageBoxW, MoveWindow,
+    PostMessageW, RegisterClassW, SB_BOTTOM, SB_LINEDOWN, SB_LINEUP, SB_PAGEDOWN, SB_PAGEUP,
+    SB_THUMBPOSITION, SB_THUMBTRACK, SB_TOP, SB_VERT, SCROLLINFO, SIF_PAGE, SIF_POS, SIF_RANGE,
+    SIF_TRACKPOS, SW_HIDE, SW_SHOW, SW_SHOWNORMAL, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+    SendMessageW, SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow,
+    TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WINDOW_STYLE, WM_APP, WM_CLOSE, WM_COMMAND,
+    WM_CREATE, WM_DESTROY, WM_GETFONT, WM_KEYDOWN, WM_MOUSEWHEEL, WM_NCDESTROY, WM_NEXTDLGCTL,
+    WM_NOTIFY, WM_NULL, WM_SETFOCUS, WM_SETFONT, WM_VSCROLL, WNDCLASSW, WS_BORDER, WS_CAPTION,
+    WS_CHILD, WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_SYSMENU, WS_TABSTOP,
+    WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::{PCWSTR, PWSTR, w};
 
@@ -826,6 +827,26 @@ fn modifier_down_any(vks: &[i32]) -> bool {
     vks.iter().copied().any(modifier_down)
 }
 
+// Options stores OptionsDialogState in GWLP_USERDATA, not the main AppState.
+// Use the modal message box that does not access editor state for this owner.
+fn show_options_error(hwnd: HWND, language: Language, message: &str) {
+    crate::log_debug(&format!("Options error shown: {message}"));
+    let previous_focus = crate::get_focus_safe();
+    let wide = to_wide(message);
+    let title = to_wide(&crate::error_title(language));
+    crate::message_box_modal(
+        hwnd,
+        PCWSTR(wide.as_ptr()),
+        PCWSTR(title.as_ptr()),
+        MB_OK | MB_ICONERROR,
+    );
+    if crate::is_window_handle_valid(previous_focus)
+        && unsafe { IsChild(hwnd, previous_focus).as_bool() }
+    {
+        crate::set_focus_safe(previous_focus);
+    }
+}
+
 fn move_options_focus_tab(hwnd: HWND, backwards: bool) {
     let current = crate::get_focus_safe();
     let next = crate::get_next_dlg_tab_item_safe(hwnd, current, backwards);
@@ -914,7 +935,7 @@ pub fn handle_navigation(hwnd: HWND, msg: &MSG) -> bool {
             })
             .flatten();
             if let Some((language, message)) = conflict {
-                crate::show_error(hwnd, language, &message);
+                show_options_error(hwnd, language, &message);
                 update_shortcut_binding_text(hwnd);
                 return true;
             }
@@ -7434,7 +7455,7 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                         })
                         .flatten();
                         if let Some((language, message)) = conflict {
-                            crate::show_error(hwnd, language, &message);
+                            show_options_error(hwnd, language, &message);
                             update_shortcut_binding_text(hwnd);
                             return LRESULT(0);
                         }
@@ -11602,7 +11623,7 @@ fn prompt_custom_pause_milliseconds(owner: HWND, language: Language) -> Option<u
         "pause_tag.custom.invalid",
         &[("min", &min), ("max", &max)],
     );
-    crate::show_error(owner, language, &message);
+    show_options_error(owner, language, &message);
     None
 }
 
@@ -15822,7 +15843,7 @@ pub fn refresh_gemini_models(hwnd: HWND) {
     let api_key = window_text(edit_key);
     if api_key.trim().is_empty() {
         let language = crate::load_settings().language;
-        crate::show_error(hwnd, language, &i18n::tr(language, "options.gemini_no_key"));
+        show_options_error(hwnd, language, &i18n::tr(language, "options.gemini_no_key"));
         return;
     }
     let api_key = api_key.trim().to_string();
@@ -15908,7 +15929,7 @@ fn handle_next_gemini_models_payload(hwnd: HWND) {
                     "options.gemini_error_models",
                     &[("error", &error)],
                 );
-                crate::show_error(hwnd, payload.language, &err_msg);
+                show_options_error(hwnd, payload.language, &err_msg);
             }
         }
         crate::log_if_err!(crate::set_window_text_w_safe(

@@ -16,39 +16,21 @@ const ITALIAONLINE_NEXT_PAGE_ID: &str = "__italiaonline_next_page__";
 
 pub fn open(parent: HWND) {
     let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
-    if language != Language::Italian {
-        return;
-    }
-    if !crate::app_windows::rai_audiodescrizioni_window::ensure_rai_luce_access_with_title(
-        parent,
-        language,
-        Some("Codice Sonarpad"),
-    ) {
-        return;
-    }
 
     let initial_query = SearchQuery {
-        kind: DirectoryKind::PagineBianche,
+        kind: DirectoryKind::PagineGialle,
         what: String::new(),
         where_: String::new(),
         page: 1,
         reverse: false,
+        country: "it".into(),
+        language: "it".into(),
     };
     run_search_flow(parent, language, initial_query);
 }
 
 pub fn reopen_last(parent: HWND) {
     let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
-    if language != Language::Italian {
-        return;
-    }
-    if !crate::app_windows::rai_audiodescrizioni_window::ensure_rai_luce_access_with_title(
-        parent,
-        language,
-        Some("Codice Sonarpad"),
-    ) {
-        return;
-    }
     let Some((query, selected_id)) = with_state(parent, |state| {
         Some((
             state.last_italiaonline_query.clone()?,
@@ -147,22 +129,35 @@ fn prompt_search_query(
     language: Language,
     initial: &SearchQuery,
 ) -> Option<SearchQuery> {
+    if language != Language::Italian {
+        return prompt_search_query_with_focus(
+            parent,
+            language,
+            &SearchQuery {
+                kind: DirectoryKind::PagineGialle,
+                reverse: false,
+                page: 1,
+                ..initial.clone()
+            },
+            false,
+        );
+    }
     let selection = choose_combo_option_dialog(
         parent,
         language,
-        "Ricerca nominativi".into(),
+        "Cerca luoghi e attività".into(),
         "Tipo di ricerca".into(),
         vec![
-            "Pagine Bianche".into(),
-            "Pagine Gialle".into(),
+            "Luoghi e attività".into(),
+            "Ricerca nominativi".into(),
             "Cerca un numero di telefono".into(),
         ],
         if initial.reverse {
             2
         } else if initial.kind == DirectoryKind::PagineGialle {
-            1
-        } else {
             0
+        } else {
+            1
         },
     )?;
     if selection == 2 {
@@ -187,6 +182,8 @@ fn prompt_search_query(
                         where_: String::new(),
                         page: 1,
                         reverse: true,
+                        country: "it".into(),
+                        language: "it".into(),
                     });
                 }
                 Err(error) => show_error(parent, language, &error),
@@ -195,9 +192,9 @@ fn prompt_search_query(
     }
     let initial = SearchQuery {
         kind: if selection == 0 {
-            DirectoryKind::PagineBianche
-        } else {
             DirectoryKind::PagineGialle
+        } else {
+            DirectoryKind::PagineBianche
         },
         reverse: false,
         ..initial.clone()
@@ -212,24 +209,37 @@ fn prompt_search_query_with_focus(
     focus_primary_field: bool,
 ) -> Option<SearchQuery> {
     let (initial_city, initial_address) = split_where_fields(&initial.where_);
-    let kind_options = vec![
-        DirectoryKind::PagineBianche.label().to_string(),
-        DirectoryKind::PagineGialle.label().to_string(),
-    ];
-    let default_kind = match initial.kind {
-        DirectoryKind::PagineBianche => 0,
-        DirectoryKind::PagineGialle => 1,
-    };
+    let countries = crate::app_windows::podcasts_window::podcast_directory_country_options();
+    let saved = with_state(parent, |s| s.settings.places_country.clone()).unwrap_or_default();
+    let country = crate::app_windows::route_window::normalize_route_country(&saved)
+        .unwrap_or_else(|| crate::app_windows::route_window::default_route_country(language));
+    let country_index = countries
+        .iter()
+        .position(|(code, _)| *code == country)
+        .unwrap_or(0);
     let prompt = prompt_window::prompt_directory_search(
         parent,
         prompt_window::PromptDirectoryOptions {
-            title: "Ricerca nominativi".to_string(),
-            type_label: "Tipo".to_string(),
-            options: kind_options,
-            default_selection: default_kind,
-            secondary_type_label: String::new(),
-            secondary_options: Vec::new(),
-            secondary_default_selection: 0,
+            title: if language == Language::Italian {
+                initial.kind.label().to_string()
+            } else {
+                crate::i18n::tr(language, "places.title")
+            },
+            type_label: String::new(),
+            options: Vec::new(),
+            default_selection: 0,
+            secondary_type_label: crate::i18n::tr(language, "route.country_label"),
+            secondary_options: if initial.kind == DirectoryKind::PagineGialle {
+                countries
+                    .iter()
+                    .map(|(code, name)| {
+                        crate::app_windows::route_window::route_country_label(language, code, name)
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            },
+            secondary_default_selection: country_index,
             tertiary_type_label: String::new(),
             tertiary_options: Vec::new(),
             tertiary_default_selection: 0,
@@ -238,30 +248,36 @@ fn prompt_search_query_with_focus(
             quaternary_options: Vec::new(),
             quaternary_default_selection: 0,
             focus_primary_field,
-            primary_label: initial.kind.primary_field_label().to_string(),
-            primary_labels: vec![
-                DirectoryKind::PagineBianche
-                    .primary_field_label()
-                    .to_string(),
-                DirectoryKind::PagineGialle
-                    .primary_field_label()
-                    .to_string(),
-            ],
+            primary_label: if language == Language::Italian {
+                initial.kind.primary_field_label().to_string()
+            } else {
+                crate::i18n::tr(language, "places.query")
+            },
+            primary_labels: Vec::new(),
             primary_default: initial.what.clone(),
-            secondary_label: "Città".to_string(),
+            secondary_label: crate::i18n::tr(language, "places.city"),
             secondary_default: initial_city,
-            tertiary_label: "Indirizzo (facoltativo)".to_string(),
+            tertiary_label: crate::i18n::tr(language, "places.address"),
             tertiary_default: initial_address,
             checkbox_label: String::new(),
             checkbox_default: false,
         },
         language,
     )?;
-    let kind = if prompt.selected_index == 0 {
-        DirectoryKind::PagineBianche
-    } else {
-        DirectoryKind::PagineGialle
-    };
+    let kind = initial.kind;
+    let country = countries
+        .get(prompt.secondary_selected_index)
+        .map(|(code, _)| *code)
+        .unwrap_or(country)
+        .to_string();
+    if kind == DirectoryKind::PagineGialle
+        && let Some(settings) = with_state(parent, |state| {
+            state.settings.places_country = country.clone();
+            state.settings.clone()
+        })
+    {
+        crate::settings::save_settings(settings);
+    }
     let trimmed_what = prompt.primary_value.trim();
     if trimmed_what.is_empty() {
         show_error(
@@ -278,6 +294,8 @@ fn prompt_search_query_with_focus(
                 where_: compose_where_value(&prompt.secondary_value, &prompt.tertiary_value),
                 page: 1,
                 reverse: false,
+                country: country.clone(),
+                language: crate::audio_description::language_code(language).into(),
             },
             true,
         );
@@ -290,6 +308,8 @@ fn prompt_search_query_with_focus(
         reverse: false,
         where_: compose_where_value(&prompt.secondary_value, &prompt.tertiary_value),
         page: 1,
+        country: country.clone(),
+        language: crate::audio_description::language_code(language).into(),
     })
 }
 
@@ -321,8 +341,14 @@ fn resolve_search_outcome(
     mut query: SearchQuery,
 ) -> Result<Option<ResolvedSearch>, String> {
     loop {
-        let outcome = if query.reverse {
+        let outcome = if language != Language::Italian {
+            query.kind = DirectoryKind::PagineGialle;
+            query.reverse = false;
+            italiaonline::search_places_only(&query)?
+        } else if query.reverse {
             italiaonline::search_phone(&query)?
+        } else if query.kind == DirectoryKind::PagineGialle {
+            italiaonline::search_activities(&query)?
         } else {
             italiaonline::search(&query)?
         };
@@ -381,7 +407,7 @@ fn browse_results(
     let mut current_selected_id = initial_selected_id;
 
     loop {
-        let title = results_title(&current_query, &current_response);
+        let title = results_title(language, &current_query, &current_response);
         let mut items = Vec::new();
         if current_response.current_page > 1 {
             items.push(MultilineSelectionItem {
@@ -459,7 +485,13 @@ fn browse_results(
                     }
                 }
                 crate::screen_reader_speak("Caricamento dettaglio");
-                match italiaonline::load_detail(&current_query, &id) {
+                match current_response
+                    .results
+                    .iter()
+                    .find(|result| result.id == id)
+                    .ok_or_else(|| "Risultato non più disponibile.".to_string())
+                    .and_then(|result| italiaonline::load_result_detail(&current_query, result))
+                {
                     Ok(detail) => {
                         with_state(parent, |state| {
                             state.last_italiaonline_query = Some(current_query.clone());
@@ -496,11 +528,13 @@ fn browse_results(
     }
 }
 
-fn results_title(query: &SearchQuery, response: &SearchResponse) -> String {
-    let label = if query.reverse {
-        "Numero di telefono"
+fn results_title(language: Language, query: &SearchQuery, response: &SearchResponse) -> String {
+    let label = if language != Language::Italian {
+        crate::i18n::tr(language, "places.title")
+    } else if query.reverse {
+        "Numero di telefono".into()
     } else {
-        query.kind.label()
+        query.kind.label().into()
     };
     let mut title = format!("{} - {}", label, query.what.trim());
     let where_display = response
@@ -586,10 +620,11 @@ fn open_results_document(
     query: &SearchQuery,
     response: &SearchResponse,
 ) -> Result<(), String> {
-    let title = results_title(query, response);
+    let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
+    let title = results_title(language, query, response);
     let mut entries = Vec::new();
     for result in &response.results {
-        let detail = italiaonline::load_detail(query, &result.id).map_err(|err| {
+        let detail = italiaonline::load_result_detail(query, result).map_err(|err| {
             format!(
                 "Impossibile caricare il dettaglio di {}: {err}",
                 result.name
@@ -630,6 +665,8 @@ mod reverse_live_tests {
                 where_: String::new(),
                 page: 1,
                 reverse: true,
+                country: "it".into(),
+                language: "it".into(),
             };
             let resolved = resolve_search_outcome(HWND(0), Language::Italian, query)
                 .unwrap()

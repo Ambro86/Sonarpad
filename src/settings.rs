@@ -853,6 +853,8 @@ pub struct AppSettings {
     #[serde(default)]
     pub route_country: String,
     #[serde(default)]
+    pub places_country: String,
+    #[serde(default)]
     pub podcast_search_provider: PodcastSearchProvider,
     #[serde(default)]
     pub radio_favorites: Vec<RadioFavorite>,
@@ -1426,6 +1428,7 @@ impl Default for AppSettings {
             rai_luce_code: String::new(),
             podcast_directory_country: String::new(),
             route_country: String::new(),
+            places_country: String::new(),
             podcast_search_provider: PodcastSearchProvider::Itunes,
             gemini_api_key: String::new(),
             audio_description_use_sonarpad_ai: false,
