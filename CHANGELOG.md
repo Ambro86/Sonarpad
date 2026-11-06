@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.25 – 2026-11-05
+Version 0.9.25 – 2026-11-06
 
 1. Added cloud sync across Windows, Mac and mobile for favorite radio and TV stations, personal news sources and folders, podcasts and SonarTube favorites, with a temporary pairing code. Favorite articles are preserved where supported. Manual sync handles deletions and includes diagnostic logs. Compatible module preferences also sync, including search type, weather city and cutting mode, with separate controls for collections and preferences and a 32 KB preference limit. Simplified setup: first choose whether to start or enter a code; connected devices show sync actions. Options are kept on a separate page. Fixed sync failures caused by the internal Favorite articles entry, which now stays local and is not treated as an RSS feed. Automatic background sync at startup and while using the app, with batched updates after changes. The cloud window shows the status and last sync time. If the server is unavailable, the app stays usable: no automatic alerts, diagnostic logs and retries with increasing delays. Preference sync also transfers Sonarpad activation to linked devices without entering the code again.
 

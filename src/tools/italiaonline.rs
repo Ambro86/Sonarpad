@@ -265,18 +265,7 @@ fn build_search_url(query: &SearchQuery) -> Result<String, String> {
     let mut serializer = Serializer::new(String::new());
     serializer.append_pair("client", &italiaonline_client()?);
     serializer.append_pair("version", &italiaonline_version()?);
-    let what = if query.reverse {
-        normalize_phone(&query.what)?
-    } else {
-        query.what.trim().to_string()
-    };
-    serializer.append_pair("what", &what);
-    if !query.reverse && !query.where_.trim().is_empty() {
-        serializer.append_pair("where", query.where_.trim());
-    }
-    if query.page > 1 {
-        serializer.append_pair("page", &query.page.to_string());
-    }
+    append_directory_query(&mut serializer, query, None)?;
     Ok(format!(
         "{}{}?{}",
         italiaonline_base_url()?,
@@ -289,7 +278,24 @@ fn build_detail_url(query: &SearchQuery, id: &str) -> Result<String, String> {
     let mut serializer = Serializer::new(String::new());
     serializer.append_pair("client", &italiaonline_client()?);
     serializer.append_pair("version", &italiaonline_version()?);
-    serializer.append_pair("id", id);
+    append_directory_query(&mut serializer, query, Some(id))?;
+    Ok(format!(
+        "{}{}?{}",
+        italiaonline_base_url()?,
+        query.kind.detail_endpoint()?,
+        serializer.finish()
+    ))
+}
+
+// Query semantics are independent of the credentials used by the endpoint.
+fn append_directory_query(
+    serializer: &mut Serializer<'_, String>,
+    query: &SearchQuery,
+    detail_id: Option<&str>,
+) -> Result<(), String> {
+    if let Some(id) = detail_id {
+        serializer.append_pair("id", id);
+    }
     let what = if query.reverse {
         normalize_phone(&query.what)?
     } else {
@@ -299,12 +305,10 @@ fn build_detail_url(query: &SearchQuery, id: &str) -> Result<String, String> {
     if !query.reverse && !query.where_.trim().is_empty() {
         serializer.append_pair("where", query.where_.trim());
     }
-    Ok(format!(
-        "{}{}?{}",
-        italiaonline_base_url()?,
-        query.kind.detail_endpoint()?,
-        serializer.finish()
-    ))
+    if detail_id.is_none() && query.page > 1 {
+        serializer.append_pair("page", &query.page.to_string());
+    }
+    Ok(())
 }
 
 fn parse_search_response(xml: &str, kind: DirectoryKind) -> Result<SearchOutcome, String> {
@@ -796,6 +800,13 @@ fn resolve_italiaonline_secret_key() -> Result<Vec<u8>, String> {
 #[cfg(test)]
 mod reverse_tests {
     use super::*;
+
+    fn query_url(query: &SearchQuery, detail_id: Option<&str>) -> Url {
+        let mut serializer = Serializer::new(String::new());
+        append_directory_query(&mut serializer, query, detail_id).unwrap();
+        Url::parse(&format!("https://example.invalid/?{}", serializer.finish())).unwrap()
+    }
+
     #[test]
     fn reverse_number_normalization_and_url() {
         for number in ["02 02 02", "+39 (02) 02-02", "0039 02.02.02"] {
@@ -811,19 +822,33 @@ mod reverse_tests {
             page: 2,
             reverse: true,
         };
-        let url = Url::parse(&build_search_url(&query).unwrap()).unwrap();
+        let url = query_url(&query, None);
         let params: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
         assert_eq!(params.get("what").unwrap(), "020202");
         assert_eq!(params.get("page").unwrap(), "2");
         assert!(!params.contains_key("where"));
-        let detail = Url::parse(&build_detail_url(&query, "sample").unwrap()).unwrap();
-        assert!(!detail.query_pairs().any(|(k, _)| k == "where"));
+        let detail = query_url(&query, Some("sample"));
+        assert!(
+            !detail
+                .query_pairs()
+                .any(|(k, _)| k == "where" || k == "page")
+        );
+        assert!(
+            detail
+                .query_pairs()
+                .any(|(k, v)| k == "id" && v == "sample")
+        );
+        assert!(
+            detail
+                .query_pairs()
+                .any(|(k, v)| k == "what" && v == "020202")
+        );
         let normal = SearchQuery {
             reverse: false,
             what: "Comune".into(),
             ..query
         };
-        let url = Url::parse(&build_search_url(&normal).unwrap()).unwrap();
+        let url = query_url(&normal, None);
         assert!(url.query_pairs().any(|(k, v)| k == "where" && v == "Roma"));
     }
 }

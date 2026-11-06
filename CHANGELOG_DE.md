@@ -1,6 +1,6 @@
 # Änderungsprotokoll
 
-Version 0.9.25 – 2026-11-05
+Version 0.9.25 – 2026-11-06
 
 1. Cloud-Synchronisierung zwischen Windows, Mac und Mobilgeräten für Radio- und TV-Favoriten, eigene Nachrichtenquellen und Ordner, Podcasts und SonarTube-Favoriten hinzugefügt. Verbindung über einen temporären Code. Artikel-Favoriten bleiben erhalten, soweit unterstützt. Manuelle Synchronisierung mit Löschungen und Diagnoseprotokollen. Auch kompatible Moduleinstellungen werden synchronisiert, darunter Suchtyp, Wetterort und Schnittmodus. Separate Steuerung für Sammlungen und Einstellungen; Einstellungen sind auf 32 KB begrenzt. Vereinfachte Einrichtung: Beim ersten Aufruf starten oder einen Code eingeben; verbundene Geräte zeigen Synchronisierungsaktionen. Die Optionen sind getrennt. Ein Fehler durch den internen Eintrag Lieblingsartikel wurde behoben: Er bleibt lokal und wird nicht als RSS-Quelle behandelt. Automatische Hintergrundsynchronisierung beim Start und während der Nutzung fasst Änderungen zusammen. Das Cloud-Fenster zeigt Status und letzte Synchronisierung. Bei Serverausfall bleibt die App ohne automatische Warnungen nutzbar; Fehler werden protokolliert und Wiederholungen erfolgen mit steigenden Wartezeiten. Die Einstellungssynchronisierung überträgt auch die Sonarpad-Aktivierung ohne erneute Codeeingabe.
 

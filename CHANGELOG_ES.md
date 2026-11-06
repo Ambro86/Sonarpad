@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.25 – 2026-11-05
+Version 0.9.25 – 2026-11-06
 
 1. Añadida la sincronización en la nube entre Windows, Mac y móvil: favoritos de radio y TV, fuentes y carpetas personales de noticias, podcasts y favoritos de SonarTube. Conexión mediante código temporal. Los artículos favoritos se conservan donde son compatibles. Sincronización manual con eliminaciones y registros de diagnóstico. También se sincronizan las preferencias compatibles: tipo de búsqueda, ciudad del tiempo y modo de corte. Controles separados para colecciones y preferencias, con un límite de 32 KB para estas últimas. Configuración simplificada: al entrar por primera vez se elige iniciar o introducir un código; los dispositivos vinculados muestran las acciones de sincronización. Las opciones están separadas. Corregido el error de la entrada interna Artículos favoritos, que permanece local y no se trata como fuente RSS. La sincronización automática en segundo plano al iniciar y durante el uso agrupa los cambios. La ventana de nube muestra el estado y la última sincronización. Si el servidor no responde, la aplicación sigue disponible sin avisos automáticos; registra el error y reintenta con esperas crecientes. Las preferencias también transfieren la activación de Sonarpad sin volver a introducir el código.
 

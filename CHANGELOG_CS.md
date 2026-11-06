@@ -1,6 +1,6 @@
 # Přehled změn
 
-Version 0.9.25 – 2026-11-05
+Version 0.9.25 – 2026-11-06
 
 1. Přidána cloudová synchronizace mezi Windows, Macem a mobilem pro oblíbená rádia a TV, vlastní zpravodajské zdroje a složky, podcasty a oblíbené položky SonarTube. Propojení dočasným kódem. Oblíbené články se zachovávají tam, kde jsou podporovány. Ruční synchronizace zahrnuje odstranění a diagnostické protokoly. Synchronizují se také kompatibilní předvolby modulů: typ hledání, město počasí a režim střihu. Samostatné ovládání sbírek a předvoleb s limitem 32 KB pro předvolby. Zjednodušené nastavení: při prvním použití zvolíte zahájení nebo zadání kódu; propojená zařízení zobrazují synchronizační akce. Možnosti jsou oddělené. Opravena chyba způsobená interní položkou Oblíbené články, která nyní zůstává místní a není zdrojem RSS. Automatická synchronizace na pozadí při spuštění a během používání sdružuje změny. Okno cloudu zobrazuje stav a poslední synchronizaci. Při nedostupnosti serveru aplikace zůstává použitelná bez automatických upozornění; chyby se zaznamenávají a pokusy se opakují s rostoucími prodlevami. Synchronizace předvoleb přenáší i aktivaci Sonarpadu bez opětovného zadání kódu.
 
