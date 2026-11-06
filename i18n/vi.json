@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Khởi hành",
+  "route.departure_now": "Khởi hành ngay",
+  "route.departure_at": "Khởi hành lúc",
+  "route.departure_zone": "Múi giờ khởi hành",
+  "route.departure_hour": "Giờ",
+  "route.departure_minute": "Phút",
+
+  "route.recent_routes": "Lộ trình gần đây",
+  "route.clear_history": "Xóa lịch sử",
+
+  "route.profile.transit": "Phương tiện công cộng",
   "places.detail.category": "Danh mục",
   "places.detail.address": "Địa chỉ",
   "places.detail.phone": "Điện thoại",

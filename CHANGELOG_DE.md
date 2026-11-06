@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Tastenkürzel: Absturz nach der Warnung vor einer bereits belegten Tastenkombination in den Optionen behoben. Nach Bestätigung mit OK kehrt der Fokus zum vorherigen Steuerelement zurück; das bestehende Tastenkürzel bleibt unverändert.
+1. Die Suche nach Orten und Unternehmen ist jetzt in allen Sprachen verfügbar, mit internationalen Ergebnissen, Beschreibungen, Bewertungen, Anzahl der Rezensionen, Öffnungszeiten und Websites, soweit vorhanden. In der italienischen Oberfläche ersetzt sie die Weißen und Gelben Seiten; deren Ergebnisse sowie die Namens- und Telefonnummernsuche bleiben erhalten. In anderen Sprachen ist nur die Suche nach Orten und Unternehmen verfügbar.
 
-2. Die Suche nach Orten und Unternehmen ist jetzt in allen Sprachen verfügbar, mit internationalen Ergebnissen, Beschreibungen, Bewertungen, Anzahl der Rezensionen, Öffnungszeiten und Websites, soweit vorhanden. In der italienischen Oberfläche ersetzt sie die Weißen und Gelben Seiten; deren Ergebnisse sowie die Namens- und Telefonnummernsuche bleiben erhalten. In anderen Sprachen ist nur die Suche nach Orten und Unternehmen verfügbar.
+2. Die Routensuche wurde mit genaueren Ergebnissen verbessert und um Routen mit öffentlichen Verkehrsmitteln erweitert.
 
 Version 0.9.25 – 2026-11-06
 

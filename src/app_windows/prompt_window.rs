@@ -93,6 +93,7 @@ pub struct PromptCredentialsResult {
 }
 
 pub struct PromptDirectoryResult {
+    pub departure: Option<(String, String)>,
     pub selected_index: usize,
     pub secondary_selected_index: usize,
     pub tertiary_selected_index: usize,
@@ -115,6 +116,7 @@ pub struct PromptDirectoryOptions {
     pub tertiary_options: Vec<String>,
     pub tertiary_default_selection: usize,
     pub tertiary_options_primary_index_only: Option<usize>,
+    pub secondary_controls_disabled_primary_index: Option<usize>,
     pub quaternary_type_label: String,
     pub quaternary_options: Vec<String>,
     pub quaternary_default_selection: usize,
@@ -543,6 +545,7 @@ pub fn prompt_credentials(
         });
 
         let mut data = CredentialsPromptData {
+            departure: None,
             body: body.to_string(),
             username: username_default.to_string(),
             password: String::new(),
@@ -624,6 +627,149 @@ pub fn prompt_directory_search(
     options: PromptDirectoryOptions,
     language: Language,
 ) -> Option<PromptDirectoryResult> {
+    prompt_directory_search_with_action(parent, options, language, None, None)
+}
+
+type DirectoryAction = (String, fn(HWND, Language) -> Option<PromptDirectoryResult>);
+const IDC_ROUTE_DEPARTURE: i32 = 216;
+const IDC_ROUTE_HOUR: i32 = 217;
+const IDC_ROUTE_MINUTE: i32 = 218;
+const IDC_ROUTE_ZONE: i32 = 219;
+const ROUTE_DEPARTURE_CONTROLS: [i32; 4] = [
+    IDC_ROUTE_DEPARTURE,
+    IDC_ROUTE_HOUR,
+    IDC_ROUTE_MINUTE,
+    IDC_ROUTE_ZONE,
+];
+
+fn refresh_route_departure(hwnd: HWND) {
+    let mode = crate::get_dlg_item_safe(hwnd, IDC_ROUTE_DEPARTURE);
+    if mode.0 == 0 {
+        return;
+    }
+    let transit = crate::send_message_w_safe(
+        crate::get_dlg_item_safe(hwnd, 204),
+        CB_GETCURSEL,
+        WPARAM(0),
+        LPARAM(0),
+    )
+    .0 == 4;
+    let scheduled =
+        transit && crate::send_message_w_safe(mode, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0 == 1;
+    for id in ROUTE_DEPARTURE_CONTROLS {
+        let visible = if id == IDC_ROUTE_DEPARTURE {
+            transit
+        } else {
+            scheduled
+        };
+        for control_id in [id, id + 100] {
+            let control = crate::get_dlg_item_safe(hwnd, control_id);
+            unsafe {
+                ShowWindow(control, if visible { SW_SHOW } else { SW_HIDE });
+                EnableWindow(control, visible);
+            }
+        }
+    }
+}
+
+fn create_route_departure(hwnd: HWND, y: i32, language: Language, zone: &str, font: HFONT) {
+    use chrono::Timelike;
+    let now = chrono::Local::now();
+    for (index, id) in ROUTE_DEPARTURE_CONTROLS.iter().copied().enumerate() {
+        let key = [
+            "route.departure_label",
+            "route.departure_hour",
+            "route.departure_minute",
+            "route.departure_zone",
+        ][index];
+        unsafe {
+            let label = CreateWindowExW(
+                Default::default(),
+                WC_STATIC,
+                PCWSTR(to_wide(&i18n::tr(language, key)).as_ptr()),
+                WS_CHILD,
+                20,
+                y + index as i32 * 36 + 4,
+                154,
+                20,
+                hwnd,
+                HMENU((id + 100) as isize),
+                HINSTANCE(0),
+                None,
+            );
+            let control = CreateWindowExW(
+                WS_EX_CLIENTEDGE,
+                if id == IDC_ROUTE_ZONE {
+                    WC_EDIT
+                } else {
+                    WC_COMBOBOXW
+                },
+                PCWSTR(to_wide(if id == IDC_ROUTE_ZONE { zone } else { "" }).as_ptr()),
+                WS_CHILD
+                    | WS_TABSTOP
+                    | WINDOW_STYLE(if id == IDC_ROUTE_ZONE {
+                        ES_AUTOHSCROLL as u32
+                    } else {
+                        CBS_DROPDOWNLIST as u32
+                    }),
+                182,
+                y + index as i32 * 36,
+                300,
+                if id == IDC_ROUTE_ZONE { 24 } else { 180 },
+                hwnd,
+                HMENU(id as isize),
+                HINSTANCE(0),
+                None,
+            );
+            for item in if id == IDC_ROUTE_DEPARTURE {
+                vec![
+                    i18n::tr(language, "route.departure_now"),
+                    i18n::tr(language, "route.departure_at"),
+                ]
+            } else if id == IDC_ROUTE_HOUR {
+                (0..24).map(|v| format!("{v:02}")).collect()
+            } else if id == IDC_ROUTE_MINUTE {
+                (0..60).map(|v| format!("{v:02}")).collect()
+            } else {
+                Vec::new()
+            } {
+                SendMessageW(
+                    control,
+                    CB_ADDSTRING,
+                    WPARAM(0),
+                    LPARAM(to_wide(&item).as_ptr() as isize),
+                );
+            }
+            if id != IDC_ROUTE_ZONE {
+                SendMessageW(
+                    control,
+                    CB_SETCURSEL,
+                    WPARAM(if id == IDC_ROUTE_HOUR {
+                        now.hour() as usize
+                    } else if id == IDC_ROUTE_MINUTE {
+                        now.minute() as usize
+                    } else {
+                        0
+                    }),
+                    LPARAM(0),
+                );
+            }
+            for item in [label, control] {
+                SendMessageW(item, WM_SETFONT, WPARAM(font.0 as usize), LPARAM(1));
+            }
+        }
+    }
+}
+
+const IDC_DIRECTORY_ACTION: i32 = 215;
+
+pub fn prompt_directory_search_with_action(
+    parent: HWND,
+    options: PromptDirectoryOptions,
+    language: Language,
+    action: Option<DirectoryAction>,
+    departure_zones: Option<Vec<String>>,
+) -> Option<PromptDirectoryResult> {
     unsafe {
         let hinstance = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
         let class_name = to_wide("SonarpadCredentialsPrompt");
@@ -650,9 +796,13 @@ pub fn prompt_directory_search(
         } else {
             34
         };
-        let window_height = 304 + (extra_combo_count as i32 * 36) + checkbox_extra_height;
+        let window_height = 304
+            + (extra_combo_count as i32 * 36)
+            + checkbox_extra_height
+            + if departure_zones.is_some() { 144 } else { 0 };
 
         let mut data = CredentialsPromptData {
+            departure: None,
             body: options.type_label,
             username: options.primary_default,
             password: options.secondary_default,
@@ -673,6 +823,7 @@ pub fn prompt_directory_search(
             confirmed: false,
             language,
             mode: CredentialsPromptMode::DirectorySearch(Box::new(DirectorySearchPromptMode {
+                departure_zones,
                 options: options.options,
                 selected_index: options.default_selection,
                 secondary_type_label: options.secondary_type_label,
@@ -682,6 +833,8 @@ pub fn prompt_directory_search(
                 tertiary_options: options.tertiary_options,
                 tertiary_selected_index: options.tertiary_default_selection,
                 tertiary_options_primary_index_only: options.tertiary_options_primary_index_only,
+                secondary_controls_disabled_primary_index: options
+                    .secondary_controls_disabled_primary_index,
                 quaternary_type_label: options.quaternary_type_label,
                 quaternary_options: options.quaternary_options,
                 quaternary_selected_index: options.quaternary_default_selection,
@@ -691,6 +844,7 @@ pub fn prompt_directory_search(
                 secondary_label: options.secondary_label,
                 tertiary_label: options.tertiary_label,
                 checkbox_label: options.checkbox_label,
+                action,
             })),
         };
 
@@ -752,6 +906,7 @@ pub fn prompt_directory_search(
 
         if data.confirmed {
             Some(PromptDirectoryResult {
+                departure: data.departure,
                 selected_index: data.directory_selected_index,
                 secondary_selected_index: data.secondary_directory_selected_index,
                 tertiary_selected_index: data.tertiary_directory_selected_index,
@@ -784,6 +939,7 @@ struct ChoicePromptData {
 }
 
 struct CredentialsPromptData {
+    departure: Option<(String, String)>,
     body: String,
     username: String,
     password: String,
@@ -806,6 +962,7 @@ enum CredentialsPromptMode {
 
 #[derive(Clone)]
 struct DirectorySearchPromptMode {
+    departure_zones: Option<Vec<String>>,
     options: Vec<String>,
     selected_index: usize,
     secondary_type_label: String,
@@ -815,6 +972,7 @@ struct DirectorySearchPromptMode {
     tertiary_options: Vec<String>,
     tertiary_selected_index: usize,
     tertiary_options_primary_index_only: Option<usize>,
+    secondary_controls_disabled_primary_index: Option<usize>,
     quaternary_type_label: String,
     quaternary_options: Vec<String>,
     quaternary_selected_index: usize,
@@ -824,6 +982,7 @@ struct DirectorySearchPromptMode {
     secondary_label: String,
     tertiary_label: String,
     checkbox_label: String,
+    action: Option<DirectoryAction>,
 }
 
 unsafe extern "system" fn simple_prompt_wndproc(
@@ -1539,6 +1698,14 @@ fn credentials_prompt_wndproc_inner(
                     } else {
                         y += 36;
                     }
+                    if let Some(zones) = &config.departure_zones {
+                        let zone = zones
+                            .get(quaternary_selected_index)
+                            .map(String::as_str)
+                            .unwrap_or("UTC");
+                        create_route_departure(hwnd, y, language, zone, hfont);
+                        y += 144;
+                    }
                     let secondary_kind_label = unsafe {
                         CreateWindowExW(
                             Default::default(),
@@ -1842,6 +2009,34 @@ fn credentials_prompt_wndproc_inner(
                     if show_checkbox {
                         y += 34;
                     }
+                    let action_button = if let Some((label, _)) = &config.action {
+                        unsafe {
+                            CreateWindowExW(
+                                Default::default(),
+                                WC_BUTTON,
+                                PCWSTR(to_wide(label).as_ptr()),
+                                WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                                20,
+                                y + 20,
+                                252,
+                                30,
+                                hwnd,
+                                HMENU(IDC_DIRECTORY_ACTION as isize),
+                                HINSTANCE(0),
+                                None,
+                            )
+                        }
+                    } else {
+                        HWND(0)
+                    };
+                    if action_button.0 != 0 {
+                        crate::send_message_w_safe(
+                            action_button,
+                            WM_SETFONT,
+                            WPARAM(hfont.0 as usize),
+                            LPARAM(1),
+                        );
+                    }
                     let ok = unsafe {
                         CreateWindowExW(
                             Default::default(),
@@ -1960,6 +2155,7 @@ fn credentials_prompt_wndproc_inner(
                             );
                         }
                     }
+                    refresh_route_departure(hwnd);
                     if let Some(selected_primary_label) = primary_labels.get(selected_index) {
                         crate::log_if_err!(crate::set_window_text_w_safe(
                             user_label,
@@ -2028,6 +2224,107 @@ fn credentials_prompt_wndproc_inner(
         WM_COMMAND => {
             let id = wparam.0 & 0xffff;
             let notify = ((wparam.0 >> 16) & 0xffff) as u16;
+            if id == IDC_DIRECTORY_ACTION as usize {
+                let ptr = crate::get_window_long_ptr_w_safe(hwnd, GWLP_USERDATA)
+                    as *mut CredentialsPromptData;
+                let action = crate::with_raw_mut_ptr_safe(ptr, |data| {
+                    if let CredentialsPromptMode::DirectorySearch(config) = &data.mode {
+                        config
+                            .action
+                            .as_ref()
+                            .map(|(_, callback)| (*callback, data.language))
+                    } else {
+                        None
+                    }
+                })
+                .flatten();
+                if let Some((callback, language)) = action {
+                    if let Some(result) = callback(hwnd, language) {
+                        for (control, value) in [
+                            (IDC_CREDENTIALS_USER as i32, result.primary_value),
+                            (IDC_CREDENTIALS_PASS as i32, result.secondary_value),
+                            (IDC_CREDENTIALS_TERTIARY, result.tertiary_value),
+                        ] {
+                            crate::log_if_err!(crate::set_window_text_w_safe(
+                                crate::get_dlg_item_safe(hwnd, control),
+                                PCWSTR(to_wide(&value).as_ptr())
+                            ));
+                        }
+                        crate::send_message_w_safe(
+                            crate::get_dlg_item_safe(hwnd, IDC_CREDENTIALS_KIND),
+                            CB_SETCURSEL,
+                            WPARAM(result.selected_index),
+                            LPARAM(0),
+                        );
+                        crate::send_message_w_safe(
+                            hwnd,
+                            WM_COMMAND,
+                            WPARAM(
+                                IDC_CREDENTIALS_KIND as usize
+                                    | ((windows::Win32::UI::WindowsAndMessaging::CBN_SELCHANGE
+                                        as usize)
+                                        << 16),
+                            ),
+                            LPARAM(0),
+                        );
+                        for (control, index) in [
+                            (
+                                IDC_CREDENTIALS_SECONDARY_KIND,
+                                result.secondary_selected_index,
+                            ),
+                            (
+                                IDC_CREDENTIALS_TERTIARY_KIND,
+                                result.tertiary_selected_index,
+                            ),
+                            (
+                                IDC_CREDENTIALS_QUATERNARY_KIND,
+                                result.quaternary_selected_index,
+                            ),
+                        ] {
+                            crate::send_message_w_safe(
+                                crate::get_dlg_item_safe(hwnd, control),
+                                CB_SETCURSEL,
+                                WPARAM(index),
+                                LPARAM(0),
+                            );
+                        }
+                        crate::send_message_w_safe(
+                            crate::get_dlg_item_safe(hwnd, IDC_CREDENTIALS_SAVE as i32),
+                            BM_SETCHECK,
+                            WPARAM(usize::from(result.checkbox_checked)),
+                            LPARAM(0),
+                        );
+                        crate::send_message_w_safe(
+                            crate::get_dlg_item_safe(hwnd, IDC_ROUTE_DEPARTURE),
+                            CB_SETCURSEL,
+                            WPARAM(0),
+                            LPARAM(0),
+                        );
+                        crate::send_message_w_safe(
+                            hwnd,
+                            WM_COMMAND,
+                            WPARAM(
+                                IDC_CREDENTIALS_QUATERNARY_KIND as usize
+                                    | ((windows::Win32::UI::WindowsAndMessaging::CBN_SELCHANGE
+                                        as usize)
+                                        << 16),
+                            ),
+                            LPARAM(0),
+                        );
+                        refresh_route_departure(hwnd);
+                        crate::set_focus_safe(crate::get_dlg_item_safe(hwnd, 1));
+                    } else {
+                        crate::set_focus_safe(crate::get_dlg_item_safe(hwnd, IDC_DIRECTORY_ACTION));
+                    }
+                }
+                return LRESULT(0);
+            }
+            if id == IDC_ROUTE_DEPARTURE as usize
+                && notify == windows::Win32::UI::WindowsAndMessaging::CBN_SELCHANGE as u16
+            {
+                refresh_route_departure(hwnd);
+                return LRESULT(0);
+            }
             if id == IDC_CREDENTIALS_KIND as usize
                 && notify == windows::Win32::UI::WindowsAndMessaging::CBN_SELCHANGE as u16
             {
@@ -2043,6 +2340,20 @@ fn credentials_prompt_wndproc_inner(
                 if combo_value >= 0 {
                     let _updated = crate::with_raw_mut_ptr_safe(ptr, |data| {
                         data.directory_selected_index = combo_value as usize;
+                        refresh_route_departure(hwnd);
+                        if let CredentialsPromptMode::DirectorySearch(config) = &data.mode
+                            && let Some(disabled_index) =
+                                config.secondary_controls_disabled_primary_index
+                        {
+                            let enabled = combo_value as usize != disabled_index;
+                            unsafe {
+                                EnableWindow(
+                                    crate::get_dlg_item_safe(hwnd, IDC_CREDENTIALS_SECONDARY_KIND),
+                                    enabled,
+                                );
+                            }
+                        }
+
                         if let CredentialsPromptMode::DirectorySearch(config) = &data.mode
                             && let Some(label) = config.primary_labels.get(combo_value as usize)
                         {
@@ -2144,6 +2455,15 @@ fn credentials_prompt_wndproc_inner(
                 if combo_value >= 0 {
                     let _updated = crate::with_raw_mut_ptr_safe(ptr, |data| {
                         data.quaternary_directory_selected_index = combo_value as usize;
+                        if let CredentialsPromptMode::DirectorySearch(config) = &data.mode
+                            && let Some(zones) = &config.departure_zones
+                            && let Some(zone) = zones.get(combo_value as usize)
+                        {
+                            crate::log_if_err!(crate::set_window_text_w_safe(
+                                crate::get_dlg_item_safe(hwnd, IDC_ROUTE_ZONE),
+                                PCWSTR(to_wide(zone).as_ptr())
+                            ));
+                        }
                     });
                 }
                 return LRESULT(0);
@@ -2212,6 +2532,41 @@ fn credentials_prompt_wndproc_inner(
                     )
                     .0;
                     if crate::with_raw_mut_ptr_safe(ptr, |data| {
+                        if combo_value == 4
+                            && crate::send_message_w_safe(
+                                crate::get_dlg_item_safe(hwnd, IDC_ROUTE_DEPARTURE),
+                                CB_GETCURSEL,
+                                WPARAM(0),
+                                LPARAM(0),
+                            )
+                            .0 == 1
+                        {
+                            let hour = crate::send_message_w_safe(
+                                crate::get_dlg_item_safe(hwnd, IDC_ROUTE_HOUR),
+                                CB_GETCURSEL,
+                                WPARAM(0),
+                                LPARAM(0),
+                            )
+                            .0;
+                            let minute = crate::send_message_w_safe(
+                                crate::get_dlg_item_safe(hwnd, IDC_ROUTE_MINUTE),
+                                CB_GETCURSEL,
+                                WPARAM(0),
+                                LPARAM(0),
+                            )
+                            .0;
+                            let zone = crate::get_dlg_item_safe(hwnd, IDC_ROUTE_ZONE);
+                            let mut text = [0u16; 128];
+                            let len = unsafe { GetWindowTextW(zone, &mut text) };
+                            data.departure = Some((
+                                format!("{hour:02}:{minute:02}"),
+                                String::from_utf16_lossy(&text[..len.max(0) as usize])
+                                    .trim()
+                                    .to_string(),
+                            ));
+                        } else {
+                            data.departure = None;
+                        }
                         data.username = username;
                         data.password = password;
                         data.tertiary = tertiary;
@@ -2296,6 +2651,10 @@ fn credentials_prompt_wndproc_inner(
                                 ],
                                 CredentialsPromptMode::DirectorySearch(_) => vec![
                                     crate::get_dlg_item_safe(hwnd, 204),
+                                    crate::get_dlg_item_safe(hwnd, IDC_ROUTE_DEPARTURE),
+                                    crate::get_dlg_item_safe(hwnd, IDC_ROUTE_HOUR),
+                                    crate::get_dlg_item_safe(hwnd, IDC_ROUTE_MINUTE),
+                                    crate::get_dlg_item_safe(hwnd, IDC_ROUTE_ZONE),
                                     crate::get_dlg_item_safe(hwnd, IDC_CREDENTIALS_SECONDARY_KIND),
                                     crate::get_dlg_item_safe(hwnd, IDC_CREDENTIALS_TERTIARY_KIND),
                                     crate::get_dlg_item_safe(hwnd, IDC_CREDENTIALS_QUATERNARY_KIND),
@@ -2303,6 +2662,7 @@ fn credentials_prompt_wndproc_inner(
                                     crate::get_dlg_item_safe(hwnd, 202),
                                     crate::get_dlg_item_safe(hwnd, IDC_CREDENTIALS_TERTIARY),
                                     crate::get_dlg_item_safe(hwnd, 203),
+                                    crate::get_dlg_item_safe(hwnd, IDC_DIRECTORY_ACTION),
                                     crate::get_dlg_item_safe(hwnd, 1),
                                     crate::get_dlg_item_safe(hwnd, 2),
                                 ],
@@ -2333,8 +2693,9 @@ fn credentials_prompt_wndproc_inner(
                 let order: Vec<HWND> = order
                     .into_iter()
                     .filter(|hwnd| {
-                        prompt_tab_stop_visible(hwnd, current_focus)
-                            || (route_auto_selected && *hwnd == tertiary_combo)
+                        prompt_tab_stop_enabled(hwnd)
+                            && (prompt_tab_stop_visible(hwnd, current_focus)
+                                || (route_auto_selected && *hwnd == tertiary_combo))
                     })
                     .collect();
                 if order.is_empty() {
@@ -2421,6 +2782,129 @@ fn focus_credentials_prompt_initial_control(hwnd: HWND, reason: &str) {
             focus_before,
             crate::get_focus_safe()
         ));
+    }
+}
+
+fn prompt_tab_stop_enabled(hwnd: &HWND) -> bool {
+    hwnd.0 != 0
+        && unsafe { windows::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled(*hwnd) }.as_bool()
+}
+
+#[cfg(test)]
+mod tab_navigation_tests {
+    use super::*;
+    #[test]
+    fn transit_departure_controls_become_tab_stops_in_the_same_dialog() {
+        // Hidden host: exercise real Win32 controls without opening a user window.
+        let host = unsafe {
+            CreateWindowExW(
+                Default::default(),
+                WC_STATIC,
+                PCWSTR::null(),
+                windows::Win32::UI::WindowsAndMessaging::WS_POPUP,
+                0,
+                0,
+                520,
+                600,
+                HWND(0),
+                HMENU(0),
+                HINSTANCE(0),
+                None,
+            )
+        };
+        assert_ne!(host.0, 0);
+        let profile = unsafe {
+            CreateWindowExW(
+                Default::default(),
+                WC_COMBOBOXW,
+                PCWSTR::null(),
+                WS_CHILD | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                0,
+                0,
+                100,
+                180,
+                host,
+                HMENU(204),
+                HINSTANCE(0),
+                None,
+            )
+        };
+        for i in 0..5 {
+            crate::send_message_w_safe(
+                profile,
+                CB_ADDSTRING,
+                WPARAM(0),
+                LPARAM(to_wide(&i.to_string()).as_ptr() as isize),
+            );
+        }
+        create_route_departure(host, 36, Language::English, "Europe/London", HFONT(0));
+        crate::send_message_w_safe(profile, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+        refresh_route_departure(host);
+        assert!(
+            ROUTE_DEPARTURE_CONTROLS
+                .iter()
+                .all(|id| !prompt_tab_stop_enabled(&crate::get_dlg_item_safe(host, *id)))
+        );
+        crate::send_message_w_safe(profile, CB_SETCURSEL, WPARAM(4), LPARAM(0));
+        refresh_route_departure(host);
+        let mode = crate::get_dlg_item_safe(host, IDC_ROUTE_DEPARTURE);
+        assert!(prompt_tab_stop_enabled(&mode));
+        assert!(
+            ROUTE_DEPARTURE_CONTROLS[1..]
+                .iter()
+                .all(|id| !prompt_tab_stop_enabled(&crate::get_dlg_item_safe(host, *id)))
+        );
+        crate::send_message_w_safe(mode, CB_SETCURSEL, WPARAM(1), LPARAM(0));
+        refresh_route_departure(host);
+        assert!(
+            ROUTE_DEPARTURE_CONTROLS
+                .iter()
+                .all(|id| prompt_tab_stop_enabled(&crate::get_dlg_item_safe(host, *id)))
+        );
+        crate::send_message_w_safe(profile, CB_SETCURSEL, WPARAM(2), LPARAM(0));
+        refresh_route_departure(host);
+        assert!(
+            ROUTE_DEPARTURE_CONTROLS
+                .iter()
+                .all(|id| !prompt_tab_stop_enabled(&crate::get_dlg_item_safe(host, *id)))
+        );
+        crate::destroy_window_safe(host).expect("destroy test dialog");
+    }
+
+    #[test]
+    fn disabled_preference_is_skipped_and_returns_when_enabled() {
+        // A real Win32 control, kept hidden so the test does not disturb the desktop.
+        let control = unsafe {
+            CreateWindowExW(
+                Default::default(),
+                WC_COMBOBOXW,
+                PCWSTR::null(),
+                windows::Win32::UI::WindowsAndMessaging::WS_POPUP,
+                0,
+                0,
+                100,
+                24,
+                HWND(0),
+                HMENU(0),
+                HINSTANCE(0),
+                None,
+            )
+        };
+        assert_ne!(control.0, 0);
+        let initially_enabled = prompt_tab_stop_enabled(&control);
+        unsafe {
+            EnableWindow(control, false);
+        }
+        let disabled_is_in_tab_order = prompt_tab_stop_enabled(&control);
+        unsafe {
+            EnableWindow(control, true);
+        }
+        let enabled_again = prompt_tab_stop_enabled(&control);
+        crate::destroy_window_safe(control).expect("destroy test control");
+        assert!(initially_enabled);
+        assert!(!disabled_is_in_tab_order);
+        assert!(enabled_again);
+        assert!(!prompt_tab_stop_enabled(&HWND(0)));
     }
 }
 

@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Odjazd",
+  "route.departure_now": "Odjedź teraz",
+  "route.departure_at": "Odjazd o",
+  "route.departure_zone": "Strefa czasowa odjazdu",
+  "route.departure_hour": "Godziny",
+  "route.departure_minute": "Minuty",
+
+  "route.recent_routes": "Ostatnie trasy",
+  "route.clear_history": "Wyczyść historię",
+
+  "route.profile.transit": "Transport publiczny",
   "places.detail.category": "Kategoria",
   "places.detail.address": "Adres",
   "places.detail.phone": "Telefon",

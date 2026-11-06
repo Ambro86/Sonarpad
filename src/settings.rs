@@ -2211,6 +2211,71 @@ fn normalize_voice_profiles(settings: &mut AppSettings) {
     }
 }
 
+pub(crate) fn parse_settings(data: &str) -> Result<AppSettings, serde_json::Error> {
+    let mut settings = serde_json::from_str::<AppSettings>(data)?;
+    log_rai_luce_event(&format!(
+        "load_settings parsed settings.json raw_len={}",
+        settings.rai_luce_code.len()
+    ));
+    if settings.remember_bdciechi_credentials && !settings.bdciechi_password.trim().is_empty() {
+        match decrypt_bdciechi_password(&settings.bdciechi_password) {
+            Some(password) => settings.bdciechi_password = password,
+            None => {
+                crate::log_debug(
+                    "Failed to decrypt stored BDCiechi password; clearing saved credentials",
+                );
+                settings.bdciechi_username.clear();
+                settings.bdciechi_password.clear();
+                settings.bdciechi_last_successful_login_unix = 0;
+            }
+        }
+    }
+    if !settings.ytdlp_site_credentials.is_empty() {
+        let mut decrypted_credentials = HashMap::new();
+        for (site, value) in std::mem::take(&mut settings.ytdlp_site_credentials) {
+            match decrypt_ytdlp_site_credentials_entry(&value) {
+                Some(credentials) => {
+                    if let Some(serialized) = serialize_ytdlp_site_credentials(&credentials) {
+                        decrypted_credentials.insert(site, serialized);
+                    }
+                }
+                None => {
+                    crate::log_debug(&format!(
+                        "Failed to decrypt stored yt-dlp credentials for site {}; preserving stored entry",
+                        site
+                    ));
+                    if !value.trim().is_empty() {
+                        decrypted_credentials.insert(site, value);
+                    }
+                }
+            }
+        }
+        settings.ytdlp_site_credentials = decrypted_credentials;
+    }
+    if !settings.rai_luce_code.trim().is_empty() {
+        match decrypt_rai_luce_code(&settings.rai_luce_code) {
+            Some(code) => {
+                log_rai_luce_event(&format!(
+                    "load_settings decrypted Rai Luce code len={}",
+                    code.len()
+                ));
+                settings.rai_luce_code = code;
+            }
+            None => {
+                crate::log_debug("Failed to decrypt stored Rai Luce code; clearing saved code");
+                log_rai_luce_event(
+                    "load_settings failed to decrypt Rai Luce code; clearing in-memory value",
+                );
+                settings.rai_luce_code.clear();
+            }
+        }
+    } else {
+        log_rai_luce_event("load_settings found empty Rai Luce code in settings.json");
+    }
+    let normalized = normalize_settings(settings);
+    Ok(normalized)
+}
+
 pub fn load_settings() -> AppSettings {
     let default_settings = AppSettings {
         language: system_language(),
@@ -2220,76 +2285,8 @@ pub fn load_settings() -> AppSettings {
     let path = get_settings_path();
     if path.exists() {
         match std::fs::read_to_string(&path) {
-            Ok(data) => match serde_json::from_str::<AppSettings>(&data) {
-                Ok(mut settings) => {
-                    log_rai_luce_event(&format!(
-                        "load_settings parsed settings.json raw_len={}",
-                        settings.rai_luce_code.len()
-                    ));
-                    if settings.remember_bdciechi_credentials
-                        && !settings.bdciechi_password.trim().is_empty()
-                    {
-                        match decrypt_bdciechi_password(&settings.bdciechi_password) {
-                            Some(password) => settings.bdciechi_password = password,
-                            None => {
-                                crate::log_debug(
-                                    "Failed to decrypt stored BDCiechi password; clearing saved credentials",
-                                );
-                                settings.bdciechi_username.clear();
-                                settings.bdciechi_password.clear();
-                                settings.bdciechi_last_successful_login_unix = 0;
-                            }
-                        }
-                    }
-                    if !settings.ytdlp_site_credentials.is_empty() {
-                        let mut decrypted_credentials = HashMap::new();
-                        for (site, value) in std::mem::take(&mut settings.ytdlp_site_credentials) {
-                            match decrypt_ytdlp_site_credentials_entry(&value) {
-                                Some(credentials) => {
-                                    if let Some(serialized) =
-                                        serialize_ytdlp_site_credentials(&credentials)
-                                    {
-                                        decrypted_credentials.insert(site, serialized);
-                                    }
-                                }
-                                None => {
-                                    crate::log_debug(&format!(
-                                        "Failed to decrypt stored yt-dlp credentials for site {}; preserving stored entry",
-                                        site
-                                    ));
-                                    if !value.trim().is_empty() {
-                                        decrypted_credentials.insert(site, value);
-                                    }
-                                }
-                            }
-                        }
-                        settings.ytdlp_site_credentials = decrypted_credentials;
-                    }
-                    if !settings.rai_luce_code.trim().is_empty() {
-                        match decrypt_rai_luce_code(&settings.rai_luce_code) {
-                            Some(code) => {
-                                log_rai_luce_event(&format!(
-                                    "load_settings decrypted Rai Luce code len={}",
-                                    code.len()
-                                ));
-                                settings.rai_luce_code = code;
-                            }
-                            None => {
-                                crate::log_debug(
-                                    "Failed to decrypt stored Rai Luce code; clearing saved code",
-                                );
-                                log_rai_luce_event(
-                                    "load_settings failed to decrypt Rai Luce code; clearing in-memory value",
-                                );
-                                settings.rai_luce_code.clear();
-                            }
-                        }
-                    } else {
-                        log_rai_luce_event(
-                            "load_settings found empty Rai Luce code in settings.json",
-                        );
-                    }
-                    let normalized = normalize_settings(settings);
+            Ok(data) => match parse_settings(&data) {
+                Ok(normalized) => {
                     update_cached_rai_luce_code(&normalized.rai_luce_code);
                     save_settings(normalized.clone());
                     return normalized;
@@ -3169,7 +3166,27 @@ pub fn load_saved_rai_luce_code() -> Option<String> {
     None
 }
 
+#[track_caller]
 pub fn save_settings(settings: AppSettings) {
+    if let Ok(raw) = std::fs::read_to_string(get_settings_path())
+        && let Ok(before) = serde_json::from_str::<serde_json::Value>(&raw)
+        && let Ok(after) = serde_json::to_value(&settings)
+    {
+        if let Err(error) = crate::cloud_sync::preserve_collection_write(
+            &settings_dir(),
+            &crate::cloud_sync::export(&before, false),
+            &crate::cloud_sync::export(&after, false),
+        ) {
+            crate::log_debug(&format!("CloudSync settings_write blocked: {error}"));
+            return;
+        }
+        crate::cloud_sync::log_collection_reductions(
+            &crate::cloud_sync::export(&before, false),
+            &crate::cloud_sync::export(&after, false),
+            &format!("settings_write:{}", std::panic::Location::caller()),
+            crate::log_debug,
+        );
+    }
     apply_network_proxy_settings(&settings);
     let mut persisted = settings;
     let explicit_clear_requested = RAI_LUCE_EXPLICIT_CLEAR_PENDING.swap(false, Ordering::SeqCst);
@@ -4051,4 +4068,22 @@ fn default_sync_converter_ogg_quality() -> u32 {
 }
 fn default_sync_converter_flac_compression() -> u32 {
     5
+}
+
+/// Called only by user removal handlers, never by ordinary saves or cloud import.
+pub fn record_explicit_cloud_deletions(before: &AppSettings, after: &AppSettings) {
+    let result = (|| -> Result<(), String> {
+        let before = serde_json::to_value(before).map_err(|_| "storage_error")?;
+        let after = serde_json::to_value(after).map_err(|_| "storage_error")?;
+        crate::cloud_sync::record_explicit_deletions(
+            &settings_dir(),
+            &crate::cloud_sync::export(&before, false),
+            &crate::cloud_sync::export(&after, false),
+        )
+    })();
+    if let Err(error) = result {
+        crate::log_debug(&format!(
+            "CloudSync explicit deletion not recorded: {error}"
+        ));
+    }
 }

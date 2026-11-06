@@ -3281,6 +3281,7 @@ fn remove_selected_favorite(hwnd: HWND) {
         return;
     };
     let mut settings = load_settings();
+    let before_cloud_delete = settings.clone();
     let before = settings.radio_favorites.len();
     settings
         .radio_favorites
@@ -3289,6 +3290,7 @@ fn remove_selected_favorite(hwnd: HWND) {
         settings.radio_favorites = normalize_favorites(settings.radio_favorites.clone());
         let favorites = settings.radio_favorites.clone();
         let lang = settings.language;
+        crate::settings::record_explicit_cloud_deletions(&before_cloud_delete, &settings);
         save_settings(settings);
         with_radio_state(hwnd, |state| {
             state.favorite_results = favorites;

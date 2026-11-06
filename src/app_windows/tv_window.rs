@@ -680,11 +680,13 @@ fn tv_context_actions(catalog: Arc<TvCatalog>) -> Vec<InterpreterContextAction> 
             return;
         };
         let mut settings = load_settings();
+        let before_cloud_delete = settings.clone();
         let before = settings.tv_favorites.len();
         settings
             .tv_favorites
             .retain(|favorite| !tv_favorite_matches_channel(favorite, &channel));
         if settings.tv_favorites.len() != before {
+            crate::settings::record_explicit_cloud_deletions(&before_cloud_delete, &settings);
             save_settings(settings);
             crate::screen_reader_speak(&i18n::tr_tv_f(
                 "tv.favorite_removed",

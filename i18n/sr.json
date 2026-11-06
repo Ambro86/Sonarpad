@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Polazak",
+  "route.departure_now": "Kreni sada",
+  "route.departure_at": "Kreni u",
+  "route.departure_zone": "Vremenska zona polaska",
+  "route.departure_hour": "Sati",
+  "route.departure_minute": "Minuti",
+
+  "route.recent_routes": "Nedavne rute",
+  "route.clear_history": "Obriši istoriju",
+
+  "route.profile.transit": "Javni prevoz",
   "places.detail.category": "Kategorija",
   "places.detail.address": "Adresa",
   "places.detail.phone": "Telefon",

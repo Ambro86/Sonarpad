@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Avresa",
+  "route.departure_now": "Åk nu",
+  "route.departure_at": "Åk klockan",
+  "route.departure_zone": "Avresans tidszon",
+  "route.departure_hour": "Timmar",
+  "route.departure_minute": "Minuter",
+
+  "route.recent_routes": "Senaste rutter",
+  "route.clear_history": "Rensa historik",
+
+  "route.profile.transit": "Kollektivtrafik",
   "places.detail.category": "Kategori",
   "places.detail.address": "Adress",
   "places.detail.phone": "Telefon",

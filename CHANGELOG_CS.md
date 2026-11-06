@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Klávesové zkratky: opraven pád po upozornění na již přiřazenou kombinaci kláves v Možnostech. Po zavření upozornění tlačítkem OK se fokus vrátí na předchozí ovládací prvek a stávající zkratka zůstane beze změny.
+1. Přidáno hledání míst a firem ve všech jazycích, s mezinárodními výsledky, popisy, hodnocením, počtem recenzí, otevírací dobou a weby, pokud jsou dostupné. V italském rozhraní nahrazuje Bílé a Zlaté stránky a zachovává jejich výsledky i hledání podle jména a telefonního čísla. V ostatních jazycích je dostupné pouze hledání míst a firem.
 
-2. Přidáno hledání míst a firem ve všech jazycích, s mezinárodními výsledky, popisy, hodnocením, počtem recenzí, otevírací dobou a weby, pokud jsou dostupné. V italském rozhraní nahrazuje Bílé a Zlaté stránky a zachovává jejich výsledky i hledání podle jména a telefonního čísla. V ostatních jazycích je dostupné pouze hledání míst a firem.
+2. Vylepšeno vyhledávání tras s přesnějšími výsledky a přidány trasy veřejnou dopravou.
 
 Version 0.9.25 – 2026-11-06
 

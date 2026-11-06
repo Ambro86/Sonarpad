@@ -21,6 +21,7 @@ pub enum RouteProfile {
     Cycling,
     Driving,
     Wheelchair,
+    Transit,
 }
 
 impl RouteProfile {
@@ -30,6 +31,7 @@ impl RouteProfile {
             RouteProfile::Cycling => "cycling-regular",
             RouteProfile::Driving => "driving-car",
             RouteProfile::Wheelchair => "wheelchair",
+            RouteProfile::Transit => "transit",
         }
     }
 
@@ -39,6 +41,7 @@ impl RouteProfile {
             RouteProfile::Cycling => "route.profile.cycling",
             RouteProfile::Driving => "route.profile.driving",
             RouteProfile::Wheelchair => "route.profile.wheelchair",
+            RouteProfile::Transit => "route.profile.transit",
         };
         i18n::tr(language, key)
     }
@@ -97,7 +100,37 @@ impl RouteAvoid {
 }
 
 #[derive(Clone)]
+pub struct RouteDeparture {
+    pub time: String,
+    pub time_zone: String,
+}
+
+pub fn default_departure_zone(country: &str) -> &'static str {
+    match country.to_lowercase().as_str() {
+        "it" => "Europe/Rome",
+        "fr" => "Europe/Paris",
+        "es" => "Europe/Madrid",
+        "pt" => "Europe/Lisbon",
+        "br" => "America/Sao_Paulo",
+        "pl" => "Europe/Warsaw",
+        "cz" => "Europe/Prague",
+        "de" => "Europe/Berlin",
+        "nl" => "Europe/Amsterdam",
+        "gb" | "uk" => "Europe/London",
+        "ua" => "Europe/Kyiv",
+        "ro" => "Europe/Bucharest",
+        "tr" => "Europe/Istanbul",
+        "cn" => "Asia/Shanghai",
+        "au" => "Australia/Sydney",
+        "ca" => "America/Toronto",
+        "us" => "America/New_York",
+        _ => "UTC",
+    }
+}
+
+#[derive(Clone)]
 pub struct RouteOptions {
+    pub departure: Option<RouteDeparture>,
     pub profile: RouteProfile,
     pub preference: RoutePreference,
     pub avoid: RouteAvoid,
@@ -122,6 +155,7 @@ impl RouteClient {
     pub fn new(base_url: &str) -> Self {
         let client = Client::builder()
             .user_agent(USER_AGENT)
+            .timeout(std::time::Duration::from_secs(40))
             .build()
             .unwrap_or_else(|error| {
                 crate::log_debug(&format!(
@@ -221,6 +255,22 @@ impl RouteClient {
         to: &GeocodeCandidate,
         options: RouteOptions,
     ) -> Result<RouteResult, RouteError> {
+        if options.profile != RouteProfile::Wheelchair {
+            match self.primary_route(from, to, &options) {
+                Ok(route) => {
+                    crate::log_debug(&format!(
+                        "route_result: provider=google fallback=false profile={} paths={}",
+                        options.profile.api_value(),
+                        route.paths.len()
+                    ));
+                    return Ok(route);
+                }
+                Err(error) if options.profile == RouteProfile::Transit => return Err(error),
+                Err(error) => crate::log_debug(&format!(
+                    "route_fallback: from=google to=ors reason={error}"
+                )),
+            }
+        }
         let boundary_country = route_country_alpha3(&options.country);
         let url = route_endpoint_url(
             &self.base_url,
@@ -267,13 +317,111 @@ impl RouteClient {
             )));
         }
 
+        let paths = response.into_paths();
+        crate::log_debug(&format!(
+            "route_result: provider=ors fallback={} profile={} paths={}",
+            options.profile != RouteProfile::Wheelchair,
+            options.profile.api_value(),
+            paths.len()
+        ));
         Ok(RouteResult {
             profile: options.profile,
             preference: options.preference,
             avoid: options.avoid,
             from_label: from.label.clone(),
             to_label: to.label.clone(),
-            paths: response.into_paths(),
+            paths,
+        })
+    }
+
+    fn primary_route(
+        &self,
+        from: &GeocodeCandidate,
+        to: &GeocodeCandidate,
+        options: &RouteOptions,
+    ) -> Result<RouteResult, RouteError> {
+        let mode = match options.profile {
+            RouteProfile::Driving => "auto",
+            RouteProfile::Walking => "piedi",
+            RouteProfile::Cycling => "bici",
+            RouteProfile::Transit => "pullman",
+            _ => unreachable!(),
+        };
+        let preference = if options.profile == RouteProfile::Transit {
+            "fastest"
+        } else {
+            options.preference.api_value()
+        };
+        let response: PrimaryRouteResponse = self
+            .client
+            .post(format!("{}/percorsi.php", self.base_url))
+            .timeout(std::time::Duration::from_secs(60))
+            .header(ROUTE_API_TOKEN_HEADER, ROUTE_API_CLIENT_TOKEN)
+            .json(&serde_json::json!({
+                "da": format!("{},{}", from.latitude, from.longitude),
+                "a": format!("{},{}", to.latitude, to.longitude),
+                "mezzo": mode,
+                "partenza": if options.profile == RouteProfile::Transit { options.departure.as_ref().map(|d| d.time.as_str()).unwrap_or("adesso") } else { "adesso" },
+                "fuso": if options.profile == RouteProfile::Transit { options.departure.as_ref().map(|d| d.time_zone.as_str()).unwrap_or("") } else { "" },
+                "preferenza": preference, "evita": options.avoid.api_value(),
+                "includi_comuni": options.include_municipalities,
+                "paese": options.country, "lingua": primary_route_language(options.language)
+            }))
+            .send()
+            .and_then(|r| r.error_for_status())
+            .map_err(|e| route_network_error(options.language, e.to_string()))?
+            .json()
+            .map_err(|e| route_invalid_response_error(options.language, e.to_string()))?;
+        let data = response
+            .data
+            .filter(|data| {
+                response.ok
+                    && !data.percorsi.is_empty()
+                    && data.preferenza == preference
+                    && data.evita == options.avoid.api_value()
+                    && (!options.include_municipalities || data.includi_comuni == Some(true))
+            })
+            .ok_or_else(|| {
+                RouteError::Server(i18n::tr(options.language, "route.error.calculation"))
+            })?;
+        if data
+            .percorsi
+            .iter()
+            .any(|p| p.istruzioni.is_empty() || p.istruzioni.iter().any(|s| s.trim().is_empty()))
+        {
+            return Err(RouteError::Server(i18n::tr(
+                options.language,
+                "route.error.calculation",
+            )));
+        }
+        Ok(RouteResult {
+            profile: options.profile,
+            preference: options.preference,
+            avoid: options.avoid,
+            from_label: from.display_label(),
+            to_label: to.display_label(),
+            paths: data
+                .percorsi
+                .into_iter()
+                .map(|path| RoutePath {
+                    notices: path.avvisi,
+                    distance_meters: path.distanza_metri,
+                    duration_seconds: path.durata_secondi,
+                    distance_text: Some(path.distanza),
+                    duration_text: Some(path.durata),
+                    steps: path
+                        .istruzioni
+                        .into_iter()
+                        .map(|instruction| RouteStep {
+                            instruction,
+                            distance_meters: 0.0,
+                            duration_seconds: 0.0,
+                        })
+                        .collect(),
+                    geometry: Vec::new(),
+                    municipality_changes: Vec::new(),
+                })
+                .collect(),
         })
     }
 
@@ -390,6 +538,12 @@ pub struct RouteResult {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RoutePath {
+    #[serde(default)]
+    pub notices: Vec<String>,
+    #[serde(default)]
+    pub distance_text: Option<String>,
+    #[serde(default)]
+    pub duration_text: Option<String>,
     pub distance_meters: f64,
     pub duration_seconds: f64,
     #[serde(default)]
@@ -398,6 +552,65 @@ pub struct RoutePath {
     pub geometry: Vec<[f64; 2]>,
     #[serde(default)]
     pub municipality_changes: Vec<MunicipalityChange>,
+}
+
+impl RoutePath {
+    pub fn distance_label(&self, language: Language) -> String {
+        self.distance_text
+            .clone()
+            .unwrap_or_else(|| format_distance_for_language(self.distance_meters, language))
+    }
+    pub fn duration_label(&self, language: Language) -> String {
+        self.duration_text
+            .clone()
+            .unwrap_or_else(|| format_duration_for_language(self.duration_seconds, language))
+    }
+}
+
+#[derive(Deserialize)]
+struct PrimaryRouteResponse {
+    ok: bool,
+    data: Option<PrimaryRouteData>,
+}
+#[derive(Deserialize)]
+struct PrimaryRouteData {
+    includi_comuni: Option<bool>,
+    preferenza: String,
+    evita: String,
+    percorsi: Vec<PrimaryRoutePath>,
+}
+#[derive(Deserialize)]
+struct PrimaryRoutePath {
+    distanza_metri: f64,
+    durata_secondi: f64,
+    distanza: String,
+    durata: String,
+    istruzioni: Vec<String>,
+    #[serde(default)]
+    avvisi: Vec<String>,
+}
+
+fn primary_route_language(language: Language) -> &'static str {
+    match language {
+        Language::Italian => "it",
+        Language::English => "en",
+        Language::German => "de",
+        Language::Spanish => "es",
+        Language::Portuguese => "pt",
+        Language::PortugueseBrazilian => "pt-BR",
+        Language::Swedish => "sv",
+        Language::Vietnamese => "vi",
+        Language::Czech => "cs",
+        Language::Polish => "pl",
+        Language::French => "fr",
+        Language::Serbian => "sr",
+        Language::Ukrainian => "uk",
+        Language::Lithuanian => "lt",
+        Language::Russian => "ru",
+        Language::Chinese => "zh",
+        Language::Hindi => "hi",
+        Language::Indonesian => "id",
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -434,7 +647,13 @@ impl RouteResult {
         output.push(' ');
         output.push_str(&self.profile.label(language));
         output.push(' ');
-        output.push_str(&self.preference.label(language));
+        if self
+            .paths
+            .first()
+            .is_none_or(|path| path.duration_text.is_none())
+        {
+            output.push_str(&self.preference.label(language));
+        }
         if self.avoid != RouteAvoid::None {
             output.push_str(", ");
             output.push_str(&self.avoid.label(language));
@@ -490,18 +709,12 @@ impl RouteResult {
 
             output.push_str(&i18n::tr(language, "route.distance"));
             output.push(' ');
-            output.push_str(&format_distance_for_language(
-                path.distance_meters,
-                language,
-            ));
+            output.push_str(&path.distance_label(language));
             output.push_str(".\n");
 
             output.push_str(&i18n::tr(language, "route.estimated_duration"));
             output.push(' ');
-            output.push_str(&format_duration_for_language(
-                path.duration_seconds,
-                language,
-            ));
+            output.push_str(&path.duration_label(language));
             output.push_str(".\n");
 
             output.push('\n');
@@ -509,6 +722,13 @@ impl RouteResult {
             output.push('\n');
 
             append_route_steps_with_municipality_changes(&mut output, path, language);
+            if !path.notices.is_empty() {
+                output.push('\n');
+                for notice in &path.notices {
+                    output.push_str(notice);
+                    output.push('\n');
+                }
+            }
         }
 
         output
@@ -594,6 +814,9 @@ impl RouteApiResponse {
         }
 
         vec![RoutePath {
+            notices: Vec::new(),
+            distance_text: None,
+            duration_text: None,
             distance_meters: self.distance_meters.unwrap_or(0.0),
             duration_seconds: self.duration_seconds.unwrap_or(0.0),
             steps: self.steps,
@@ -1060,4 +1283,249 @@ fn simplify_query_more(query: &str) -> Option<String> {
     }
 
     None
+}
+
+#[cfg(test)]
+mod primary_route_tests {
+    use super::*;
+    use std::io::{BufRead, Read, Write};
+    use std::net::TcpListener;
+
+    fn server(
+        responses: Vec<(u16, &'static str)>,
+    ) -> (String, std::thread::JoinHandle<Vec<String>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let handle = std::thread::spawn(move || {
+            let mut requests = Vec::new();
+            for (status, body) in responses {
+                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+                let mut stream = loop {
+                    match listener.accept() {
+                        Ok((stream, _)) => break stream,
+                        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                            assert!(
+                                std::time::Instant::now() < deadline,
+                                "Missing route request"
+                            );
+                            std::thread::sleep(std::time::Duration::from_millis(5));
+                        }
+                        Err(e) => panic!("{e}"),
+                    }
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(std::time::Duration::from_secs(3)))
+                    .unwrap();
+                let mut reader = std::io::BufReader::new(stream.try_clone().unwrap());
+                let mut request = String::new();
+                let mut length = 0;
+                loop {
+                    let mut line = String::new();
+                    reader.read_line(&mut line).unwrap();
+                    if line == "\r\n" {
+                        break;
+                    }
+                    if let Some(value) = line.to_lowercase().strip_prefix("content-length:") {
+                        length = value.trim().parse().unwrap();
+                    }
+                    request.push_str(&line);
+                }
+                let mut bytes = vec![0; length];
+                reader.read_exact(&mut bytes).unwrap();
+                request.push_str(&String::from_utf8(bytes).unwrap());
+                requests.push(request);
+                write!(stream, "HTTP/1.1 {status} OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+            }
+            requests
+        });
+        (base, handle)
+    }
+    fn candidate() -> GeocodeCandidate {
+        GeocodeCandidate {
+            label: "Oxford Circus".into(),
+            name: String::new(),
+            country: String::new(),
+            region: String::new(),
+            county: String::new(),
+            locality: String::new(),
+            postalcode: String::new(),
+            latitude: 51.5152,
+            longitude: -0.1419,
+        }
+    }
+    fn options(profile: RouteProfile) -> RouteOptions {
+        RouteOptions {
+            departure: None,
+            profile,
+            preference: RoutePreference::Fastest,
+            avoid: RouteAvoid::None,
+            include_municipalities: false,
+            language: Language::English,
+            country: "gb".into(),
+        }
+    }
+    const PRIMARY: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Take Bus 12 at 12:30","Arrive at destination"],"avvisi":["Notice: Bus diversion"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"fastest","evita":""}}"#;
+    const LOCALITIES: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Locality detected along the route: London.","Take Bus 12 at 12:30"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"fastest","evita":"","includi_comuni":true}}"#;
+    const SHORTEST: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Take Bus 12 at 12:30"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"shortest","evita":""}}"#;
+    const AVOID: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Take Bus 12 at 12:30"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"fastest","evita":"highways,tollways"}}"#;
+
+    const ORS: &str = r#"{"ok":true,"distance_meters":1000,"duration_seconds":600,"steps":[]}"#;
+
+    #[test]
+    fn primary_success_preserves_alternatives_text_and_region() {
+        for (profile, mode) in [
+            (RouteProfile::Walking, "piedi"),
+            (RouteProfile::Driving, "auto"),
+            (RouteProfile::Transit, "pullman"),
+        ] {
+            let (base, server) = server(vec![(200, PRIMARY)]);
+            let result = RouteClient::new(&base)
+                .route_between_coordinates(&candidate(), &candidate(), options(profile))
+                .unwrap();
+            assert_eq!(result.paths.len(), 2);
+            let text = result.format_for_speech_or_text(Language::English);
+            assert!(
+                text.contains("1.2 mi")
+                    && text.contains("20 min")
+                    && text.contains("Take Bus 12 at 12:30")
+            );
+            assert!(text.contains("2. Arrive at destination.\n\nNotice: Bus diversion\n"));
+            assert!(!text.contains("3. Notice:"));
+            let requests = server.join().unwrap();
+            assert!(requests[0].starts_with("POST /percorsi.php "));
+            assert!(requests[0].contains(&format!(r#""mezzo":"{mode}""#)));
+            assert!(
+                requests[0].contains(r#""paese":"gb""#) && requests[0].contains(r#""lingua":"en""#)
+            );
+        }
+    }
+    #[test]
+    fn primary_failures_fall_back_to_ors() {
+        for failure in [
+            (502, "down"),
+            (200, "not JSON"),
+            (200, r#"{"ok":true,"data":{"percorsi":[]}}"#),
+        ] {
+            for profile in [RouteProfile::Walking, RouteProfile::Driving] {
+                let (base, server) = server(vec![failure, (200, ORS)]);
+                let result = RouteClient::new(&base)
+                    .route_between_coordinates(&candidate(), &candidate(), options(profile))
+                    .unwrap();
+                assert_eq!(result.paths[0].distance_meters, 1000.0);
+                let requests = server.join().unwrap();
+                assert!(requests[0].starts_with("POST /percorsi.php "));
+                assert!(requests[1].starts_with("GET /ors_route.php?"));
+                assert!(requests[1].contains(profile.api_value()));
+            }
+        }
+    }
+    #[test]
+    fn wheelchair_stays_on_ors() {
+        let (base, server) = server(vec![(200, ORS)]);
+        RouteClient::new(&base)
+            .route_between_coordinates(
+                &candidate(),
+                &candidate(),
+                options(RouteProfile::Wheelchair),
+            )
+            .unwrap();
+        assert!(server.join().unwrap()[0].starts_with("GET /ors_route.php?"));
+    }
+    #[test]
+    fn localities_enrich_the_same_google_route() {
+        let mut plan = options(RouteProfile::Driving);
+        plan.include_municipalities = true;
+        let (base, primary_server) = server(vec![(200, LOCALITIES)]);
+        let result = RouteClient::new(&base)
+            .route_between_coordinates(&candidate(), &candidate(), plan.clone())
+            .unwrap();
+        assert_eq!(result.paths[0].distance_meters, 1900.0);
+        assert!(result.paths[0].steps[0].instruction.contains("London"));
+        let requests = primary_server.join().unwrap();
+        assert_eq!(requests.len(), 1);
+        assert!(
+            requests[0].starts_with("POST /percorsi.php ")
+                && requests[0].contains(r#""includi_comuni":true"#)
+        );
+        let (base, server) = server(vec![(200, PRIMARY), (200, ORS)]);
+        RouteClient::new(&base)
+            .route_between_coordinates(&candidate(), &candidate(), plan)
+            .unwrap();
+        assert!(server.join().unwrap()[1].contains("include_municipalities=1"));
+    }
+    #[test]
+    fn preferences_and_avoidance_use_primary_and_require_confirmation() {
+        let mut shortest = options(RouteProfile::Driving);
+        shortest.preference = RoutePreference::Shortest;
+        let mut avoid = options(RouteProfile::Driving);
+        avoid.avoid = RouteAvoid::HighwaysAndTollways;
+        for (plan, response) in [
+            (shortest.clone(), SHORTEST),
+            (avoid.clone(), AVOID),
+            (options(RouteProfile::Cycling), PRIMARY),
+        ] {
+            let (base, server) = server(vec![(200, response)]);
+            let result = RouteClient::new(&base)
+                .route_between_coordinates(&candidate(), &candidate(), plan.clone())
+                .unwrap();
+            assert_eq!(result.paths[0].distance_meters, 1900.0);
+            let requests = server.join().unwrap();
+            assert!(requests[0].contains(&format!(
+                r#""preferenza":"{}""#,
+                plan.preference.api_value()
+            )));
+            assert!(requests[0].contains(&format!(r#""evita":"{}""#, plan.avoid.api_value())));
+        }
+        // Old servers or ignored options must not silently discard the user's choice.
+        for plan in [shortest, avoid] {
+            let (base, server) = server(vec![(200, PRIMARY), (200, ORS)]);
+            RouteClient::new(&base)
+                .route_between_coordinates(&candidate(), &candidate(), plan)
+                .unwrap();
+            assert!(server.join().unwrap()[1].starts_with("GET /ors_route.php?"));
+        }
+    }
+    #[test]
+    fn scheduled_transit_passes_time_and_zone_and_other_modes_ignore_them() {
+        for profile in [RouteProfile::Transit, RouteProfile::Driving] {
+            let mut plan = options(profile);
+            plan.departure = Some(RouteDeparture {
+                time: "18:35".into(),
+                time_zone: "Europe/London".into(),
+            });
+            let (base, server) = server(vec![(200, PRIMARY)]);
+            RouteClient::new(&base)
+                .route_between_coordinates(&candidate(), &candidate(), plan)
+                .unwrap();
+            let requests = server.join().unwrap();
+            assert_eq!(requests.len(), 1);
+            let expected = if profile == RouteProfile::Transit {
+                "18:35"
+            } else {
+                "adesso"
+            };
+            assert!(requests[0].contains(&format!(r#""partenza":"{expected}""#)));
+            assert_eq!(
+                requests[0].contains(r#""fuso":"Europe/London""#),
+                profile == RouteProfile::Transit
+            );
+        }
+    }
+
+    #[test]
+    fn transit_failure_does_not_request_an_ors_walking_route() {
+        let (base, server) = server(vec![(502, "unavailable")]);
+        assert!(
+            RouteClient::new(&base)
+                .route_between_coordinates(
+                    &candidate(),
+                    &candidate(),
+                    options(RouteProfile::Transit)
+                )
+                .is_err()
+        );
+        assert_eq!(server.join().unwrap().len(), 1);
+    }
 }

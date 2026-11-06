@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Atalhos de teclado: corrigida uma falha após o aviso de combinação de teclas já atribuída nas Opções. Ao fechar o aviso com OK, o foco regressa ao controlo anterior e o atalho existente permanece inalterado.
+1. Adicionada a pesquisa de locais e empresas em todos os idiomas, com resultados internacionais, descrições, classificações, número de avaliações, horários e sites quando disponíveis. Na interface italiana substitui as Páginas Brancas e Amarelas, mantendo os seus resultados e as pesquisas por nome e telefone. Nos outros idiomas está disponível apenas a pesquisa de locais e empresas.
 
-2. Adicionada a pesquisa de locais e empresas em todos os idiomas, com resultados internacionais, descrições, classificações, número de avaliações, horários e sites quando disponíveis. Na interface italiana substitui as Páginas Brancas e Amarelas, mantendo os seus resultados e as pesquisas por nome e telefone. Nos outros idiomas está disponível apenas a pesquisa de locais e empresas.
+2. Melhorada a pesquisa de percursos, com resultados mais precisos e a inclusão de percursos em transportes públicos.
 
 Version 0.9.25 – 2026-11-06
 

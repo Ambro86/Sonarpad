@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Skróty klawiaturowe: naprawiono awarię po ostrzeżeniu o już przypisanej kombinacji klawiszy w Opcjach. Zamknięcie ostrzeżenia przyciskiem OK przywraca fokus na poprzedni element sterujący i nie zmienia istniejącego skrótu.
+1. Dodano wyszukiwanie miejsc i firm we wszystkich językach, z wynikami międzynarodowymi, opisami, ocenami, liczbą opinii, godzinami otwarcia i stronami internetowymi, gdy są dostępne. We włoskim interfejsie zastępuje ono Białe i Żółte Strony, zachowując ich wyniki oraz wyszukiwanie nazwisk i numerów telefonu. W pozostałych językach dostępne jest tylko wyszukiwanie miejsc i firm.
 
-2. Dodano wyszukiwanie miejsc i firm we wszystkich językach, z wynikami międzynarodowymi, opisami, ocenami, liczbą opinii, godzinami otwarcia i stronami internetowymi, gdy są dostępne. We włoskim interfejsie zastępuje ono Białe i Żółte Strony, zachowując ich wyniki oraz wyszukiwanie nazwisk i numerów telefonu. W pozostałych językach dostępne jest tylko wyszukiwanie miejsc i firm.
+2. Ulepszono wyszukiwanie tras, zapewniając dokładniejsze wyniki, i dodano trasy komunikacji publicznej.
 
 Version 0.9.25 – 2026-11-06
 

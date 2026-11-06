@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Отправление",
+  "route.departure_now": "Отправиться сейчас",
+  "route.departure_at": "Отправиться в",
+  "route.departure_zone": "Часовой пояс отправления",
+  "route.departure_hour": "Часы",
+  "route.departure_minute": "Минуты",
+
+  "route.recent_routes": "Недавние маршруты",
+  "route.clear_history": "Очистить историю",
+
+  "route.profile.transit": "Общественный транспорт",
   "places.detail.category": "Категория",
   "places.detail.address": "Адрес",
   "places.detail.phone": "Телефон",

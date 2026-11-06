@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Keyboard shortcuts: fixed a crash after the warning about an already assigned key combination in Options. Closing the warning with OK restores focus to the previous control and leaves the existing shortcut unchanged.
+1. Added Find places and businesses in all languages, with international results, descriptions, ratings, review counts, opening hours and websites when available. In the Italian interface it replaces White and Yellow Pages while retaining their results, name search and phone-number search. Other languages offer place and business search only.
 
-2. Added Find places and businesses in all languages, with international results, descriptions, ratings, review counts, opening hours and websites when available. In the Italian interface it replaces White and Yellow Pages while retaining their results, name search and phone-number search. Other languages offer place and business search only.
+2. Improved route search with more accurate results and added public transport routes.
 
 Version 0.9.25 – 2026-11-06
 

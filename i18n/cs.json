@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Odjezd",
+  "route.departure_now": "Odjet nyní",
+  "route.departure_at": "Odjezd v",
+  "route.departure_zone": "Časové pásmo odjezdu",
+  "route.departure_hour": "Hodiny",
+  "route.departure_minute": "Minuty",
+
+  "route.recent_routes": "Nedávné trasy",
+  "route.clear_history": "Vymazat historii",
+
+  "route.profile.transit": "Veřejná doprava",
   "places.detail.category": "Kategorie",
   "places.detail.address": "Adresa",
   "places.detail.phone": "Telefon",

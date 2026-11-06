@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Pintasan keyboard: memperbaiki crash setelah peringatan kombinasi tombol yang sudah digunakan di Opsi. Menutup peringatan dengan OK mengembalikan fokus ke kontrol sebelumnya dan tidak mengubah pintasan yang ada.
+1. Pencarian tempat dan usaha tersedia dalam semua bahasa, dengan hasil internasional, deskripsi, penilaian, jumlah ulasan, jam buka, dan situs web jika tersedia. Di antarmuka Italia, fitur ini menggantikan Halaman Putih dan Kuning sambil mempertahankan hasil serta pencarian nama dan nomor telepon. Bahasa lain hanya menyediakan pencarian tempat dan usaha.
 
-2. Pencarian tempat dan usaha tersedia dalam semua bahasa, dengan hasil internasional, deskripsi, penilaian, jumlah ulasan, jam buka, dan situs web jika tersedia. Di antarmuka Italia, fitur ini menggantikan Halaman Putih dan Kuning sambil mempertahankan hasil serta pencarian nama dan nomor telepon. Bahasa lain hanya menyediakan pencarian tempat dan usaha.
+2. Pencarian rute ditingkatkan dengan hasil yang lebih akurat dan penambahan rute transportasi umum.
 
 Version 0.9.25 – 2026-11-06
 

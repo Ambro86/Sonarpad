@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "出发",
+  "route.departure_now": "立即出发",
+  "route.departure_at": "出发时间",
+  "route.departure_zone": "出发地时区",
+  "route.departure_hour": "小时",
+  "route.departure_minute": "分钟",
+
+  "route.recent_routes": "最近路线",
+  "route.clear_history": "清除历史记录",
+
+  "route.profile.transit": "公共交通",
   "places.detail.category": "类别",
   "places.detail.address": "地址",
   "places.detail.phone": "电话",

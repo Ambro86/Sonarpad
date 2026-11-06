@@ -485,6 +485,7 @@ fn prompt_search(
             tertiary_options: Vec::new(),
             tertiary_default_selection: 0,
             tertiary_options_primary_index_only: None,
+            secondary_controls_disabled_primary_index: None,
             quaternary_type_label: String::new(),
             quaternary_options: Vec::new(),
             quaternary_default_selection: 0,

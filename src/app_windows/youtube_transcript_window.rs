@@ -490,7 +490,7 @@ pub(crate) fn sonarmusic_action(
         position: 0,
     };
     if action == 0 {
-        if !crate::try_launch_sonarmusic_direct_in_mpv(parent, url, title)? {
+        if !crate::try_launch_sonarmusic_direct_in_mpv(parent, url, title, &ytdlp)? {
             let fallback_started = std::time::Instant::now();
             let Some(path) = ensure_ytdlp_available(parent, language, &labels(language), None)?
             else {
@@ -2283,10 +2283,12 @@ fn add_stream_favorite(parent: HWND, label: String, url: String) {
 
 fn remove_stream_favorite(parent: HWND, url: &str) {
     if with_state(parent, |state| {
+        let before_cloud_delete = state.settings.clone();
         state
             .settings
             .stream_favorites
             .retain(|favorite| !favorite.url.eq_ignore_ascii_case(url));
+        crate::settings::record_explicit_cloud_deletions(&before_cloud_delete, &state.settings);
         save_settings(state.settings.clone());
     })
     .is_none()

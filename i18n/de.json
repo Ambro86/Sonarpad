@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Abfahrt",
+  "route.departure_now": "Jetzt abfahren",
+  "route.departure_at": "Abfahrt um",
+  "route.departure_zone": "Zeitzone der Abfahrt",
+  "route.departure_hour": "Stunden",
+  "route.departure_minute": "Minuten",
+
+  "route.recent_routes": "Letzte Routen",
+  "route.clear_history": "Verlauf löschen",
+
+  "route.profile.transit": "Öffentliche Verkehrsmittel",
   "places.detail.category": "Kategorie",
   "places.detail.address": "Adresse",
   "places.detail.phone": "Telefon",

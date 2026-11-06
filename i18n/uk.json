@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Відправлення",
+  "route.departure_now": "Вирушити зараз",
+  "route.departure_at": "Вирушити о",
+  "route.departure_zone": "Часовий пояс відправлення",
+  "route.departure_hour": "Години",
+  "route.departure_minute": "Хвилини",
+
+  "route.recent_routes": "Недавні маршрути",
+  "route.clear_history": "Очистити історію",
+
+  "route.profile.transit": "Громадський транспорт",
   "places.detail.category": "Категорія",
   "places.detail.address": "Адреса",
   "places.detail.phone": "Телефон",

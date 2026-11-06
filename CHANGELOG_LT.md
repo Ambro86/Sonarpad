@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Spartieji klavišai: ištaisyta programos strigtis po įspėjimo apie jau priskirtą klavišų derinį Parinktyse. Uždarius įspėjimą mygtuku Gerai, fokusas grįžta į ankstesnį valdiklį, o esamas derinys nekeičiamas.
+1. Vietų ir įmonių paieška dabar prieinama visomis kalbomis: tarptautiniai rezultatai, aprašymai, įvertinimai, atsiliepimų skaičius, darbo laikas ir svetainės, kai šie duomenys pateikti. Itališkoje sąsajoje ji pakeičia Baltuosius ir Geltonuosius puslapius, išsaugodama jų rezultatus bei paiešką pagal vardą ir telefono numerį. Kitomis kalbomis galima tik vietų ir įmonių paieška.
 
-2. Vietų ir įmonių paieška dabar prieinama visomis kalbomis: tarptautiniai rezultatai, aprašymai, įvertinimai, atsiliepimų skaičius, darbo laikas ir svetainės, kai šie duomenys pateikti. Itališkoje sąsajoje ji pakeičia Baltuosius ir Geltonuosius puslapius, išsaugodama jų rezultatus bei paiešką pagal vardą ir telefono numerį. Kitomis kalbomis galima tik vietų ir įmonių paieška.
+2. Patobulinta maršrutų paieška: tikslesni rezultatai ir pridėti viešojo transporto maršrutai.
 
 Version 0.9.25 – 2026-11-06
 

@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Raccourcis clavier : correction d’un plantage après l’avertissement signalant une combinaison déjà attribuée dans les Options. Fermer l’avertissement avec OK rétablit le focus sur le contrôle précédent sans modifier le raccourci existant.
+1. Ajout de la recherche de lieux et d’activités dans toutes les langues, avec des résultats internationaux, descriptions, notes, nombre d’avis, horaires et sites web lorsqu’ils sont disponibles. Dans l’interface italienne, elle remplace les Pages blanches et jaunes tout en conservant leurs résultats et les recherches par nom ou numéro de téléphone. Les autres langues proposent uniquement la recherche de lieux et d’activités.
 
-2. Ajout de la recherche de lieux et d’activités dans toutes les langues, avec des résultats internationaux, descriptions, notes, nombre d’avis, horaires et sites web lorsqu’ils sont disponibles. Dans l’interface italienne, elle remplace les Pages blanches et jaunes tout en conservant leurs résultats et les recherches par nom ou numéro de téléphone. Les autres langues proposent uniquement la recherche de lieux et d’activités.
+2. Amélioration de la recherche d’itinéraires avec des résultats plus précis et ajout des trajets en transports en commun.
 
 Version 0.9.25 – 2026-11-06
 

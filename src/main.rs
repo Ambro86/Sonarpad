@@ -5444,7 +5444,20 @@ pub(crate) fn try_launch_sonarmusic_direct_in_mpv(
     hwnd: HWND,
     url: &str,
     title: &str,
+    ytdlp_path: &Path,
 ) -> Result<bool, String> {
+    let options = StreamMpvOptions {
+        title: Some(title),
+        ytdlp_path: Some(ytdlp_path),
+        ytdl_format: None,
+        ytdlp_credentials: None,
+        user_agent: None,
+        prefer_audio_description: false,
+        allow_bookmark_resume: pending_stream_bookmark_matches(hwnd, url),
+        force_video: true,
+        live_tv: false,
+        configure_tv_tracks_async: true,
+    };
     let started = std::time::Instant::now();
     match sonarmusic::resolve_playback(url) {
         Ok(direct) => {
@@ -5452,24 +5465,8 @@ pub(crate) fn try_launch_sonarmusic_direct_in_mpv(
                 "SonarMusic direct resolution: {} ms",
                 started.elapsed().as_millis()
             ));
-            let result = launch_stream_url_in_mpv_with_input(
-                hwnd,
-                url,
-                StreamMpvOptions {
-                    title: Some(title),
-                    ytdlp_path: None,
-                    ytdl_format: None,
-                    ytdlp_credentials: None,
-                    user_agent: None,
-                    prefer_audio_description: false,
-                    allow_bookmark_resume: pending_stream_bookmark_matches(hwnd, url),
-                    force_video: true,
-                    live_tv: false,
-                    configure_tv_tracks_async: true,
-                },
-                Some(&direct),
-                false,
-            );
+            let result =
+                launch_stream_url_in_mpv_with_input(hwnd, url, options, Some(&direct), false);
             if result.is_ok() {
                 return result.map(|()| true);
             }
@@ -5480,6 +5477,16 @@ pub(crate) fn try_launch_sonarmusic_direct_in_mpv(
                 .is_some_and(|err| err.contains("richiesta più recente"))
             {
                 return result.map(|()| true);
+            }
+            if result
+                .as_ref()
+                .err()
+                .is_some_and(|error| error == "empty audio stream")
+            {
+                log_debug(
+                    "SonarMusic direct stream has no playable audio; retrying with existing yt-dlp HLS recovery",
+                );
+                return launch_youtube_hls_with_startup_retry(hwnd, url, options).map(|()| true);
             }
             log_debug("SonarMusic direct player failed; retrying yt-dlp");
         }
@@ -5802,6 +5809,7 @@ fn should_retry_youtube_http500(url: &str, options: StreamMpvOptions<'_>, error:
     matches!(
         error,
         "HTTP 500"
+            | "empty audio stream"
             | "http error 403"
             | "no video formats found"
             | "requested format is not available"
@@ -24031,6 +24039,14 @@ mod tests {
         let url = "https://www.youtube.com/watch?v=-U8Tu9MkEb4";
         assert!(super::should_retry_youtube_http500(
             url, options, "HTTP 500"
+        ));
+        assert!(super::should_retry_youtube_http500(
+            url,
+            super::StreamMpvOptions {
+                force_video: true,
+                ..options
+            },
+            "empty audio stream"
         ));
         for error in [
             "",

@@ -1,11 +1,13 @@
+#[path = "route_history.rs"]
+mod route_history;
+
 use windows::Win32::Foundation::HWND;
 
 use crate::app_windows::podcasts_window;
 use crate::app_windows::prompt_window::{self, PromptDirectoryOptions};
 use crate::app_windows::route_service::{
-    GeocodeCandidate, RouteAvoid, RouteClient, RouteOptions, RoutePath, RoutePreference,
-    RouteProfile, RouteRequestResult, RouteResult, format_distance_for_language,
-    format_duration_for_language,
+    GeocodeCandidate, RouteAvoid, RouteClient, RouteDeparture, RouteOptions, RoutePath,
+    RoutePreference, RouteProfile, RouteRequestResult, RouteResult,
 };
 use crate::app_windows::youtube_transcript_window::{
     self, MultilineSearchOptions, MultilineSelectionItem, MultilineSelectionResult,
@@ -32,6 +34,7 @@ fn run_route_flow(parent: HWND, language: Language) {
     // 2. Esegui la ricerca
     match client.route_from_addresses(&params.from, &params.to, params.plan.clone()) {
         Ok(RouteRequestResult::Ready(route)) => {
+            remember_route(&route, &params.plan);
             display_route(parent, language, route);
         }
         Ok(RouteRequestResult::NeedsSelection {
@@ -43,6 +46,7 @@ fn run_route_flow(parent: HWND, language: Language) {
             include_municipalities,
         }) => {
             let plan = RouteOptions {
+                departure: params.plan.departure.clone(),
                 profile,
                 preference,
                 avoid,
@@ -71,12 +75,127 @@ struct RouteParams {
     plan: RouteOptions,
 }
 
+fn remember_route(route: &RouteResult, plan: &RouteOptions) {
+    route_history::remember(route_history::RecentRoute {
+        from: route.from_label.clone(),
+        to: route.to_label.clone(),
+        profile: plan.profile.api_value().into(),
+        preference: plan.preference.api_value().into(),
+        avoid: plan.avoid.api_value().into(),
+        country: plan.country.clone(),
+        municipalities: plan.include_municipalities,
+    });
+}
+
+fn choose_recent_route(parent: HWND, language: Language) -> Option<RouteParams> {
+    loop {
+        let history = route_history::load();
+        let mut items = Vec::new();
+        for (index, item) in history.iter().enumerate() {
+            items.push(MultilineSelectionItem {
+                id: index.to_string(),
+                title: format!("{} → {}", item.from, item.to),
+                description: Some(recent_profile(&item.profile).label(language)),
+            });
+        }
+        match youtube_transcript_window::select_multiline_items_with_search(
+            parent,
+            language,
+            i18n::tr(language, "route.recent_routes"),
+            items,
+            None,
+            MultilineSearchOptions {
+                initial_query: String::new(),
+                search_button_label: String::new(),
+                show_search_edit: false,
+                secondary_action_label: Some(i18n::tr(language, "route.clear_history")),
+                context_actions: Vec::new(),
+                right_arrow_accepts_selection: true,
+                left_arrow_closes: true,
+                escape_stops_active_player: false,
+                refresh: None,
+            },
+        ) {
+            MultilineSelectionResult::Selected(id) => {
+                let item = history.get(id.parse::<usize>().ok()?)?;
+                return Some(RouteParams {
+                    from: item.from.clone(),
+                    to: item.to.clone(),
+                    plan: RouteOptions {
+                        departure: None,
+                        profile: recent_profile(&item.profile),
+                        preference: if item.preference == "shortest" {
+                            RoutePreference::Shortest
+                        } else {
+                            RoutePreference::Fastest
+                        },
+                        avoid: match item.avoid.as_str() {
+                            "highways" => RouteAvoid::Highways,
+                            "tollways" => RouteAvoid::Tollways,
+                            "highways,tollways" => RouteAvoid::HighwaysAndTollways,
+                            _ => RouteAvoid::None,
+                        },
+                        include_municipalities: item.municipalities,
+                        language,
+                        country: item.country.clone(),
+                    },
+                });
+            }
+            MultilineSelectionResult::SecondaryAction => route_history::save(&[]),
+            _ => return None,
+        }
+    }
+}
+
+fn recent_route_fields(
+    parent: HWND,
+    language: Language,
+) -> Option<prompt_window::PromptDirectoryResult> {
+    let params = choose_recent_route(parent, language)?;
+    Some(prompt_window::PromptDirectoryResult {
+        departure: None,
+        selected_index: match params.plan.profile {
+            RouteProfile::Walking => 0,
+            RouteProfile::Cycling => 1,
+            RouteProfile::Driving => 2,
+            RouteProfile::Wheelchair => 3,
+            RouteProfile::Transit => 4,
+        },
+        secondary_selected_index: usize::from(params.plan.preference == RoutePreference::Shortest),
+        tertiary_selected_index: match params.plan.avoid {
+            RouteAvoid::None => 0,
+            RouteAvoid::Highways => 1,
+            RouteAvoid::Tollways => 2,
+            RouteAvoid::HighwaysAndTollways => 3,
+        },
+        quaternary_selected_index: podcasts_window::podcast_directory_country_options()
+            .iter()
+            .position(|(code, _)| *code == params.plan.country)
+            .unwrap_or(0),
+        primary_value: params.from,
+        secondary_value: params.to,
+        tertiary_value: String::new(),
+        checkbox_checked: params.plan.include_municipalities,
+    })
+}
+
+fn recent_profile(value: &str) -> RouteProfile {
+    match value {
+        "driving-car" => RouteProfile::Driving,
+        "cycling-regular" => RouteProfile::Cycling,
+        "wheelchair" => RouteProfile::Wheelchair,
+        "transit" => RouteProfile::Transit,
+        _ => RouteProfile::Walking,
+    }
+}
+
 fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> {
     let profile_options = [
         RouteProfile::Walking,
         RouteProfile::Cycling,
         RouteProfile::Driving,
         RouteProfile::Wheelchair,
+        RouteProfile::Transit,
     ];
     let preference_options = [RoutePreference::Fastest, RoutePreference::Shortest];
     let avoid_options = [
@@ -135,6 +254,7 @@ fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> 
         tertiary_options: avoid_list,
         tertiary_default_selection: 0,
         tertiary_options_primary_index_only: Some(2),
+        secondary_controls_disabled_primary_index: Some(4),
         quaternary_type_label: i18n::tr(language, "route.country_label"),
         quaternary_options: country_list,
         quaternary_default_selection: country_default_selection,
@@ -150,7 +270,23 @@ fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> 
         checkbox_default: false,
     };
 
-    let result = prompt_window::prompt_directory_search(parent, options, language)?;
+    let result = prompt_window::prompt_directory_search_with_action(
+        parent,
+        options,
+        language,
+        Some((
+            i18n::tr(language, "route.recent_routes"),
+            recent_route_fields,
+        )),
+        Some(
+            country_options
+                .iter()
+                .map(|(code, _)| {
+                    crate::app_windows::route_service::default_departure_zone(code).to_string()
+                })
+                .collect(),
+        ),
+    )?;
 
     let profile = profile_options
         .get(result.selected_index)
@@ -185,10 +321,18 @@ fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> 
         crate::settings::save_settings(settings_snapshot);
     }
 
+    let departure = if profile == RouteProfile::Transit {
+        result
+            .departure
+            .map(|(time, time_zone)| RouteDeparture { time, time_zone })
+    } else {
+        None
+    };
     Some(RouteParams {
         from: result.primary_value,
         to: result.secondary_value,
         plan: RouteOptions {
+            departure,
             profile,
             preference,
             avoid,
@@ -325,8 +469,11 @@ fn handle_selection_and_route(
     };
 
     crate::screen_reader_speak(&i18n::tr(language, "route.calculating"));
-    match client.route_between_coordinates(&from_selected, &to_selected, plan) {
-        Ok(route) => display_route(parent, language, route),
+    match client.route_between_coordinates(&from_selected, &to_selected, plan.clone()) {
+        Ok(route) => {
+            remember_route(&route, &plan);
+            display_route(parent, language, route);
+        }
         Err(err) => show_error(parent, language, &err.to_string()),
     }
 }
@@ -405,8 +552,8 @@ fn route_path_selection_item(
     };
     let description = format!(
         "{}; {}",
-        format_distance_for_language(path.distance_meters, language),
-        format_duration_for_language(path.duration_seconds, language)
+        path.distance_label(language),
+        path.duration_label(language)
     );
 
     MultilineSelectionItem {

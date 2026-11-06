@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Keberangkatan",
+  "route.departure_now": "Berangkat sekarang",
+  "route.departure_at": "Berangkat pukul",
+  "route.departure_zone": "Zona waktu keberangkatan",
+  "route.departure_hour": "Jam",
+  "route.departure_minute": "Menit",
+
+  "route.recent_routes": "Rute terbaru",
+  "route.clear_history": "Hapus riwayat",
+
+  "route.profile.transit": "Transportasi umum",
   "places.detail.category": "Kategori",
   "places.detail.address": "Alamat",
   "places.detail.phone": "Telepon",

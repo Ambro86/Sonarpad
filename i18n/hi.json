@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "प्रस्थान",
+  "route.departure_now": "अभी निकलें",
+  "route.departure_at": "इस समय निकलें",
+  "route.departure_zone": "प्रस्थान का समय क्षेत्र",
+  "route.departure_hour": "घंटे",
+  "route.departure_minute": "मिनट",
+
+  "route.recent_routes": "हाल के मार्ग",
+  "route.clear_history": "इतिहास साफ़ करें",
+
+  "route.profile.transit": "सार्वजनिक परिवहन",
   "places.detail.category": "श्रेणी",
   "places.detail.address": "पता",
   "places.detail.phone": "फ़ोन",

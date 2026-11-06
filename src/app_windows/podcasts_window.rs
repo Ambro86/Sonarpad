@@ -5917,7 +5917,12 @@ fn handle_source_action(hwnd: HWND, verb: SourceAction) {
             let removed = {
                 with_state(parent, |ps| {
                     if source_index < ps.settings.podcast_sources.len() {
+                        let before_cloud_delete = ps.settings.clone();
                         ps.settings.podcast_sources.remove(source_index);
+                        crate::settings::record_explicit_cloud_deletions(
+                            &before_cloud_delete,
+                            &ps.settings,
+                        );
                         settings::save_settings(ps.settings.clone());
                         true
                     } else {

@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Phím tắt: sửa lỗi ứng dụng bị thoát sau cảnh báo tổ hợp phím đã được gán trong Tùy chọn. Khi đóng cảnh báo bằng OK, tiêu điểm trở về điều khiển trước đó và phím tắt hiện có không thay đổi.
+1. Thêm tìm kiếm địa điểm và doanh nghiệp cho mọi ngôn ngữ, với kết quả quốc tế, mô tả, điểm đánh giá, số lượt đánh giá, giờ mở cửa và trang web khi có. Trong giao diện tiếng Ý, tính năng này thay thế Trang Trắng và Trang Vàng nhưng vẫn giữ kết quả cũ cùng tìm kiếm theo tên và số điện thoại. Các ngôn ngữ khác chỉ có tìm kiếm địa điểm và doanh nghiệp.
 
-2. Thêm tìm kiếm địa điểm và doanh nghiệp cho mọi ngôn ngữ, với kết quả quốc tế, mô tả, điểm đánh giá, số lượt đánh giá, giờ mở cửa và trang web khi có. Trong giao diện tiếng Ý, tính năng này thay thế Trang Trắng và Trang Vàng nhưng vẫn giữ kết quả cũ cùng tìm kiếm theo tên và số điện thoại. Các ngôn ngữ khác chỉ có tìm kiếm địa điểm và doanh nghiệp.
+2. Cải thiện tìm kiếm tuyến đường với kết quả chính xác hơn và bổ sung tuyến đi bằng phương tiện công cộng.
 
 Version 0.9.25 – 2026-11-06
 

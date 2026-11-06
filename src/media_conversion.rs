@@ -43,6 +43,22 @@ pub(crate) fn convert(
     cancel: Arc<AtomicBool>,
     progress: &mut dyn FnMut(u32),
 ) -> Result<(), String> {
+    convert_with_preferred_audio_stream(
+        input, output, settings, video, image, cancel, progress, None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn convert_with_preferred_audio_stream(
+    input: &Path,
+    output: &Path,
+    settings: &ConvertAudioSettings,
+    video: bool,
+    image: Option<&Path>,
+    cancel: Arc<AtomicBool>,
+    progress: &mut dyn FnMut(u32),
+    preferred_audio_stream_index: Option<i32>,
+) -> Result<(), String> {
     if same_file(input, output) || image.is_some_and(|image| same_file(image, output)) {
         return Err("Input and output must be different files".to_string());
     }
@@ -71,12 +87,13 @@ pub(crate) fn convert(
         report(0);
         if !video {
             // Audio callbacks use hundredths of a percent (0..10000), unlike video/mux (0..100).
-            crate::ffmpeg_export::convert_audio_file(
+            crate::ffmpeg_export::convert_audio_file_with_preferred_stream(
                 input,
                 &staged,
                 settings,
                 Some(cancel.clone()),
                 Some(&mut |pct| report(pct.min(10000) * 99 / 10000)),
+                preferred_audio_stream_index,
             )?;
         } else {
             let has_video = crate::ffmpeg_source::has_real_video_stream(input)?;
@@ -100,12 +117,13 @@ pub(crate) fn convert(
                 &mut |pct| report(pct.min(100) * video_share / 100),
             )?;
             if has_audio {
-                crate::ffmpeg_export::convert_audio_file(
+                crate::ffmpeg_export::convert_audio_file_with_preferred_stream(
                     input,
                     &audio_file,
                     settings,
                     Some(cancel.clone()),
                     Some(&mut |pct| report(33 + pct.min(10000) * 33 / 10000)),
+                    preferred_audio_stream_index,
                 )?;
                 crate::ffmpeg_export::remux_media_file_to_mp4_with_external_audio_stream(
                     &video_file,
@@ -722,6 +740,46 @@ mod tests {
             }
             result
         }
+    }
+
+    #[test]
+    #[ignore = "requires a local legacy video via SONARPAD_LEGACY_VIDEO_TEST"]
+    fn legacy_video_dll_recode_produces_segmentable_mp4() {
+        let input = PathBuf::from(std::env::var("SONARPAD_LEGACY_VIDEO_TEST").unwrap());
+        let (directory, _, _) = fixtures();
+        let source = directory.join("legacy.mkv");
+        excerpt(&input, &source, 30.0).unwrap();
+        let output = directory.join("compatible.mp4");
+        let cancel = Arc::new(AtomicBool::new(false));
+        let tracks = crate::ffmpeg_source::list_audio_streams(&source).unwrap();
+        super::convert_with_preferred_audio_stream(
+            &source,
+            &output,
+            &ConvertAudioSettings {
+                format: ConvertAudioFormat::Aac,
+                quality: ConvertAudioQuality::BitrateKbps(192),
+            },
+            true,
+            None,
+            cancel,
+            &mut |_| {},
+            tracks.first().map(|track| track.index),
+        )
+        .unwrap();
+        assert!(crate::ffmpeg_source::has_real_video_stream(&output).unwrap());
+        assert!(
+            !crate::ffmpeg_source::list_audio_streams(&output)
+                .unwrap()
+                .is_empty()
+        );
+        let before = media_duration_seconds(&source).unwrap();
+        let after = media_duration_seconds(&output).unwrap();
+        assert!(
+            (before - after).abs() < 0.5,
+            "duration changed: {before} -> {after}"
+        );
+        excerpt(&output, &directory.join("gemini.mp4"), 10.0).unwrap();
+        std::fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]

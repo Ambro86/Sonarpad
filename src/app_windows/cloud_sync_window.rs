@@ -24,6 +24,33 @@ impl Drop for DialogGuard {
         UI_OPEN.store(false, Ordering::SeqCst);
     }
 }
+fn load_sync_settings() -> Result<Value, String> {
+    load_sync_settings_from(&settings_dir().join("settings.json"))
+}
+
+fn load_sync_settings_from(path: &std::path::Path) -> Result<Value, String> {
+    let raw = std::fs::read_to_string(path).map_err(|_| "storage_error")?;
+    let parsed: crate::settings::AppSettings =
+        serde_json::from_str(&raw).map_err(|_| "storage_error")?;
+    let loaded =
+        serde_json::to_value(crate::settings::parse_settings(&raw).map_err(|_| "storage_error")?)
+            .map_err(|_| "storage_error")?;
+    // Never export fallback defaults after a failed or racing settings read.
+    if std::fs::read_to_string(path).map_err(|_| "storage_error")? != raw {
+        log_debug("CloudSync settings_read file changed during read; sync blocked");
+        return Err("storage_error".into());
+    }
+    let parsed = serde_json::to_value(parsed).map_err(|_| "storage_error")?;
+    let collections = json!({"sync_preferences":false});
+    if cloud_sync::selected(&collections, &cloud_sync::export(&parsed, false))
+        != cloud_sync::selected(&collections, &cloud_sync::export(&loaded, false))
+    {
+        log_debug("CloudSync settings_read inconsistent collections; sync blocked");
+        return Err("storage_error".into());
+    }
+    Ok(loaded)
+}
+
 pub fn tick(parent: HWND) {
     if BUSY.load(Ordering::SeqCst) || UI_OPEN.load(Ordering::SeqCst) {
         return;
@@ -34,7 +61,7 @@ pub fn tick(parent: HWND) {
     if !meta["group_id"].is_string() {
         return;
     }
-    let Ok(settings) = serde_json::to_value(crate::settings::load_settings()) else {
+    let Ok(settings) = load_sync_settings() else {
         return;
     };
     let dirty = cloud_sync::local_changes(&meta, &settings, false).unwrap_or(true);
@@ -71,16 +98,26 @@ pub fn open(parent: HWND) {
         return;
     }
     let _guard = DialogGuard;
-    let Some((language, settings)) = with_state(parent, |s| {
-        (
-            s.settings.language,
-            serde_json::to_value(crate::settings::load_settings()),
-        )
-    }) else {
+    let Some((language, settings)) =
+        with_state(parent, |s| (s.settings.language, load_sync_settings()))
+    else {
         return;
     };
-    let Ok(settings) = settings else {
-        return;
+    let settings = match settings {
+        Ok(settings) => settings,
+        Err(error) => {
+            log_debug(&format!("CloudSync open blocked: {error}"));
+            crate::show_error(
+                parent,
+                language,
+                label(
+                    language,
+                    "Non riesco a leggere le impostazioni in modo sicuro. La sincronizzazione è stata bloccata per proteggere i tuoi dati. Riprova.",
+                    "Unable to read settings safely. Sync was blocked to protect your data. Please try again.",
+                ),
+            );
+            return;
+        }
     };
     let title = label(language, "Sincronizzazione cloud", "Cloud sync");
     let meta = match Session::metadata(&settings_dir()) {
@@ -380,13 +417,15 @@ pub fn complete(parent: HWND, param: LPARAM) {
         if let Some(mut remote) = outcome.remote {
             let mut activation_changed = false;
             let applied = with_state(parent, |state| -> Result<(), String> {
-                let mut settings = serde_json::to_value(crate::settings::load_settings())
-                    .map_err(|_| "storage_error")?;
+                let mut settings = load_sync_settings().map_err(|_| "storage_error")?;
                 let current = outcome
                     .session
                     .select(&cloud_sync::export(&settings, false));
                 let merged =
                     cloud_sync::merge(&remote, &outcome.session.meta["pending"]["state"], &current);
+                outcome
+                    .session
+                    .guard_deletions("incoming", &current, &merged)?;
                 let old_language = cloud_sync::language(&settings, false);
                 cloud_sync::apply(&mut settings, &merged, false)?;
                 if old_language != cloud_sync::language(&settings, false)
@@ -404,8 +443,7 @@ pub fn complete(parent: HWND, param: LPARAM) {
                 let updated: crate::settings::AppSettings =
                     serde_json::from_value(settings).map_err(|_| "invalid_response")?;
                 save_settings(updated.clone());
-                let persisted = serde_json::to_value(crate::settings::load_settings())
-                    .map_err(|_| "storage_error")?;
+                let persisted = load_sync_settings().map_err(|_| "storage_error")?;
                 if cloud_sync::export(&persisted, false)
                     != cloud_sync::export(
                         &serde_json::to_value(&updated).map_err(|_| "storage_error")?,
@@ -414,6 +452,14 @@ pub fn complete(parent: HWND, param: LPARAM) {
                 {
                     return Err("storage_error".into());
                 }
+                cloud_sync::log_collection_reductions(
+                    &current,
+                    &outcome
+                        .session
+                        .select(&cloud_sync::export(&persisted, false)),
+                    "write_verified",
+                    crate::log_debug,
+                );
                 activation_changed = state.settings.rai_luce_code != updated.rai_luce_code;
                 state.settings = updated;
                 Ok(())
@@ -440,6 +486,22 @@ pub fn complete(parent: HWND, param: LPARAM) {
     if automatic {
         if let Err(error) = result {
             log_debug(&format!("CloudSync automatic completion error={error}"));
+        }
+        return;
+    }
+    if result
+        .as_ref()
+        .is_err_and(|error| error == "deletion_confirmation_required")
+    {
+        if let Ok(session) = Session::load(&settings_dir()) {
+            crate::show_error(
+                parent,
+                language,
+                &cloud_sync::deletion_review_text(
+                    &session.meta["deletion_review"],
+                    language == Language::Italian,
+                ),
+            );
         }
         return;
     }
@@ -512,5 +574,52 @@ pub fn complete(parent: HWND, param: LPARAM) {
                 ),
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod settings_read_tests {
+    use super::*;
+
+    #[test]
+    fn sync_read_preserves_file_with_encrypted_credentials() {
+        let path = std::env::temp_dir().join(format!(
+            "sonarpad-sync-read-{}-{}.json",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let settings = crate::settings::AppSettings {
+            rai_luce_code: crate::settings::encrypt_rai_luce_code("test-only-code"),
+            ..Default::default()
+        };
+        let raw = serde_json::to_string(&settings).unwrap();
+        std::fs::write(&path, &raw).unwrap();
+        for _ in 0..2 {
+            let loaded = load_sync_settings_from(&path).unwrap();
+            assert_eq!(loaded["rai_luce_code"], "test-only-code");
+            assert_eq!(std::fs::read_to_string(&path).unwrap(), raw);
+        }
+        std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn sync_read_rejects_missing_or_corrupt_settings_without_defaults() {
+        let path = std::env::temp_dir().join(format!(
+            "sonarpad-sync-read-{}-{}.json",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        assert!(load_sync_settings_from(&path).is_err());
+        assert!(!path.exists());
+        std::fs::write(&path, "{invalid").unwrap();
+        assert!(load_sync_settings_from(&path).is_err());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "{invalid");
+        std::fs::remove_file(&path).unwrap();
     }
 }

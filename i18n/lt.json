@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Išvykimas",
+  "route.departure_now": "Išvykti dabar",
+  "route.departure_at": "Išvykti",
+  "route.departure_zone": "Išvykimo laiko juosta",
+  "route.departure_hour": "Valandos",
+  "route.departure_minute": "Minutės",
+
+  "route.recent_routes": "Naujausi maršrutai",
+  "route.clear_history": "Išvalyti istoriją",
+
+  "route.profile.transit": "Viešasis transportas",
   "places.detail.category": "Kategorija",
   "places.detail.address": "Adresas",
   "places.detail.phone": "Telefonas",

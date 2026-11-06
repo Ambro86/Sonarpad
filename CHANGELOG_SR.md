@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Пречице на тастатури: исправљено рушење после упозорења о већ додељеној комбинацији тастера у Опцијама. Затварањем упозорења дугметом У реду фокус се враћа на претходну контролу, а постојећа пречица остаје непромењена.
+1. Pretraga mesta i preduzeća dostupna je na svim jezicima, sa međunarodnim rezultatima, opisima, ocenama, brojem recenzija, radnim vremenom i veb-sajtovima kada su dostupni. U italijanskom interfejsu zamenjuje Bele i Žute strane, uz očuvanje njihovih rezultata i pretrage po imenu i broju telefona. Na drugim jezicima dostupna je samo pretraga mesta i preduzeća.
 
-2. Pretraga mesta i preduzeća dostupna je na svim jezicima, sa međunarodnim rezultatima, opisima, ocenama, brojem recenzija, radnim vremenom i veb-sajtovima kada su dostupni. U italijanskom interfejsu zamenjuje Bele i Žute strane, uz očuvanje njihovih rezultata i pretrage po imenu i broju telefona. Na drugim jezicima dostupna je samo pretraga mesta i preduzeća.
+2. Poboljšana je pretraga ruta sa preciznijim rezultatima i dodate su rute javnim prevozom.
 
 Version 0.9.25 – 2026-11-06
 

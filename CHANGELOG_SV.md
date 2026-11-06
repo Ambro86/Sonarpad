@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Kortkommandon: åtgärdat en krasch efter varningen om en redan tilldelad tangentkombination i Alternativ. När varningen stängs med OK återgår fokus till föregående kontroll och det befintliga kortkommandot förblir oförändrat.
+1. Sökning efter platser och företag finns nu på alla språk, med internationella resultat, beskrivningar, betyg, antal recensioner, öppettider och webbplatser när uppgifterna finns. I det italienska gränssnittet ersätter den Vita och Gula sidorna, med deras resultat samt namn- och telefonnummersökning kvar. På andra språk finns endast sökning efter platser och företag.
 
-2. Sökning efter platser och företag finns nu på alla språk, med internationella resultat, beskrivningar, betyg, antal recensioner, öppettider och webbplatser när uppgifterna finns. I det italienska gränssnittet ersätter den Vita och Gula sidorna, med deras resultat samt namn- och telefonnummersökning kvar. På andra språk finns endast sökning efter platser och företag.
+2. Förbättrad ruttsökning med mer exakta resultat och tillagda resvägar med kollektivtrafik.
 
 Version 0.9.25 – 2026-11-06
 

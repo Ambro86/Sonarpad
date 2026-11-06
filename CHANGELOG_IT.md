@@ -2,9 +2,9 @@
 
 Version 0.9.26 – 2026-11-06
 
-1. Scorciatoie da tastiera: corretto il crash dopo l’avviso di combinazione già assegnata nelle Opzioni. Chiudendo l’avviso con OK, il focus torna al controllo precedente e la combinazione esistente resta invariata.
+1. Cerca luoghi e attività è ora disponibile in tutte le lingue, con risultati internazionali, descrizioni, valutazioni, numero di recensioni, orari di apertura e sito web, quando disponibili. Nell’interfaccia italiana sostituisce Pagine Bianche e Gialle, mantenendone anche i risultati, la ricerca nominativi e la ricerca per numero di telefono. Nelle altre lingue è disponibile solo la ricerca di luoghi e attività.
 
-2. Cerca luoghi e attività è ora disponibile in tutte le lingue, con risultati internazionali, descrizioni, valutazioni, numero di recensioni, orari di apertura e sito web, quando disponibili. Nell’interfaccia italiana sostituisce Pagine Bianche e Gialle, mantenendone anche i risultati, la ricerca nominativi e la ricerca per numero di telefono. Nelle altre lingue è disponibile solo la ricerca di luoghi e attività.
+2. Migliorata la ricerca dei percorsi, con risultati più precisi e l’aggiunta dei percorsi per i mezzi pubblici.
 
 Version 0.9.25 – 2026-11-06
 

@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Partida",
+  "route.departure_now": "Partir agora",
+  "route.departure_at": "Partir às",
+  "route.departure_zone": "Fuso horário da partida",
+  "route.departure_hour": "Horas",
+  "route.departure_minute": "Minutos",
+
+  "route.recent_routes": "Rotas recentes",
+  "route.clear_history": "Limpar histórico",
+
+  "route.profile.transit": "Transporte público",
   "places.detail.category": "Categoria",
   "places.detail.address": "Endereço",
   "places.detail.phone": "Telefone",

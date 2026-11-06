@@ -8939,6 +8939,7 @@ fn handle_select_articles(hwnd: HWND) {
         .unwrap_or(false);
 
         with_state(parent, |ps| {
+            let before_cloud_delete = ps.settings.clone();
             if source_is_favorites {
                 ps.settings
                     .rss_favorite_articles
@@ -8959,6 +8960,7 @@ fn handle_select_articles(hwnd: HWND) {
                     }
                 }
             }
+            crate::settings::record_explicit_cloud_deletions(&before_cloud_delete, &ps.settings);
             save_rss_settings(ps);
         });
 
@@ -9128,6 +9130,7 @@ fn handle_delete_folder(hwnd: HWND, folder_path: Vec<String>) {
     }
 
     let removed = with_state(parent, |state| {
+        let before_cloud_delete = state.settings.clone();
         let stored_folders = state
             .settings
             .rss_folders_by_language
@@ -9159,6 +9162,7 @@ fn handle_delete_folder(hwnd: HWND, folder_path: Vec<String>) {
         if let Some(active_folders) = state.settings.rss_folders_by_language.get_mut(&news_code) {
             active_folders.retain(|path| !path.starts_with(folder_path.as_slice()));
         }
+        crate::settings::record_explicit_cloud_deletions(&before_cloud_delete, &state.settings);
         save_rss_settings(state);
         (sources, folders)
     });
@@ -9344,10 +9348,15 @@ fn handle_delete(hwnd: HWND) {
                             }
                         }
                     }
+                    let before_cloud_delete = ps.settings.clone();
                     if is_favorites_source_url(&url) {
                         ps.settings.rss_favorite_articles.clear();
                     }
                     ps.settings.rss_sources.remove(idx);
+                    crate::settings::record_explicit_cloud_deletions(
+                        &before_cloud_delete,
+                        &ps.settings,
+                    );
                     delayed_target_source_idx = if ps.settings.rss_sources.is_empty() {
                         None
                     } else if idx > 0 {
@@ -9457,6 +9466,7 @@ fn handle_delete(hwnd: HWND) {
                                 .get(source_idx)
                                 .is_some_and(is_favorites_source);
                             if is_favorites {
+                                let before_cloud_delete = ps.settings.clone();
                                 let removed = remove_favorite_article_by_key(
                                     &mut ps.settings.rss_favorite_articles,
                                     &key,
@@ -9467,6 +9477,10 @@ fn handle_delete(hwnd: HWND) {
                                     // source clean now that deletion is persisted directly.
                                     src.removed_item_keys.retain(|k| k != &key);
                                 }
+                                crate::settings::record_explicit_cloud_deletions(
+                                    &before_cloud_delete,
+                                    &ps.settings,
+                                );
                                 if removed {
                                     save_rss_settings(ps);
                                 }

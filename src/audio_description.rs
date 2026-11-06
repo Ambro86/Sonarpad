@@ -19,10 +19,7 @@ use rodio::Source;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -5377,132 +5374,6 @@ fn audio_description_selected_audio_stream_index(
     Ok(selected.map(|stream| stream.index))
 }
 
-#[derive(Clone, Copy, Debug)]
-enum AudioDescriptionRecodeBackend {
-    NvidiaNvenc,
-    AmdAmf,
-    IntelQsv,
-    CpuLibx264Superfast,
-}
-
-impl AudioDescriptionRecodeBackend {
-    fn label(self) -> &'static str {
-        match self {
-            Self::NvidiaNvenc => "h264_nvenc",
-            Self::AmdAmf => "h264_amf",
-            Self::IntelQsv => "h264_qsv",
-            Self::CpuLibx264Superfast => "libx264-superfast",
-        }
-    }
-
-    fn append_video_args(self, command: &mut Command) {
-        match self {
-            Self::NvidiaNvenc => {
-                command
-                    .arg("-c:v")
-                    .arg("h264_nvenc")
-                    .arg("-preset")
-                    .arg("p1")
-                    .arg("-cq")
-                    .arg("18");
-            }
-            Self::AmdAmf => {
-                command
-                    .arg("-c:v")
-                    .arg("h264_amf")
-                    .arg("-quality")
-                    .arg("speed")
-                    .arg("-qp_i")
-                    .arg("18")
-                    .arg("-qp_p")
-                    .arg("18");
-            }
-            Self::IntelQsv => {
-                command
-                    .arg("-c:v")
-                    .arg("h264_qsv")
-                    .arg("-preset")
-                    .arg("veryfast")
-                    .arg("-global_quality")
-                    .arg("18");
-            }
-            Self::CpuLibx264Superfast => {
-                command
-                    .arg("-c:v")
-                    .arg("libx264")
-                    .arg("-preset")
-                    .arg("superfast")
-                    .arg("-crf")
-                    .arg("18");
-            }
-        }
-    }
-}
-
-fn audio_description_ffmpeg_candidates() -> Vec<PathBuf> {
-    let mut candidates = Vec::new();
-    if let Ok(exe_path) = std::env::current_exe()
-        && let Some(exe_dir) = exe_path.parent()
-    {
-        candidates.push(exe_dir.join("ffmpeg.exe"));
-        candidates.push(exe_dir.join("ffmpeg"));
-        candidates.push(exe_dir.join("bin").join("ffmpeg.exe"));
-        candidates.push(exe_dir.join("bin").join("ffmpeg"));
-        candidates.push(exe_dir.join("runtime").join("ffmpeg.exe"));
-        candidates.push(exe_dir.join("runtime").join("ffmpeg"));
-        candidates.push(exe_dir.join("runtime").join("ffmpeg").join("ffmpeg.exe"));
-        candidates.push(exe_dir.join("runtime").join("ffmpeg").join("ffmpeg"));
-        candidates.push(exe_dir.join("tools").join("ffmpeg.exe"));
-        candidates.push(exe_dir.join("tools").join("ffmpeg"));
-    }
-    candidates.push(PathBuf::from("ffmpeg.exe"));
-    candidates.push(PathBuf::from("ffmpeg"));
-    let mut unique = Vec::new();
-    for candidate in candidates {
-        if !unique
-            .iter()
-            .any(|existing: &PathBuf| existing == &candidate)
-        {
-            unique.push(candidate);
-        }
-    }
-    unique
-}
-
-fn audio_description_ffmpeg_is_usable(ffmpeg_executable: &Path) -> bool {
-    if ffmpeg_executable.components().count() > 1 && !ffmpeg_executable.exists() {
-        return false;
-    }
-
-    let mut command = Command::new(ffmpeg_executable);
-    command
-        .arg("-hide_banner")
-        .arg("-version")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    #[cfg(windows)]
-    command.creation_flags(0x08000000);
-
-    command.status().is_ok_and(|status| status.success())
-}
-
-fn locate_audio_description_ffmpeg_executable() -> Result<PathBuf, String> {
-    for candidate in audio_description_ffmpeg_candidates() {
-        if audio_description_ffmpeg_is_usable(&candidate) {
-            crate::log_debug(&format!(
-                "Audio description: timestamp recode will use ffmpeg executable {}",
-                candidate.display()
-            ));
-            return Ok(candidate);
-        }
-    }
-    Err(
-        "Audio description: could not locate a usable ffmpeg executable for timestamp recode"
-            .to_string(),
-    )
-}
-
 fn validate_audio_description_recode_output(output_path: &Path) -> Result<(), String> {
     let metadata = fs::metadata(output_path).map_err(|error| {
         format!("Audio description: timestamp recode output validation failed: {error}")
@@ -5528,200 +5399,6 @@ fn validate_audio_description_recode_output(output_path: &Path) -> Result<(), St
     Ok(())
 }
 
-fn run_audio_description_ffmpeg_recode_once(
-    ffmpeg_executable: &Path,
-    input_path: &Path,
-    output_path: &Path,
-    selected_audio_stream_index: Option<i32>,
-    backend: AudioDescriptionRecodeBackend,
-    cancel: &Arc<AtomicBool>,
-) -> Result<(), String> {
-    if output_path.exists() {
-        crate::log_if_err!(
-            fs::remove_file(output_path),
-            "Audio description: remove stale recode attempt failed"
-        );
-    }
-
-    let mut command = Command::new(ffmpeg_executable);
-    if let Some(ffmpeg_dir) = ffmpeg_executable.parent()
-        && !ffmpeg_dir.as_os_str().is_empty()
-    {
-        command.current_dir(ffmpeg_dir);
-    }
-    command
-        .arg("-y")
-        .arg("-hide_banner")
-        .arg("-loglevel")
-        .arg("error")
-        .arg("-fflags")
-        .arg("+genpts")
-        .arg("-hwaccel")
-        .arg("auto")
-        .arg("-i")
-        .arg(input_path)
-        .arg("-map")
-        .arg("0:v:0")
-        .arg("-sn")
-        .arg("-dn")
-        .arg("-map_metadata")
-        .arg("-1")
-        .arg("-pix_fmt")
-        .arg("yuv420p")
-        .arg("-vf")
-        .arg("setpts=PTS-STARTPTS")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-
-    if let Some(audio_stream_index) = selected_audio_stream_index {
-        command
-            .arg("-map")
-            .arg(format!("0:{audio_stream_index}"))
-            .arg("-c:a")
-            .arg("aac")
-            .arg("-b:a")
-            .arg("192k")
-            .arg("-af")
-            .arg("aresample=async=1:first_pts=0");
-    } else {
-        command.arg("-an");
-    }
-
-    backend.append_video_args(&mut command);
-    command
-        .arg("-movflags")
-        .arg("+faststart")
-        .arg("-avoid_negative_ts")
-        .arg("make_zero")
-        .arg(output_path);
-
-    #[cfg(windows)]
-    command.creation_flags(0x08000000);
-
-    crate::log_debug(&format!(
-        "Audio description: recoding timestamp-damaged source with ffmpeg backend={} input={} output={} preferred_audio_stream={:?} selected_audio_stream={:?}",
-        backend.label(),
-        input_path.display(),
-        output_path.display(),
-        selected_audio_stream_index,
-        selected_audio_stream_index
-    ));
-
-    let mut child = command.spawn().map_err(|error| {
-        format!(
-            "Audio description: could not start ffmpeg timestamp recode with backend {}: {error}",
-            backend.label()
-        )
-    })?;
-
-    loop {
-        if cancel.load(Ordering::Relaxed) {
-            crate::log_if_err!(
-                child.kill(),
-                "Audio description: stop timestamp recode process failed"
-            );
-            crate::log_if_err!(
-                child.wait(),
-                "Audio description: wait for cancelled timestamp recode process failed"
-            );
-            crate::log_if_err!(
-                fs::remove_file(output_path),
-                "Audio description: remove cancelled recode output failed"
-            );
-            return Err("cancelled".to_string());
-        }
-
-        match child.try_wait() {
-            Ok(Some(status)) => {
-                if !status.success() {
-                    crate::log_if_err!(
-                        fs::remove_file(output_path),
-                        "Audio description: remove failed recode output failed"
-                    );
-                    return Err(format!(
-                        "Audio description: ffmpeg timestamp recode backend {} failed with status {status}",
-                        backend.label()
-                    ));
-                }
-                break;
-            }
-            Ok(None) => std::thread::sleep(Duration::from_millis(200)),
-            Err(error) => {
-                crate::log_if_err!(
-                    child.kill(),
-                    "Audio description: stop failed timestamp recode process failed"
-                );
-                crate::log_if_err!(
-                    child.wait(),
-                    "Audio description: wait for failed timestamp recode process failed"
-                );
-                crate::log_if_err!(
-                    fs::remove_file(output_path),
-                    "Audio description: remove failed recode output failed"
-                );
-                return Err(format!(
-                    "Audio description: could not monitor ffmpeg timestamp recode backend {}: {error}",
-                    backend.label()
-                ));
-            }
-        }
-    }
-
-    validate_audio_description_recode_output(output_path)
-}
-
-fn run_audio_description_ffmpeg_recode(
-    ffmpeg_executable: &Path,
-    input_path: &Path,
-    output_path: &Path,
-    preferred_audio_stream_index: Option<i32>,
-    cancel: &Arc<AtomicBool>,
-) -> Result<(), String> {
-    let selected_audio_stream_index =
-        audio_description_selected_audio_stream_index(input_path, preferred_audio_stream_index)?;
-    let backends = [
-        AudioDescriptionRecodeBackend::NvidiaNvenc,
-        AudioDescriptionRecodeBackend::AmdAmf,
-        AudioDescriptionRecodeBackend::IntelQsv,
-        AudioDescriptionRecodeBackend::CpuLibx264Superfast,
-    ];
-    let mut failures = Vec::new();
-
-    for backend in backends {
-        match run_audio_description_ffmpeg_recode_once(
-            ffmpeg_executable,
-            input_path,
-            output_path,
-            selected_audio_stream_index,
-            backend,
-            cancel,
-        ) {
-            Ok(()) => {
-                crate::log_debug(&format!(
-                    "Audio description: timestamp recode completed successfully with ffmpeg backend={}",
-                    backend.label()
-                ));
-                return Ok(());
-            }
-            Err(error) if error == "cancelled" => return Err(error),
-            Err(error) => {
-                crate::log_debug(&format!(
-                    "Audio description: ffmpeg timestamp recode backend={} failed and Sonarpad will try the next backend: {}",
-                    backend.label(),
-                    error
-                ));
-                failures.push(format!("{}: {}", backend.label(), error));
-            }
-        }
-    }
-
-    Err(format!(
-        "Audio description: all ffmpeg timestamp recode backends failed ({})",
-        failures.join(" | ")
-    ))
-}
-
 fn recode_audio_description_source_for_invalid_timeline(
     input_path: &Path,
     preferred_audio_stream_index: Option<i32>,
@@ -5734,17 +5411,37 @@ fn recode_audio_description_source_for_invalid_timeline(
         );
     }
 
+    let preferred_audio_stream_index =
+        audio_description_selected_audio_stream_index(input_path, preferred_audio_stream_index)?;
     let final_path = audio_description_recoded_source_path(input_path);
     let temporary_path = temporary_sibling_path(&final_path, "recode");
-    let ffmpeg_executable = locate_audio_description_ffmpeg_executable()?;
-
-    run_audio_description_ffmpeg_recode(
-        &ffmpeg_executable,
+    crate::log_debug(
+        "Audio description: recoding with bundled FFmpeg DLLs (MPEG-4/AAC), no external executable",
+    );
+    let result = crate::media_conversion::convert_with_preferred_audio_stream(
         input_path,
         &temporary_path,
+        &crate::ffmpeg_export::ConvertAudioSettings {
+            format: crate::ffmpeg_export::ConvertAudioFormat::Aac,
+            quality: crate::ffmpeg_export::ConvertAudioQuality::BitrateKbps(192),
+        },
+        true,
+        None,
+        cancel.clone(),
+        &mut |_| {},
         preferred_audio_stream_index,
-        cancel,
-    )?;
+    )
+    .and_then(|()| validate_audio_description_recode_output(&temporary_path));
+    if let Err(error) = result {
+        if temporary_path.exists() {
+            crate::log_if_err!(fs::remove_file(&temporary_path));
+        }
+        return Err(if cancel.load(Ordering::Relaxed) {
+            "cancelled".to_string()
+        } else {
+            error
+        });
+    }
 
     if final_path.exists() {
         fs::remove_file(&final_path).map_err(|error| {
@@ -7379,7 +7076,7 @@ pub fn create_audio_description(
                     return Err(mp4_error);
                 }
                 crate::log_debug(&format!(
-                    "Audio description: MP4 remux is incompatible with the source codec; trying the existing H.264/AAC recode as a final fallback. error={mp4_error}"
+                    "Audio description: MP4 remux is incompatible with the source codec; trying the internal MPEG-4/AAC recode as a final fallback. error={mp4_error}"
                 ));
                 if let Ok(mut callbacks) = callback_state.lock() {
                     notify_status(
@@ -7408,7 +7105,7 @@ pub fn create_audio_description(
                     if error == "cancelled" {
                         error
                     } else {
-                        format!("{mp4_error}\nH.264/AAC recode fallback failed: {error}")
+                        format!("{mp4_error}\nInternal MPEG-4/AAC recode fallback failed: {error}")
                     }
                 })
             }) {

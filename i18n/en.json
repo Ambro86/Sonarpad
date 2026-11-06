@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Departure",
+  "route.departure_now": "Leave now",
+  "route.departure_at": "Leave at",
+  "route.departure_zone": "Departure time zone",
+  "route.departure_hour": "Hours",
+  "route.departure_minute": "Minutes",
+
+  "route.recent_routes": "Recent routes",
+  "route.clear_history": "Clear history",
+
+  "route.profile.transit": "Public transport",
   "places.detail.category": "Category",
   "places.detail.address": "Address",
   "places.detail.phone": "Phone",

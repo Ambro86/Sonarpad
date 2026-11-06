@@ -1,4 +1,15 @@
 {
+  "route.departure_label": "Partenza",
+  "route.departure_now": "Partenza ora",
+  "route.departure_at": "Parti alle",
+  "route.departure_zone": "Fuso orario della partenza",
+  "route.departure_hour": "Ore",
+  "route.departure_minute": "Minuti",
+
+  "route.recent_routes": "Percorsi recenti",
+  "route.clear_history": "Cancella cronologia",
+
+  "route.profile.transit": "Mezzi pubblici",
   "places.detail.category": "Categoria",
   "places.detail.address": "Indirizzo",
   "places.detail.phone": "Telefono",
