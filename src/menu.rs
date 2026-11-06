@@ -400,7 +400,7 @@ pub fn menu_labels(language: Language) -> MenuLabels {
         menu_weather: i18n::tr(language, "menu.weather"),
         menu_cinema: i18n::tr(language, "menu.cinema"),
         menu_calendar: i18n::tr(language, "menu.calendar"),
-        menu_italiaonline: format!("{}...\tAlt+Shift+G", i18n::tr(language, "places.title")),
+        menu_italiaonline: format!("&{}...\tAlt+Shift+G", i18n::tr(language, "places.title")),
         menu_radio: i18n::tr(language, "menu.radio"),
         menu_prompt: i18n::tr(language, "menu.prompt"),
         menu_rss: i18n::tr(language, "menu.rss"),
