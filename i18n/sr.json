@@ -1,4 +1,6 @@
 {
+  "places.new_search": "Нова претрага",
+  "places.open_all": "Отвори све",
   "places.phone_search": "Пронађи број телефона",
   "places.phone_query": "Унесите број телефона",
   "places.phone_invalid": "Унесите важећи број телефона са позивним бројем.",

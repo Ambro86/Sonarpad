@@ -1,4 +1,6 @@
 {
+  "places.new_search": "Nauja paieška",
+  "places.open_all": "Atverti viską",
   "places.phone_search": "Ieškoti telefono numerio",
   "places.phone_query": "Įveskite telefono numerį",
   "places.phone_invalid": "Įveskite galiojantį telefono numerį su miesto arba šalies kodu.",

@@ -1,5 +1,9 @@
 # Přehled změn
 
+Version 0.9.27 – 2026-11-07
+
+1. SonarTube a SonarMusic: opravena chyba, která bránila obnovení přehrávání po delší pauze. Zvuk a video pokračují od uložené pozice.
+
 Version 0.9.26 – 2026-11-07
 
 1. Přidáno hledání míst a firem ve všech jazycích, s mezinárodními výsledky, popisy, hodnocením, počtem recenzí, otevírací dobou a weby, pokud jsou dostupné. V italském rozhraní nahrazuje Bílé a Zlaté stránky a zachovává jejich výsledky i hledání podle jména a telefonního čísla. V ostatních jazycích je dostupné pouze hledání míst a firem.

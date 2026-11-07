@@ -1,5 +1,9 @@
 # Pakeitimų žurnalas
 
+Version 0.9.27 – 2026-11-07
+
+1. SonarTube ir SonarMusic: ištaisyta klaida, dėl kurios po ilgos pauzės nepavykdavo tęsti atkūrimo. Garsas ir vaizdas atkuriami nuo išsaugotos vietos.
+
 Version 0.9.26 – 2026-11-07
 
 1. Vietų ir įmonių paieška dabar prieinama visomis kalbomis: tarptautiniai rezultatai, aprašymai, įvertinimai, atsiliepimų skaičius, darbo laikas ir svetainės, kai šie duomenys pateikti. Itališkoje sąsajoje ji pakeičia Baltuosius ir Geltonuosius puslapius, išsaugodama jų rezultatus bei paiešką pagal vardą ir telefono numerį. Kitomis kalbomis galima tik vietų ir įmonių paieška.

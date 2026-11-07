@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+Version 0.9.27 – 2026-11-07
+
+1. SonarTube und SonarMusic: Ein Fehler wurde behoben, durch den die Wiedergabe nach einer längeren Pause nicht fortgesetzt wurde. Audio und Video werden an der gespeicherten Position fortgesetzt.
+
 Version 0.9.26 – 2026-11-07
 
 1. Die Suche nach Orten und Unternehmen ist jetzt in allen Sprachen verfügbar, mit internationalen Ergebnissen, Beschreibungen, Bewertungen, Anzahl der Rezensionen, Öffnungszeiten und Websites, soweit vorhanden. In der italienischen Oberfläche ersetzt sie die Weißen und Gelben Seiten; deren Ergebnisse sowie die Namens- und Telefonnummernsuche bleiben erhalten. In anderen Sprachen ist nur die Suche nach Orten und Unternehmen verfügbar.

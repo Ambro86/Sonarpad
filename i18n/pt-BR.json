@@ -1,4 +1,6 @@
 {
+  "places.new_search": "Nova busca",
+  "places.open_all": "Abrir tudo",
   "places.phone_search": "Buscar um número de telefone",
   "places.phone_query": "Digite o número de telefone",
   "places.phone_invalid": "Digite um número de telefone válido com DDD ou código do país.",

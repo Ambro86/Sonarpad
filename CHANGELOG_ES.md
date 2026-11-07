@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.27 – 2026-11-07
+
+1. SonarTube y SonarMusic: corregido un bloqueo que impedía reanudar la reproducción después de una pausa prolongada. El audio y el vídeo continúan desde la posición guardada.
+
 Version 0.9.26 – 2026-11-07
 
 1. Añadida la búsqueda de lugares y negocios en todos los idiomas, con resultados internacionales, descripciones, valoraciones, número de reseñas, horarios y sitios web cuando están disponibles. En la interfaz italiana sustituye a las Páginas Blancas y Amarillas, conservando sus resultados y las búsquedas por nombre y teléfono. En los demás idiomas solo se ofrece la búsqueda de lugares y negocios.

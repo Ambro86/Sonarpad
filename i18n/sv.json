@@ -1,4 +1,6 @@
 {
+  "places.new_search": "Ny sökning",
+  "places.open_all": "Öppna alla",
   "places.phone_search": "Sök ett telefonnummer",
   "places.phone_query": "Ange telefonnumret",
   "places.phone_invalid": "Ange ett giltigt telefonnummer med riktnummer eller landskod.",

@@ -936,10 +936,15 @@ mod ytdlp_command_tests {
 
     #[test]
     fn playlist_youtube_verification_tries_one_other_client_then_stops() {
-        let error = "ERROR: [youtube] abc: Please sign in. This helps protect our community. Use --cookies-from-browser or --cookies for the authentication.";
-        assert!(super::is_youtube_sign_in_verification_error(error));
-        assert!(super::playlist_download_error_is_permanent(error));
-        assert!(!super::should_retry_youtube_download_failure(error, false));
+        for error in [
+            "ERROR: [youtube] abc: Please sign in. This helps protect our community. Use --cookies-from-browser or --cookies for the authentication.",
+            "ERROR: [youtube] RBtFQkG1nog: Please sign in. Use --cookies-from-browser or --cookies for the authentication.",
+        ] {
+            assert!(super::is_youtube_sign_in_verification_error(error));
+            assert!(super::playlist_download_error_is_permanent(error));
+            assert!(!super::should_retry_youtube_download_failure(error, false));
+            assert!(!super::should_retry_youtube_download_failure(error, true));
+        }
         assert!(!super::is_youtube_sign_in_verification_error(
             "HTTP Error 503"
         ));
@@ -12425,7 +12430,7 @@ fn should_retry_youtube_download_failure(error: &str, stalled: bool) -> bool {
 
 fn is_youtube_sign_in_verification_error(error: &str) -> bool {
     let lower = error.to_ascii_lowercase();
-    lower.contains("please sign in. this helps protect our community")
+    lower.contains("please sign in.")
         || lower.contains("sign in to confirm you're not a bot")
         || lower.contains("sign in to confirm you’re not a bot")
 }

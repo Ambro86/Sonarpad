@@ -1,4 +1,6 @@
 {
+  "places.new_search": "Новый поиск",
+  "places.open_all": "Открыть всё",
   "places.phone_search": "Найти номер телефона",
   "places.phone_query": "Введите номер телефона",
   "places.phone_invalid": "Введите действительный номер телефона с кодом города или страны.",

@@ -1,4 +1,6 @@
 {
+  "places.new_search": "Neue Suche",
+  "places.open_all": "Alle öffnen",
   "places.phone_search": "Telefonnummer suchen",
   "places.phone_query": "Telefonnummer eingeben",
   "places.phone_invalid": "Geben Sie eine gültige Telefonnummer mit Vorwahl ein.",

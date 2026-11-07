@@ -1,4 +1,6 @@
 {
+  "places.new_search": "New search",
+  "places.open_all": "Open all",
   "places.phone_search": "Find a phone number",
   "places.phone_query": "Enter the phone number",
   "places.phone_invalid": "Enter a valid phone number, including its area or country code.",

@@ -1,5 +1,9 @@
 # Ändringslogg
 
+Version 0.9.27 – 2026-11-07
+
+1. SonarTube och SonarMusic: åtgärdat ett fel som hindrade uppspelningen från att återupptas efter en längre paus. Ljud och video fortsätter från den sparade positionen.
+
 Version 0.9.26 – 2026-11-07
 
 1. Sökning efter platser och företag finns nu på alla språk, med internationella resultat, beskrivningar, betyg, antal recensioner, öppettider och webbplatser när uppgifterna finns. I det italienska gränssnittet ersätter den Vita och Gula sidorna, med deras resultat samt namn- och telefonnummersökning kvar. På andra språk finns endast sökning efter platser och företag.

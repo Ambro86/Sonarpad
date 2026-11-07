@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+Version 0.9.27 – 2026-11-07
+
+1. SonarTube dan SonarMusic: memperbaiki masalah pemutaran yang tidak dapat dilanjutkan setelah jeda panjang. Audio dan video dilanjutkan dari posisi tersimpan.
+
 Version 0.9.26 – 2026-11-07
 
 1. Pencarian tempat dan usaha tersedia dalam semua bahasa, dengan hasil internasional, deskripsi, penilaian, jumlah ulasan, jam buka, dan situs web jika tersedia. Di antarmuka Italia, fitur ini menggantikan Halaman Putih dan Kuning sambil mempertahankan hasil serta pencarian nama dan nomor telepon. Bahasa lain hanya menyediakan pencarian tempat dan usaha.

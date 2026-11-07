@@ -1,4 +1,6 @@
 {
+  "places.new_search": "新搜索",
+  "places.open_all": "全部打开",
   "places.phone_search": "查找电话号码",
   "places.phone_query": "输入电话号码",
   "places.phone_invalid": "请输入包含区号或国家代码的有效电话号码。",

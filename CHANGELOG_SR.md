@@ -1,5 +1,9 @@
 # Dnevnik izmena
 
+Version 0.9.27 – 2026-11-07
+
+1. SonarTube и SonarMusic: исправљена је грешка која је спречавала наставак репродукције после дуже паузе. Звук и видео се настављају од сачуване позиције.
+
 Version 0.9.26 – 2026-11-07
 
 1. Pretraga mesta i preduzeća dostupna je na svim jezicima, sa međunarodnim rezultatima, opisima, ocenama, brojem recenzija, radnim vremenom i veb-sajtovima kada su dostupni. U italijanskom interfejsu zamenjuje Bele i Žute strane, uz očuvanje njihovih rezultata i pretrage po imenu i broju telefona. Na drugim jezicima dostupna je samo pretraga mesta i preduzeća.

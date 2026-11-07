@@ -440,9 +440,9 @@ fn browse_results(
             current_selected_id.clone(),
             youtube_transcript_window::MultilineSearchOptions {
                 initial_query: String::new(),
-                search_button_label: "Nuova ricerca".to_string(),
+                search_button_label: crate::i18n::tr(language, "places.new_search"),
                 show_search_edit: false,
-                secondary_action_label: Some("Apri tutto".to_string()),
+                secondary_action_label: Some(crate::i18n::tr(language, "places.open_all")),
                 context_actions: Vec::new(),
                 right_arrow_accepts_selection: true,
                 left_arrow_closes: false,

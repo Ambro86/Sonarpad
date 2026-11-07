@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.27 – 2026-11-07
+
+1. SonarTube e SonarMusic: corretto un blocco della riproduzione dopo una pausa prolungata. Audio e video riprendono dalla posizione salvata.
+
 Version 0.9.26 – 2026-11-07
 
 1. Cerca luoghi e attività è ora disponibile in tutte le lingue, con risultati internazionali, descrizioni, valutazioni, numero di recensioni, orari di apertura e sito web, quando disponibili. Nell’interfaccia italiana sostituisce Pagine Bianche e Gialle, mantenendone anche i risultati, la ricerca nominativi e la ricerca per numero di telefono. Nelle altre lingue è disponibile solo la ricerca di luoghi e attività.

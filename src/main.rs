@@ -4843,13 +4843,15 @@ fn refresh_youtube_mpv_after_long_pause(
     if !app_windows::youtube_transcript_window::is_youtube_stream_url(&url) {
         return Err("Current stream is not a YouTube video".to_string());
     }
-    // mpv loadfile re-runs yt-dlp to obtain fresh signed media URLs, preserving
-    // the process, player window, selection list and approximate play position.
+    // Direct SonarTube/SonarMusic playback starts mpv with --ytdl=no. Enable
+    // its existing hook before loadfile, or the ytdl:// URL fails to load.
+    // Keep the process, player window, selection list and saved position.
     let command = youtube_reload_command(&url, position_secs.unwrap_or(0.0));
     log_debug(&format!(
-        "YouTube long-pause refresh: re-resolving video from position {:.1}s",
+        "YouTube long-pause refresh: enabling yt-dlp and re-resolving video from position {:.1}s",
         position_secs.unwrap_or(0.0)
     ));
+    try_send_command_to_managed_mpv(hwnd, r#"{"command":["set_property","ytdl",true]}"#)?;
     try_send_command_to_managed_mpv(hwnd, &command)
 }
 

@@ -1,5 +1,9 @@
 # Nhật ký thay đổi
 
+Version 0.9.27 – 2026-11-07
+
+1. SonarTube và SonarMusic: sửa lỗi không thể tiếp tục phát sau khi tạm dừng lâu. Âm thanh và video tiếp tục từ vị trí đã lưu.
+
 Version 0.9.26 – 2026-11-07
 
 1. Thêm tìm kiếm địa điểm và doanh nghiệp cho mọi ngôn ngữ, với kết quả quốc tế, mô tả, điểm đánh giá, số lượt đánh giá, giờ mở cửa và trang web khi có. Trong giao diện tiếng Ý, tính năng này thay thế Trang Trắng và Trang Vàng nhưng vẫn giữ kết quả cũ cùng tìm kiếm theo tên và số điện thoại. Các ngôn ngữ khác chỉ có tìm kiếm địa điểm và doanh nghiệp.

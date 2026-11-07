@@ -1,4 +1,6 @@
 {
+  "places.new_search": "Nueva búsqueda",
+  "places.open_all": "Abrir todo",
   "places.phone_search": "Buscar un número de teléfono",
   "places.phone_query": "Introduce el número de teléfono",
   "places.phone_invalid": "Introduce un número de teléfono válido con su prefijo.",
