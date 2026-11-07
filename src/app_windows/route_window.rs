@@ -7,7 +7,8 @@ use crate::app_windows::podcasts_window;
 use crate::app_windows::prompt_window::{self, PromptDirectoryOptions};
 use crate::app_windows::route_service::{
     GeocodeCandidate, RouteAvoid, RouteClient, RouteDeparture, RouteOptions, RoutePath,
-    RoutePreference, RouteProfile, RouteRequestResult, RouteResult,
+    RoutePreference, RouteProfile, RouteRequestResult, RouteResult, candidates_need_selection,
+    prefer_nearby_candidates,
 };
 use crate::app_windows::youtube_transcript_window::{
     self, MultilineSearchOptions, MultilineSelectionItem, MultilineSelectionResult,
@@ -387,10 +388,10 @@ fn handle_selection_and_route(
     language: Language,
     client: &RouteClient,
     from_candidates: Vec<GeocodeCandidate>,
-    to_candidates: Vec<GeocodeCandidate>,
+    mut to_candidates: Vec<GeocodeCandidate>,
     plan: RouteOptions,
 ) {
-    let from_selected = if from_candidates.len() > 1 {
+    let from_selected = if candidates_need_selection(&from_candidates) {
         let items = from_candidates
             .iter()
             .enumerate()
@@ -429,7 +430,8 @@ fn handle_selection_and_route(
         from_candidates[0].clone()
     };
 
-    let to_selected = if to_candidates.len() > 1 {
+    prefer_nearby_candidates(&mut to_candidates, &from_selected);
+    let to_selected = if candidates_need_selection(&to_candidates) {
         let items = to_candidates
             .iter()
             .enumerate()

@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Vyhledat telefonní číslo",
+  "places.phone_query": "Zadejte telefonní číslo",
+  "places.phone_invalid": "Zadejte platné telefonní číslo včetně předvolby.",
   "route.departure_label": "Odjezd",
   "route.departure_now": "Odjet nyní",
   "route.departure_at": "Odjezd v",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Vyberte hlas syntézy řeči.",
   "audio_description.extended": "Povolit rozšířené pauzy: ve výjimečných případech pozastavit film, když se popis nevejde do ticha",
   "audio_description.allow_nonverbal_vocals": "Povolit popisy během neřečových hlasových projevů",
+  "audio_description.allow_dialogue_overlap": "Povolit audiopopis během dialogů a komentáře",
   "audio_description.gemini_api_key": "Klíč API Gemini:",
   "audio_description.show_api_key": "Zobrazit klíč API",
   "audio_description.gemini_error_models": "Modely Gemini se nepodařilo načíst: {error}",

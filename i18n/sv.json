@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Sök ett telefonnummer",
+  "places.phone_query": "Ange telefonnumret",
+  "places.phone_invalid": "Ange ett giltigt telefonnummer med riktnummer eller landskod.",
   "route.departure_label": "Avresa",
   "route.departure_now": "Åk nu",
   "route.departure_at": "Åk klockan",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Välj en talsyntesröst.",
   "audio_description.extended": "Aktivera förlängda pauser: pausa filmen i undantagsfall när beskrivningen inte ryms i en tystnad",
   "audio_description.allow_nonverbal_vocals": "Tillåt beskrivningar under icke-verbala röstljud",
+  "audio_description.allow_dialogue_overlap": "Tillåt syntolkning under dialog och kommentarer",
   "audio_description.gemini_api_key": "Gemini API-nyckel:",
   "audio_description.show_api_key": "Visa API-nyckel",
   "audio_description.gemini_error_models": "Kunde inte läsa in Gemini-modeller: {error}",

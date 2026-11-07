@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Procurar um número de telefone",
+  "places.phone_query": "Introduza o número de telefone",
+  "places.phone_invalid": "Introduza um número de telefone válido com indicativo.",
   "route.departure_label": "Partida",
   "route.departure_now": "Partir agora",
   "route.departure_at": "Partir às",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Selecione uma voz de síntese.",
   "audio_description.extended": "Ativar pausas prolongadas: interromper o filme em casos excecionais quando a descrição não cabe num silêncio",
   "audio_description.allow_nonverbal_vocals": "Permitir descrições sobre vocalizações não verbais",
+  "audio_description.allow_dialogue_overlap": "Permitir audiodescrições durante diálogos e comentários",
   "audio_description.gemini_api_key": "Chave API Gemini:",
   "audio_description.show_api_key": "Mostrar chave API",
   "audio_description.gemini_error_models": "Não foi possível carregar os modelos Gemini: {error}",

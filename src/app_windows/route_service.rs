@@ -185,7 +185,23 @@ impl RouteClient {
             )));
         }
 
-        // Prova la query originale
+        match self.fetch_primary_geocode(address, language, country) {
+            Ok(results) if !results.is_empty() => {
+                crate::log_debug(&format!(
+                    "route_geocode: provider=google candidates={}",
+                    results.len()
+                ));
+                return Ok(results);
+            }
+            Ok(_) => crate::log_debug(
+                "route_geocode: provider=ors fallback=true reason=no_usable_google_suggestions",
+            ),
+            Err(error) => crate::log_debug(&format!(
+                "route_geocode: provider=ors fallback=true reason={error}"
+            )),
+        }
+
+        // Preserve the existing ORS lookup and query simplification as fallback.
         let results = self.fetch_geocode(address, language, country)?;
 
         // Se i risultati sono solo la città (fallback del geocoder), prova a semplificare la query
@@ -210,6 +226,70 @@ impl RouteClient {
         }
 
         Ok(results)
+    }
+
+    fn fetch_primary_geocode(
+        &self,
+        address: &str,
+        language: Language,
+        country: &str,
+    ) -> Result<Vec<GeocodeCandidate>, RouteError> {
+        let response: PrimaryGeocodeResponse = self
+            .client
+            .post(format!("{}/percorsi.php", self.base_url))
+            .timeout(std::time::Duration::from_secs(10))
+            .header(ROUTE_API_TOKEN_HEADER, ROUTE_API_CLIENT_TOKEN)
+            .json(&serde_json::json!({
+                "azione": "indirizzi", "q": address,
+                "paese": country.to_ascii_lowercase(),
+                "lingua": primary_route_language(language),
+            }))
+            .send()
+            .and_then(|response| response.error_for_status())
+            .map_err(|error| route_network_error(language, error.to_string()))?
+            .json()
+            .map_err(|error| route_invalid_response_error(language, error.to_string()))?;
+        let data = response
+            .data
+            .filter(|_| response.ok)
+            .ok_or_else(|| RouteError::Server(i18n::tr(language, "route.error.address_search")))?;
+        // A number added to a street label is not a verified house coordinate.
+        if data
+            .alternative
+            .iter()
+            .any(|item| item.civico_da_verificare == Some(true))
+        {
+            return Ok(Vec::new());
+        }
+        Ok(data
+            .alternative
+            .into_iter()
+            .filter_map(|item| {
+                let latitude = item.latitude?;
+                let longitude = item.longitude?;
+                let label = item.indirizzo.trim().to_string();
+                if label.is_empty()
+                    || !latitude.is_finite()
+                    || !longitude.is_finite()
+                    || latitude.abs() > 90.0
+                    || longitude.abs() > 180.0
+                {
+                    return None;
+                }
+                Some(GeocodeCandidate {
+                    name: item.nome.unwrap_or_else(|| label.clone()),
+                    label,
+                    country: country.to_string(),
+                    region: String::new(),
+                    county: String::new(),
+                    locality: String::new(),
+                    postalcode: String::new(),
+                    latitude,
+                    longitude,
+                    requires_confirmation: item.tipo.as_deref() != Some("indirizzo"),
+                })
+            })
+            .collect())
     }
 
     fn fetch_geocode(
@@ -448,7 +528,8 @@ impl RouteClient {
             )));
         }
 
-        if from_candidates.len() > 1 || to_candidates.len() > 1 {
+        if candidates_need_selection(&from_candidates) || candidates_need_selection(&to_candidates)
+        {
             return Ok(RouteRequestResult::NeedsSelection {
                 from_candidates,
                 to_candidates,
@@ -500,6 +581,29 @@ pub struct GeocodeCandidate {
     pub postalcode: String,
     pub latitude: f64,
     pub longitude: f64,
+    #[serde(default)]
+    pub requires_confirmation: bool,
+}
+
+pub fn candidates_need_selection(candidates: &[GeocodeCandidate]) -> bool {
+    candidates.len() > 1
+        || candidates
+            .first()
+            .is_some_and(|item| item.requires_confirmation)
+}
+
+pub fn prefer_nearby_candidates(candidates: &mut [GeocodeCandidate], from: &GeocodeCandidate) {
+    let distance = |candidate: &GeocodeCandidate| {
+        let latitude = ((candidate.latitude - from.latitude).to_radians() / 2.0).sin();
+        let longitude = ((candidate.longitude - from.longitude).to_radians() / 2.0).sin();
+        latitude * latitude
+            + from.latitude.to_radians().cos()
+                * candidate.latitude.to_radians().cos()
+                * longitude
+                * longitude
+    };
+    // Stable ordering keeps all alternatives, including more distant namesakes.
+    candidates.sort_by(|left, right| distance(left).total_cmp(&distance(right)));
 }
 
 impl GeocodeCandidate {
@@ -565,6 +669,29 @@ impl RoutePath {
             .clone()
             .unwrap_or_else(|| format_duration_for_language(self.duration_seconds, language))
     }
+}
+
+#[derive(Deserialize)]
+struct PrimaryGeocodeResponse {
+    ok: bool,
+    data: Option<PrimaryGeocodeData>,
+}
+
+#[derive(Deserialize)]
+struct PrimaryGeocodeData {
+    #[serde(default)]
+    alternative: Vec<PrimaryGeocodeCandidate>,
+}
+
+#[derive(Deserialize)]
+struct PrimaryGeocodeCandidate {
+    #[serde(default)]
+    indirizzo: String,
+    nome: Option<String>,
+    tipo: Option<String>,
+    latitude: Option<f64>,
+    longitude: Option<f64>,
+    civico_da_verificare: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -1353,6 +1480,7 @@ mod primary_route_tests {
             postalcode: String::new(),
             latitude: 51.5152,
             longitude: -0.1419,
+            requires_confirmation: false,
         }
     }
     fn options(profile: RouteProfile) -> RouteOptions {
@@ -1372,6 +1500,127 @@ mod primary_route_tests {
     const AVOID: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Take Bus 12 at 12:30"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"fastest","evita":"highways,tollways"}}"#;
 
     const ORS: &str = r#"{"ok":true,"distance_meters":1000,"duration_seconds":600,"steps":[]}"#;
+
+    const ADDRESS: &str = r#"{"ok":true,"data":{"alternative":[{"indirizzo":"Via Francesco Cilea, 12, Torino, TO","nome":"Via Francesco Cilea, 12","tipo":"indirizzo","latitude":45.0983965,"longitude":7.7052344}]}}"#;
+    const PLACES: &str = r#"{"ok":true,"data":{"alternative":[{"indirizzo":"Zerbonia Autodemolizioni, Alessandria, AL","nome":"Zerbonia Autodemolizioni","tipo":"luogo","latitude":44.8455399,"longitude":8.6805169},{"indirizzo":"IIS Romolo Zerboni, Via Paolo della Cella, Torino, TO","nome":"IIS Romolo Zerboni","tipo":"luogo","latitude":45.104888,"longitude":7.6786255},{"indirizzo":"zerboni torino","latitude":null,"longitude":null}]}}"#;
+    const SINGLE_PLACE: &str = r#"{"ok":true,"data":{"alternative":[{"indirizzo":"IIS Romolo Zerboni, Via Paolo della Cella, Torino, TO","tipo":"luogo","latitude":45.104888,"longitude":7.6786255}]}}"#;
+    const ORS_GEOCODE: &str = r#"{"ok":true,"results":[{"label":"Via Francesco Cilea, Torino, Italia","name":"Via Francesco Cilea","country":"Italia","region":"Torino","county":"","locality":"Torino","postalcode":"10154","latitude":45.0983965,"longitude":7.7052344}]}"#;
+
+    #[test]
+    fn place_suggestions_require_selection_and_route_to_the_chosen_coordinates() {
+        let (base, server) = server(vec![(200, ADDRESS), (200, PLACES), (200, PRIMARY)]);
+        let client = RouteClient::new(&base);
+        let mut plan = options(RouteProfile::Driving);
+        plan.language = Language::Italian;
+        plan.country = "it".into();
+        let result = client
+            .route_from_addresses("via francesco cilea 12", "zerboni", plan.clone())
+            .unwrap();
+        let RouteRequestResult::NeedsSelection {
+            from_candidates,
+            mut to_candidates,
+            ..
+        } = result
+        else {
+            panic!("A place must be chosen before calculating the route");
+        };
+        assert!(!candidates_need_selection(&from_candidates));
+        assert!(candidates_need_selection(&to_candidates));
+        assert_eq!(
+            to_candidates.len(),
+            2,
+            "Generic searches have no coordinates"
+        );
+        assert_eq!(to_candidates[0].name, "Zerbonia Autodemolizioni");
+        prefer_nearby_candidates(&mut to_candidates, &from_candidates[0]);
+        assert_eq!(to_candidates[0].name, "IIS Romolo Zerboni");
+        assert_eq!(to_candidates[1].name, "Zerbonia Autodemolizioni");
+        let result = client
+            .route_between_coordinates(&from_candidates[0], &to_candidates[0], plan)
+            .unwrap();
+        assert!(result.to_label.contains("Via Paolo della Cella"));
+        let requests = server.join().unwrap();
+        assert_eq!(requests.len(), 3);
+        for request in &requests[..2] {
+            assert!(request.starts_with("POST /percorsi.php "));
+            assert!(request.contains(r#""azione":"indirizzi""#));
+            assert!(request.contains(r#""paese":"it""#));
+            assert!(request.contains(r#""lingua":"it""#));
+        }
+        assert!(requests[1].contains(r#""q":"zerboni""#));
+        assert!(requests[2].contains(r#""a":"45.104888,7.6786255""#));
+    }
+
+    #[test]
+    fn even_one_place_requires_confirmation_but_verified_addresses_keep_the_existing_flow() {
+        let (base, place_server) = server(vec![(200, ADDRESS), (200, SINGLE_PLACE)]);
+        let result = RouteClient::new(&base)
+            .route_from_addresses("via Cilea 12", "zerboni", options(RouteProfile::Driving))
+            .unwrap();
+        let RouteRequestResult::NeedsSelection { to_candidates, .. } = result else {
+            panic!("A single place still needs confirmation");
+        };
+        assert_eq!(to_candidates.len(), 1);
+        assert!(candidates_need_selection(&to_candidates));
+        assert_eq!(place_server.join().unwrap().len(), 2);
+
+        let (base, address_server) = server(vec![(200, ADDRESS), (200, ADDRESS), (200, PRIMARY)]);
+        let result = RouteClient::new(&base)
+            .route_from_addresses(
+                "via Cilea 12",
+                "via Cilea 12",
+                options(RouteProfile::Driving),
+            )
+            .unwrap();
+        assert!(matches!(result, RouteRequestResult::Ready(_)));
+        assert_eq!(address_server.join().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn unusable_google_suggestions_keep_ors_address_lookup_as_fallback() {
+        for failure in [
+            (502, "unavailable"),
+            (200, "not JSON"),
+            (200, r#"{"ok":false}"#),
+            (200, r#"{"ok":true,"data":{"alternative":[]}}"#),
+            (
+                200,
+                r#"{"ok":true,"data":{"alternative":[{"indirizzo":"Old server without coordinates"}]}}"#,
+            ),
+            (
+                200,
+                r#"{"ok":true,"data":{"alternative":[{"indirizzo":"Invalid point","latitude":91,"longitude":7}]}}"#,
+            ),
+            (
+                200,
+                r#"{"ok":true,"data":{"alternative":[{"indirizzo":"Via Cilea, 12","civico_da_verificare":true,"latitude":45,"longitude":7}]}}"#,
+            ),
+        ] {
+            let (base, server) = server(vec![failure, (200, ORS_GEOCODE)]);
+            let results = RouteClient::new(&base)
+                .geocode("via Cilea 12", Language::Italian, "it")
+                .unwrap();
+            assert_eq!(results[0].latitude, 45.0983965);
+            assert!(!results[0].requires_confirmation);
+            let requests = server.join().unwrap();
+            assert!(requests[0].starts_with("POST /percorsi.php "));
+            assert!(requests[1].starts_with("GET /ors_geocode.php?"));
+            assert!(requests[1].contains("boundary.country=ITA"));
+            assert!(requests[1].contains("q=via+Cilea+12"));
+        }
+    }
+
+    #[test]
+    fn geocode_suggestions_use_the_selected_international_country_and_language() {
+        let (base, server) = server(vec![(200, ADDRESS)]);
+        RouteClient::new(&base)
+            .geocode("10 Downing Street", Language::English, "GB")
+            .unwrap();
+        let requests = server.join().unwrap();
+        assert!(requests[0].contains(r#""paese":"gb""#));
+        assert!(requests[0].contains(r#""lingua":"en""#));
+        assert!(requests[0].contains(r#""q":"10 Downing Street""#));
+    }
 
     #[test]
     fn primary_success_preserves_alternatives_text_and_region() {

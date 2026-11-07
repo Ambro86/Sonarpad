@@ -1,10 +1,12 @@
 # Pakeitimų žurnalas
 
-Version 0.9.26 – 2026-11-06
+Version 0.9.26 – 2026-11-07
 
 1. Vietų ir įmonių paieška dabar prieinama visomis kalbomis: tarptautiniai rezultatai, aprašymai, įvertinimai, atsiliepimų skaičius, darbo laikas ir svetainės, kai šie duomenys pateikti. Itališkoje sąsajoje ji pakeičia Baltuosius ir Geltonuosius puslapius, išsaugodama jų rezultatus bei paiešką pagal vardą ir telefono numerį. Kitomis kalbomis galima tik vietų ir įmonių paieška.
 
 2. Patobulinta maršrutų paieška: tikslesni rezultatai ir pridėti viešojo transporto maršrutai.
+
+3. DI garsiniai aprašymai: pridėta parinktis „Leisti garsinius aprašymus dialogų ir komentarų metu“, kuri pagal numatytuosius nustatymus išjungta. Ji ypač naudinga futbolo rungtynėms, imtynėms ir kitiems sporto renginiams, kuriuose nuolatinis komentavimas palikdavo mažai arba visai nepalikdavo vietos Sonarpad aprašymams, taip pat muzikiniams vaizdo klipams. Įjungus parinktį, aprašymai gali skambėti kalbos ar dainavimo metu, tačiau nepersidengia tarpusavyje. Pasirinkimas išsaugomas projekte vėlesniam redagavimui ir pakartotiniam generavimui. Išjungus parinktį, įprasta dialogų apsauga nesikeičia.
 
 Version 0.9.25 – 2026-11-06
 

@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "फ़ोन नंबर खोजें",
+  "places.phone_query": "फ़ोन नंबर दर्ज करें",
+  "places.phone_invalid": "क्षेत्र या देश कोड सहित मान्य फ़ोन नंबर दर्ज करें।",
   "route.departure_label": "प्रस्थान",
   "route.departure_now": "अभी निकलें",
   "route.departure_at": "इस समय निकलें",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "वाक् संश्लेषण की आवाज़ चुनें।",
   "audio_description.extended": "विस्तारित विराम सक्षम करें: जब वर्णन मौन में न समाए तो असाधारण स्थिति में फ़िल्म रोकें",
   "audio_description.allow_nonverbal_vocals": "गैर-मौखिक मानवीय ध्वनियों के दौरान वर्णन की अनुमति दें",
+  "audio_description.allow_dialogue_overlap": "संवाद और कमेंट्री के दौरान ऑडियो विवरण की अनुमति दें",
   "audio_description.gemini_api_key": "Gemini API कुंजी:",
   "audio_description.show_api_key": "API कुंजी दिखाएँ",
   "audio_description.gemini_error_models": "Gemini मॉडल लोड नहीं हो सके: {error}",

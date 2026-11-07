@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Telefonnummer suchen",
+  "places.phone_query": "Telefonnummer eingeben",
+  "places.phone_invalid": "Geben Sie eine gültige Telefonnummer mit Vorwahl ein.",
   "route.departure_label": "Abfahrt",
   "route.departure_now": "Jetzt abfahren",
   "route.departure_at": "Abfahrt um",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Wählen Sie eine Sprachsynthese-Stimme aus.",
   "audio_description.extended": "Erweiterte Pausen aktivieren: Film in Ausnahmefällen anhalten, wenn die Beschreibung nicht in eine Sprechpause passt",
   "audio_description.allow_nonverbal_vocals": "Beschreibungen über nichtsprachliche Lautäußerungen zulassen",
+  "audio_description.allow_dialogue_overlap": "Audiodeskriptionen während Dialogen und Kommentaren zulassen",
   "audio_description.gemini_api_key": "Gemini-API-Schlüssel:",
   "audio_description.show_api_key": "API-Schlüssel anzeigen",
   "audio_description.gemini_error_models": "Gemini-Modelle konnten nicht geladen werden: {error}",

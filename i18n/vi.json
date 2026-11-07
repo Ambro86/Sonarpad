@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Tìm số điện thoại",
+  "places.phone_query": "Nhập số điện thoại",
+  "places.phone_invalid": "Nhập số điện thoại hợp lệ, bao gồm mã vùng hoặc mã quốc gia.",
   "route.departure_label": "Khởi hành",
   "route.departure_now": "Khởi hành ngay",
   "route.departure_at": "Khởi hành lúc",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Chọn một giọng tổng hợp.",
   "audio_description.extended": "Bật khoảng dừng mở rộng: tạm dừng phim trong trường hợp đặc biệt khi phần mô tả không vừa khoảng lặng",
   "audio_description.allow_nonverbal_vocals": "Cho phép mô tả khi có âm thanh giọng nói phi ngôn ngữ",
+  "audio_description.allow_dialogue_overlap": "Cho phép mô tả âm thanh trong khi có hội thoại và bình luận",
   "audio_description.gemini_api_key": "Khóa API Gemini:",
   "audio_description.show_api_key": "Hiển thị khóa API",
   "audio_description.gemini_error_models": "Không thể tải các mô hình Gemini: {error}",

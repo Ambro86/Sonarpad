@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Пронађи број телефона",
+  "places.phone_query": "Унесите број телефона",
+  "places.phone_invalid": "Унесите важећи број телефона са позивним бројем.",
   "route.departure_label": "Polazak",
   "route.departure_now": "Kreni sada",
   "route.departure_at": "Kreni u",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Изаберите голос синтеза говора.",
   "audio_description.extended": "Включить расширенные паузы: в исключительных случаях приостанавливать фильм, если опис не помещается в тишину",
   "audio_description.allow_nonverbal_vocals": "Дозволи описе током невербалних гласовних звукова",
+  "audio_description.allow_dialogue_overlap": "Дозволи аудио описе током дијалога и коментара",
   "audio_description.gemini_api_key": "Кључ API Gemini:",
   "audio_description.show_api_key": "Прикажи API кључ",
   "audio_description.gemini_error_models": "Није могуће загрузить модели Gemini: {error}",

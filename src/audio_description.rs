@@ -110,6 +110,7 @@ pub struct AudioDescriptionJob {
     pub verbosity: AudioDescriptionVerbosity,
     pub allow_extended_pauses: bool,
     pub allow_nonverbal_vocals: bool,
+    pub allow_dialogue_overlap: bool,
     pub recognize_characters: bool,
     pub recognize_screen_text: bool,
     pub character_catalog: Option<AudioDescriptionCharacterCatalogContext>,
@@ -246,6 +247,8 @@ struct AudioDescriptionPartialCheckpoint {
     allow_extended_pauses: bool,
     #[serde(default)]
     allow_nonverbal_vocals: bool,
+    #[serde(default)]
+    allow_dialogue_overlap: bool,
     recognize_characters: bool,
     #[serde(default)]
     recognize_screen_text: bool,
@@ -323,6 +326,7 @@ pub struct AudioDescriptionResumeSettings {
     pub verbosity: AudioDescriptionVerbosity,
     pub allow_extended_pauses: bool,
     pub allow_nonverbal_vocals: bool,
+    pub allow_dialogue_overlap: bool,
     pub recognize_characters: bool,
     pub recognize_screen_text: bool,
     pub save_project: bool,
@@ -839,6 +843,8 @@ pub struct AudioDescriptionProject {
     pub allow_extended_pauses: bool,
     #[serde(default)]
     pub allow_nonverbal_vocals: bool,
+    #[serde(default)]
+    pub allow_dialogue_overlap: bool,
     #[serde(default = "default_true")]
     pub recognize_characters: bool,
     #[serde(default = "default_true")]
@@ -3509,6 +3515,7 @@ fn save_audio_description_partial_checkpoint(
         verbosity: job.verbosity.as_bridge_value().to_string(),
         allow_extended_pauses: job.allow_extended_pauses,
         allow_nonverbal_vocals: job.allow_nonverbal_vocals,
+        allow_dialogue_overlap: job.allow_dialogue_overlap,
         recognize_characters: job.recognize_characters,
         recognize_screen_text: job.recognize_screen_text,
         save_project: job.save_project,
@@ -3585,6 +3592,7 @@ pub fn load_audio_description_resume_settings(
         verbosity: AudioDescriptionVerbosity::from_bridge_value(&checkpoint.verbosity),
         allow_extended_pauses: checkpoint.allow_extended_pauses,
         allow_nonverbal_vocals: checkpoint.allow_nonverbal_vocals,
+        allow_dialogue_overlap: checkpoint.allow_dialogue_overlap,
         recognize_characters: checkpoint.recognize_characters,
         recognize_screen_text: checkpoint.recognize_screen_text,
         save_project: checkpoint.save_project,
@@ -3622,6 +3630,7 @@ pub fn audio_description_job_from_checkpoint(
         verbosity: AudioDescriptionVerbosity::from_bridge_value(&checkpoint.verbosity),
         allow_extended_pauses: checkpoint.allow_extended_pauses,
         allow_nonverbal_vocals: checkpoint.allow_nonverbal_vocals,
+        allow_dialogue_overlap: checkpoint.allow_dialogue_overlap,
         recognize_characters: checkpoint.recognize_characters,
         recognize_screen_text: checkpoint.recognize_screen_text,
         character_catalog,
@@ -3726,6 +3735,7 @@ fn build_audio_description_project(
         verbosity: job.verbosity.as_bridge_value().to_string(),
         allow_extended_pauses: job.allow_extended_pauses,
         allow_nonverbal_vocals: job.allow_nonverbal_vocals,
+        allow_dialogue_overlap: job.allow_dialogue_overlap,
         recognize_characters: job.recognize_characters,
         recognize_screen_text: job.recognize_screen_text,
         gemini_model: job.gemini_model.clone(),
@@ -3741,6 +3751,7 @@ fn build_audio_description_project(
         fade_ms: AUDIO_DESCRIPTION_FADE_MS,
         protected_intervals: protected_intervals
             .iter()
+            .filter(|_| !job.allow_dialogue_overlap)
             .map(|interval| AudioDescriptionProjectInterval {
                 start_sec: interval.start_sec,
                 end_sec: interval.end_sec,
@@ -4108,6 +4119,7 @@ pub(crate) fn audio_description_job_from_project(
         verbosity: verbosity_from_project(&project.verbosity),
         allow_extended_pauses: project.allow_extended_pauses,
         allow_nonverbal_vocals: project.allow_nonverbal_vocals,
+        allow_dialogue_overlap: project.allow_dialogue_overlap,
         recognize_characters: project.recognize_characters,
         recognize_screen_text: project.recognize_screen_text,
         character_catalog: None,
@@ -4145,6 +4157,7 @@ pub fn audio_description_project_edit_available_duration(
     let protected: Vec<BridgeInterval> = project
         .protected_intervals
         .iter()
+        .filter(|_| !project.allow_dialogue_overlap)
         .map(|interval| BridgeInterval {
             start_sec: interval.start_sec,
             end_sec: interval.end_sec,
@@ -4203,6 +4216,7 @@ pub(crate) fn audio_description_preview_job(
         verbosity: AudioDescriptionVerbosity::Standard,
         allow_extended_pauses: false,
         allow_nonverbal_vocals: false,
+        allow_dialogue_overlap: false,
         recognize_characters: false,
         recognize_screen_text: false,
         character_catalog: None,
@@ -4945,6 +4959,7 @@ pub fn apply_reanalyzed_audio_description_project_segment_and_reexport(
     let protected_intervals: Vec<BridgeInterval> = prepared_project
         .protected_intervals
         .iter()
+        .filter(|_| !prepared_project.allow_dialogue_overlap)
         .map(|interval| BridgeInterval {
             start_sec: interval.start_sec,
             end_sec: interval.end_sec,
@@ -5137,6 +5152,7 @@ pub fn change_audio_description_project_voice(
     let protected_intervals = project
         .protected_intervals
         .iter()
+        .filter(|_| !project.allow_dialogue_overlap)
         .map(|interval| BridgeInterval {
             start_sec: interval.start_sec,
             end_sec: interval.end_sec,
@@ -5518,6 +5534,7 @@ fn insert_additional_reanalyzed_descriptions(
     let protected = project
         .protected_intervals
         .iter()
+        .filter(|_| !project.allow_dialogue_overlap)
         .map(|interval| BridgeInterval {
             start_sec: interval.start_sec,
             end_sec: interval.end_sec,
@@ -6312,6 +6329,7 @@ pub fn reexport_audio_description_project(
     let protected_intervals: Vec<BridgeInterval> = project
         .protected_intervals
         .iter()
+        .filter(|_| !project.allow_dialogue_overlap)
         .map(|interval| BridgeInterval {
             start_sec: interval.start_sec,
             end_sec: interval.end_sec,
@@ -6831,6 +6849,7 @@ pub fn create_audio_description(
         verbosity: job.verbosity.as_bridge_value().to_string(),
         allow_extended_pauses: job.allow_extended_pauses,
         allow_nonverbal_vocals: job.allow_nonverbal_vocals,
+        allow_dialogue_overlap: job.allow_dialogue_overlap,
         recognize_characters: job.recognize_characters,
         recognize_screen_text: job.recognize_screen_text,
         initial_character_glossary: job
@@ -7142,6 +7161,9 @@ pub fn create_audio_description(
         "Audio description cleanup operation failed"
     );
     let analysis = analysis_result?;
+    if job.allow_dialogue_overlap && !analysis.allow_dialogue_overlap {
+        return Err("The audio-description bridge must be updated to support descriptions during dialogue and commentary.".to_string());
+    }
     let mut callbacks = Arc::try_unwrap(callback_state)
         .map_err(|_| "Audio description: callback state still in use".to_string())?
         .into_inner()
@@ -8834,6 +8856,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: false,
             allow_nonverbal_vocals: false,
+            allow_dialogue_overlap: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -8894,6 +8917,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             allow_nonverbal_vocals: false,
+            allow_dialogue_overlap: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -9121,6 +9145,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             allow_nonverbal_vocals: false,
+            allow_dialogue_overlap: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -9195,6 +9220,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             allow_nonverbal_vocals: false,
+            allow_dialogue_overlap: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -9476,6 +9502,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             allow_nonverbal_vocals: false,
+            allow_dialogue_overlap: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -9543,6 +9570,47 @@ mod tests {
         let available = audio_description_project_edit_available_duration(&project, 0)
             .expect("available duration");
         assert_eq!(available, Some(5.0));
+        // Opting in removes only dialogue constraints, not the next cue boundary.
+        let mut overlap_project = project.clone();
+        overlap_project.allow_dialogue_overlap = true;
+        assert_eq!(
+            audio_description_project_edit_available_duration(&project, 1).unwrap(),
+            Some(3.0)
+        );
+        assert_eq!(
+            audio_description_project_edit_available_duration(&overlap_project, 1).unwrap(),
+            Some(5.0)
+        );
+        assert_eq!(
+            audio_description_project_edit_available_duration(&overlap_project, 0).unwrap(),
+            Some(5.0)
+        );
+        let encoded = serde_json::to_value(&overlap_project).unwrap();
+        let decoded: super::AudioDescriptionProject =
+            serde_json::from_value(encoded.clone()).unwrap();
+        assert!(decoded.allow_dialogue_overlap);
+        let mut legacy = encoded;
+        legacy
+            .as_object_mut()
+            .unwrap()
+            .remove("allow_dialogue_overlap");
+        let legacy: super::AudioDescriptionProject = serde_json::from_value(legacy).unwrap();
+        assert!(!legacy.allow_dialogue_overlap);
+        let mut overlap_job = job.clone();
+        overlap_job.allow_dialogue_overlap = true;
+        let created = build_audio_description_project(
+            &overlap_job,
+            12.0,
+            12.0,
+            &[BridgeInterval {
+                start_sec: 0.0,
+                end_sec: 12.0,
+            }],
+            &scheduled,
+            &[],
+        );
+        assert!(created.allow_dialogue_overlap);
+        assert!(created.protected_intervals.is_empty());
         assert!(validate_audio_description_project_edit_duration(available, 4.9).is_ok());
         assert!(matches!(
             validate_audio_description_project_edit_duration(available, 5.2),
@@ -9561,6 +9629,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             allow_nonverbal_vocals: false,
+            allow_dialogue_overlap: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,
@@ -9612,6 +9681,7 @@ mod tests {
             verbosity: AudioDescriptionVerbosity::Detailed,
             allow_extended_pauses: true,
             allow_nonverbal_vocals: false,
+            allow_dialogue_overlap: false,
             recognize_characters: true,
             recognize_screen_text: false,
             character_catalog: None,

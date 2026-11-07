@@ -1,10 +1,12 @@
 # Přehled změn
 
-Version 0.9.26 – 2026-11-06
+Version 0.9.26 – 2026-11-07
 
 1. Přidáno hledání míst a firem ve všech jazycích, s mezinárodními výsledky, popisy, hodnocením, počtem recenzí, otevírací dobou a weby, pokud jsou dostupné. V italském rozhraní nahrazuje Bílé a Zlaté stránky a zachovává jejich výsledky i hledání podle jména a telefonního čísla. V ostatních jazycích je dostupné pouze hledání míst a firem.
 
 2. Vylepšeno vyhledávání tras s přesnějšími výsledky a přidány trasy veřejnou dopravou.
+
+3. AI audiopopis: přidána volba „Povolit audiopopis během dialogů a komentáře“, která je ve výchozím nastavení vypnutá. Hodí se zejména pro fotbalové zápasy, wrestling a další sportovní přenosy, kde nepřetržitý komentář nechával málo nebo žádný prostor pro popisy Sonarpadu, ale také pro hudební videoklipy. Po zapnutí mohou popisy zaznívat i během řeči nebo zpěvu, aniž by se navzájem překrývaly. Volba se ukládá do projektu pro pozdější úpravy a opětovné generování. Při vypnutí zůstává běžná ochrana dialogů beze změny.
 
 Version 0.9.25 – 2026-11-06
 

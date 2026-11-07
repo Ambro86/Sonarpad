@@ -124,6 +124,39 @@ pub fn search(
     country: &str,
     language: &str,
 ) -> Result<Vec<Place>, String> {
+    search_request(
+        serde_json::json!({"q": what, "citta": location, "paese": country, "lingua": language}),
+    )
+}
+
+pub fn normalize_phone(input: &str) -> Option<String> {
+    let input = input.trim();
+    if input.chars().enumerate().any(|(i, c)| {
+        !c.is_ascii_digit() && !c.is_whitespace() && !"()-./".contains(c) && !(c == '+' && i == 0)
+    }) {
+        return None;
+    }
+    let compact: String = input
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '+')
+        .collect();
+    let compact = compact
+        .strip_prefix("00")
+        .map(|s| format!("+{s}"))
+        .unwrap_or(compact);
+    (5..=15)
+        .contains(&compact.trim_start_matches('+').len())
+        .then_some(compact)
+}
+
+pub fn search_phone(number: &str, country: &str, language: &str) -> Result<Vec<Place>, String> {
+    let number = normalize_phone(number).ok_or("Invalid phone number")?;
+    search_request(
+        serde_json::json!({"q": number, "telefono": number, "paese": country, "lingua": language}),
+    )
+}
+
+fn search_request(params: serde_json::Value) -> Result<Vec<Place>, String> {
     let token = option_env!("SONARPAD_ROUTE_CLIENT_TOKEN").unwrap_or("");
     if token.is_empty() {
         return Err("Ricerca luoghi non configurata in questa versione.".into());
@@ -138,7 +171,7 @@ pub fn search(
             "User-Agent",
             concat!("Sonarpad/", env!("CARGO_PKG_VERSION")),
         )
-        .json(&serde_json::json!({"q": what, "citta": location, "paese": country, "lingua": language}))
+        .json(&params)
         .send()
         .and_then(reqwest::blocking::Response::error_for_status)
         .map_err(|_| "Servizio di ricerca luoghi temporaneamente non disponibile.")?
@@ -292,6 +325,22 @@ pub fn same_place(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn international_phone_normalization_preserves_prefix_and_zeroes() {
+        for (input, expected) in [
+            ("02 0202", "020202"),
+            ("+39 (02) 0202", "+39020202"),
+            ("0033 1 58 59 22 22", "+33158592222"),
+            ("01 58 59 22 22", "0158592222"),
+            ("+1 (212) 123-4567", "+12121234567"),
+        ] {
+            assert_eq!(normalize_phone(input).as_deref(), Some(expected));
+        }
+        for input in ["", "123", "phone 020202", "02+0202", "+1234567890123456"] {
+            assert_eq!(normalize_phone(input), None);
+        }
+    }
+
     fn italian() -> PlaceText {
         let values: serde_json::Value =
             serde_json::from_str(include_str!("../../i18n/it.json")).unwrap();

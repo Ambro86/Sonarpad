@@ -3761,4 +3761,15 @@ Your entire output MUST be a single JSON object with {output_keys}.
     else:
         app_logger.info("No custom prompt provided by user.")
 
+    if config_model.get_setting("allow_dialogue_overlap") is True:
+        overlap_instruction = (
+            "EXPLICIT USER OPTION: Narration during dialogue and commentary is permitted. "
+            "This overrides only instructions to avoid or omit descriptions during speech. "
+            "The supplied authorized windows intentionally include spoken audio. Describe "
+            "visible action even during continuous commentary. Keep visual evidence, timing, "
+            "word budgets, spacing between descriptions and all other rules unchanged."
+        )
+        system_instruction += "\n" + overlap_instruction
+        user_prompt_parts.append(overlap_instruction)
+
     return system_instruction, "\n".join(user_prompt_parts)

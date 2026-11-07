@@ -1,10 +1,12 @@
 # Dnevnik izmena
 
-Version 0.9.26 – 2026-11-06
+Version 0.9.26 – 2026-11-07
 
 1. Pretraga mesta i preduzeća dostupna je na svim jezicima, sa međunarodnim rezultatima, opisima, ocenama, brojem recenzija, radnim vremenom i veb-sajtovima kada su dostupni. U italijanskom interfejsu zamenjuje Bele i Žute strane, uz očuvanje njihovih rezultata i pretrage po imenu i broju telefona. Na drugim jezicima dostupna je samo pretraga mesta i preduzeća.
 
 2. Poboljšana je pretraga ruta sa preciznijim rezultatima i dodate su rute javnim prevozom.
+
+3. Аудио описи помоћу вештачке интелигенције: додата је опција „Дозволи аудио описе током дијалога и коментара“, која је подразумевано искључена. Посебно је корисна за фудбалске утакмице, рвање и друге спортске догађаје где непрекидан коментар оставља мало или нимало простора за Sonarpad описе, као и за музичке спотове. Када је укључена, описи могу да се чују током говора или певања, без међусобног преклапања. Избор се чува у пројекту за касније измене и поновно генерисање. Када је искључена, уобичајена заштита дијалога остаје непромењена.
 
 Version 0.9.25 – 2026-11-06
 

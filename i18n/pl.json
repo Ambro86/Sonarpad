@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Wyszukaj numer telefonu",
+  "places.phone_query": "Wpisz numer telefonu",
+  "places.phone_invalid": "Wpisz prawidłowy numer telefonu wraz z numerem kierunkowym.",
   "route.departure_label": "Odjazd",
   "route.departure_now": "Odjedź teraz",
   "route.departure_at": "Odjazd o",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Wybierz głos syntezy mowy.",
   "audio_description.extended": "Włącz rozszerzone pauzy: zatrzymaj film w wyjątkowych przypadkach, gdy opis nie mieści się w ciszy",
   "audio_description.allow_nonverbal_vocals": "Zezwól na opisy podczas niewerbalnych odgłosów głosowych",
+  "audio_description.allow_dialogue_overlap": "Zezwalaj na audiodeskrypcję podczas dialogów i komentarza",
   "audio_description.gemini_api_key": "Klucz API Gemini:",
   "audio_description.show_api_key": "Pokaż klucz API",
   "audio_description.gemini_error_models": "Nie udało się wczytać modeli Gemini: {error}",

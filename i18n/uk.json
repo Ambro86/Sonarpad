@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Знайти номер телефону",
+  "places.phone_query": "Введіть номер телефону",
+  "places.phone_invalid": "Введіть дійсний номер телефону разом із кодом міста або країни.",
   "route.departure_label": "Відправлення",
   "route.departure_now": "Вирушити зараз",
   "route.departure_at": "Вирушити о",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Виберіть голос синтеза мовлення.",
   "audio_description.extended": "Включить расширенные паузы: в исключительных случаях приостанавливать фильм, если опис не помещается в тишу",
   "audio_description.allow_nonverbal_vocals": "Дозволити описи під час невербальних голосових звуків",
+  "audio_description.allow_dialogue_overlap": "Дозволити аудіоописи під час діалогів і коментарів",
   "audio_description.gemini_api_key": "Ключ API Gemini:",
   "audio_description.show_api_key": "Показати ключ API",
   "audio_description.gemini_error_models": "Не вдалося загрузить модели Gemini: {error}",

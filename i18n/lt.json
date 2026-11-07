@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Ieškoti telefono numerio",
+  "places.phone_query": "Įveskite telefono numerį",
+  "places.phone_invalid": "Įveskite galiojantį telefono numerį su miesto arba šalies kodu.",
   "route.departure_label": "Išvykimas",
   "route.departure_now": "Išvykti dabar",
   "route.departure_at": "Išvykti",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Pasirinkite kalbos sintezės balsą.",
   "audio_description.extended": "Įjungti išplėstines pauzes: išimtiniais atvejais pristabdyti filmą, kai aprašas netelpa tyloje",
   "audio_description.allow_nonverbal_vocals": "Leisti aprašymus per neverbalinius balso garsus",
+  "audio_description.allow_dialogue_overlap": "Leisti garsinius aprašymus dialogų ir komentarų metu",
   "audio_description.gemini_api_key": "Gemini API raktas:",
   "audio_description.show_api_key": "Rodyti API raktą",
   "audio_description.gemini_error_models": "Nepavyko įkelti Gemini modelių: {error}",

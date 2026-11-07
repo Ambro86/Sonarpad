@@ -608,6 +608,20 @@ fn covered_deletions(removed: &Value, allowed: &Value) -> bool {
     })
 }
 
+fn explicit_deletions(events: &[Value]) -> Value {
+    let mut allowed = json!({});
+    for event in events {
+        let key = text(event, "collection");
+        if !allowed[key].is_array() {
+            allowed[key] = json!([]);
+        }
+        if let Some(ids) = allowed[key].as_array_mut() {
+            ids.push(event["id"].clone());
+        }
+    }
+    allowed
+}
+
 pub fn preserve_collection_write(dir: &Path, before: &Value, after: &Value) -> Result<(), String> {
     if removed_items(before, after)
         .as_object()
@@ -987,13 +1001,13 @@ impl Session {
         direction: &str,
         before: &Value,
         after: &Value,
-    ) -> Result<(), String> {
+    ) -> Result<Value, String> {
         log_collection_reductions(before, after, direction, crate::log_debug);
         if removed_items(before, after)
             .as_object()
             .is_none_or(|v| v.is_empty())
         {
-            return Ok(());
+            return Ok(after.clone());
         }
         let collections = |state: &Value| -> Value {
             state
@@ -1017,21 +1031,88 @@ impl Session {
             }
             self.meta["recovery"] = json!(recovery);
         }
-        let allowed = if direction == "outgoing" {
-            &self.meta["pending"]["explicit_deletions"]
+        let allowed = if direction == "local_during_sync" {
+            let events: Vec<Value> = list(&deletion_events(
+                self.path.parent().ok_or("storage_error")?,
+            )?)
+            .into_iter()
+            .filter(|event| event["group_id"] == self.meta["group_id"])
+            .collect();
+            explicit_deletions(&events)
+        } else if direction == "outgoing" {
+            self.meta["pending"]["explicit_deletions"].clone()
         } else {
-            &self.meta["response"]["authorized_deletions"]
+            self.meta["response"]["authorized_deletions"].clone()
         };
-        if covered_deletions(&removed_items(before, after), allowed) {
+        if covered_deletions(&removed_items(before, after), &allowed) {
             self.save()?;
-            return Ok(());
+            return Ok(after.clone());
         }
-        self.meta["deletion_review"] = review;
-        if direction == "outgoing" {
-            self.meta["blocked_before_send"] = json!(true);
+        // Cancel only unproven removals, preserving additions, edits and explicit
+        // user deletions in the same batch. The rest of sync can then proceed.
+        let mut safe = after.clone();
+        for (name, rows) in removed_items(before, after)
+            .as_object()
+            .ok_or("storage_error")?
+        {
+            let restored: Vec<Value> = list(rows)
+                .into_iter()
+                .filter(|row| !list(&allowed[name]).contains(&row["id"]))
+                .collect();
+            if restored.is_empty() {
+                continue;
+            }
+            crate::log_debug(&format!(
+                "CloudSync deletion_cancelled direction={direction} collection={name} restored={} sync_continues=true",
+                restored.len()
+            ));
+            safe[name]
+                .as_array_mut()
+                .ok_or("storage_error")?
+                .extend(restored);
         }
+        log_collection_reductions(
+            &safe,
+            after,
+            &format!("cancelled_{direction}"),
+            crate::log_debug,
+        );
+        self.meta["last_cancelled_deletions"] = review;
+        self.meta
+            .as_object_mut()
+            .ok_or("storage_error")?
+            .remove("deletion_review");
         self.save()?;
-        Err("deletion_confirmation_required".into())
+        Ok(safe)
+    }
+
+    fn prepare_pending_state(&mut self) -> Result<Value, String> {
+        // Keep the actual local snapshot separate from the repaired wire state.
+        // Otherwise the merge would interpret the same missing items as fresh
+        // local deletions and discard the just-recovered favorites again.
+        if self.meta.get("pending_local_state").is_none() {
+            self.meta["pending_local_state"] = self.meta["pending"]["state"].clone();
+        }
+        let before = self.meta["pending"]["baseline"].clone();
+        let after = self.meta["pending"]["state"].clone();
+        let safe = self.guard_deletions("outgoing", &before, &after)?;
+        self.meta["pending"]["state"] = safe.clone();
+        self.save()?;
+        Ok(safe)
+    }
+
+    pub fn merge_response(&mut self, remote: &Value, current: &Value) -> Result<Value, String> {
+        let base = self
+            .meta
+            .get("pending_local_state")
+            .unwrap_or(&self.meta["pending"]["state"])
+            .clone();
+        let current = self.guard_deletions("local_during_sync", &base, current)?;
+        let merged = merge(remote, &base, &current);
+        // Protect recovered outgoing items too, even if the local snapshot was
+        // empty and an unproven server reduction omits the same items.
+        let expected = merge(&self.meta["pending"]["state"], &base, &current);
+        self.guard_deletions("incoming", &expected, &merged)
     }
     pub fn sync(&mut self, settings: &Value, mac: bool, log: fn(&str)) -> Result<Value, String> {
         if !self.connected() {
@@ -1046,6 +1127,10 @@ impl Session {
                 .as_object_mut()
                 .ok_or("storage_error")?
                 .remove("blocked_before_send");
+            self.meta
+                .as_object_mut()
+                .ok_or("storage_error")?
+                .remove("pending_local_state");
         }
         if self.meta.get("pending").is_none() {
             self.meta["pending"] = json!({"schema_version":1,"sequence":self.meta["sequence"].as_u64().unwrap_or(0)+1,
@@ -1056,24 +1141,12 @@ impl Session {
             .into_iter()
             .filter(|event| event["group_id"] == self.meta["group_id"])
             .collect::<Vec<_>>();
-            let mut explicit = json!({});
-            for event in &events {
-                let key = text(event, "collection");
-                if !explicit[key].is_array() {
-                    explicit[key] = json!([]);
-                }
-                explicit[key]
-                    .as_array_mut()
-                    .ok_or("storage_error")?
-                    .push(event["id"].clone());
-            }
-            self.meta["pending"]["explicit_deletions"] = explicit;
+            self.meta["pending"]["explicit_deletions"] = explicit_deletions(&events);
             self.meta["pending"]["deletion_events"] = json!(events);
             self.save()?;
         }
         let before = self.meta["pending"]["baseline"].clone();
-        let after = self.meta["pending"]["state"].clone();
-        self.guard_deletions("outgoing", &before, &after)?;
+        let after = self.prepare_pending_state()?;
         if self.meta.get("response").is_none()
             && removed_items(&before, &after)
                 .as_object()
@@ -1132,6 +1205,8 @@ impl Session {
             m.remove("approved_outgoing");
             m.remove("approved_incoming");
             m.remove("deletion_review");
+            m.remove("blocked_before_send");
+            m.remove("pending_local_state");
             m.remove("pending");
             m.remove("response");
         }
@@ -1476,7 +1551,7 @@ mod deletion_guard_tests {
     }
 
     #[test]
-    fn reductions_require_exact_review_and_keep_recovery() {
+    fn reductions_restore_only_unproven_removals_and_keep_recovery() {
         let path = std::env::temp_dir().join(format!(
             "sonarpad-sync-review-{}-{}.json",
             std::process::id(),
@@ -1504,12 +1579,13 @@ mod deletion_guard_tests {
             let after = json!({name:rows[..25]});
             assert_eq!(
                 session.guard_deletions("outgoing", &before, &after),
-                Err("deletion_confirmation_required".into())
+                Ok(before.clone())
             );
-            let review = session.meta["deletion_review"].clone();
+            let review = session.meta["last_cancelled_deletions"].clone();
             let persisted: Value =
                 serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-            assert_eq!(persisted["deletion_review"], review);
+            assert_eq!(persisted["last_cancelled_deletions"], review);
+            assert!(persisted.get("deletion_review").is_none());
             assert_eq!(
                 persisted["recovery"].as_array().unwrap().last().unwrap()["state"],
                 before
@@ -1520,30 +1596,106 @@ mod deletion_guard_tests {
                 .map(|row| row["id"].clone())
                 .collect();
             session.meta["pending"] = json!({"explicit_deletions":{name:ids}});
-            session
-                .guard_deletions("outgoing", &before, &after)
-                .unwrap();
-            assert!(
+            assert_eq!(
+                session
+                    .guard_deletions("outgoing", &before, &after)
+                    .unwrap(),
+                after
+            );
+            assert_eq!(
                 session
                     .guard_deletions("incoming", &before, &after)
-                    .is_err()
+                    .unwrap(),
+                before
             );
-            assert!(
+            assert_eq!(
                 session
                     .guard_deletions("outgoing", &before, &json!({name:[]}))
-                    .is_err()
+                    .unwrap(),
+                after
             );
             session.meta["response"] = json!({"authorized_deletions":{name:ids}});
-            session
-                .guard_deletions("incoming", &before, &after)
-                .unwrap();
-            assert!(
+            assert_eq!(
+                session
+                    .guard_deletions("incoming", &before, &after)
+                    .unwrap(),
+                after
+            );
+            assert_eq!(
                 session
                     .guard_deletions("incoming", &before, &json!({name:[]}))
-                    .is_err()
+                    .unwrap(),
+                after
             );
+            session.meta.as_object_mut().unwrap().remove("pending");
+            session.meta.as_object_mut().unwrap().remove("response");
         }
         std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn recovered_outgoing_items_survive_retry_merge_and_unproven_server_loss() {
+        let dir =
+            std::env::temp_dir().join(format!("sonarpad-sync-restore-{}", rand::random::<u64>()));
+        let before = json!({"sonartube":[
+            {"id":"a","data":{"name":"A"}}, {"id":"b","data":{"name":"B"}}, {"id":"c","data":{"name":"C"}}
+        ], "preferences":[{"id":"sonartube.search_type","data":{"value":"videos"}}]});
+        let local = json!({"sonartube":[], "preferences":[{"id":"sonartube.search_type","data":{"value":"channels"}}]});
+        let mut session = Session {
+            path: dir.join("cloud_sync.json"),
+            token: String::new(),
+            meta: json!({"group_id":"g", "pending":{"baseline":before,"state":local}}),
+        };
+        let sent = session.prepare_pending_state().unwrap();
+        assert_eq!(sent["sonartube"], before["sonartube"]);
+        assert_eq!(sent["preferences"], local["preferences"]);
+        session.meta = Session::metadata(&dir).unwrap();
+        assert_eq!(session.prepare_pending_state().unwrap(), sent);
+        assert_eq!(session.meta["pending_local_state"], local);
+        let mut remote = sent.clone();
+        remote["sonartube"][0]["data"]["name"] = json!("Server edit");
+        let applied = session.merge_response(&remote, &local).unwrap();
+        assert_eq!(applied, remote);
+        remote["sonartube"] = json!([]);
+        assert_eq!(session.merge_response(&remote, &local).unwrap(), sent);
+        session.meta["response"] =
+            json!({"sequence":2,"authorized_deletions":{"sonartube":["a","b","c"]}});
+        assert_eq!(session.merge_response(&remote, &local).unwrap(), remote);
+        session.finish(remote).unwrap();
+        assert!(session.meta.get("pending_local_state").is_none());
+        std::fs::remove_file(dir.join("cloud_sync.json")).unwrap();
+        std::fs::remove_file(dir.join("cloud_deletion_events.json")).unwrap();
+        std::fs::remove_dir(dir).unwrap();
+    }
+
+    #[test]
+    fn concurrent_accidental_loss_is_restored_but_new_explicit_removal_survives() {
+        let dir = std::env::temp_dir().join(format!(
+            "sonarpad-sync-concurrent-{}",
+            rand::random::<u64>()
+        ));
+        let before = json!({"sonartube":[{"id":"a","data":{}},{"id":"b","data":{}}]});
+        let empty = json!({"sonartube":[]});
+        let mut session = Session {
+            path: dir.join("cloud_sync.json"),
+            token: String::new(),
+            meta: json!({"group_id":"g", "pending":{"baseline":before,"state":before}}),
+        };
+        session.prepare_pending_state().unwrap();
+        assert_eq!(session.merge_response(&before, &empty).unwrap(), before);
+        let keep_b = json!({"sonartube":[{"id":"b","data":{}}]});
+        record_explicit_deletions(&dir, &before, &keep_b).unwrap();
+        assert_eq!(session.merge_response(&before, &empty).unwrap(), keep_b);
+        let additions = json!({"sonartube":[{"id":"new","data":{}}]});
+        let merged = session.merge_response(&before, &additions).unwrap();
+        let ids: Vec<Value> = list(&merged["sonartube"])
+            .iter()
+            .map(|row| row["id"].clone())
+            .collect();
+        assert_eq!(ids, vec![json!("new"), json!("b")]);
+        std::fs::remove_file(dir.join("cloud_sync.json")).unwrap();
+        std::fs::remove_file(dir.join("cloud_deletion_events.json")).unwrap();
+        std::fs::remove_dir(dir).unwrap();
     }
     #[test]
     fn replacements_are_deletions_but_omitted_scope_and_additions_are_not() {

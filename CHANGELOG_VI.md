@@ -1,10 +1,12 @@
 # Nhật ký thay đổi
 
-Version 0.9.26 – 2026-11-06
+Version 0.9.26 – 2026-11-07
 
 1. Thêm tìm kiếm địa điểm và doanh nghiệp cho mọi ngôn ngữ, với kết quả quốc tế, mô tả, điểm đánh giá, số lượt đánh giá, giờ mở cửa và trang web khi có. Trong giao diện tiếng Ý, tính năng này thay thế Trang Trắng và Trang Vàng nhưng vẫn giữ kết quả cũ cùng tìm kiếm theo tên và số điện thoại. Các ngôn ngữ khác chỉ có tìm kiếm địa điểm và doanh nghiệp.
 
 2. Cải thiện tìm kiếm tuyến đường với kết quả chính xác hơn và bổ sung tuyến đi bằng phương tiện công cộng.
+
+3. Mô tả âm thanh AI: thêm tùy chọn “Cho phép mô tả âm thanh trong khi có hội thoại và bình luận”, mặc định tắt. Tùy chọn này đặc biệt hữu ích cho các trận bóng đá, đấu vật và những sự kiện thể thao khác mà lời bình luận liên tục khiến Sonarpad có rất ít hoặc không có khoảng trống để mô tả, cũng như cho video âm nhạc. Khi bật, mô tả có thể phát trong lúc nói hoặc hát mà không chồng lên nhau. Lựa chọn được lưu trong dự án cho các lần chỉnh sửa và tạo lại sau này. Khi tắt, cơ chế bảo vệ hội thoại thông thường không thay đổi.
 
 Version 0.9.25 – 2026-11-06
 

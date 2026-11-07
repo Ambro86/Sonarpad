@@ -247,6 +247,7 @@ def _configure_omni(request: dict) -> None:
             "application_language": language,
             "send_silenced_video_to_ai": False,
             "enable_dialogue_protection": True,
+            "allow_dialogue_overlap": request.get("allow_dialogue_overlap") is True,
             "description_coverage_mode": "intensive",
             "intensive_min_silence_seconds": 1.5,
             "enable_extended_audio_description": bool(
@@ -468,6 +469,14 @@ def run(request: dict) -> dict:
         25,
     )
 
+    # Explicit opt-in only: preserve the normal detector/generation/alignment path.
+    # Empty protection windows let the existing schedulers use the full timeline,
+    # while retaining cue spacing, real TTS duration and end-of-video checks.
+    if request.get("allow_dialogue_overlap") is True:
+        app_logger.info("Explicit dialogue/ commentary overlap enabled by the user.")
+        dialogue_intervals = []
+        nonverbal_candidates = []
+
     free_windows_text = speech_detector.format_intervals_for_prompt(
         dialogue_intervals, duration
     )
@@ -600,6 +609,7 @@ def run(request: dict) -> dict:
         "analysis_engine": "pyannote-segmentation-onnx",
         "description_mode": "intensive",
         "safety_block_none": True,
+        "allow_dialogue_overlap": request.get("allow_dialogue_overlap") is True,
         "allow_extended_pauses": bool(request.get("allow_extended_pauses", True)),
         "recognize_characters": bool(request.get("recognize_characters", True)),
         "protected_intervals": protected,

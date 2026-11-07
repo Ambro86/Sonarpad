@@ -91,6 +91,7 @@ const ID_CREATE_VIDEO: usize = 9684;
 const ID_ALLOW_NONVERBAL_VOCALS: usize = 9685;
 const ID_SOURCE_VOLUME: usize = 9686;
 const ID_STOP_MIX_PREVIEW: usize = 9687;
+const ID_ALLOW_DIALOGUE_OVERLAP: usize = 9689;
 const ID_BITRATE: usize = 9688;
 const EM_SETPASSWORDCHAR: u32 = 0x00CC;
 const SONARPAD_AI_SERVICE_URL: &str = "https://sonarpad.com/sonarpad-ai";
@@ -132,6 +133,7 @@ struct Labels {
     verbosity_detailed: String,
     extended: String,
     allow_nonverbal_vocals: String,
+    allow_dialogue_overlap: String,
     recognize_characters: String,
     recognize_screen_text: String,
     keep_character_catalog: String,
@@ -201,6 +203,7 @@ struct WindowState {
     verbosity_combo: HWND,
     extended_checkbox: HWND,
     allow_nonverbal_vocals_checkbox: HWND,
+    allow_dialogue_overlap_checkbox: HWND,
     recognize_characters_checkbox: HWND,
     recognize_screen_text_checkbox: HWND,
     keep_character_catalog_checkbox: HWND,
@@ -563,6 +566,7 @@ fn labels(language: Language) -> Labels {
         verbosity_detailed: i18n::tr(language, "audio_description.verbosity.detailed"),
         extended: i18n::tr(language, "audio_description.extended"),
         allow_nonverbal_vocals: i18n::tr(language, "audio_description.allow_nonverbal_vocals"),
+        allow_dialogue_overlap: i18n::tr(language, "audio_description.allow_dialogue_overlap"),
         recognize_characters: i18n::tr(language, "audio_description.recognize_characters"),
         recognize_screen_text: i18n::tr(language, "audio_description.recognize_screen_text"),
         keep_character_catalog: i18n::tr(language, "audio_description.keep_character_catalog"),
@@ -832,7 +836,7 @@ fn open_window(parent: HWND) -> HWND {
             120,
             50,
             700,
-            960,
+            990,
             parent,
             HMENU(0),
             hinstance,
@@ -1732,6 +1736,8 @@ fn persist_audio_description_preferences(state: &WindowState) {
         };
         app.settings.audio_description_extended_pauses = extended;
         app.settings.audio_description_allow_nonverbal_vocals = allow_nonverbal_vocals;
+        app.settings.audio_description_allow_dialogue_overlap =
+            checkbox_checked(state.allow_dialogue_overlap_checkbox);
         app.settings.audio_description_recognize_characters = recognize_characters;
         app.settings.audio_description_recognize_screen_text = recognize_screen_text;
         app.settings.audio_description_keep_character_catalog = keep_character_catalog;
@@ -2574,6 +2580,7 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
             verbosity: selected_verbosity(state.verbosity_combo),
             allow_extended_pauses: extended,
             allow_nonverbal_vocals: checkbox_checked(state.allow_nonverbal_vocals_checkbox),
+            allow_dialogue_overlap: checkbox_checked(state.allow_dialogue_overlap_checkbox),
             recognize_characters,
             recognize_screen_text: checkbox_checked(state.recognize_screen_text_checkbox),
             character_catalog,
@@ -2801,6 +2808,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     verbosity,
                     extended_pauses,
                     allow_nonverbal_vocals,
+                    allow_dialogue_overlap,
                     recognize_characters,
                     recognize_screen_text,
                     keep_character_catalog,
@@ -2834,6 +2842,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         state.settings.audio_description_verbosity,
                         state.settings.audio_description_extended_pauses,
                         state.settings.audio_description_allow_nonverbal_vocals,
+                        state.settings.audio_description_allow_dialogue_overlap,
                         state.settings.audio_description_recognize_characters,
                         state.settings.audio_description_recognize_screen_text,
                         state.settings.audio_description_keep_character_catalog,
@@ -2857,6 +2866,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     0,
                     100,
                     2,
+                    false,
                     false,
                     false,
                     true,
@@ -3036,13 +3046,38 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     LPARAM(0),
                 );
 
+                let allow_dialogue_overlap_checkbox = CreateWindowExW(
+                    Default::default(),
+                    WC_BUTTON,
+                    PCWSTR(to_wide(&labels.allow_dialogue_overlap).as_ptr()),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
+                    16,
+                    242,
+                    650,
+                    24,
+                    hwnd,
+                    HMENU(ID_ALLOW_DIALOGUE_OVERLAP as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                SendMessageW(
+                    allow_dialogue_overlap_checkbox,
+                    BM_SETCHECK,
+                    WPARAM(if allow_dialogue_overlap {
+                        BST_CHECKED.0 as usize
+                    } else {
+                        0
+                    }),
+                    LPARAM(0),
+                );
+
                 let recognize_characters_checkbox = CreateWindowExW(
                     Default::default(),
                     WC_BUTTON,
                     PCWSTR(to_wide(&labels.recognize_characters).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     16,
-                    242,
+                    272,
                     650,
                     24,
                     hwnd,
@@ -3075,7 +3110,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.keep_character_catalog).as_ptr()),
                     keep_catalog_style,
                     16,
-                    270,
+                    300,
                     650,
                     24,
                     hwnd,
@@ -3099,7 +3134,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     hwnd,
                     &labels.character_catalog_selection_label,
                     16,
-                    298,
+                    328,
                     190,
                     hfont,
                 );
@@ -3125,7 +3160,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR::null(),
                     catalog_combo_style,
                     210,
-                    294,
+                    324,
                     439,
                     220,
                     hwnd,
@@ -3158,7 +3193,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     hwnd,
                     &labels.character_catalog_new_name_label,
                     16,
-                    330,
+                    360,
                     190,
                     hfont,
                 );
@@ -3168,7 +3203,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR::null(),
                     WS_CHILD | WS_TABSTOP | WINDOW_STYLE(ES_AUTOHSCROLL as u32),
                     210,
-                    326,
+                    356,
                     439,
                     24,
                     hwnd,
@@ -3200,7 +3235,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.save_project).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     16,
-                    362,
+                    392,
                     324,
                     24,
                     hwnd,
@@ -3225,7 +3260,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.create_video).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     350,
-                    362,
+                    392,
                     316,
                     24,
                     hwnd,
@@ -3253,7 +3288,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.recognize_screen_text).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     16,
-                    392,
+                    422,
                     650,
                     24,
                     hwnd,
@@ -3278,7 +3313,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.delete_video_after).as_ptr()),
                     WS_CHILD | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     16,
-                    420,
+                    450,
                     650,
                     24,
                     hwnd,
@@ -3301,7 +3336,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     if save_project { SW_HIDE } else { SW_SHOW },
                 );
 
-                let ai_access_label = create_label(hwnd, &labels.ai_access, 16, 424, 120, hfont);
+                let ai_access_label = create_label(hwnd, &labels.ai_access, 16, 454, 120, hfont);
                 let ai_personal_radio = CreateWindowExW(
                     Default::default(),
                     WC_BUTTON,
@@ -3312,7 +3347,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         | WS_GROUP
                         | WINDOW_STYLE(BS_AUTORADIOBUTTON as u32),
                     136,
-                    448,
+                    478,
                     230,
                     26,
                     hwnd,
@@ -3326,7 +3361,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.ai_sonarpad).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTORADIOBUTTON as u32),
                     370,
-                    448,
+                    478,
                     290,
                     26,
                     hwnd,
@@ -3356,7 +3391,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 );
 
                 let gemini_api_key_label =
-                    create_label(hwnd, &labels.gemini_api_key, 16, 482, 210, hfont);
+                    create_label(hwnd, &labels.gemini_api_key, 16, 512, 210, hfont);
                 let gemini_api_key_edit = CreateWindowExW(
                     WS_EX_CLIENTEDGE,
                     WC_EDIT,
@@ -3366,7 +3401,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         | WS_TABSTOP
                         | WINDOW_STYLE(ES_AUTOHSCROLL as u32 | ES_PASSWORD as u32),
                     16,
-                    502,
+                    532,
                     420,
                     24,
                     hwnd,
@@ -3380,7 +3415,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.gemini_show_api_key).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     446,
-                    500,
+                    530,
                     220,
                     24,
                     hwnd,
@@ -3400,7 +3435,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.gemini_get_key).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     446,
-                    528,
+                    558,
                     220,
                     28,
                     hwnd,
@@ -3410,7 +3445,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 );
 
                 let sonarpad_code_label =
-                    create_label(hwnd, &labels.sonarpad_code, 16, 482, 210, hfont);
+                    create_label(hwnd, &labels.sonarpad_code, 16, 512, 210, hfont);
                 let sonarpad_code_edit = CreateWindowExW(
                     WS_EX_CLIENTEDGE,
                     WC_EDIT,
@@ -3419,7 +3454,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         | WS_TABSTOP
                         | WINDOW_STYLE(ES_AUTOHSCROLL as u32 | ES_PASSWORD as u32),
                     16,
-                    502,
+                    532,
                     420,
                     24,
                     hwnd,
@@ -3433,7 +3468,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.sonarpad_show_code).as_ptr()),
                     WS_CHILD | WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
                     446,
-                    500,
+                    530,
                     220,
                     24,
                     hwnd,
@@ -3448,7 +3483,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     LPARAM(0),
                 );
                 let sonarpad_balance_label =
-                    create_label(hwnd, &labels.sonarpad_balance, 16, 534, 120, hfont);
+                    create_label(hwnd, &labels.sonarpad_balance, 16, 564, 120, hfont);
                 let sonarpad_balance_edit = CreateWindowExW(
                     WS_EX_CLIENTEDGE,
                     WC_EDIT,
@@ -3457,7 +3492,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         | WS_TABSTOP
                         | WINDOW_STYLE(ES_AUTOHSCROLL as u32 | ES_READONLY as u32),
                     136,
-                    530,
+                    560,
                     180,
                     24,
                     hwnd,
@@ -3471,7 +3506,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.sonarpad_request_code).as_ptr()),
                     WS_CHILD | WS_TABSTOP,
                     446,
-                    528,
+                    558,
                     220,
                     28,
                     hwnd,
@@ -3481,14 +3516,14 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 );
 
                 let gemini_model_label =
-                    create_label(hwnd, &labels.gemini_model, 16, 564, 210, hfont);
+                    create_label(hwnd, &labels.gemini_model, 16, 594, 210, hfont);
                 let gemini_model_combo = CreateWindowExW(
                     WS_EX_CLIENTEDGE,
                     WC_COMBOBOXW,
                     PCWSTR::null(),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
                     16,
-                    584,
+                    614,
                     420,
                     220,
                     hwnd,
@@ -3507,7 +3542,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.gemini_refresh_models).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     446,
-                    582,
+                    612,
                     203,
                     28,
                     hwnd,
@@ -3519,7 +3554,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 // Engine and voice are now configured exclusively from the "Regola voce"
                 // dialog. Keep these controls hidden as the internal source of truth so the
                 // existing generation/persistence path remains unchanged and regression-free.
-                let engine_label = create_label(hwnd, &labels.engine, 16, 620, 200, hfont);
+                let engine_label = create_label(hwnd, &labels.engine, 16, 650, 200, hfont);
                 ShowWindow(engine_label, SW_HIDE);
                 let engine_combo = CreateWindowExW(
                     Default::default(),
@@ -3527,7 +3562,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR::null(),
                     WS_CHILD | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
                     16,
-                    640,
+                    670,
                     200,
                     150,
                     hwnd,
@@ -3550,7 +3585,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     LPARAM(0),
                 );
 
-                let voice_label = create_label(hwnd, &labels.voice, 236, 620, 200, hfont);
+                let voice_label = create_label(hwnd, &labels.voice, 236, 650, 200, hfont);
                 ShowWindow(voice_label, SW_HIDE);
                 let voice_combo = CreateWindowExW(
                     Default::default(),
@@ -3558,7 +3593,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR::null(),
                     WS_CHILD | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
                     236,
-                    640,
+                    670,
                     413,
                     220,
                     hwnd,
@@ -3576,7 +3611,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         hwnd,
                         language,
                         hfont,
-                        644,
+                        674,
                         (ID_SOURCE_VOLUME, ID_STOP_MIX_PREVIEW),
                         source_volume,
                     );
@@ -3584,7 +3619,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     hwnd,
                     &i18n::tr(language, "audio_description.bitrate"),
                     16,
-                    680,
+                    710,
                     230,
                     hfont,
                 );
@@ -3594,7 +3629,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR::null(),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
                     250,
-                    677,
+                    707,
                     120,
                     180,
                     hwnd,
@@ -3611,7 +3646,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 // Give the progress text its own accessible name rather than letting
                 // screen readers infer it from the preceding audio settings labels.
                 let progress_name = progress_control_name(language, None);
-                let progress_label = create_label(hwnd, &progress_name, 16, 702, 650, hfont);
+                let progress_label = create_label(hwnd, &progress_name, 16, 732, 650, hfont);
                 ShowWindow(progress_label, SW_HIDE);
                 let progress = CreateWindowExW(
                     Default::default(),
@@ -3622,7 +3657,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         | WS_VSCROLL
                         | WINDOW_STYLE((ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL) as u32),
                     16,
-                    724,
+                    754,
                     650,
                     72,
                     hwnd,
@@ -3638,7 +3673,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&progress_name).as_ptr()),
                     WS_CHILD,
                     16,
-                    802,
+                    832,
                     650,
                     20,
                     hwnd,
@@ -3653,7 +3688,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.ready).as_ptr()),
                     WS_CHILD | WS_VISIBLE,
                     16,
-                    754,
+                    784,
                     650,
                     48,
                     hwnd,
@@ -3667,7 +3702,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.voice_settings).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     16,
-                    828,
+                    858,
                     110,
                     30,
                     hwnd,
@@ -3681,7 +3716,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.modify_project).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     136,
-                    828,
+                    858,
                     180,
                     30,
                     hwnd,
@@ -3695,7 +3730,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.resume_title).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     326,
-                    828,
+                    858,
                     180,
                     30,
                     hwnd,
@@ -3709,7 +3744,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.start).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_DEFPUSHBUTTON as u32),
                     516,
-                    828,
+                    858,
                     150,
                     30,
                     hwnd,
@@ -3723,7 +3758,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.cancel).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     390,
-                    868,
+                    898,
                     100,
                     30,
                     hwnd,
@@ -3738,7 +3773,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     PCWSTR(to_wide(&labels.close).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     510,
-                    868,
+                    898,
                     100,
                     30,
                     hwnd,
@@ -3775,6 +3810,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     verbosity_combo,
                     extended_checkbox,
                     allow_nonverbal_vocals_checkbox,
+                    allow_dialogue_overlap_checkbox,
                     recognize_characters_checkbox,
                     recognize_screen_text_checkbox,
                     keep_character_catalog_checkbox,
@@ -3816,6 +3852,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     verbosity_combo,
                     extended_checkbox,
                     allow_nonverbal_vocals_checkbox,
+                    allow_dialogue_overlap_checkbox,
                     recognize_characters_checkbox,
                     recognize_screen_text_checkbox,
                     keep_character_catalog_checkbox,
@@ -3889,6 +3926,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         verbosity_combo,
                         extended_checkbox,
                         allow_nonverbal_vocals_checkbox,
+                        allow_dialogue_overlap_checkbox,
                         recognize_characters_checkbox,
                         recognize_screen_text_checkbox,
                         keep_character_catalog_checkbox,
@@ -4147,7 +4185,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         }
                         persist_audio_description_preferences(state);
                     }
-                    ID_ALLOW_NONVERBAL_VOCALS if !state.running => {
+                    ID_ALLOW_NONVERBAL_VOCALS | ID_ALLOW_DIALOGUE_OVERLAP if !state.running => {
                         persist_audio_description_preferences(state);
                     }
                     ID_DELETE_VIDEO_AFTER if !state.running => {
@@ -4900,6 +4938,16 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         state.allow_nonverbal_vocals_checkbox,
                         BM_SETCHECK,
                         WPARAM(if resume.allow_nonverbal_vocals {
+                            BST_CHECKED.0 as usize
+                        } else {
+                            0
+                        }),
+                        LPARAM(0),
+                    );
+                    SendMessageW(
+                        state.allow_dialogue_overlap_checkbox,
+                        BM_SETCHECK,
+                        WPARAM(if resume.allow_dialogue_overlap {
                             BST_CHECKED.0 as usize
                         } else {
                             0

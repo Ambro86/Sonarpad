@@ -585,6 +585,7 @@ mod ytdlp_command_tests {
             format,
             quality: StreamQualitySelection::Original,
             direct_play: true,
+            search_type: 0,
             reopen_collection_page: None,
             reopen_selected_label: None,
             previous_input: None,
@@ -659,6 +660,40 @@ mod ytdlp_command_tests {
         }
         assert!(super::ytdlp_download_diagnostics("unrelated output").is_none());
         assert!(super::ytdlp_download_diagnostics("SONARPAD_PROGRESS:500:1000:NA").is_none());
+    }
+
+    #[test]
+    fn hls_download_progress_ignores_the_initial_manifest_size_estimate() {
+        let samples = [
+            (
+                "SONARPAD_PROGRESS:712:NA:712:248.59:NA:0:616:mp4:1080:m3u8_native:vp09:none:0:38:downloading",
+                0,
+            ),
+            (
+                "SONARPAD_PROGRESS:33233874:NA:70158238.8888889:0:NA:66.72:616:mp4:1080:m3u8_native:vp09:none:17:38:downloading",
+                44,
+            ),
+            (
+                "SONARPAD_PROGRESS:41384392:NA:71480362.9090909:0:NA:87.87:616:mp4:1080:m3u8_native:vp09:none:21:38:downloading",
+                55,
+            ),
+            (
+                "SONARPAD_PROGRESS:80000000:80000000:NA:0:0:120:616:mp4:1080:m3u8_native:vp09:none:38:38:finished",
+                100,
+            ),
+        ];
+        for (line, expected) in samples {
+            assert_eq!(super::parse_ytdlp_progress_pct(line), Some(expected));
+        }
+        // Non-fragmented downloads retain byte progress, including decimal estimates.
+        assert_eq!(
+            super::parse_ytdlp_progress_pct("SONARPAD_PROGRESS:500:NA:1000.5"),
+            Some(50)
+        );
+        assert_eq!(
+            super::parse_ytdlp_progress_pct("SONARPAD_PROGRESS:500:NA:NaN"),
+            None
+        );
     }
 
     #[test]
@@ -834,6 +869,7 @@ mod ytdlp_command_tests {
             "HTTP Error 503",
             "HTTP Error 504",
             "Read timed out",
+            "ERROR: unable to download video data: HTTPSConnectionPool(host='manifest.googlevideo.com', port=443): Read timed out. (read timeout=10.0)",
         ] {
             assert!(super::should_retry_youtube_download_failure(error, false));
         }
@@ -2975,6 +3011,48 @@ fn collect_stream_collection_entries(
     out
 }
 
+fn collect_stream_search_entries(
+    entries: &[serde_json::Value],
+    language: Language,
+    search_type: u8,
+) -> Vec<StreamCollectionEntry> {
+    let filtered: Vec<serde_json::Value> = entries
+        .iter()
+        .filter(|entry| {
+            if search_type == 0 {
+                return true;
+            }
+            if entry["kind"].is_string() {
+                return crate::sonartube::matches_search_type(entry, search_type);
+            }
+            // yt-dlp uses URLs/ie_key instead of the catalog's `kind` field.
+            let Some(url) = stream_entry_url(entry) else {
+                return false;
+            };
+            let channel = is_youtube_channel_url(&url);
+            let playlist = !channel
+                && (is_youtube_collection_url(&url)
+                    || (entry["ie_key"] == "YoutubeTab"
+                        && normalize_youtube_playlist_url_from_input(&url).is_some()));
+            match search_type {
+                1 => !channel && !playlist && extract_video_id(&url).is_some(),
+                2 => playlist,
+                3 => channel,
+                _ => false, // Course/podcast identity requires the catalog metadata.
+            }
+        })
+        .cloned()
+        .collect();
+    if filtered.len() != entries.len() {
+        crate::log_debug(&format!(
+            "SonarTube search filter: type={search_type} kept={} discarded={}",
+            filtered.len(),
+            entries.len() - filtered.len()
+        ));
+    }
+    collect_stream_collection_entries(&filtered, language, true)
+}
+
 fn probe_youtube_collection_entries(
     ytdlp_path: &Path,
     url: &str,
@@ -3106,6 +3184,88 @@ mod youtube_search_stability_tests {
     use super::*;
 
     #[test]
+    fn fallback_search_filters_playlists_channels_and_videos_without_kind_metadata() {
+        let entries = serde_json::json!([
+            {"title":"Episode 1", "url":"https://www.youtube.com/watch?v=abcdefghijk", "ie_key":"Youtube", "view_count":123},
+            {"title":"Full series", "url":"https://www.youtube.com/playlist?list=PLseries", "ie_key":"YoutubeTab"},
+            {"title":"Channel", "url":"https://www.youtube.com/channel/UCabcd", "ie_key":"YoutubeTab"},
+            {"title":"Other series", "webpage_url":"https://www.youtube.com/playlist?list=PLother", "ie_key":"YoutubeTab"},
+            {"title":"Episode 2", "url":"https://www.youtube.com/watch?v=123456789ab", "ie_key":"Youtube", "view_count":234}
+        ]);
+        let entries = entries.as_array().unwrap();
+        for (kind, expected) in [
+            (
+                0,
+                vec![
+                    "Episode 1",
+                    "Full series",
+                    "Channel",
+                    "Other series",
+                    "Episode 2",
+                ],
+            ),
+            (1, vec!["Episode 1", "Episode 2"]),
+            (2, vec!["Full series", "Other series"]),
+            (3, vec!["Channel"]),
+            (4, vec![]),
+            (5, vec![]),
+        ] {
+            let result = collect_stream_search_entries(entries, Language::English, kind);
+            assert_eq!(
+                result
+                    .iter()
+                    .map(|row| row.title.as_str())
+                    .collect::<Vec<_>>(),
+                expected
+            );
+            if kind == 2 {
+                assert!(result.iter().all(
+                    |row| row.label.contains("Playlist") && is_youtube_collection_url(&row.url)
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn catalog_search_filter_remains_strict_and_direct_videos_ignore_it() {
+        let entries = serde_json::json!([
+            {"kind":"video", "title":"Episode", "url":"https://www.youtube.com/watch?v=abcdefghijk", "view_count":123},
+            {"kind":"playlist", "title":"Series", "url":"https://www.youtube.com/playlist?list=PLseries"},
+            {"kind":"playlist", "collection_type":"course", "title":"Course", "url":"https://www.youtube.com/playlist?list=PLcourse"},
+            {"kind":"playlist", "collection_type":"podcast", "title":"Podcast", "url":"https://www.youtube.com/playlist?list=PLpodcast"}
+        ]);
+        let entries = entries.as_array().unwrap();
+        for (kind, count) in [(0, 4), (1, 1), (2, 3), (3, 0), (4, 1), (5, 1)] {
+            assert_eq!(
+                collect_stream_search_entries(entries, Language::English, kind).len(),
+                count
+            );
+        }
+        let url = "https://www.youtube.com/watch?v=abcdefghijk";
+        for search_type in 0..=5 {
+            let resolved = resolve_stream_input_url(
+                HWND(0),
+                Language::English,
+                Path::new("unused.exe"),
+                url,
+                search_type,
+                StreamSelectionResolveOptions {
+                    initial_collection_page: None,
+                    initial_selected_label: None,
+                    initial_progress: None,
+                    playlist_download_options: PlaylistDownloadOptions {
+                        format: StreamOutputFormat::Auto,
+                        quality: StreamQualitySelection::Original,
+                    },
+                },
+            )
+            .unwrap()
+            .unwrap();
+            assert_eq!(resolved.url, url);
+        }
+    }
+
+    #[test]
     fn youtube_search_keeps_channels_videos_and_playlists_in_provider_order() {
         let items = vec![
             StreamCollectionEntry {
@@ -3211,7 +3371,7 @@ fn probe_youtube_search_entries_uncached(
             page,
             page_data.entries.len()
         ));
-        let entries = collect_stream_collection_entries(&page_data.entries, language, true);
+        let entries = collect_stream_search_entries(&page_data.entries, language, search_type);
         return Ok((entries, page_data.next.is_some()));
     }
     if search_type >= 4 {
@@ -3270,7 +3430,7 @@ fn probe_youtube_search_entries_uncached(
         .take(STREAM_SELECTION_PAGE_SIZE)
         .cloned()
         .collect();
-    let collected = collect_stream_collection_entries(&page_entries, language, true);
+    let collected = collect_stream_search_entries(&page_entries, language, search_type);
     Ok((collected, has_more))
 }
 
@@ -3327,6 +3487,7 @@ fn youtube_selection_save_context(
             format,
             quality,
             direct_play: false,
+            search_type: 0,
             reopen_collection_page: None,
             reopen_selected_label: None,
             previous_input: None,
@@ -7014,6 +7175,7 @@ fn choose_youtube_search_entry(
     language: Language,
     ytdlp_path: &Path,
     query: &str,
+    search_type: u8,
     options: StreamSelectionResolveOptions<'_>,
 ) -> Result<Option<ResolvedStreamSelection>, String> {
     let StreamSelectionResolveOptions {
@@ -7023,9 +7185,8 @@ fn choose_youtube_search_entry(
         playlist_download_options,
         ..
     } = options;
-    let search_type = with_state(parent, |state| state.settings.sonartube_search_type)
-        .unwrap_or(0)
-        .min(5);
+    let search_type = search_type.min(5);
+    crate::log_debug(&format!("SonarTube search started: type={search_type}"));
     let initial_page = initial_collection_page.unwrap_or(0);
     let mut page = initial_page;
     let mut shared_progress = initial_progress;
@@ -7186,12 +7347,13 @@ fn resolve_stream_input_url(
     language: Language,
     ytdlp_path: &Path,
     input: &str,
+    search_type: u8,
     options: StreamSelectionResolveOptions<'_>,
 ) -> Result<Option<ResolvedStreamSelection>, String> {
     if looks_like_valid_stream_url(input) {
         return choose_youtube_collection_entry(parent, language, ytdlp_path, input, options);
     }
-    choose_youtube_search_entry(parent, language, ytdlp_path, input, options)
+    choose_youtube_search_entry(parent, language, ytdlp_path, input, search_type, options)
 }
 
 fn is_members_only_stream_error(err: &str) -> bool {
@@ -7464,6 +7626,7 @@ struct StreamDialogResult {
     format: StreamOutputFormat,
     quality: StreamQualitySelection,
     direct_play: bool,
+    search_type: u8,
     reopen_collection_page: Option<usize>,
     reopen_selected_label: Option<String>,
     previous_input: Option<String>,
@@ -7536,6 +7699,35 @@ struct StreamDialogState {
     open_comments_button: HWND,
     ok_button: HWND,
     result: Arc<Mutex<Option<StreamDialogResult>>>,
+}
+
+fn capture_stream_dialog_result(state: &StreamDialogState) -> StreamDialogResult {
+    // Read the real control at submission, including accessibility selections
+    // that did not send CBN_SELCHANGE. Carry it with this search so background
+    // preference updates cannot replace the user's choice while it starts.
+    let search_type = unsafe {
+        SendMessageW(state.search_type_combo, CB_GETCURSEL, WPARAM(0), LPARAM(0))
+            .0
+            .clamp(0, 5) as u8
+    };
+    with_state(state.parent, |app| {
+        if app.settings.sonartube_search_type != search_type {
+            app.settings.sonartube_search_type = search_type;
+            save_settings(app.settings.clone());
+        }
+    });
+    StreamDialogResult {
+        url: current_stream_dialog_input(state),
+        format: state.default_save_format,
+        quality: StreamQualitySelection::Original,
+        direct_play: true,
+        search_type,
+        reopen_collection_page: None,
+        reopen_selected_label: None,
+        previous_input: None,
+        previous_collection_page: None,
+        previous_selected_label: None,
+    }
 }
 
 struct StreamSaveOptionsInit {
@@ -9402,21 +9594,8 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                         if !screen_reader_speak(&msg) {
                             crate::log_debug("Screen reader speak failed");
                         }
-                        let url = current_stream_dialog_input(state);
-                        let format = state.default_save_format;
-                        let quality = StreamQualitySelection::Original;
                         *state.result.lock().unwrap_or_else(|e| e.into_inner()) =
-                            Some(StreamDialogResult {
-                                url,
-                                format,
-                                quality,
-                                direct_play: true,
-                                reopen_collection_page: None,
-                                reopen_selected_label: None,
-                                previous_input: None,
-                                previous_collection_page: None,
-                                previous_selected_label: None,
-                            });
+                            Some(capture_stream_dialog_result(state));
                     })
                     .is_none()
                     {
@@ -9517,6 +9696,9 @@ fn show_stream_dialog(
             format: default_format,
             quality: StreamQualitySelection::Original,
             direct_play: true,
+            search_type: with_state(parent, |state| state.settings.sonartube_search_type)
+                .unwrap_or(0)
+                .min(5),
             reopen_collection_page: context.collection_page,
             reopen_selected_label: context.selected_label,
             previous_input: context.previous_input,
@@ -10393,25 +10575,33 @@ fn parse_ytdlp_progress_pct(line: &str) -> Option<u32> {
 fn parse_ytdlp_progress_template_pct(line: &str) -> Option<u32> {
     let marker = format!("{YTDLP_PROGRESS_TEMPLATE_PREFIX}:");
     let start = line.find(&marker)? + marker.len();
-    let mut parts = line[start..].split(':');
+    let parts: Vec<_> = line[start..].split(':').collect();
+    // HLS may initially estimate the whole video from its tiny initialization
+    // fragment. Use the known fragment count instead of pinning progress at 100%.
+    if let Some(fragment) = parts
+        .get(12)
+        .and_then(|part| part.trim().parse::<u64>().ok())
+        && let Some(count) = parts
+            .get(13)
+            .and_then(|part| part.trim().parse::<u64>().ok())
+            .filter(|count| *count > 0)
+    {
+        return Some((fragment.saturating_mul(100) / count).min(100) as u32);
+    }
     let downloaded = parts
-        .next()?
+        .first()?
         .trim()
         .parse::<u64>()
         .ok()
         .filter(|v| *v > 0)?;
     let total = parts
-        .next()
-        .and_then(|part| part.trim().parse::<u64>().ok())
-        .filter(|v| *v > 0)
-        .or_else(|| {
-            parts
-                .next()
-                .and_then(|part| part.trim().parse::<u64>().ok())
-                .filter(|v| *v > 0)
-        })?;
+        .get(1)
+        .into_iter()
+        .chain(parts.get(2))
+        .filter_map(|part| part.trim().parse::<f64>().ok())
+        .find(|value| value.is_finite() && *value > 0.0)?;
     Some(
-        ((downloaded as f64 / total as f64) * 100.0)
+        ((downloaded as f64 / total) * 100.0)
             .clamp(0.0, 100.0)
             .round() as u32,
     )
@@ -12474,6 +12664,7 @@ fn download_selected_youtube_playlist_entries(
             format: options.format,
             quality: options.quality,
             direct_play: false,
+            search_type: 0,
             reopen_collection_page: None,
             reopen_selected_label: None,
             previous_input: None,
@@ -13012,6 +13203,48 @@ fn download_stream_context_for_audio_description(
     };
 
     let mut downloaded_path = attempt.primary_path.take();
+    // Keep the successful/default path unchanged. Reuse the existing alternate
+    // YouTube client on temporary failures, retaining video for audio description.
+    if downloaded_path.is_none()
+        && is_youtube_stream_url(&context.url)
+        && should_retry_youtube_download_failure(&attempt.stderr_capture, attempt.stalled)
+    {
+        crate::log_debug(&format!(
+            "Audio description download [{}]: retrying with alternate YouTube client after temporary failure: {}",
+            prefix,
+            truncate_debug_text(attempt.stderr_capture.trim(), 1500)
+        ));
+        remove_stream_cache_files_for_prefix(&cache_dir, &prefix);
+        report_progress(progress, 0);
+        attempt = match run_ytdlp_stream_download_attempt_with_client(
+            YtdlpDownloadRequest {
+                parent,
+                progress,
+                language,
+                ytdlp_path: &context.ytdlp_path,
+                url: &context.url,
+                cache_dir: &cache_dir,
+                prefix: &prefix,
+                output_template: &output_template,
+                dialog_data: &download_options,
+                selected_audio_format: None,
+                prefer_video: true,
+                ytdlp_debug: ytdlp_debug_enabled(),
+                credentials: active_credentials.as_ref(),
+            },
+            true,
+        ) {
+            Ok(attempt) => attempt,
+            Err(message) => {
+                if !message.is_empty() {
+                    close_progress_dialog(progress);
+                    show_error(parent, language, &message);
+                }
+                return true;
+            }
+        };
+        downloaded_path = attempt.primary_path.take();
+    }
     if downloaded_path.is_none() {
         let err = if attempt.stderr_capture.trim().is_empty() {
             "yt-dlp failed".to_string()
@@ -13195,6 +13428,7 @@ fn download_active_youtube_for_audio_description_with_mode(
                 format: StreamOutputFormat::Auto,
                 quality: StreamQualitySelection::Original,
                 direct_play: true,
+                search_type: 0,
                 reopen_collection_page: None,
                 reopen_selected_label: None,
                 previous_input: None,
@@ -13503,6 +13737,7 @@ pub fn play_streaming_audio_from_url(parent: HWND) {
             language,
             &path,
             &input,
+            dialog_data.search_type,
             StreamSelectionResolveOptions {
                 initial_collection_page: dialog_data.reopen_collection_page,
                 initial_selected_label: dialog_data.reopen_selected_label.as_deref(),
@@ -16005,6 +16240,7 @@ mod webm_download_tests {
             format: StreamOutputFormat::Webm,
             quality: StreamQualitySelection::Original,
             direct_play: false,
+            search_type: 0,
             reopen_collection_page: None,
             reopen_selected_label: None,
             previous_input: None,
@@ -16191,6 +16427,27 @@ mod stream_search_keyboard_tests {
             assert_ne!(hwnd.0, 0);
             let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut StreamDialogState;
             assert!(!ptr.is_null());
+            SendMessageW(
+                (*ptr).url_edit,
+                WM_SETTEXT,
+                WPARAM(0),
+                LPARAM(to_wide("Doctor Who").as_ptr() as isize),
+            );
+            for selected in 0..=5 {
+                // CB_SETCURSEL changes the control without CBN_SELCHANGE. The
+                // submitted result must use the control, not a stale preference.
+                SendMessageW(
+                    (*ptr).search_type_combo,
+                    CB_SETCURSEL,
+                    WPARAM(selected),
+                    LPARAM(0),
+                );
+                let submitted = capture_stream_dialog_result(&*ptr);
+                assert_eq!(submitted.url, "Doctor Who");
+                assert_eq!(submitted.search_type, selected as u8);
+                SendMessageW((*ptr).search_type_combo, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+                assert_eq!(submitted.search_type, selected as u8);
+            }
             for input in [
                 "",
                 "Pink Floyd",

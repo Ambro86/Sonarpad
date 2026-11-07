@@ -1,10 +1,12 @@
 # Changelog
 
-Version 0.9.26 – 2026-11-06
+Version 0.9.26 – 2026-11-07
 
 1. Added Find places and businesses in all languages, with international results, descriptions, ratings, review counts, opening hours and websites when available. In the Italian interface it replaces White and Yellow Pages while retaining their results, name search and phone-number search. Other languages offer place and business search only.
 
 2. Improved route search with more accurate results and added public transport routes.
+
+3. AI audio descriptions: added “Allow audio descriptions during dialogue and commentary”, disabled by default. This is especially useful for football matches, wrestling and other sporting events where continuous commentary left little or no room for Sonarpad’s descriptions, as well as music videos. When enabled, descriptions can play during speech or singing without overlapping one another. The choice is saved in the project for subsequent edits and regeneration. When disabled, normal dialogue protection remains unchanged.
 
 Version 0.9.25 – 2026-11-06
 

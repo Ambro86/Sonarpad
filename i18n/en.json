@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Find a phone number",
+  "places.phone_query": "Enter the phone number",
+  "places.phone_invalid": "Enter a valid phone number, including its area or country code.",
   "route.departure_label": "Departure",
   "route.departure_now": "Leave now",
   "route.departure_at": "Leave at",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Select a speech synthesis voice.",
   "audio_description.extended": "Enable extended pauses: pause the film in exceptional cases when the description does not fit in a silence",
   "audio_description.allow_nonverbal_vocals": "Allow descriptions over non-verbal vocal sounds",
+  "audio_description.allow_dialogue_overlap": "Allow audio descriptions during dialogue and commentary",
   "audio_description.gemini_api_key": "Gemini API key:",
   "audio_description.show_api_key": "Show API key",
   "audio_description.gemini_error_models": "Could not load Gemini models: {error}",

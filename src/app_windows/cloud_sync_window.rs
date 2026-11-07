@@ -421,11 +421,7 @@ pub fn complete(parent: HWND, param: LPARAM) {
                 let current = outcome
                     .session
                     .select(&cloud_sync::export(&settings, false));
-                let merged =
-                    cloud_sync::merge(&remote, &outcome.session.meta["pending"]["state"], &current);
-                outcome
-                    .session
-                    .guard_deletions("incoming", &current, &merged)?;
+                let merged = outcome.session.merge_response(&remote, &current)?;
                 let old_language = cloud_sync::language(&settings, false);
                 cloud_sync::apply(&mut settings, &merged, false)?;
                 if old_language != cloud_sync::language(&settings, false)

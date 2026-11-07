@@ -1,10 +1,12 @@
 # Catatan perubahan
 
-Version 0.9.26 – 2026-11-06
+Version 0.9.26 – 2026-11-07
 
 1. Pencarian tempat dan usaha tersedia dalam semua bahasa, dengan hasil internasional, deskripsi, penilaian, jumlah ulasan, jam buka, dan situs web jika tersedia. Di antarmuka Italia, fitur ini menggantikan Halaman Putih dan Kuning sambil mempertahankan hasil serta pencarian nama dan nomor telepon. Bahasa lain hanya menyediakan pencarian tempat dan usaha.
 
 2. Pencarian rute ditingkatkan dengan hasil yang lebih akurat dan penambahan rute transportasi umum.
+
+3. Deskripsi audio AI: menambahkan opsi “Izinkan deskripsi audio selama dialog dan komentar”, yang dinonaktifkan secara bawaan. Opsi ini terutama berguna untuk pertandingan sepak bola, gulat, dan acara olahraga lain dengan komentar terus-menerus yang sebelumnya menyisakan sedikit atau tidak ada ruang bagi deskripsi Sonarpad, serta untuk video musik. Jika diaktifkan, deskripsi dapat diputar saat ada ucapan atau nyanyian tanpa saling tumpang tindih. Pilihan disimpan dalam proyek untuk penyuntingan dan pembuatan ulang berikutnya. Jika dinonaktifkan, perlindungan dialog biasa tetap tidak berubah.
 
 Version 0.9.25 – 2026-11-06
 

@@ -1,10 +1,12 @@
 # Changelog
 
-Version 0.9.26 – 2026-11-06
+Version 0.9.26 – 2026-11-07
 
 1. Añadida la búsqueda de lugares y negocios en todos los idiomas, con resultados internacionales, descripciones, valoraciones, número de reseñas, horarios y sitios web cuando están disponibles. En la interfaz italiana sustituye a las Páginas Blancas y Amarillas, conservando sus resultados y las búsquedas por nombre y teléfono. En los demás idiomas solo se ofrece la búsqueda de lugares y negocios.
 
 2. Mejorada la búsqueda de rutas con resultados más precisos y añadidas rutas en transporte público.
+
+3. Audiodescripciones con IA: añadida la opción «Permitir audiodescripciones durante los diálogos y los comentarios», desactivada de forma predeterminada. Es especialmente útil para partidos de fútbol, combates de lucha libre y otros eventos deportivos en los que la narración continua dejaba poco o ningún espacio para las descripciones de Sonarpad, así como para vídeos musicales. Al activarla, las descripciones pueden sonar durante el habla o el canto sin superponerse entre sí. La elección se guarda en el proyecto para posteriores ediciones y regeneraciones. Si está desactivada, la protección habitual de los diálogos no cambia.
 
 Version 0.9.25 – 2026-11-06
 

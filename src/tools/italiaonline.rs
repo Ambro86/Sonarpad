@@ -1,10 +1,16 @@
+#[path = "pg_phone.rs"]
+mod pg_phone;
 #[path = "places.rs"]
 mod places;
+pub(crate) use places::normalize_phone as normalize_place_phone;
 
 use base64::Engine;
 use quick_xml::{Reader, events::Event};
 use std::collections::HashSet;
 use url::{Url, form_urlencoded::Serializer};
+
+// Same built-in directory configuration as Mac and mobile. No user access code is required.
+const DIRECTORY_KEY: &[u8] = b"mK9!vP2xL8#qT4zN7@rW1sY6dF0hJ3uBzUrL1BirM@|\\";
 
 const ITALIAONLINE_BASE_URL_B64: &str = "BT9NUUx/HRUjWkodMRoTOlYsGzZeHTVfCiMeAT4c";
 const ITALIAONLINE_SEARCH_PB_B64: &str = "Hi5YUxU4Qho=";
@@ -159,7 +165,11 @@ pub(crate) fn normalize_phone(input: &str) -> Result<String, String> {
 }
 
 pub(crate) fn search_places_only(query: &SearchQuery) -> Result<SearchOutcome, String> {
-    let primary = places::search(&query.what, &query.where_, &query.country, &query.language)?;
+    let primary = if query.reverse {
+        places::search_phone(&query.what, &query.country, &query.language)?
+    } else {
+        places::search(&query.what, &query.where_, &query.country, &query.language)?
+    };
     merge_activities(
         query,
         Ok(primary),
@@ -271,6 +281,32 @@ pub(crate) fn search(query: &SearchQuery) -> Result<SearchOutcome, String> {
         ));
     }
 
+    if query.reverse && query.kind == DirectoryKind::PagineGialle {
+        let number = normalize_phone(&query.what)?;
+        let url = pg_phone::search_url(&number, query.page);
+        let bytes = crate::curl_client::CurlClient::fetch_url_impersonated(&url)
+            .map_err(|err| format!("Impossibile cercare in Pagine Gialle: {err}"))?;
+        let page = pg_phone::parse(&String::from_utf8_lossy(&bytes), &number)?;
+        return Ok(SearchOutcome::Results(SearchResponse {
+            display_where: None,
+            current_page: query.page,
+            is_last_page: page.is_last_page,
+            results: page
+                .results
+                .into_iter()
+                .map(|item| SearchResult {
+                    id: item.id,
+                    name: item.name,
+                    address: item.address,
+                    city: None,
+                    province: None,
+                    category: item.category,
+                    phones: item.phones,
+                    detail: None,
+                })
+                .collect(),
+        }));
+    }
     let url = build_search_url(query)?;
     let bytes = crate::curl_client::CurlClient::fetch_url_impersonated(&url)
         .map_err(|err| format!("Impossibile cercare in {}: {err}", query.kind.label()))?;
@@ -295,6 +331,27 @@ pub(crate) fn search(query: &SearchQuery) -> Result<SearchOutcome, String> {
 
 // Keep the source in combined result IDs so details use the matching directory.
 pub(crate) fn search_phone(query: &SearchQuery) -> Result<SearchOutcome, String> {
+    if query.country != "it" || normalize_phone(&query.what).is_err() {
+        return search_places_only(query);
+    }
+    if query.page > 1 {
+        return search_phone_directories(query);
+    }
+    let (primary, legacy) = std::thread::scope(|scope| {
+        let worker =
+            scope.spawn(|| places::search_phone(&query.what, &query.country, &query.language));
+        let legacy = search_phone_directories(query);
+        (
+            worker
+                .join()
+                .unwrap_or_else(|_| Err("Ricerca luoghi interrotta.".into())),
+            legacy,
+        )
+    });
+    merge_activities(query, primary, legacy)
+}
+
+fn search_phone_directories(query: &SearchQuery) -> Result<SearchOutcome, String> {
     let mut combined = SearchResponse {
         display_where: None,
         current_page: query.page,
@@ -885,7 +942,7 @@ fn italiaonline_version() -> Result<String, String> {
 }
 
 fn decode_italiaonline_url(encoded: &str) -> Result<String, String> {
-    let key = resolve_italiaonline_secret_key()?;
+    let key = DIRECTORY_KEY;
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(encoded)
         .map_err(|err| format!("URL Italiaonline offuscato non valido: {err}"))?;
@@ -896,16 +953,6 @@ fn decode_italiaonline_url(encoded: &str) -> Result<String, String> {
         .collect();
     String::from_utf8(decoded)
         .map_err(|err| format!("URL Italiaonline decodificato non valido: {err}"))
-}
-
-fn resolve_italiaonline_secret_key() -> Result<Vec<u8>, String> {
-    if let Some(secret_key) = crate::settings::load_saved_rai_luce_code() {
-        let trimmed = secret_key.trim();
-        if !trimmed.is_empty() {
-            return Ok(trimmed.as_bytes().to_vec());
-        }
-    }
-    Err("Chiave Luce mancante: inserisci il codice nelle impostazioni RSS/Podcast.".to_string())
 }
 
 #[cfg(test)]
@@ -1021,6 +1068,57 @@ mod activities_tests {
 #[cfg(test)]
 mod reverse_tests {
     use super::*;
+
+    #[test]
+    fn directory_configuration_does_not_require_a_user_access_code() {
+        let query = SearchQuery {
+            kind: DirectoryKind::PagineBianche,
+            what: "020202".into(),
+            where_: String::new(),
+            country: "it".into(),
+            language: "it".into(),
+            page: 1,
+            reverse: true,
+        };
+        let url = Url::parse(&build_search_url(&query).unwrap()).unwrap();
+        assert!(url.path().ends_with("searchpb"));
+        assert!(
+            url.query_pairs()
+                .any(|(key, value)| key == "what" && value == "020202")
+        );
+    }
+
+    #[test]
+    #[ignore = "Live public telephone directory checks"]
+    fn live_public_phone_directories_and_details() {
+        for number in ["020202", "0115617776", "0114310032"] {
+            for kind in [DirectoryKind::PagineBianche, DirectoryKind::PagineGialle] {
+                let query = SearchQuery {
+                    kind,
+                    what: format!("+39 {number}"),
+                    where_: String::new(),
+                    country: "it".into(),
+                    language: "it".into(),
+                    page: 1,
+                    reverse: true,
+                };
+                let SearchOutcome::Results(response) = search(&query).unwrap() else {
+                    panic!("Phone lookup must not request a city");
+                };
+                assert!(!response.results.is_empty(), "{kind:?}: {number}");
+                assert!(response.results.iter().all(|item| {
+                    item.phones
+                        .iter()
+                        .any(|phone| normalize_phone(phone).ok().as_deref() == Some(number))
+                }));
+                println!("{kind:?}: {number}: {} results", response.results.len());
+                if number == "0114310032" {
+                    let detail = load_detail(&query, &response.results[0].id).unwrap();
+                    assert!(detail.body.contains("4310032") || detail.body.contains("431 0032"));
+                }
+            }
+        }
+    }
 
     fn query_url(query: &SearchQuery, detail_id: Option<&str>) -> Url {
         let mut serializer = Serializer::new(String::new());

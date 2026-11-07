@@ -1,10 +1,12 @@
 # Journal des modifications
 
-Version 0.9.26 – 2026-11-06
+Version 0.9.26 – 2026-11-07
 
 1. Ajout de la recherche de lieux et d’activités dans toutes les langues, avec des résultats internationaux, descriptions, notes, nombre d’avis, horaires et sites web lorsqu’ils sont disponibles. Dans l’interface italienne, elle remplace les Pages blanches et jaunes tout en conservant leurs résultats et les recherches par nom ou numéro de téléphone. Les autres langues proposent uniquement la recherche de lieux et d’activités.
 
 2. Amélioration de la recherche d’itinéraires avec des résultats plus précis et ajout des trajets en transports en commun.
+
+3. Audiodescriptions IA : ajout de l’option « Autoriser les audiodescriptions pendant les dialogues et les commentaires », désactivée par défaut. Elle est particulièrement utile pour les matchs de football, le catch et les autres événements sportifs où les commentaires continus laissaient peu ou pas de place aux descriptions de Sonarpad, ainsi que pour les clips musicaux. Une fois activée, les descriptions peuvent être diffusées pendant la parole ou le chant, sans se chevaucher entre elles. Le choix est enregistré dans le projet pour les modifications et régénérations ultérieures. Si l’option est désactivée, la protection habituelle des dialogues reste inchangée.
 
 Version 0.9.25 – 2026-11-06
 

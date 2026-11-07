@@ -1,4 +1,7 @@
 {
+  "places.phone_search": "Cari nomor telepon",
+  "places.phone_query": "Masukkan nomor telepon",
+  "places.phone_invalid": "Masukkan nomor telepon yang valid, termasuk kode area atau negara.",
   "route.departure_label": "Keberangkatan",
   "route.departure_now": "Berangkat sekarang",
   "route.departure_at": "Berangkat pukul",
@@ -203,6 +206,7 @@
   "audio_description.error.voice": "Pilih suara untuk membacakan deskripsi.",
   "audio_description.extended": "Aktifkan jeda tambahan: jedakan film dalam kondisi khusus ketika deskripsi tidak muat dalam bagian hening",
   "audio_description.allow_nonverbal_vocals": "Izinkan deskripsi diputar bersamaan dengan suara vokal nonverbal",
+  "audio_description.allow_dialogue_overlap": "Izinkan deskripsi audio selama dialog dan komentar",
   "audio_description.gemini_api_key": "Kunci API Gemini:",
   "audio_description.show_api_key": "Tampilkan kunci API",
   "audio_description.gemini_error_models": "Tidak dapat memuat model Gemini: {error}",

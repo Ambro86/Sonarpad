@@ -900,6 +900,8 @@ pub struct AppSettings {
     pub audio_description_extended_pauses: bool,
     #[serde(default = "default_true")]
     pub audio_description_allow_nonverbal_vocals: bool,
+    #[serde(default)]
+    pub audio_description_allow_dialogue_overlap: bool,
     #[serde(default = "default_true")]
     pub audio_description_recognize_characters: bool,
     #[serde(default = "default_true")]
@@ -1448,6 +1450,7 @@ impl Default for AppSettings {
             audio_description_verbosity: default_audio_description_verbosity(),
             audio_description_extended_pauses: false,
             audio_description_allow_nonverbal_vocals: true,
+            audio_description_allow_dialogue_overlap: false,
             audio_description_recognize_characters: true,
             audio_description_recognize_screen_text: true,
             audio_description_keep_character_catalog: false,
@@ -1786,7 +1789,12 @@ fn dir_is_writable(dir: &std::path::Path) -> bool {
     if std::fs::create_dir_all(dir).is_err() {
         return false;
     }
-    let probe = dir.join(format!(".probe_{}", std::process::id()));
+    static PROBE_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let probe = dir.join(format!(
+        ".probe_{}_{}",
+        std::process::id(),
+        PROBE_ID.fetch_add(1, Ordering::Relaxed)
+    ));
     match std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -1875,23 +1883,47 @@ fn resolve_settings_dir() -> PathBuf {
 pub fn settings_dir() -> PathBuf {
     use std::sync::OnceLock;
     static DIR: OnceLock<PathBuf> = OnceLock::new();
-    DIR.get_or_init(resolve_settings_dir).clone()
+    DIR.get_or_init(|| {
+        // Tests must never read or overwrite the installed application's data.
+        if cfg!(test) {
+            let dir = if let Some(root) = std::env::var_os("SONARPAD_FOLDER_TEST_ROOT") {
+                assert_eq!(std::env::var_os("APPDATA"), Some(root.clone()));
+                PathBuf::from(root).join("Sonarpad")
+            } else {
+                std::env::temp_dir().join(format!(
+                    "sonarpad-settings-test-{}-{}",
+                    std::process::id(),
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_nanos()
+                ))
+            };
+            if let Err(error) = std::fs::create_dir_all(&dir) {
+                panic!("Cannot create isolated settings directory: {error}");
+            }
+            dir
+        } else {
+            resolve_settings_dir()
+        }
+    })
+    .clone()
 }
 
 fn get_settings_path() -> PathBuf {
-    resolve_settings_dir().join("settings.json")
+    settings_dir().join("settings.json")
 }
 
 fn rai_luce_trace_path() -> PathBuf {
-    resolve_settings_dir().join("rai_luce_trace.txt")
+    settings_dir().join("rai_luce_trace.txt")
 }
 
 fn rai_luce_backup_path() -> PathBuf {
-    resolve_settings_dir().join("rai_luce_last_good.txt")
+    settings_dir().join("rai_luce_last_good.txt")
 }
 
 fn log_rai_luce_event(message: &str) {
-    let dir = resolve_settings_dir();
+    let dir = settings_dir();
     if let Err(e) = std::fs::create_dir_all(&dir) {
         crate::log_debug(&format!(
             "Failed to create settings directory for Rai Luce trace: {}",
@@ -2277,18 +2309,21 @@ pub(crate) fn parse_settings(data: &str) -> Result<AppSettings, serde_json::Erro
 }
 
 pub fn load_settings() -> AppSettings {
+    load_settings_from_path(&get_settings_path())
+}
+
+// Reading must not write an older snapshot back over a concurrent user change.
+fn load_settings_from_path(path: &std::path::Path) -> AppSettings {
     let default_settings = AppSettings {
         language: system_language(),
         ..Default::default()
     };
 
-    let path = get_settings_path();
     if path.exists() {
-        match std::fs::read_to_string(&path) {
+        match std::fs::read_to_string(path) {
             Ok(data) => match parse_settings(&data) {
                 Ok(normalized) => {
                     update_cached_rai_luce_code(&normalized.rai_luce_code);
-                    save_settings(normalized.clone());
                     return normalized;
                 }
                 Err(e) => {
@@ -2327,9 +2362,8 @@ pub fn load_settings() -> AppSettings {
     let normalized = normalize_settings(default_settings);
     update_cached_rai_luce_code(&normalized.rai_luce_code);
     log_rai_luce_event(
-        "load_settings creating default settings because settings.json does not exist",
+        "load_settings returning default settings because settings.json does not exist",
     );
-    save_settings(normalized.clone());
     normalized
 }
 
@@ -3168,6 +3202,9 @@ pub fn load_saved_rai_luce_code() -> Option<String> {
 
 #[track_caller]
 pub fn save_settings(settings: AppSettings) {
+    // Serialize backup, reduction diagnostics and replacement as one write.
+    static WRITE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _write_guard = WRITE_LOCK.lock().unwrap_or_else(|error| error.into_inner());
     if let Ok(raw) = std::fs::read_to_string(get_settings_path())
         && let Ok(before) = serde_json::from_str::<serde_json::Value>(&raw)
         && let Ok(after) = serde_json::to_value(&settings)
@@ -3279,25 +3316,8 @@ pub fn save_settings(settings: AppSettings) {
     }
     match serde_json::to_string_pretty(&persisted) {
         Ok(json) => {
-            let tmp_path = path.with_extension("json.tmp");
-            let save_result = (|| -> std::io::Result<()> {
-                let mut file = std::fs::File::create(&tmp_path)?;
-                file.write_all(json.as_bytes())?;
-                file.sync_all()?;
-                match std::fs::rename(&tmp_path, &path) {
-                    Ok(()) => Ok(()),
-                    Err(rename_err) => {
-                        if path.exists() {
-                            std::fs::remove_file(&path)?;
-                            std::fs::rename(&tmp_path, &path)
-                        } else {
-                            Err(rename_err)
-                        }
-                    }
-                }
-            })();
+            let save_result = write_settings_atomically(&path, json.as_bytes());
             if let Err(e) = save_result {
-                let _cleanup_result = std::fs::remove_file(&tmp_path);
                 crate::log_debug(&format!(
                     "Failed to save settings to {}: {}",
                     path.display(),
@@ -3309,6 +3329,42 @@ pub fn save_settings(settings: AppSettings) {
             crate::log_debug(&format!("Failed to serialize settings: {}", e));
         }
     }
+}
+
+// Never delete the previous file on a failed replacement. Unique temporary names
+// also protect against another Sonarpad process saving at the same time.
+fn write_settings_atomically(path: &std::path::Path, json: &[u8]) -> std::io::Result<()> {
+    static WRITE_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let temporary = path.with_extension(format!(
+        "json.{}.{}.tmp",
+        std::process::id(),
+        WRITE_ID.fetch_add(1, Ordering::Relaxed)
+    ));
+    let result = (|| {
+        {
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&temporary)?;
+            file.write_all(json)?;
+            file.sync_all()?;
+        }
+        let source = to_wide(&temporary.to_string_lossy());
+        let destination = to_wide(&path.to_string_lossy());
+        unsafe {
+            windows::Win32::Storage::FileSystem::MoveFileExW(
+                PCWSTR(source.as_ptr()),
+                PCWSTR(destination.as_ptr()),
+                windows::Win32::Storage::FileSystem::MOVEFILE_REPLACE_EXISTING
+                    | windows::Win32::Storage::FileSystem::MOVEFILE_WRITE_THROUGH,
+            )
+            .map_err(std::io::Error::other)
+        }
+    })();
+    if result.is_err() {
+        let _cleanup_result = std::fs::remove_file(&temporary);
+    }
+    result
 }
 
 pub fn build_network_proxy_url(
@@ -4007,6 +4063,7 @@ mod audio_description_save_folder_tests {
         assert_eq!(settings.audio_description_verbosity, 2);
         assert!(settings.audio_description_recent_project_folders.is_empty());
         assert!(!settings.audio_description_extended_pauses);
+        assert!(!settings.audio_description_allow_dialogue_overlap);
         assert!(settings.audio_description_recognize_characters);
         assert!(settings.audio_description_recognize_screen_text);
         assert!(!settings.audio_description_keep_character_catalog);
@@ -4085,5 +4142,111 @@ pub fn record_explicit_cloud_deletions(before: &AppSettings, after: &AppSettings
         crate::log_debug(&format!(
             "CloudSync explicit deletion not recorded: {error}"
         ));
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::expect_used)]
+mod settings_storage_tests {
+    use super::*;
+
+    fn fixture(name: &str) -> PathBuf {
+        let dir = settings_dir().join(name);
+        std::fs::create_dir_all(&dir).expect("fixture directory");
+        dir
+    }
+
+    #[test]
+    fn tests_use_an_isolated_stable_settings_path() {
+        let dir = settings_dir();
+        if std::env::var_os("SONARPAD_FOLDER_TEST_ROOT").is_none() {
+            assert!(dir.starts_with(std::env::temp_dir()));
+            if let Some(appdata) = std::env::var_os("APPDATA") {
+                assert_ne!(dir, PathBuf::from(appdata).join("Sonarpad"));
+            }
+        }
+        std::thread::scope(|scope| {
+            for _ in 0..16 {
+                let dir = &dir;
+                scope.spawn(move || {
+                    for _ in 0..50 {
+                        assert_eq!(get_settings_path(), dir.join("settings.json"));
+                    }
+                });
+            }
+        });
+    }
+
+    #[test]
+    fn concurrent_writability_probes_do_not_select_a_fallback() {
+        let dir = fixture("probe-test");
+        std::thread::scope(|scope| {
+            for _ in 0..16 {
+                let dir = &dir;
+                scope.spawn(move || {
+                    for _ in 0..50 {
+                        assert!(dir_is_writable(dir));
+                    }
+                });
+            }
+        });
+    }
+
+    #[test]
+    fn loading_does_not_rewrite_settings_or_create_defaults() {
+        let path = fixture("read-only-test").join("settings.json");
+        let missing = path.with_extension("missing.json");
+        load_settings_from_path(&missing);
+        assert!(!missing.exists());
+        let mut settings = AppSettings::default();
+        settings.stream_favorites.push(StreamFavorite {
+            label: "Favorite".into(),
+            url: "https://www.youtube.com/watch?v=abcdefghijk".into(),
+        });
+        let original = serde_json::to_vec(&settings).expect("serialize fixture");
+        std::fs::write(&path, &original).expect("fixture");
+        let loaded = load_settings_from_path(&path);
+        assert_eq!(loaded.stream_favorites.len(), 1);
+        assert_eq!(std::fs::read(&path).expect("read fixture"), original);
+    }
+
+    #[test]
+    fn failed_replacement_keeps_previous_settings() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let path = fixture("failed-write-test").join("settings.json");
+        std::fs::write(&path, b"original favorites").expect("fixture");
+        let _locked = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(1)
+            .open(&path)
+            .expect("lock fixture");
+        assert!(write_settings_atomically(&path, b"replacement").is_err());
+        assert_eq!(
+            std::fs::read(&path).expect("original remains"),
+            b"original favorites"
+        );
+    }
+
+    #[test]
+    fn concurrent_replacements_never_expose_missing_or_partial_settings() {
+        let path = fixture("concurrent-write-test").join("settings.json");
+        write_settings_atomically(&path, br#"{"favorites":[1,2,3]}"#).expect("initial fixture");
+        std::thread::scope(|scope| {
+            for _ in 0..4 {
+                let path = &path;
+                scope.spawn(move || {
+                    for _ in 0..50 {
+                        // Windows may reject a replacement while a reader holds the file;
+                        // the existing complete document must remain available.
+                        let _result = write_settings_atomically(path, br#"{"favorites":[4,5,6]}"#);
+                    }
+                });
+            }
+            for _ in 0..500 {
+                let raw = std::fs::read(&path).expect("settings always present");
+                let value: serde_json::Value = serde_json::from_slice(&raw).expect("complete JSON");
+                assert_eq!(value["favorites"].as_array().expect("favorites").len(), 3);
+            }
+        });
     }
 }

@@ -1,10 +1,12 @@
 # Ändringslogg
 
-Version 0.9.26 – 2026-11-06
+Version 0.9.26 – 2026-11-07
 
 1. Sökning efter platser och företag finns nu på alla språk, med internationella resultat, beskrivningar, betyg, antal recensioner, öppettider och webbplatser när uppgifterna finns. I det italienska gränssnittet ersätter den Vita och Gula sidorna, med deras resultat samt namn- och telefonnummersökning kvar. På andra språk finns endast sökning efter platser och företag.
 
 2. Förbättrad ruttsökning med mer exakta resultat och tillagda resvägar med kollektivtrafik.
+
+3. AI-syntolkning: alternativet ”Tillåt syntolkning under dialog och kommentarer” har lagts till och är avstängt som standard. Det är särskilt användbart för fotbollsmatcher, wrestling och andra sportevenemang där oavbrutna kommentarer lämnade lite eller inget utrymme för Sonarpads beskrivningar, samt för musikvideor. När det är aktiverat kan beskrivningar spelas upp under tal eller sång utan att överlappa varandra. Valet sparas i projektet för senare redigering och ny generering. När alternativet är avstängt är det vanliga dialogskyddet oförändrat.
 
 Version 0.9.25 – 2026-11-06
 
