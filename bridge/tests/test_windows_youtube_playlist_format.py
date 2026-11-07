@@ -21,7 +21,12 @@ class WindowsYoutubeSaveArchitectureTests(unittest.TestCase):
         self.assertNotIn("let format_combo = CreateWindowExW(", block)
         self.assertNotIn("let quality_combo = CreateWindowExW(", block)
         self.assertIn("default_save_format: init.default_format", block)
-        self.assertIn("quality = StreamQualitySelection::Original", block)
+        self.assertIn("Some(capture_stream_dialog_result(state))", block)
+        result_start = self.youtube.index("fn capture_stream_dialog_result(")
+        result_end = self.youtube.index("\n}\n", result_start) + 2
+        result_block = self.youtube[result_start:result_end]
+        self.assertIn("format: state.default_save_format", result_block)
+        self.assertIn("quality: StreamQualitySelection::Original", result_block)
 
     def test_save_media_dialog_owns_format_and_quality_selection(self):
         start = self.youtube.index("fn stream_save_options_wndproc_inner(")
