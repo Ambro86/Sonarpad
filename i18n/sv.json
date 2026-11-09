@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "Den här ordboksposten ändrades i ett annat fönster. Öppna ordboken igen och försök på nytt.",
+  "stream_audio.youtube_sign_in_required": "YouTube kräver inloggning för den här videon. Den kan inte spelas upp eller laddas ned i Sonarpad.",
   "places.new_search": "Ny sökning",
   "places.open_all": "Öppna alla",
   "places.phone_search": "Sök ett telefonnummer",

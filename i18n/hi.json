@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "शब्दकोश की यह प्रविष्टि किसी दूसरी विंडो में बदल दी गई है। शब्दकोश फिर से खोलें और दोबारा कोशिश करें।",
+  "stream_audio.youtube_sign_in_required": "इस वीडियो के लिए YouTube में साइन इन करना ज़रूरी है। इसे Sonarpad में चलाया या डाउनलोड नहीं किया जा सकता।",
   "places.new_search": "नई खोज",
   "places.open_all": "सभी खोलें",
   "places.phone_search": "फ़ोन नंबर खोजें",

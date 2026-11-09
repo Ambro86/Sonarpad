@@ -4,6 +4,14 @@ Version 0.9.27 – 2026-11-07
 
 1. SonarTube e SonarMusic: corretto un blocco della riproduzione dopo una pausa prolungata. Audio e video riprendono dalla posizione salvata.
 
+2. Cerca luoghi e attività: tradotti in tutte le lingue i pulsanti «Nuova ricerca» e «Apri tutto», che restavano in italiano.
+
+3. YouTube: messaggio chiaro quando un video richiede l’accesso, al posto del generico «yt-dlp failed», evitando tentativi inutili.
+
+4. Dizionario vocale: protezione dalle perdite durante aggiornamenti e salvataggi da altre finestre; aggiunta una copia di sicurezza delle impostazioni con recupero in caso di file danneggiato.
+
+5. Percorsi: premendo Esc dal percorso scelto si torna alle alternative, mantenendo la selezione precedente senza ripetere la ricerca.
+
 Version 0.9.26 – 2026-11-07
 
 1. Cerca luoghi e attività è ora disponibile in tutte le lingue, con risultati internazionali, descrizioni, valutazioni, numero di recensioni, orari di apertura e sito web, quando disponibili. Nell’interfaccia italiana sostituisce Pagine Bianche e Gialle, mantenendone anche i risultati, la ricerca nominativi e la ricerca per numero di telefono. Nelle altre lingue è disponibile solo la ricerca di luoghi e attività.

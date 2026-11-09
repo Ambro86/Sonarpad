@@ -4,6 +4,14 @@ Version 0.9.27 – 2026-11-07
 
 1. SonarTube и SonarMusic: исправљена је грешка која је спречавала наставак репродукције после дуже паузе. Звук и видео се настављају од сачуване позиције.
 
+2. Претрага места и предузећа: дугмад „Нова претрага“ и „Отвори све“, која су раније остајала на италијанском, преведена су на све подржане језике.
+
+3. YouTube: када видео захтева пријављивање, сада се приказује јасна порука уместо опште грешке „yt-dlp failed“, без непотребних поновних покушаја.
+
+4. Речник изговора: додата је заштита од губитка података током ажурирања и чувања из других прозора, као и резервна копија подешавања за опоравак ако се датотека оштети.
+
+5. Руте: притиском на Esc у изабраној рути враћате се на алтернативе, уз задржавање претходног избора без понављања претраге.
+
 Version 0.9.26 – 2026-11-07
 
 1. Pretraga mesta i preduzeća dostupna je na svim jezicima, sa međunarodnim rezultatima, opisima, ocenama, brojem recenzija, radnim vremenom i veb-sajtovima kada su dostupni. U italijanskom interfejsu zamenjuje Bele i Žute strane, uz očuvanje njihovih rezultata i pretrage po imenu i broju telefona. Na drugim jezicima dostupna je samo pretraga mesta i preduzeća.

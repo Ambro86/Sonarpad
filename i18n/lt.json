@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "Šis žodyno įrašas buvo pakeistas kitame lange. Iš naujo atverkite žodyną ir bandykite dar kartą.",
+  "stream_audio.youtube_sign_in_required": "Norint žiūrėti šį vaizdo įrašą, „YouTube“ reikalauja prisijungti. Jo negalima paleisti ar atsisiųsti naudojant „Sonarpad“.",
   "places.new_search": "Nauja paieška",
   "places.open_all": "Atverti viską",
   "places.phone_search": "Ieškoti telefono numerio",

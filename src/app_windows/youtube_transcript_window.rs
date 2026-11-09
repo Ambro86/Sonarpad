@@ -7393,6 +7393,8 @@ pub(crate) fn youtube_mpv_playback_error_message(language: Language, detail: &st
         members_only_stream_message(language)
     } else if is_drm_not_supported_stream_error(detail) {
         drm_not_supported_stream_message(language)
+    } else if detail == "login required" || is_youtube_sign_in_verification_error(detail) {
+        i18n::tr(language, "stream_audio.youtube_sign_in_required")
     } else {
         i18n::tr_f(language, "stream_audio.download_failed", &[("err", detail)])
     }
@@ -7415,6 +7417,8 @@ fn stream_download_error_message(language: Language, err: &str) -> String {
         members_only_stream_message(language)
     } else if is_drm_not_supported_stream_error(err) {
         drm_not_supported_stream_message(language)
+    } else if is_youtube_sign_in_verification_error(err) {
+        i18n::tr(language, "stream_audio.youtube_sign_in_required")
     } else {
         i18n::tr_f(language, "stream_audio.download_failed", &[("err", err)])
     }

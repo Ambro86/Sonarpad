@@ -627,7 +627,7 @@ pub fn prompt_directory_search(
     options: PromptDirectoryOptions,
     language: Language,
 ) -> Option<PromptDirectoryResult> {
-    prompt_directory_search_with_action(parent, options, language, None, None)
+    prompt_directory_search_with_action(parent, options, language, None, None, None)
 }
 
 type DirectoryAction = (String, fn(HWND, Language) -> Option<PromptDirectoryResult>);
@@ -670,6 +670,34 @@ fn refresh_route_departure(hwnd: HWND) {
             }
         }
     }
+}
+
+fn restore_route_departure(hwnd: HWND, time: &str, zone: &str) {
+    let Some((hour, minute)) = time.split_once(':').and_then(|(hour, minute)| {
+        Some((hour.parse::<usize>().ok()?, minute.parse::<usize>().ok()?))
+    }) else {
+        return;
+    };
+    if hour >= 24 || minute >= 60 {
+        return;
+    }
+    for (id, value) in [
+        (IDC_ROUTE_DEPARTURE, 1),
+        (IDC_ROUTE_HOUR, hour),
+        (IDC_ROUTE_MINUTE, minute),
+    ] {
+        crate::send_message_w_safe(
+            crate::get_dlg_item_safe(hwnd, id),
+            CB_SETCURSEL,
+            WPARAM(value),
+            LPARAM(0),
+        );
+    }
+    crate::log_if_err!(crate::set_window_text_w_safe(
+        crate::get_dlg_item_safe(hwnd, IDC_ROUTE_ZONE),
+        PCWSTR(to_wide(zone).as_ptr())
+    ));
+    refresh_route_departure(hwnd);
 }
 
 fn create_route_departure(hwnd: HWND, y: i32, language: Language, zone: &str, font: HFONT) {
@@ -769,6 +797,7 @@ pub fn prompt_directory_search_with_action(
     language: Language,
     action: Option<DirectoryAction>,
     departure_zones: Option<Vec<String>>,
+    initial_departure: Option<(String, String)>,
 ) -> Option<PromptDirectoryResult> {
     unsafe {
         let hinstance = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
@@ -865,6 +894,10 @@ pub fn prompt_directory_search_with_action(
 
         if hwnd.0 == 0 {
             return None;
+        }
+
+        if let Some((time, zone)) = initial_departure {
+            restore_route_departure(hwnd, &time, &zone);
         }
 
         windows::Win32::UI::Input::KeyboardAndMouse::EnableWindow(parent, false);
@@ -2854,8 +2887,30 @@ mod tab_navigation_tests {
                 .iter()
                 .all(|id| !prompt_tab_stop_enabled(&crate::get_dlg_item_safe(host, *id)))
         );
-        crate::send_message_w_safe(mode, CB_SETCURSEL, WPARAM(1), LPARAM(0));
-        refresh_route_departure(host);
+        restore_route_departure(host, "23:47", "Europe/Rome");
+        for (id, expected) in [
+            (IDC_ROUTE_DEPARTURE, 1),
+            (IDC_ROUTE_HOUR, 23),
+            (IDC_ROUTE_MINUTE, 47),
+        ] {
+            assert_eq!(
+                crate::send_message_w_safe(
+                    crate::get_dlg_item_safe(host, id),
+                    CB_GETCURSEL,
+                    WPARAM(0),
+                    LPARAM(0),
+                )
+                .0,
+                expected,
+            );
+        }
+        let mut zone = [0u16; 128];
+        let length =
+            unsafe { GetWindowTextW(crate::get_dlg_item_safe(host, IDC_ROUTE_ZONE), &mut zone) };
+        assert_eq!(
+            String::from_utf16_lossy(&zone[..length as usize]),
+            "Europe/Rome"
+        );
         assert!(
             ROUTE_DEPARTURE_CONTROLS
                 .iter()

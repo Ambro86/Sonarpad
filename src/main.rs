@@ -3712,6 +3712,7 @@ fn youtube_mpv_log_has_failure(log: &str) -> Option<String> {
             "login required",
             &[
                 "sign in to confirm",
+                "please sign in",
                 "login required",
                 "use --username and --password",
             ],
@@ -6147,7 +6148,15 @@ fn launch_stream_url_in_mpv_with_input(
                         "Riproduzione mpv annullata da una richiesta più recente.".to_string()
                     );
                 }
-                return Err(detail);
+                return Err(if detail == "login required" {
+                    let language =
+                        with_state(hwnd, |state| state.settings.language).unwrap_or_default();
+                    app_windows::youtube_transcript_window::youtube_mpv_playback_error_message(
+                        language, &detail,
+                    )
+                } else {
+                    detail
+                });
             }
             if stop_obsolete_mpv_child(hwnd, mpv_generation, &mut child, "stream tracks ready") {
                 set_local_mpv_video_mode(hwnd, false);
@@ -11516,6 +11525,16 @@ fn run_app(
                 log_mpv_focus_snapshot(hwnd, "mpv_escape.pretranslate");
                 if is_mpv_playback_active(hwnd) {
                     schedule_mpv_esc_focus_debug_snapshots(hwnd);
+                }
+                if let Some(hwnd_edit) = get_active_edit(hwnd)
+                    && GetFocus() == hwnd_edit
+                    && GetKeyState(VK_CONTROL.0 as i32) >= 0
+                    && GetKeyState(VK_SHIFT.0 as i32) >= 0
+                    && GetKeyState(windows::Win32::UI::Input::KeyboardAndMouse::VK_MENU.0 as i32)
+                        >= 0
+                    && app_windows::route_window::navigate_back(hwnd, hwnd_edit)
+                {
+                    continue;
                 }
                 let rss_hwnd = with_state(hwnd, |state| state.rss_window).unwrap_or(HWND(0));
                 if rss_hwnd.0 != 0
@@ -24025,6 +24044,29 @@ fn spawn_new_window_with_path(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn youtube_mpv_recognizes_sign_in_instead_of_generic_extractor_failure() {
+        let log = concat!(
+            "[ytdl_hook] ERROR: [youtube] RBtFQkG1nog: Please sign in. Use --cookies-from-browser or --cookies for the authentication.\n",
+            "[ytdl_hook] youtube-dl failed: unexpected error occurred\n",
+            "[stream] No protocol handler found to open URL ytdl://https://www.youtube.com/watch?v=RBtFQkG1nog\n",
+            "[cplayer] finished playback, loading failed (reason 4)\n",
+        );
+        assert_eq!(
+            super::youtube_mpv_log_has_failure(log).as_deref(),
+            Some("login required")
+        );
+        assert_eq!(
+            super::youtube_mpv_log_has_failure(&format!("{log}Starting playback\n")),
+            None
+        );
+        assert_eq!(
+            super::youtube_mpv_log_has_failure("youtube-dl failed: unexpected error occurred\n")
+                .as_deref(),
+            Some("youtube-dl failed")
+        );
+    }
+
+    #[test]
     fn youtube_http500_hls_fallback_is_restricted_to_the_reported_failure() {
         let options = super::StreamMpvOptions {
             title: None,
@@ -25040,6 +25082,7 @@ pub(crate) fn open_pdf_document_async(hwnd: HWND, path: &Path, from_copydata: bo
             prefer_title_for_save_suggestion: false,
             prefer_mpv_playback: false,
             route_map: None,
+            route_navigation: None,
             epub_index: Vec::new(),
             epub_original_text: None,
             pdf_is_imported_source: true,
@@ -25406,6 +25449,7 @@ fn handle_document_loaded(hwnd: HWND, payload: editor_manager::DocumentLoadResul
                 prefer_title_for_save_suggestion: false,
                 prefer_mpv_playback: false,
                 route_map: None,
+                route_navigation: None,
                 epub_index: loaded.epub_index,
                 epub_original_text: loaded.epub_original_text,
                 pdf_is_imported_source: false,

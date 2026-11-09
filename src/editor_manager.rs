@@ -1,5 +1,6 @@
 use crate::accessibility::{EM_GETSEL, EM_REPLACESEL, EM_SCROLLCARET, to_wide, to_wide_normalized};
 use crate::app_windows::route_service::RouteMapData;
+use crate::app_windows::route_window::RouteNavigation;
 use crate::ebook_formats::{
     is_daisy_path, is_kindle_path, read_daisy_document, read_kindle_document,
 };
@@ -1362,6 +1363,8 @@ pub struct Document {
     pub prefer_title_for_save_suggestion: bool,
     pub prefer_mpv_playback: bool,
     pub route_map: Option<RouteMapData>,
+    // Session-only navigation back through the route alternatives and search form.
+    pub route_navigation: Option<RouteNavigation>,
     pub epub_index: Vec<EpubIndexEntry>,
     pub epub_original_text: Option<String>,
     pub pdf_is_imported_source: bool,
@@ -1398,6 +1401,7 @@ impl Default for Document {
             prefer_title_for_save_suggestion: false,
             prefer_mpv_playback: false,
             route_map: None,
+            route_navigation: None,
             epub_index: Vec::new(),
             epub_original_text: None,
             pdf_is_imported_source: false,
@@ -3461,6 +3465,7 @@ pub fn new_document(hwnd: HWND) {
                 prefer_title_for_save_suggestion: false,
                 prefer_mpv_playback: false,
                 route_map: None,
+                route_navigation: None,
                 epub_index: Vec::new(),
                 epub_original_text: None,
                 pdf_is_imported_source: false,
@@ -3513,6 +3518,7 @@ pub fn ensure_audio_document_tab(hwnd: HWND, path: &Path) -> Option<usize> {
                 prefer_title_for_save_suggestion: false,
                 prefer_mpv_playback: false,
                 route_map: None,
+                route_navigation: None,
                 epub_index: Vec::new(),
                 epub_original_text: None,
                 pdf_is_imported_source: false,
@@ -4117,6 +4123,7 @@ pub fn get_or_create_rss_document(hwnd: HWND, title: &str) -> Option<HWND> {
                 prefer_title_for_save_suggestion: false,
                 prefer_mpv_playback: false,
                 route_map: None,
+                route_navigation: None,
                 epub_index: Vec::new(),
                 epub_original_text: None,
                 pdf_is_imported_source: false,

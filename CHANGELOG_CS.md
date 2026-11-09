@@ -4,6 +4,14 @@ Version 0.9.27 – 2026-11-07
 
 1. SonarTube a SonarMusic: opravena chyba, která bránila obnovení přehrávání po delší pauze. Zvuk a video pokračují od uložené pozice.
 
+2. Hledání míst a podniků: tlačítka „Nové hledání“ a „Otevřít vše“, která dříve zůstávala v italštině, jsou nyní přeložena do všech podporovaných jazyků.
+
+3. YouTube: pokud video vyžaduje přihlášení, zobrazí se srozumitelná zpráva místo obecné chyby „yt-dlp failed“. Zbytečné opakované pokusy se již neprovádějí.
+
+4. Slovník výslovnosti: přidána ochrana před ztrátou dat při aktualizacích a ukládání z jiných oken a záložní kopie nastavení s obnovou v případě poškození souboru.
+
+5. Trasy: stisknutím Esc ve zvolené trase se vrátíte k alternativám se zachováním předchozího výběru, aniž by se hledání opakovalo.
+
 Version 0.9.26 – 2026-11-07
 
 1. Přidáno hledání míst a firem ve všech jazycích, s mezinárodními výsledky, popisy, hodnocením, počtem recenzí, otevírací dobou a weby, pokud jsou dostupné. V italském rozhraní nahrazuje Bílé a Zlaté stránky a zachovává jejich výsledky i hledání podle jména a telefonního čísla. V ostatních jazycích je dostupné pouze hledání míst a firem.

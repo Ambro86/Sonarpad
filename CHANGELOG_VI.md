@@ -4,6 +4,14 @@ Version 0.9.27 – 2026-11-07
 
 1. SonarTube và SonarMusic: sửa lỗi không thể tiếp tục phát sau khi tạm dừng lâu. Âm thanh và video tiếp tục từ vị trí đã lưu.
 
+2. Tìm địa điểm và doanh nghiệp: các nút “Tìm kiếm mới” và “Mở tất cả”, trước đây vẫn hiển thị bằng tiếng Ý, đã được dịch sang tất cả ngôn ngữ được hỗ trợ.
+
+3. YouTube: khi video yêu cầu đăng nhập, ứng dụng hiển thị thông báo rõ ràng thay cho lỗi chung “yt-dlp failed” và tránh thử lại không cần thiết.
+
+4. Từ điển phát âm: bổ sung bảo vệ chống mất dữ liệu khi cập nhật và khi lưu từ cửa sổ khác, cùng bản sao lưu cài đặt để khôi phục nếu tệp bị hỏng.
+
+5. Lộ trình: nhấn Esc từ lộ trình đã chọn để quay lại danh sách phương án, giữ nguyên lựa chọn trước đó mà không cần tìm kiếm lại.
+
 Version 0.9.26 – 2026-11-07
 
 1. Thêm tìm kiếm địa điểm và doanh nghiệp cho mọi ngôn ngữ, với kết quả quốc tế, mô tả, điểm đánh giá, số lượt đánh giá, giờ mở cửa và trang web khi có. Trong giao diện tiếng Ý, tính năng này thay thế Trang Trắng và Trang Vàng nhưng vẫn giữ kết quả cũ cùng tìm kiếm theo tên và số điện thoại. Các ngôn ngữ khác chỉ có tìm kiếm địa điểm và doanh nghiệp.

@@ -1,6 +1,8 @@
 use crate::accessibility::{handle_accessibility, to_wide};
 use crate::i18n;
-use crate::settings::{DictionaryEntry, Language, TtsEngine, VoiceInfo, save_settings};
+use crate::settings::{
+    DictionaryChange, DictionaryEntry, Language, TtsEngine, VoiceInfo, save_dictionary_change,
+};
 use crate::{tts_engine, with_state};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -137,6 +139,10 @@ pub fn open(parent: HWND) {
             SetForegroundWindow(existing);
             return;
         }
+
+        // Another window or process may have edited the dictionary meanwhile.
+        let latest = crate::settings::load_settings().dictionary;
+        with_state(parent, |state| state.settings.dictionary = latest);
 
         let hinstance = HINSTANCE(GetModuleHandleW(None).unwrap_or_default().0);
         let class_name = to_wide(DICTIONARY_CLASS_NAME);
@@ -488,17 +494,18 @@ fn remove_selected_entry(hwnd: HWND) {
     let Some(index) = selected_dictionary_index(hwnd) else {
         return;
     };
-    if {
-        with_state(parent, |state| {
-            if index < state.settings.dictionary.len() {
-                state.settings.dictionary.remove(index);
-            }
-            save_settings(state.settings.clone());
-        })
-    }
-    .is_none()
-    {
-        crate::log_debug("Failed to access dictionary state");
+    let result = with_state(parent, |state| {
+        let Some(entry) = state.settings.dictionary.get(index).cloned() else {
+            return Ok(());
+        };
+        let entries =
+            save_dictionary_change(state.settings.clone(), DictionaryChange::Remove(entry))?;
+        state.settings.dictionary = entries;
+        Ok::<(), String>(())
+    });
+    if let Some(Err(error)) = result {
+        let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
+        crate::show_error(hwnd, language, &error);
     }
     refresh_dictionary_list(hwnd);
     if let Err(_e) = crate::post_message_w_safe(hwnd, DICT_FOCUS_LIST_MSG, WPARAM(0), LPARAM(0)) {
@@ -1023,32 +1030,32 @@ fn apply_entry_dialog(hwnd: HWND) {
     let custom_engine = None;
     let custom_voice = None;
 
-    if {
-        with_state(parent, |state| {
-            let entry = DictionaryEntry {
-                original,
-                replacement,
-                match_case,
-                use_custom_voice: use_voice,
-                custom_voice_engine: custom_engine,
-                custom_voice,
-            };
-            match index {
-                Some(idx) => {
-                    if idx < state.settings.dictionary.len() {
-                        state.settings.dictionary[idx] = entry;
-                    }
-                }
-                None => {
-                    state.settings.dictionary.push(entry);
-                }
+    let result = with_state(parent, |state| {
+        let entry = DictionaryEntry {
+            original,
+            replacement,
+            match_case,
+            use_custom_voice: use_voice,
+            custom_voice_engine: custom_engine,
+            custom_voice,
+        };
+        let change = match index {
+            Some(idx) => {
+                let Some(previous) = state.settings.dictionary.get(idx).cloned() else {
+                    return Ok(());
+                };
+                DictionaryChange::Replace(previous, entry)
             }
-            save_settings(state.settings.clone());
-        })
-    }
-    .is_none()
-    {
-        crate::log_debug("Failed to access dictionary state");
+            None => DictionaryChange::Add(entry),
+        };
+        let entries = save_dictionary_change(state.settings.clone(), change)?;
+        state.settings.dictionary = entries;
+        Ok::<(), String>(())
+    });
+    if let Some(Err(error)) = result {
+        let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
+        crate::show_error(hwnd, language, &error);
+        return;
     }
 
     refresh_dictionary_list(owner);

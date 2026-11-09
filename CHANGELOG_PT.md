@@ -4,6 +4,14 @@ Version 0.9.27 – 2026-11-07
 
 1. SonarTube e SonarMusic: corrigido um bloqueio que impedia retomar a reprodução após uma pausa prolongada. O áudio e o vídeo são retomados a partir da posição guardada.
 
+2. Pesquisa de locais e empresas: os botões «Nova pesquisa» e «Abrir tudo», que continuavam em italiano, foram traduzidos para todos os idiomas suportados.
+
+3. YouTube: é agora apresentada uma mensagem clara quando um vídeo exige início de sessão, em vez do erro genérico «yt-dlp failed», evitando novas tentativas desnecessárias.
+
+4. Dicionário de pronúncia: adicionada proteção contra a perda de dados durante atualizações e ao guardar a partir de outras janelas, bem como uma cópia de segurança das definições para recuperação se o ficheiro ficar danificado.
+
+5. Percursos: premir Esc no percurso escolhido permite regressar às alternativas, mantendo a seleção anterior sem repetir a pesquisa.
+
 Version 0.9.26 – 2026-11-07
 
 1. Adicionada a pesquisa de locais e empresas em todos os idiomas, com resultados internacionais, descrições, classificações, número de avaliações, horários e sites quando disponíveis. Na interface italiana substitui as Páginas Brancas e Amarelas, mantendo os seus resultados e as pesquisas por nome e telefone. Nos outros idiomas está disponível apenas a pesquisa de locais e empresas.

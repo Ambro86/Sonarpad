@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "Dieser Wörterbucheintrag wurde in einem anderen Fenster geändert. Öffnen Sie das Wörterbuch erneut und versuchen Sie es noch einmal.",
+  "stream_audio.youtube_sign_in_required": "YouTube verlangt für dieses Video eine Anmeldung. Es kann in Sonarpad nicht abgespielt oder heruntergeladen werden.",
   "places.new_search": "Neue Suche",
   "places.open_all": "Alle öffnen",
   "places.phone_search": "Telefonnummer suchen",

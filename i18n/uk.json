@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "Цей запис словника було змінено в іншому вікні. Відкрийте словник знову та повторіть спробу.",
+  "stream_audio.youtube_sign_in_required": "Для доступу до цього відео YouTube вимагає входу в обліковий запис. Його неможливо відтворити чи завантажити в Sonarpad.",
   "places.new_search": "Новий пошук",
   "places.open_all": "Відкрити все",
   "places.phone_search": "Знайти номер телефону",

@@ -485,6 +485,7 @@ impl RouteClient {
                 .into_iter()
                 .map(|path| RoutePath {
                     notices: path.avvisi,
+                    transit_details: path.mezzi,
                     distance_meters: path.distanza_metri,
                     duration_seconds: path.durata_secondi,
                     distance_text: Some(path.distanza),
@@ -645,6 +646,8 @@ pub struct RoutePath {
     #[serde(default)]
     pub notices: Vec<String>,
     #[serde(default)]
+    pub transit_details: Vec<String>,
+    #[serde(default)]
     pub distance_text: Option<String>,
     #[serde(default)]
     pub duration_text: Option<String>,
@@ -715,6 +718,8 @@ struct PrimaryRoutePath {
     istruzioni: Vec<String>,
     #[serde(default)]
     avvisi: Vec<String>,
+    #[serde(default)]
+    mezzi: Vec<String>,
 }
 
 fn primary_route_language(language: Language) -> &'static str {
@@ -942,6 +947,7 @@ impl RouteApiResponse {
 
         vec![RoutePath {
             notices: Vec::new(),
+            transit_details: Vec::new(),
             distance_text: None,
             duration_text: None,
             distance_meters: self.distance_meters.unwrap_or(0.0),
@@ -1494,7 +1500,7 @@ mod primary_route_tests {
             country: "gb".into(),
         }
     }
-    const PRIMARY: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Take Bus 12 at 12:30","Arrive at destination"],"avvisi":["Notice: Bus diversion"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"fastest","evita":""}}"#;
+    const PRIMARY: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Take Bus 12 at 12:30","Arrive at destination"],"avvisi":["Notice: Bus diversion"],"mezzi":["Take Bus 12 at 12:30"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"fastest","evita":""}}"#;
     const LOCALITIES: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Locality detected along the route: London.","Take Bus 12 at 12:30"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"fastest","evita":"","includi_comuni":true}}"#;
     const SHORTEST: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Take Bus 12 at 12:30"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"shortest","evita":""}}"#;
     const AVOID: &str = r#"{"ok":true,"data":{"percorsi":[{"distanza":"1.2 mi","durata":"20 min","istruzioni":["Take Bus 12 at 12:30"],"distanza_metri":1900,"durata_secondi":1200},{"distanza":"1.4 mi","durata":"24 min","istruzioni":["Take Underground Central"],"distanza_metri":2300,"durata_secondi":1440}],"preferenza":"fastest","evita":"highways,tollways"}}"#;
@@ -1634,6 +1640,8 @@ mod primary_route_tests {
                 .route_between_coordinates(&candidate(), &candidate(), options(profile))
                 .unwrap();
             assert_eq!(result.paths.len(), 2);
+            assert_eq!(result.paths[0].transit_details, ["Take Bus 12 at 12:30"]);
+            assert!(result.paths[1].transit_details.is_empty());
             let text = result.format_for_speech_or_text(Language::English);
             assert!(
                 text.contains("1.2 mi")

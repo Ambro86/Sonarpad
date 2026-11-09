@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "Mục từ điển này đã được thay đổi trong cửa sổ khác. Hãy mở lại từ điển và thử lại.",
+  "stream_audio.youtube_sign_in_required": "YouTube yêu cầu đăng nhập để xem video này. Không thể phát hoặc tải video xuống trong Sonarpad.",
   "places.new_search": "Tìm kiếm mới",
   "places.open_all": "Mở tất cả",
   "places.phone_search": "Tìm số điện thoại",

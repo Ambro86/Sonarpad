@@ -95,14 +95,12 @@ fn seed_installed_release_tag_if_missing(hwnd: HWND, tag: &str) {
 }
 
 fn persist_installed_release_tag(tag: &str) {
-    let trimmed = tag.trim();
-    if trimmed.is_empty() {
-        return;
-    }
-    let mut settings = load_settings();
-    if settings.installed_release_tag.trim() != trimmed {
-        settings.installed_release_tag = trimmed.to_string();
-        save_settings(settings);
+    // Updating one version marker must not rewrite the user's profile using
+    // the older updater's AppSettings schema or fallback defaults.
+    if let Err(error) = crate::settings::persist_installed_release_tag(tag) {
+        log_debug(&format!(
+            "Self-update: settings retained; release tag not saved: {error}"
+        ));
     }
 }
 

@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "此词典条目已在另一个窗口中更改。请重新打开词典后重试。",
+  "stream_audio.youtube_sign_in_required": "YouTube 要求登录才能访问此视频。无法在 Sonarpad 中播放或下载此视频。",
   "places.new_search": "新搜索",
   "places.open_all": "全部打开",
   "places.phone_search": "查找电话号码",

@@ -19,54 +19,60 @@ use crate::{i18n, show_error, with_state};
 
 pub fn open(parent: HWND) {
     let language = with_state(parent, |state| state.settings.language).unwrap_or_default();
-    run_route_flow(parent, language);
+    run_route_flow(parent, language, None);
 }
 
-fn run_route_flow(parent: HWND, language: Language) {
+fn run_route_flow(parent: HWND, language: Language, mut previous: Option<RouteParams>) {
     let client = RouteClient::default();
 
-    // 1. Chiedi partenza, arrivo e profilo
-    let Some(params) = prompt_route_params(parent, language) else {
-        return;
-    };
-
-    crate::screen_reader_speak(&i18n::tr(language, "route.searching"));
-
-    // 2. Esegui la ricerca
-    match client.route_from_addresses(&params.from, &params.to, params.plan.clone()) {
-        Ok(RouteRequestResult::Ready(route)) => {
-            remember_route(&route, &params.plan);
-            display_route(parent, language, route);
-        }
-        Ok(RouteRequestResult::NeedsSelection {
-            from_candidates,
-            to_candidates,
-            profile,
-            preference,
-            avoid,
-            include_municipalities,
-        }) => {
-            let plan = RouteOptions {
-                departure: params.plan.departure.clone(),
+    loop {
+        let Some(params) = prompt_route_params(parent, language, previous.as_ref()) else {
+            return;
+        };
+        crate::screen_reader_speak(&i18n::tr(language, "route.searching"));
+        let route = match client.route_from_addresses(&params.from, &params.to, params.plan.clone())
+        {
+            Ok(RouteRequestResult::Ready(route)) => Some(route),
+            Ok(RouteRequestResult::NeedsSelection {
+                from_candidates,
+                to_candidates,
                 profile,
                 preference,
                 avoid,
                 include_municipalities,
-                language,
-                country: params.plan.country.clone(),
-            };
-            handle_selection_and_route(
-                parent,
-                language,
-                &client,
-                from_candidates,
-                to_candidates,
-                plan,
-            );
+            }) => {
+                let plan = RouteOptions {
+                    departure: params.plan.departure.clone(),
+                    profile,
+                    preference,
+                    avoid,
+                    include_municipalities,
+                    language,
+                    country: params.plan.country.clone(),
+                };
+                handle_selection_and_route(
+                    parent,
+                    language,
+                    &client,
+                    from_candidates,
+                    to_candidates,
+                    plan,
+                )
+            }
+            Err(err) => {
+                show_error(parent, language, &err.to_string());
+                return;
+            }
+        };
+        if let Some(route) = route {
+            remember_route(&route, &params.plan);
+            if let Some(selected) = select_route_path(parent, language, &route, None) {
+                display_selected_route(parent, language, route, selected, params);
+                return;
+            }
         }
-        Err(err) => {
-            show_error(parent, language, &err.to_string());
-        }
+        // Esc in a selection returns to the form; Esc in the form ends the flow.
+        previous = Some(params);
     }
 }
 
@@ -74,6 +80,12 @@ struct RouteParams {
     from: String,
     to: String,
     plan: RouteOptions,
+}
+
+pub(crate) struct RouteNavigation {
+    route: RouteResult,
+    selected: usize,
+    params: RouteParams,
 }
 
 fn remember_route(route: &RouteResult, plan: &RouteOptions) {
@@ -190,7 +202,11 @@ fn recent_profile(value: &str) -> RouteProfile {
     }
 }
 
-fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> {
+fn prompt_route_params(
+    parent: HWND,
+    language: Language,
+    previous: Option<&RouteParams>,
+) -> Option<RouteParams> {
     let profile_options = [
         RouteProfile::Walking,
         RouteProfile::Cycling,
@@ -209,7 +225,8 @@ fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> 
     let saved_country =
         with_state(parent, |state| state.settings.route_country.clone()).unwrap_or_default();
     let route_country =
-        normalize_route_country(&saved_country).unwrap_or_else(|| default_route_country(language));
+        normalize_route_country(previous.map_or(&saved_country, |params| &params.plan.country))
+            .unwrap_or_else(|| default_route_country(language));
 
     let options_list = profile_options
         .iter()
@@ -247,13 +264,27 @@ fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> 
         title: i18n::tr(language, "route.title"),
         type_label: i18n::tr(language, "route.profile_label"),
         options: options_list,
-        default_selection: 0,
+        default_selection: previous
+            .and_then(|params| {
+                profile_options
+                    .iter()
+                    .position(|v| *v == params.plan.profile)
+            })
+            .unwrap_or(0),
         secondary_type_label: i18n::tr(language, "route.preference_label"),
         secondary_options: preference_list,
-        secondary_default_selection: 0,
+        secondary_default_selection: previous
+            .and_then(|params| {
+                preference_options
+                    .iter()
+                    .position(|v| *v == params.plan.preference)
+            })
+            .unwrap_or(0),
         tertiary_type_label: i18n::tr(language, "route.avoid_label"),
         tertiary_options: avoid_list,
-        tertiary_default_selection: 0,
+        tertiary_default_selection: previous
+            .and_then(|params| avoid_options.iter().position(|v| *v == params.plan.avoid))
+            .unwrap_or(0),
         tertiary_options_primary_index_only: Some(2),
         secondary_controls_disabled_primary_index: Some(4),
         quaternary_type_label: i18n::tr(language, "route.country_label"),
@@ -262,13 +293,15 @@ fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> 
         focus_primary_field: false,
         primary_label: i18n::tr(language, "route.from_label"),
         primary_labels: Vec::new(),
-        primary_default: String::new(),
+        primary_default: previous
+            .map(|params| params.from.clone())
+            .unwrap_or_default(),
         secondary_label: i18n::tr(language, "route.to_label"),
-        secondary_default: String::new(),
+        secondary_default: previous.map(|params| params.to.clone()).unwrap_or_default(),
         tertiary_label: String::new(),
         tertiary_default: String::new(),
         checkbox_label: i18n::tr(language, "route.include_municipalities"),
-        checkbox_default: false,
+        checkbox_default: previous.is_some_and(|params| params.plan.include_municipalities),
     };
 
     let result = prompt_window::prompt_directory_search_with_action(
@@ -287,6 +320,13 @@ fn prompt_route_params(parent: HWND, language: Language) -> Option<RouteParams> 
                 })
                 .collect(),
         ),
+        previous.and_then(|params| {
+            params
+                .plan
+                .departure
+                .as_ref()
+                .map(|departure| (departure.time.clone(), departure.time_zone.clone()))
+        }),
     )?;
 
     let profile = profile_options
@@ -390,7 +430,7 @@ fn handle_selection_and_route(
     from_candidates: Vec<GeocodeCandidate>,
     mut to_candidates: Vec<GeocodeCandidate>,
     plan: RouteOptions,
-) {
+) -> Option<RouteResult> {
     let from_selected = if candidates_need_selection(&from_candidates) {
         let items = from_candidates
             .iter()
@@ -424,7 +464,7 @@ fn handle_selection_and_route(
                 let idx = id_str.parse::<usize>().unwrap_or(0);
                 from_candidates[idx].clone()
             }
-            _ => return,
+            _ => return None,
         }
     } else {
         from_candidates[0].clone()
@@ -464,43 +504,113 @@ fn handle_selection_and_route(
                 let idx = id_str.parse::<usize>().unwrap_or(0);
                 to_candidates[idx].clone()
             }
-            _ => return,
+            _ => return None,
         }
     } else {
         to_candidates[0].clone()
     };
 
     crate::screen_reader_speak(&i18n::tr(language, "route.calculating"));
-    match client.route_between_coordinates(&from_selected, &to_selected, plan.clone()) {
-        Ok(route) => {
-            remember_route(&route, &plan);
-            display_route(parent, language, route);
+    match client.route_between_coordinates(&from_selected, &to_selected, plan) {
+        Ok(route) => Some(route),
+        Err(err) => {
+            show_error(parent, language, &err.to_string());
+            None
         }
-        Err(err) => show_error(parent, language, &err.to_string()),
     }
 }
 
-fn display_route(parent: HWND, language: Language, route: RouteResult) {
-    let Some(route) = select_route_path(parent, language, route) else {
-        return;
+pub(crate) fn navigate_back(parent: HWND, edit: HWND) -> bool {
+    // Release application state before opening a dialog with its own message loop.
+    let context = with_state(parent, |state| {
+        let document = state.docs.get_mut(state.current)?;
+        if document.hwnd_edit != edit {
+            return None;
+        }
+        document
+            .route_navigation
+            .take()
+            .map(|navigation| (state.settings.language, navigation))
+    })
+    .flatten();
+    let Some((language, navigation)) = context else {
+        return false;
     };
-    let route_map = route.map_data(language);
-    let text = route.format_for_speech_or_text(language);
+    let RouteNavigation {
+        route,
+        selected: previous,
+        params,
+    } = navigation;
+    crate::log_debug(&format!(
+        "route_return_to_alternatives: paths={} selected={previous}",
+        route.paths.len()
+    ));
+    if route.paths.len() > 1
+        && let Some(selected) = select_route_path(parent, language, &route, Some(previous))
+    {
+        if selected == previous {
+            with_state(parent, |state| {
+                if let Some(document) = state.docs.iter_mut().find(|doc| doc.hwnd_edit == edit) {
+                    document.route_navigation = Some(RouteNavigation {
+                        route,
+                        selected,
+                        params,
+                    });
+                }
+            });
+        } else {
+            display_selected_route(parent, language, route, selected, params);
+        }
+    } else {
+        // The editor's return context was consumed above, so closing the form
+        // cannot reopen these alternatives on the next Esc.
+        run_route_flow(parent, language, Some(params));
+    }
+    true
+}
+
+fn display_selected_route(
+    parent: HWND,
+    language: Language,
+    route: RouteResult,
+    selected: usize,
+    params: RouteParams,
+) {
+    let selected_route = RouteResult {
+        paths: route.paths.get(selected).cloned().into_iter().collect(),
+        ..route.clone()
+    };
+    let route_map = selected_route.map_data(language);
+    let text = selected_route.format_for_speech_or_text(language);
     editor_manager::new_document(parent);
     editor_manager::set_current_document_title(parent, &route.suggested_filename(language));
     if let Some(route_map) = route_map {
         editor_manager::set_current_route_map(parent, route_map);
     }
+    with_state(parent, |state| {
+        if let Some(document) = state.docs.get_mut(state.current) {
+            document.route_navigation = Some(RouteNavigation {
+                route,
+                selected,
+                params,
+            });
+        }
+    });
     if let Some(hwnd_edit) = crate::get_active_edit(parent) {
         editor_manager::set_edit_text(hwnd_edit, &text);
         editor_manager::mark_current_document_dirty_prefer_title(parent);
     }
 }
 
-fn select_route_path(parent: HWND, language: Language, route: RouteResult) -> Option<RouteResult> {
+fn select_route_path(
+    parent: HWND,
+    language: Language,
+    route: &RouteResult,
+    initial_selection: Option<usize>,
+) -> Option<usize> {
     crate::log_debug(&format!("route_select_path: paths={}", route.paths.len()));
     if route.paths.len() <= 1 {
-        return Some(route);
+        return Some(0);
     }
 
     let items = route
@@ -515,7 +625,7 @@ fn select_route_path(parent: HWND, language: Language, route: RouteResult) -> Op
         language,
         i18n::tr(language, "route.choose_route"),
         items,
-        None,
+        initial_selection.map(|index| index.to_string()),
         MultilineSearchOptions {
             initial_query: String::new(),
             search_button_label: String::new(),
@@ -531,12 +641,8 @@ fn select_route_path(parent: HWND, language: Language, route: RouteResult) -> Op
 
     match selected {
         MultilineSelectionResult::Selected(id_str) => {
-            let idx = id_str.parse::<usize>().unwrap_or(0);
-            let selected_path = route.paths.get(idx)?.clone();
-            Some(RouteResult {
-                paths: vec![selected_path],
-                ..route
-            })
+            let idx = id_str.parse::<usize>().ok()?;
+            route.paths.get(idx).map(|_| idx)
         }
         _ => None,
     }
@@ -552,15 +658,55 @@ fn route_path_selection_item(
     } else {
         format!("{} {index}", i18n::tr(language, "route.alternative_route"))
     };
-    let description = format!(
+    let mut description = format!(
         "{}; {}",
         path.distance_label(language),
         path.duration_label(language)
     );
+    for transit in &path.transit_details {
+        if !transit.trim().is_empty() {
+            description.push_str("; ");
+            description.push_str(transit);
+        }
+    }
 
     MultilineSelectionItem {
         id: index.to_string(),
         title,
         description: Some(description),
+    }
+}
+
+#[cfg(test)]
+mod selection_tests {
+    use super::*;
+
+    #[test]
+    fn equal_distance_and_duration_still_identify_different_transit_departures() {
+        let mut first: RoutePath = serde_json::from_value(serde_json::json!({
+            "distance_meters": 2751, "duration_seconds": 1214,
+            "distance_text": "2.8 km", "duration_text": "20 min",
+            "transit_details": ["Take Bus 75. Board at Cigna at 19:01; get off at Grosseto at 19:11."]
+        })).unwrap();
+        let description = route_path_selection_item(Language::English, 0, &first)
+            .description
+            .unwrap();
+        let mut next = first.clone();
+        next.transit_details[0] =
+            "Take Bus 75. Board at Cigna at 19:25; get off at Grosseto at 19:35.".into();
+        let next_description = route_path_selection_item(Language::English, 1, &next)
+            .description
+            .unwrap();
+        assert!(description.contains("Bus 75") && description.contains("19:01"));
+        assert!(next_description.contains("19:25"));
+        assert_ne!(description, next_description);
+
+        first.transit_details.clear();
+        assert_eq!(
+            route_path_selection_item(Language::English, 0, &first)
+                .description
+                .as_deref(),
+            Some("2.8 km; 20 min")
+        );
     }
 }

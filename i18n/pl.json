@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "Ten wpis słownika został zmieniony w innym oknie. Otwórz słownik ponownie i spróbuj jeszcze raz.",
+  "stream_audio.youtube_sign_in_required": "YouTube wymaga zalogowania, aby uzyskać dostęp do tego filmu. Nie można go odtworzyć ani pobrać w Sonarpad.",
   "places.new_search": "Nowe wyszukiwanie",
   "places.open_all": "Otwórz wszystko",
   "places.phone_search": "Wyszukaj numer telefonu",

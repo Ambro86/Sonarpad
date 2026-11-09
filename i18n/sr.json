@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "Ова ставка речника је измењена у другом прозору. Поново отворите речник и покушајте поново.",
+  "stream_audio.youtube_sign_in_required": "YouTube захтева пријаву за овај видео. Није га могуће репродуковати или преузети у Sonarpad-у.",
   "places.new_search": "Нова претрага",
   "places.open_all": "Отвори све",
   "places.phone_search": "Пронађи број телефона",

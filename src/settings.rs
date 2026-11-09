@@ -69,7 +69,7 @@ struct SavedYtdlpSiteCredentials {
     password: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DictionaryEntry {
     pub original: String,
     pub replacement: String,
@@ -2351,6 +2351,9 @@ fn load_settings_from_path(path: &std::path::Path) -> AppSettings {
             }
         }
 
+        if let Some(recovered) = load_settings_backup(path) {
+            return recovered;
+        }
         let normalized = normalize_settings(default_settings);
         update_cached_rai_luce_code(&normalized.rai_luce_code);
         log_rai_luce_event(
@@ -2359,12 +2362,31 @@ fn load_settings_from_path(path: &std::path::Path) -> AppSettings {
         return normalized;
     }
 
+    if let Some(recovered) = load_settings_backup(path) {
+        return recovered;
+    }
     let normalized = normalize_settings(default_settings);
     update_cached_rai_luce_code(&normalized.rai_luce_code);
     log_rai_luce_event(
         "load_settings returning default settings because settings.json does not exist",
     );
     normalized
+}
+
+fn settings_backup_path(path: &std::path::Path) -> PathBuf {
+    path.with_file_name("settings.last-good.json")
+}
+
+fn load_settings_backup(path: &std::path::Path) -> Option<AppSettings> {
+    let data = std::fs::read_to_string(settings_backup_path(path)).ok()?;
+    let settings = parse_settings(&data).ok()?;
+    crate::log_debug(&format!(
+        "Settings recovered from last-good backup: path={} dictionary_entries={}",
+        path.display(),
+        settings.dictionary.len()
+    ));
+    update_cached_rai_luce_code(&settings.rai_luce_code);
+    Some(settings)
 }
 
 fn rss_favorite_item_key(item: &RssItem) -> String {
@@ -3200,25 +3222,176 @@ pub fn load_saved_rai_luce_code() -> Option<String> {
     None
 }
 
+// A separate lock file protects the read/modify/replace operation across app
+// windows, processes and the updater, even while settings.json is replaced.
+fn lock_settings_file(path: &std::path::Path) -> std::io::Result<std::fs::File> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let lock = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(path.with_extension("json.lock"))?;
+    let deadline = std::time::Instant::now() + std::time::Duration::from_millis(300);
+    loop {
+        match lock.try_lock() {
+            Ok(()) => return Ok(lock),
+            Err(std::fs::TryLockError::WouldBlock) if std::time::Instant::now() < deadline => {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            Err(error) => return Err(std::io::Error::other(error)),
+        }
+    }
+}
+
+fn read_settings_for_write(
+    path: &std::path::Path,
+    validate_app_settings: bool,
+) -> Result<Option<serde_json::Value>, String> {
+    fn read(
+        path: &std::path::Path,
+        validate_app_settings: bool,
+    ) -> Result<Option<serde_json::Value>, String> {
+        match std::fs::read(path) {
+            Ok(raw) => {
+                let value: serde_json::Value = serde_json::from_slice(&raw)
+                    .map_err(|error| format!("Settings not overwritten: {error}"))?;
+                if !value.is_object() {
+                    return Err("Settings not overwritten: expected a JSON object".into());
+                }
+                if validate_app_settings {
+                    serde_json::from_slice::<AppSettings>(&raw)
+                        .map_err(|error| format!("Settings not overwritten: {error}"))?;
+                }
+                Ok(Some(value))
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(format!("Settings not overwritten: {error}")),
+        }
+    }
+    let current = read(path, validate_app_settings);
+    if matches!(current, Ok(Some(_))) {
+        return current;
+    }
+    match read(&settings_backup_path(path), validate_app_settings) {
+        Ok(Some(backup)) => {
+            crate::log_debug(&format!(
+                "Settings write recovering last-good backup: path={}",
+                path.display()
+            ));
+            Ok(Some(backup))
+        }
+        Ok(None) => current,
+        Err(error) => Err(error),
+    }
+}
+
+fn write_settings_with_backup(
+    path: &std::path::Path,
+    json: &[u8],
+    before: Option<&serde_json::Value>,
+) -> Result<(), String> {
+    let backup = match before {
+        Some(value) => serde_json::to_vec_pretty(value).map_err(|error| error.to_string())?,
+        None => json.to_vec(),
+    };
+    write_settings_atomically(&settings_backup_path(path), &backup)
+        .map_err(|error| format!("Settings backup failed; original retained: {error}"))?;
+    write_settings_atomically(path, json).map_err(|error| error.to_string())
+}
+
+pub(crate) enum DictionaryChange {
+    Add(DictionaryEntry),
+    Replace(DictionaryEntry, DictionaryEntry),
+    Remove(DictionaryEntry),
+}
+
+fn apply_dictionary_change(
+    entries: &mut Vec<DictionaryEntry>,
+    change: &DictionaryChange,
+    language: Language,
+) -> Result<(), String> {
+    match change {
+        DictionaryChange::Add(entry) => entries.push(entry.clone()),
+        DictionaryChange::Replace(previous, replacement) => {
+            let index = entries
+                .iter()
+                .position(|entry| entry == previous)
+                .ok_or_else(|| crate::i18n::tr(language, "dictionary.changed_elsewhere"))?;
+            entries[index] = replacement.clone();
+        }
+        DictionaryChange::Remove(previous) => {
+            if let Some(index) = entries.iter().position(|entry| entry == previous) {
+                entries.remove(index);
+            }
+        }
+    }
+    Ok(())
+}
+
 #[track_caller]
 pub fn save_settings(settings: AppSettings) {
-    // Serialize backup, reduction diagnostics and replacement as one write.
-    static WRITE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    let _write_guard = WRITE_LOCK.lock().unwrap_or_else(|error| error.into_inner());
-    if let Ok(raw) = std::fs::read_to_string(get_settings_path())
-        && let Ok(before) = serde_json::from_str::<serde_json::Value>(&raw)
+    if let Err(error) = save_settings_inner(settings, None, &get_settings_path()) {
+        crate::log_debug(&format!("Settings save failed: {error}"));
+    }
+}
+
+pub(crate) fn save_dictionary_change(
+    settings: AppSettings,
+    change: DictionaryChange,
+) -> Result<Vec<DictionaryEntry>, String> {
+    save_settings_inner(settings, Some(change), &get_settings_path())
+}
+
+#[track_caller]
+fn save_settings_inner(
+    mut settings: AppSettings,
+    dictionary_change: Option<DictionaryChange>,
+    path: &std::path::Path,
+) -> Result<Vec<DictionaryEntry>, String> {
+    let _write_guard = lock_settings_file(path).map_err(|error| error.to_string())?;
+    let before = read_settings_for_write(path, true)?;
+    if let Some(before) = before.as_ref() {
+        // A failed load must never turn into a default-settings overwrite.
+        let previous: AppSettings = serde_json::from_value(before.clone())
+            .map_err(|error| format!("Settings not overwritten: {error}"))?;
+        if settings.dictionary != previous.dictionary {
+            crate::log_debug(&format!(
+                "Voice dictionary retained from disk: pid={} incoming={} stored={} caller={}",
+                std::process::id(),
+                settings.dictionary.len(),
+                previous.dictionary.len(),
+                std::panic::Location::caller()
+            ));
+        }
+        settings.dictionary = previous.dictionary;
+    }
+    if let Some(change) = dictionary_change {
+        let count = settings.dictionary.len();
+        apply_dictionary_change(&mut settings.dictionary, &change, settings.language)?;
+        crate::log_debug(&format!(
+            "Voice dictionary explicit edit: pid={} before={} after={}",
+            std::process::id(),
+            count,
+            settings.dictionary.len()
+        ));
+    }
+    let dictionary = settings.dictionary.clone();
+    if let Some(before) = before.as_ref()
         && let Ok(after) = serde_json::to_value(&settings)
     {
         if let Err(error) = crate::cloud_sync::preserve_collection_write(
             &settings_dir(),
-            &crate::cloud_sync::export(&before, false),
+            &crate::cloud_sync::export(before, false),
             &crate::cloud_sync::export(&after, false),
         ) {
             crate::log_debug(&format!("CloudSync settings_write blocked: {error}"));
-            return;
+            return Err(error);
         }
         crate::cloud_sync::log_collection_reductions(
-            &crate::cloud_sync::export(&before, false),
+            &crate::cloud_sync::export(before, false),
             &crate::cloud_sync::export(&after, false),
             &format!("settings_write:{}", std::panic::Location::caller()),
             crate::log_debug,
@@ -3308,27 +3481,36 @@ pub fn save_settings(settings: AppSettings) {
     persisted.gemini_api_key = encrypt_gemini_api_key(&persisted.gemini_api_key);
     persisted.sonarpad_ai_access_code =
         encrypt_sonarpad_ai_access_code(&persisted.sonarpad_ai_access_code);
-    let path = get_settings_path();
     if let Some(parent) = path.parent()
         && let Err(e) = std::fs::create_dir_all(parent)
     {
         crate::log_debug(&format!("Failed to create settings directory: {}", e));
     }
-    match serde_json::to_string_pretty(&persisted) {
-        Ok(json) => {
-            let save_result = write_settings_atomically(&path, json.as_bytes());
-            if let Err(e) = save_result {
-                crate::log_debug(&format!(
-                    "Failed to save settings to {}: {}",
-                    path.display(),
-                    e
-                ));
-            }
-        }
-        Err(e) => {
-            crate::log_debug(&format!("Failed to serialize settings: {}", e));
-        }
+    let json = serde_json::to_string_pretty(&persisted).map_err(|error| error.to_string())?;
+    write_settings_with_backup(path, json.as_bytes(), before.as_ref())?;
+    Ok(dictionary)
+}
+
+pub(crate) fn persist_installed_release_tag(tag: &str) -> Result<(), String> {
+    persist_installed_release_tag_at(&get_settings_path(), tag)
+}
+
+fn persist_installed_release_tag_at(path: &std::path::Path, tag: &str) -> Result<(), String> {
+    if tag.trim().is_empty() {
+        return Ok(());
     }
+    let _write_guard = lock_settings_file(path).map_err(|error| error.to_string())?;
+    let Some(before) = read_settings_for_write(path, false)? else {
+        // The updater must never create a default user profile.
+        return Ok(());
+    };
+    if before["installed_release_tag"].as_str() == Some(tag.trim()) {
+        return Ok(());
+    }
+    let mut updated = before.clone();
+    updated["installed_release_tag"] = tag.trim().into();
+    let json = serde_json::to_vec_pretty(&updated).map_err(|error| error.to_string())?;
+    write_settings_with_backup(path, &json, Some(&before))
 }
 
 // Never delete the previous file on a failed replacement. Unique temporary names
@@ -4154,6 +4336,168 @@ mod settings_storage_tests {
         let dir = settings_dir().join(name);
         std::fs::create_dir_all(&dir).expect("fixture directory");
         dir
+    }
+
+    fn word(original: &str) -> DictionaryEntry {
+        DictionaryEntry {
+            original: original.into(),
+            replacement: format!("spoken {original}"),
+            match_case: true,
+            use_custom_voice: false,
+            custom_voice_engine: None,
+            custom_voice: None,
+        }
+    }
+
+    #[test]
+    fn stale_settings_cannot_erase_dictionary_and_explicit_edits_keep_other_windows_words() {
+        let path = fixture("dictionary-stale-windows").join("settings.json");
+        let first = word("first");
+        let second = word("second");
+        let initial = AppSettings {
+            dictionary: vec![first.clone()],
+            ..Default::default()
+        };
+        save_settings_inner(initial.clone(), None, &path).expect("initial dictionary");
+        let stale = AppSettings::default();
+        save_settings_inner(stale.clone(), None, &path).expect("stale ordinary save");
+        assert_eq!(
+            load_settings_from_path(&path).dictionary,
+            vec![first.clone()]
+        );
+        save_settings_inner(
+            stale.clone(),
+            Some(DictionaryChange::Add(second.clone())),
+            &path,
+        )
+        .expect("add from another window");
+        save_settings_inner(
+            initial.clone(),
+            Some(DictionaryChange::Remove(first.clone())),
+            &path,
+        )
+        .expect("remove only selected word");
+        assert_eq!(
+            load_settings_from_path(&path).dictionary,
+            vec![second.clone()]
+        );
+        let replacement = word("updated");
+        save_settings_inner(
+            stale.clone(),
+            Some(DictionaryChange::Replace(
+                second.clone(),
+                replacement.clone(),
+            )),
+            &path,
+        )
+        .expect("edit selected word");
+        assert!(
+            save_settings_inner(
+                stale.clone(),
+                Some(DictionaryChange::Replace(second, first)),
+                &path
+            )
+            .is_err()
+        );
+        assert_eq!(
+            load_settings_from_path(&path).dictionary,
+            vec![replacement.clone()]
+        );
+        save_settings_inner(stale, Some(DictionaryChange::Remove(replacement)), &path)
+            .expect("explicitly remove last word");
+        save_settings_inner(initial, None, &path).expect("old window saves after removal");
+        assert!(load_settings_from_path(&path).dictionary.is_empty());
+    }
+
+    #[test]
+    fn updater_changes_only_version_and_preserves_unknown_fields_and_private_values() {
+        let path = fixture("update-profile").join("settings.json");
+        let original = serde_json::json!({
+            "installed_release_tag":"v0.9.25", "dictionary":[word("pronunciation")],
+            "future_setting":{"unrecognized_by_old_updater":true},
+            "tts_voice":"User voice", "tts_engine":"future_engine",
+            "encrypted_test_password":"opaque-test-fixture"
+        });
+        std::fs::write(&path, serde_json::to_vec(&original).expect("JSON")).expect("fixture");
+        persist_installed_release_tag_at(&path, "v0.9.26").expect("update marker");
+        let mut updated: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).expect("updated file")).expect("JSON");
+        assert_eq!(updated["installed_release_tag"], "v0.9.26");
+        updated["installed_release_tag"] = original["installed_release_tag"].clone();
+        assert_eq!(updated, original);
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(
+                &std::fs::read(settings_backup_path(&path)).expect("backup")
+            )
+            .expect("JSON"),
+            original
+        );
+    }
+
+    #[test]
+    fn missing_or_unreadable_settings_are_not_replaced_with_defaults_by_updater() {
+        let path = fixture("update-unreadable-profile").join("settings.json");
+        persist_installed_release_tag_at(&path, "v1.0").expect("no user profile yet");
+        assert!(!path.exists());
+        std::fs::write(&path, b"{broken").expect("fixture");
+        assert!(persist_installed_release_tag_at(&path, "v1.0").is_err());
+        assert!(save_settings_inner(AppSettings::default(), None, &path).is_err());
+        assert_eq!(std::fs::read(&path).expect("original file"), b"{broken");
+    }
+
+    #[test]
+    fn backup_recovers_dictionary_and_preferences_after_corruption() {
+        let path = fixture("recover-user-profile").join("settings.json");
+        let settings = AppSettings {
+            dictionary: vec![word("kept")],
+            word_wrap: false,
+            ..Default::default()
+        };
+        save_settings_inner(settings, None, &path).expect("initial save and backup");
+        for invalid in ["{interrupted", r#"{"tts_engine":"invalid"}"#] {
+            std::fs::write(&path, invalid).expect("simulate corruption");
+            let recovered = load_settings_from_path(&path);
+            assert_eq!(recovered.dictionary, vec![word("kept")]);
+            assert!(!recovered.word_wrap);
+            save_settings_inner(recovered, None, &path).expect("repair from backup");
+            assert_eq!(
+                load_settings_from_path(&path).dictionary,
+                vec![word("kept")]
+            );
+        }
+    }
+
+    #[test]
+    fn failed_backup_leaves_user_profile_untouched() {
+        let path = fixture("blocked-profile-backup").join("settings.json");
+        let data = serde_json::to_vec(&AppSettings {
+            dictionary: vec![word("kept")],
+            ..Default::default()
+        })
+        .expect("JSON");
+        std::fs::write(&path, &data).expect("fixture");
+        std::fs::create_dir(settings_backup_path(&path)).expect("block backup destination");
+        assert!(persist_installed_release_tag_at(&path, "v1.0").is_err());
+        assert_eq!(std::fs::read(&path).expect("retained profile"), data);
+    }
+
+    #[test]
+    fn independent_settings_file_handles_cannot_write_through_another_writer_lock() {
+        let path = fixture("profile-writer-lock").join("settings.json");
+        let second = {
+            let _guard = lock_settings_file(&path).expect("first writer");
+            let second = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(path.with_extension("json.lock"))
+                .expect("second writer handle");
+            assert!(matches!(
+                second.try_lock(),
+                Err(std::fs::TryLockError::WouldBlock)
+            ));
+            second
+        };
+        second.try_lock().expect("lock released when writer exits");
     }
 
     #[test]

@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "Esta entrada do dicionário foi alterada em outra janela. Reabra o dicionário e tente novamente.",
+  "stream_audio.youtube_sign_in_required": "O YouTube exige login para este vídeo. Não é possível reproduzi-lo ou baixá-lo no Sonarpad.",
   "places.new_search": "Nova busca",
   "places.open_all": "Abrir tudo",
   "places.phone_search": "Buscar um número de telefone",

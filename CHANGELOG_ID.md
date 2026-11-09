@@ -4,6 +4,14 @@ Version 0.9.27 – 2026-11-07
 
 1. SonarTube dan SonarMusic: memperbaiki masalah pemutaran yang tidak dapat dilanjutkan setelah jeda panjang. Audio dan video dilanjutkan dari posisi tersimpan.
 
+2. Pencarian tempat dan bisnis: tombol “Pencarian baru” dan “Buka semua”, yang sebelumnya masih berbahasa Italia, kini diterjemahkan ke semua bahasa yang didukung.
+
+3. YouTube: pesan yang jelas kini menjelaskan jika video memerlukan login, menggantikan kesalahan umum “yt-dlp failed” dan menghindari percobaan ulang yang tidak perlu.
+
+4. Kamus pelafalan: menambahkan perlindungan terhadap kehilangan data saat pembaruan dan penyimpanan dari jendela lain, serta cadangan pengaturan untuk pemulihan jika berkas rusak.
+
+5. Rute: menekan Esc dari rute yang dipilih akan kembali ke daftar alternatif dengan pilihan sebelumnya tetap terpilih, tanpa mengulangi pencarian.
+
 Version 0.9.26 – 2026-11-07
 
 1. Pencarian tempat dan usaha tersedia dalam semua bahasa, dengan hasil internasional, deskripsi, penilaian, jumlah ulasan, jam buka, dan situs web jika tersedia. Di antarmuka Italia, fitur ini menggantikan Halaman Putih dan Kuning sambil mempertahankan hasil serta pencarian nama dan nomor telepon. Bahasa lain hanya menyediakan pencarian tempat dan usaha.

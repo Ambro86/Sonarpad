@@ -1,4 +1,6 @@
 {
+  "dictionary.changed_elsewhere": "Tato položka slovníku byla změněna v jiném okně. Otevřete slovník znovu a zkuste to znovu.",
+  "stream_audio.youtube_sign_in_required": "YouTube u tohoto videa vyžaduje přihlášení. V aplikaci Sonarpad jej nelze přehrát ani stáhnout.",
   "places.new_search": "Nové hledání",
   "places.open_all": "Otevřít vše",
   "places.phone_search": "Vyhledat telefonní číslo",

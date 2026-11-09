@@ -114,7 +114,7 @@ fn add_file_to_zip<W: Write + std::io::Seek>(
     // All diagnostic inputs are text. Invalid UTF-8 must never bypass redaction.
     let content = String::from_utf8_lossy(&bytes);
 
-    let final_content = if archive_name == "settings.json" {
+    let final_content = if matches!(archive_name, "settings.json" | "settings.last-good.json") {
         sanitized_settings(&content)?
     } else if sanitize {
         sanitize_content(&content)
@@ -182,6 +182,14 @@ fn write_diagnostics_zip<W: Write + std::io::Seek>(writer: W) -> Result<W, Strin
     // 4. settings.json - sanitizzato
     let settings_path = settings_dir.join("settings.json");
     add_file_to_zip(&mut zip, &settings_path, "settings.json", true)?;
+    if let Err(error) = add_file_to_zip(
+        &mut zip,
+        &settings_dir.join("settings.last-good.json"),
+        "settings.last-good.json",
+        true,
+    ) {
+        crate::log_debug(&format!("Diagnostic settings backup omitted: {error}"));
+    }
 
     // 5. last_error.txt - se esiste (sanitizzato)
     let last_error_path = settings_dir.join("last_error.txt");
@@ -369,6 +377,30 @@ fn send_report_to(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn diagnostic_settings_backup_redacts_credentials_but_keeps_dictionary()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let path = crate::settings::settings_dir().join("diagnostic-backup-fixture.json");
+        std::fs::write(
+            &path,
+            r#"{"dictionary":[{"original":"word","replacement":"spoken"}],"gemini_api_key":"private-test-value","nested":{"password":"hidden-test-value"}}"#,
+        )?;
+        let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        add_file_to_zip(&mut writer, &path, "settings.last-good.json", true)?;
+        let mut archive = zip::ZipArchive::new(writer.finish()?)?;
+        let mut content = String::new();
+        archive
+            .by_name("settings.last-good.json")?
+            .read_to_string(&mut content)?;
+        std::fs::remove_file(path)?;
+        assert!(!content.contains("private-test-value"));
+        assert!(!content.contains("hidden-test-value"));
+        let settings: serde_json::Value = serde_json::from_str(&content)?;
+        assert_eq!(settings["dictionary"][0]["original"], "word");
+        assert_eq!(settings["gemini_api_key"], "[REDACTED]");
+        Ok(())
+    }
 
     #[test]
     fn diagnostic_reply_email_is_optional_and_rejects_invalid_headers() {

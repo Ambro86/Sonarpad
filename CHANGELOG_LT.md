@@ -4,6 +4,14 @@ Version 0.9.27 – 2026-11-07
 
 1. SonarTube ir SonarMusic: ištaisyta klaida, dėl kurios po ilgos pauzės nepavykdavo tęsti atkūrimo. Garsas ir vaizdas atkuriami nuo išsaugotos vietos.
 
+2. Vietų ir įmonių paieška: mygtukai „Nauja paieška“ ir „Atverti viską“, kurie anksčiau likdavo italų kalba, išversti į visas palaikomas kalbas.
+
+3. YouTube: kai norint peržiūrėti vaizdo įrašą reikia prisijungti, vietoj bendros klaidos „yt-dlp failed“ rodomas aiškus pranešimas ir išvengiama nereikalingų pakartotinių bandymų.
+
+4. Tarimo žodynas: pridėta apsauga nuo duomenų praradimo atnaujinant programą ir išsaugant iš kitų langų. Taip pat kuriama atsarginė nustatymų kopija, leidžianti juos atkurti sugadinus failą.
+
+5. Maršrutai: paspaudus Esc pasirinktame maršrute grįžtama prie alternatyvų, išlaikant ankstesnį pasirinkimą ir nekartojant paieškos.
+
 Version 0.9.26 – 2026-11-07
 
 1. Vietų ir įmonių paieška dabar prieinama visomis kalbomis: tarptautiniai rezultatai, aprašymai, įvertinimai, atsiliepimų skaičius, darbo laikas ir svetainės, kai šie duomenys pateikti. Itališkoje sąsajoje ji pakeičia Baltuosius ir Geltonuosius puslapius, išsaugodama jų rezultatus bei paiešką pagal vardą ir telefono numerį. Kitomis kalbomis galima tik vietų ir įmonių paieška.
