@@ -31,6 +31,7 @@ use editor_manager::Document;
 use settings::*;
 mod bookmarks;
 use bookmarks::*;
+mod edge_gec_v2;
 mod tts_engine;
 use tts_engine::*;
 mod daisy_player;

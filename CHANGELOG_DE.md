@@ -1,6 +1,6 @@
 # Änderungsprotokoll
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube und SonarMusic: Ein Fehler wurde behoben, durch den die Wiedergabe nach einer längeren Pause nicht fortgesetzt wurde. Audio und Video werden an der gespeicherten Position fortgesetzt.
 

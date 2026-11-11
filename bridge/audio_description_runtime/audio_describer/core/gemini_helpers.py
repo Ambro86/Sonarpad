@@ -1098,7 +1098,8 @@ def process_gemini_response(response, status_callback):
 
     candidate = response.candidates[0]
 
-    if not hasattr(candidate, 'content') or not candidate.content or not candidate.content.parts:
+    parts = getattr(getattr(candidate, 'content', None), 'parts', None)
+    if not parts:
         finish_reason_obj = getattr(candidate, 'finish_reason', None)
         finish_reason_name = getattr(finish_reason_obj, 'name', 'UNKNOWN') if finish_reason_obj else 'NOT_SPECIFIED'
 
@@ -1130,7 +1131,7 @@ def process_gemini_response(response, status_callback):
             app_logger.warning("Response candidate finished with STOP but had no content parts.")
             return "", False
 
-    for part in candidate.content.parts:
+    for part in parts:
         text_content = getattr(part, 'text', "") or ""
         if getattr(part, "thought", None):
             thoughts_found = True

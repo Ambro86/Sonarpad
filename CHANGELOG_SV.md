@@ -1,6 +1,6 @@
 # Ändringslogg
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube och SonarMusic: åtgärdat ett fel som hindrade uppspelningen från att återupptas efter en längre paus. Ljud och video fortsätter från den sparade positionen.
 

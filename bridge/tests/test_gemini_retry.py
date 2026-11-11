@@ -15,6 +15,19 @@ class GeminiRetryTests(unittest.TestCase):
         gemini_helpers.set_quota_decision_handler(None)
         gemini_helpers.set_overload_decision_handler(None)
 
+    def test_safety_response_without_parts_raises_content_block(self):
+        response = SimpleNamespace(candidates=[SimpleNamespace(
+            content=SimpleNamespace(), finish_reason=SimpleNamespace(name="SAFETY"))])
+        with self.assertRaises(gemini_helpers.ContentBlockedError) as raised:
+            gemini_helpers.process_gemini_response(response, None)
+        self.assertEqual(raised.exception.reason, "SAFETY")
+
+    def test_normal_response_parts_are_preserved(self):
+        response = SimpleNamespace(candidates=[SimpleNamespace(
+            content=SimpleNamespace(parts=[SimpleNamespace(text="Descrizione.")]),
+            finish_reason=SimpleNamespace(name="STOP"))])
+        self.assertEqual(gemini_helpers.process_gemini_response(response, None), ("Descrizione.", True))
+
     def test_transient_failure_retries_beyond_thirty_with_fixed_delay(self):
         failures = [TimeoutError("temporary timeout") for _ in range(35)]
         operation = mock.Mock(side_effect=failures + ["ok"])

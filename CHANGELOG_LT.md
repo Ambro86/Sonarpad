@@ -1,6 +1,6 @@
 # Pakeitimų žurnalas
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube ir SonarMusic: ištaisyta klaida, dėl kurios po ilgos pauzės nepavykdavo tęsti atkūrimo. Garsas ir vaizdas atkuriami nuo išsaugotos vietos.
 

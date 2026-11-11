@@ -48,28 +48,34 @@ use crate::subtitle_wasapi::{decode_mp3_to_pcm, resample_pcm};
 
 pub const WSS_URL_BASE: &str =
     "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
-// Edge 155 is the primary Read Aloud endpoint; a real synthesis test
-// successfully received MP3 audio using the compatible v1 GEC signature.
-// The earlier endpoint remains a fallback when the modern connection fails.
-// Do not log authentication parameters or reuse captured browser credentials.
+// Edge 157's native Read Aloud uses the Sec-MS-GEC v2 CS64-SHA256 signature.
+// Verified locally against 5 independent requests captured from Edge itself.
+// Keep the previously working v1 route, then the legacy endpoint, as fallbacks.
+// Keep MP3 output unchanged: protocol/authentication migration is independent
+// from the browser's optional WebM/Opus synthesis configuration.
+// Never log authentication parameters or reuse captured browser credentials.
 const EDGE_READ_ALOUD_MODERN_URL: &str =
     "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1";
+const EDGE_READ_ALOUD_V2_GEC_VERSION: &str = "2-157.0.4341.42";
 const EDGE_READ_ALOUD_MODERN_GEC_VERSION: &str = "1-155.0.4283.45";
 const EDGE_READ_ALOUD_LEGACY_GEC_VERSION: &str = "1-132.0.2917.39";
+const EDGE_READ_ALOUD_V2_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0";
 const EDGE_READ_ALOUD_MODERN_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0";
 const EDGE_READ_ALOUD_LEGACY_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0";
 
 #[derive(Clone, Copy)]
 enum EdgeReadAloudRoute {
-    Legacy,
+    ModernV2,
     ModernCompatible,
+    Legacy,
 }
 
 impl EdgeReadAloudRoute {
     fn label(self) -> &'static str {
         match self {
+            Self::ModernV2 => "Edge 157 v2 (api.msedgeservices.com)",
+            Self::ModernCompatible => "Edge 155 v1 (api.msedgeservices.com)",
             Self::Legacy => "legacy (speech.platform.bing.com)",
-            Self::ModernCompatible => "Edge 155 (api.msedgeservices.com)",
         }
     }
 }
@@ -79,19 +85,28 @@ fn edge_read_aloud_request(
     route: EdgeReadAloudRoute,
     request_id: &str,
 ) -> Result<tungstenite::http::Request<()>, String> {
-    let gec = generate_sec_ms_gec();
+    let gec = match route {
+        EdgeReadAloudRoute::ModernV2 => crate::edge_gec_v2::generate_sec_ms_gec(),
+        EdgeReadAloudRoute::ModernCompatible | EdgeReadAloudRoute::Legacy => generate_sec_ms_gec(),
+    };
     let (url_base, key_name, gec_version, user_agent) = match route {
-        EdgeReadAloudRoute::Legacy => (
-            WSS_URL_BASE,
-            "TrustedClientToken",
-            EDGE_READ_ALOUD_LEGACY_GEC_VERSION,
-            EDGE_READ_ALOUD_LEGACY_USER_AGENT,
+        EdgeReadAloudRoute::ModernV2 => (
+            EDGE_READ_ALOUD_MODERN_URL,
+            "Ocp-Apim-Subscription-Key",
+            EDGE_READ_ALOUD_V2_GEC_VERSION,
+            EDGE_READ_ALOUD_V2_USER_AGENT,
         ),
         EdgeReadAloudRoute::ModernCompatible => (
             EDGE_READ_ALOUD_MODERN_URL,
             "Ocp-Apim-Subscription-Key",
             EDGE_READ_ALOUD_MODERN_GEC_VERSION,
             EDGE_READ_ALOUD_MODERN_USER_AGENT,
+        ),
+        EdgeReadAloudRoute::Legacy => (
+            WSS_URL_BASE,
+            "TrustedClientToken",
+            EDGE_READ_ALOUD_LEGACY_GEC_VERSION,
+            EDGE_READ_ALOUD_LEGACY_USER_AGENT,
         ),
     };
     let url_str = format!(
@@ -152,48 +167,48 @@ async fn connect_edge_read_aloud(
     request_id: &str,
     connect_timeout: Duration,
 ) -> Result<(EdgeReadAloudSocket, EdgeReadAloudRoute), String> {
-    let primary = EdgeReadAloudRoute::ModernCompatible;
-    match connect_edge_read_aloud_route(primary, request_id, connect_timeout).await {
-        Ok(ws) => {
-            crate::log_debug(&format!(
-                "Edge TTS: WebSocket connected (HTTP 101), endpoint={} [PRIMARY]",
-                primary.label()
-            ));
-            Ok((ws, primary))
-        }
-        Err(primary_err) => {
-            let backup = EdgeReadAloudRoute::Legacy;
-            crate::log_debug(&format!(
-                "Edge TTS: primary endpoint={} failed: {}; trying fallback={}",
-                primary.label(),
-                primary_err,
-                backup.label()
-            ));
-            match connect_edge_read_aloud_route(backup, request_id, connect_timeout).await {
-                Ok(ws) => {
+    // Try the exact Edge 157 v2 protocol first, then both proven older routes.
+    // The backoff/retry logic outside this function remains unchanged.
+    let routes = [
+        EdgeReadAloudRoute::ModernV2,
+        EdgeReadAloudRoute::ModernCompatible,
+        EdgeReadAloudRoute::Legacy,
+    ];
+    let mut failures = Vec::with_capacity(routes.len());
+    for (index, route) in routes.into_iter().enumerate() {
+        match connect_edge_read_aloud_route(route, request_id, connect_timeout).await {
+            Ok(ws) => {
+                let role = if index == 0 { "PRIMARY" } else { "FALLBACK" };
+                crate::log_debug(&format!(
+                    "Edge TTS: WebSocket connected (HTTP 101), endpoint={} [{}]",
+                    route.label(),
+                    role
+                ));
+                return Ok((ws, route));
+            }
+            Err(error) => {
+                // A 429 asks us to slow down. Trying another route immediately
+                // would make rate limiting worse; let the existing retry backoff work.
+                if is_edge_rate_limited_error(&error) {
                     crate::log_debug(&format!(
-                        "Edge TTS: WebSocket connected (HTTP 101), endpoint={} [FALLBACK]; primary failed: {}",
-                        backup.label(),
-                        primary_err
+                        "Edge TTS: rate-limited at endpoint={}; deferring retries",
+                        route.label()
                     ));
-                    Ok((ws, backup))
+                    return Err(error);
                 }
-                Err(backup_err) => {
-                    crate::log_debug(&format!(
-                        "Edge TTS: both endpoints rejected connection: primary={} error={}; fallback={} error={}",
-                        primary.label(),
-                        primary_err,
-                        backup.label(),
-                        backup_err
-                    ));
-                    Err(format!(
-                        "Edge 155: {}; legacy fallback: {}",
-                        primary_err, backup_err
-                    ))
-                }
+                crate::log_debug(&format!(
+                    "Edge TTS: endpoint={} failed: {}; trying next available route",
+                    route.label(),
+                    error
+                ));
+                failures.push(format!("{}: {}", route.label(), error));
             }
         }
     }
+    Err(format!(
+        "Edge TTS connection failed on all routes: {}",
+        failures.join("; ")
+    ))
 }
 
 pub const MAX_TTS_TEXT_LEN: usize = 3000;
@@ -11883,14 +11898,63 @@ mod google_audiobook_optimization_tests {
     #[test]
     fn edge_route_order_and_diagnostics_are_explicit() {
         assert_eq!(
+            EdgeReadAloudRoute::ModernV2.label(),
+            "Edge 157 v2 (api.msedgeservices.com)"
+        );
+        assert_eq!(
             EdgeReadAloudRoute::ModernCompatible.label(),
-            "Edge 155 (api.msedgeservices.com)"
+            "Edge 155 v1 (api.msedgeservices.com)"
         );
         assert_eq!(
             EdgeReadAloudRoute::Legacy.label(),
             "legacy (speech.platform.bing.com)"
         );
+        assert_eq!(EDGE_READ_ALOUD_V2_GEC_VERSION, "2-157.0.4341.42");
         assert_eq!(EDGE_READ_ALOUD_MODERN_GEC_VERSION, "1-155.0.4283.45");
+        let v2 = edge_read_aloud_request(
+            EdgeReadAloudRoute::ModernV2,
+            "0123456789abcdef0123456789abcdef",
+        )
+        .expect("v2 request");
+        let query = v2.uri().query().expect("v2 query");
+        let signature = query
+            .split('&')
+            .find_map(|param| param.strip_prefix("Sec-MS-GEC="))
+            .expect("v2 signature");
+        assert_eq!(signature.len(), 81);
+        assert_eq!(signature.as_bytes()[16], b'-');
+        assert!(
+            signature
+                .chars()
+                .filter(|c| *c != '-')
+                .all(|c| c.is_ascii_hexdigit())
+        );
+        assert!(query.contains("Sec-MS-GEC-Version=2-157.0.4341.42"));
+        assert!(query.contains("Ocp-Apim-Subscription-Key="));
+        assert!(
+            v2.headers()
+                .get("User-Agent")
+                .is_some_and(|h| h.to_str().is_ok_and(|s| s.contains("Edg/157.0.0.0")))
+        );
+        let old = edge_read_aloud_request(
+            EdgeReadAloudRoute::ModernCompatible,
+            "0123456789abcdef0123456789abcdef",
+        )
+        .expect("legacy v1 request");
+        let old_signature = old
+            .uri()
+            .query()
+            .expect("v1 query")
+            .split('&')
+            .find_map(|param| param.strip_prefix("Sec-MS-GEC="))
+            .expect("v1 signature");
+        assert_eq!(old_signature.len(), 64);
+        assert!(
+            old.uri()
+                .query()
+                .expect("v1 query")
+                .contains("Sec-MS-GEC-Version=1-155.0.4283.45")
+        );
     }
 
     #[test]

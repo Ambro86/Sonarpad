@@ -1,6 +1,6 @@
 # Catatan perubahan
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube dan SonarMusic: memperbaiki masalah pemutaran yang tidak dapat dilanjutkan setelah jeda panjang. Audio dan video dilanjutkan dari posisi tersimpan.
 

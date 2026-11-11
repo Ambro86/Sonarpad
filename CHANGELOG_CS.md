@@ -1,6 +1,6 @@
 # Přehled změn
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube a SonarMusic: opravena chyba, která bránila obnovení přehrávání po delší pauze. Zvuk a video pokračují od uložené pozice.
 

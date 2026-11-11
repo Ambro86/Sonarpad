@@ -942,7 +942,7 @@ def _generate_blocked_chunk_by_minutes(
 ):
     """Salvage a blocked three-minute chunk using independent one-minute clips.
 
-    Each minute is attempted once. A minute that remains PROHIBITED_CONTENT is
+    Each blocked minute is attempted twice. A minute that remains blocked is
     deliberately left without descriptions while successful minutes are kept.
     Returned timestamps are already absolute on the full-video timeline.
     """
@@ -1064,28 +1064,47 @@ def _generate_blocked_chunk_by_minutes(
                 end_offset_sec=local_minute_end,
                 trusted_prepared_video=True,
             )
-            response = gemini.generate_content_with_retry(
-                client,
-                model=model_name,
-                contents=[prompt_text, minute_video_part],
-                config=config_obj,
-                status_callback=status_update_callback,
-                prohibited_content_max_attempts=1,
-            )
-            gemini.save_raw_ai_output(
-                os.path.basename(video_path),
-                "blocked_chunk_minute_response",
-                response,
-                suffix=f"_chunk{chunk_number}_minute{minute_label}",
-            )
-            usage = gemini.log_token_usage(
-                f"Chunk_{chunk_number}_Minute_{minute_label}", response
-            )
-            if usage:
-                recovered_usage.append(usage)
-            response_text, success = gemini.process_gemini_response(
-                response, status_update_callback
-            )
+            # Retry only this minute, reusing the same upload and prompt.
+            for blocked_attempt in range(2):
+                try:
+                    response = gemini.generate_content_with_retry(
+                        client,
+                        model=model_name,
+                        contents=[prompt_text, minute_video_part],
+                        config=config_obj,
+                        status_callback=status_update_callback,
+                        prohibited_content_max_attempts=1,
+                    )
+                    gemini.save_raw_ai_output(
+                        os.path.basename(video_path),
+                        "blocked_chunk_minute_response",
+                        response,
+                        suffix=f"_chunk{chunk_number}_minute{minute_label}",
+                    )
+                    usage = gemini.log_token_usage(
+                        f"Chunk_{chunk_number}_Minute_{minute_label}", response
+                    )
+                    if usage:
+                        recovered_usage.append(usage)
+                    response_text, success = gemini.process_gemini_response(
+                        response, status_update_callback
+                    )
+                    break
+                except ContentBlockedError as exc:
+                    reason = str(getattr(exc, "reason", "")).upper()
+                    if (reason not in ("PROHIBITED_CONTENT", "SAFETY")
+                            or blocked_attempt == 1
+                            or (reason == "PROHIBITED_CONTENT"
+                                and minute_duration > _BLOCKED_CHUNK_FALLBACK_DURATION_SEC)):
+                        raise
+                    app_logger.warning(
+                        "Blocked chunk %d minute %d returned %s; retrying once.",
+                        chunk_number, minute_label, reason,
+                    )
+                    status_update_callback(
+                        _("Retrying %(what)s (attempt %(attempt)d)…")
+                        % {"what": _("Gemini request"), "attempt": 2}
+                    )
             if not success or not response_text:
                 app_logger.warning(
                     "Blocked chunk %d fallback minute %d returned no text; "
@@ -1136,9 +1155,11 @@ def _generate_blocked_chunk_by_minutes(
                 chunk_number, minute_label, len(normalized),
             )
         except ContentBlockedError as exc:
-            if str(getattr(exc, "reason", "")).upper() != "PROHIBITED_CONTENT":
+            if str(getattr(exc, "reason", "")).upper() not in ("PROHIBITED_CONTENT", "SAFETY"):
                 raise
-            if clip_ranges is not None and minute_duration > _BLOCKED_CHUNK_FALLBACK_DURATION_SEC:
+            if (str(getattr(exc, "reason", "")).upper() == "PROHIBITED_CONTENT"
+                    and clip_ranges is not None
+                    and minute_duration > _BLOCKED_CHUNK_FALLBACK_DURATION_SEC):
                 # Retry only this custom segment through the existing minute loop.
                 # Keep the original chunk origin for prepared-file offsets.
                 subranges = []
@@ -1158,7 +1179,7 @@ def _generate_blocked_chunk_by_minutes(
                 )
                 continue
             app_logger.warning(
-                "Blocked chunk %d fallback minute %d is still prohibited; "
+                "Blocked chunk %d fallback minute %d is still blocked; "
                 "continuing with original audio and no descriptions for "
                 "%.3f-%.3fs.",
                 chunk_number, minute_label, minute_start, minute_end,

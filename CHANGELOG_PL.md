@@ -1,6 +1,6 @@
 # Dziennik zmian
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube i SonarMusic: naprawiono błąd uniemożliwiający wznowienie odtwarzania po dłuższej pauzie. Dźwięk i wideo są wznawiane od zapisanej pozycji.
 

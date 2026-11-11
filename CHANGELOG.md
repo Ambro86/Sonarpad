@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube and SonarMusic: fixed playback failing to resume after a long pause. Audio and video resume from the saved position.
 

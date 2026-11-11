@@ -1,6 +1,6 @@
 # Nhật ký thay đổi
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube và SonarMusic: sửa lỗi không thể tiếp tục phát sau khi tạm dừng lâu. Âm thanh và video tiếp tục từ vị trí đã lưu.
 

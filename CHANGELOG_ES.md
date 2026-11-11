@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube y SonarMusic: corregido un bloqueo que impedía reanudar la reproducción después de una pausa prolongada. El audio y el vídeo continúan desde la posición guardada.
 

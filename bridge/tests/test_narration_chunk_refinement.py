@@ -75,7 +75,7 @@ class NarrationRestartTests(unittest.TestCase):
             stack.enter_context(mock.patch.object(ad.config_model, "get_setting", side_effect=settings.get))
             prepare = stack.enter_context(mock.patch.object(ad, "_prepare_video_for_gemini", return_value=("part", None)))
             generate = stack.enter_context(mock.patch.object(ad.gemini, "generate_content_with_retry",
-                side_effect=[object(), blocked, object(), blocked, object(), object()]))
+                side_effect=[object(), blocked, object(), blocked, blocked, object(), object()]))
             stack.enter_context(mock.patch.object(ad.gemini, "process_gemini_response", return_value=("{}", True)))
             stack.enter_context(mock.patch.object(ad, "_parse_with_optional_json_repair",
                 return_value=([("00:01", "00:02", "Scena.")], [])))
@@ -94,7 +94,7 @@ class NarrationRestartTests(unittest.TestCase):
                               for c in prepare.call_args_list],
                              [(0,25),(25,160),(25,85),(85,145),(145,160),(160,180)])
             self.assertEqual([d[0] for d in descriptions], [391,416,536,551])
-            self.assertEqual(generate.call_count, 6)
+            self.assertEqual(generate.call_count, 7)
             self.assertEqual(original_ranges, [(390,415),(415,550),(550,570)])
             self.assertTrue(all(c.args[1] == "existing.mkv" for c in prepare.call_args_list))
 

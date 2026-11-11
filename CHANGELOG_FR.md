@@ -1,6 +1,6 @@
 # Journal des modifications
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube et SonarMusic : correction d’un blocage empêchant la reprise de la lecture après une pause prolongée. L’audio et la vidéo reprennent à la position enregistrée.
 

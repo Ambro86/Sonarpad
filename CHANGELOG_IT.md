@@ -1,6 +1,6 @@
 # Changelog
 
-Version 0.9.27 – 2026-11-07
+Version 0.9.27 – 2026-11-11
 
 1. SonarTube e SonarMusic: corretto un blocco della riproduzione dopo una pausa prolungata. Audio e video riprendono dalla posizione salvata.
 

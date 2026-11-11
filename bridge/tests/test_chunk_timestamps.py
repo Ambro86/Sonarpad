@@ -137,13 +137,31 @@ class ChunkTimestampTests(unittest.TestCase):
         self.assertAlmostEqual(result[0][1], 427.0)
 
     def test_blocked_chunk_keeps_successful_minutes_and_skips_blocked_one(self):
+        self._check_blocked_minute("PROHIBITED_CONTENT")
+
+    def test_safety_minute_preserves_neighbors_after_two_attempts(self):
+        self._check_blocked_minute("SAFETY")
+
+    def test_safety_minute_recovers_on_second_attempt(self):
+        self._check_blocked_minute("SAFETY", recover=True)
+
+    def _check_blocked_minute(self, reason, recover=False):
         responses = [object(), gemini_helpers.ContentBlockedError(
-            "blocked", reason="PROHIBITED_CONTENT"
+            "blocked", reason=reason
+        ), object() if recover else gemini_helpers.ContentBlockedError(
+            "blocked", reason=reason
         ), object()]
+        processed = [("{}", True)] * len(responses)
+        if reason == "SAFETY":
+            processed = [entry if isinstance(entry, Exception) else ("{}", True)
+                         for entry in responses]
+            responses = [object() for _ in responses]
         parsed = [
             ([('00:10', '00:12', 'Prima scena.')], []),
             ([('00:05', '00:07', 'Terza scena.')], []),
         ]
+        if recover:
+            parsed.insert(1, ([("00:02", "00:04", "Recuperata.")], []))
         settings = {
             "application_language": "it",
             "enable_character_glossary": False,
@@ -166,7 +184,7 @@ class ChunkTimestampTests(unittest.TestCase):
             ) as generate,
             mock.patch(
                 "audio_describer.core.audio_describer.gemini.process_gemini_response",
-                return_value=("{}", True),
+                side_effect=processed,
             ),
             mock.patch(
                 "audio_describer.core.audio_describer._parse_with_optional_json_repair",
@@ -211,19 +229,19 @@ class ChunkTimestampTests(unittest.TestCase):
                 status_update_callback=statuses.append,
             )
 
-        self.assertEqual(descriptions, [
-            (10.0, 12.0, "Prima scena."),
-            (125.0, 127.0, "Terza scena."),
-        ])
+        expected = [(10.0, 12.0, "Prima scena."), (125.0, 127.0, "Terza scena.")]
+        if recover:
+            expected.insert(1, (62.0, 64.0, "Recuperata."))
+        self.assertEqual(descriptions, expected)
         self.assertEqual(glossary, [])
         self.assertEqual(usage, [])
-        self.assertEqual(generate.call_count, 3)
+        self.assertEqual(generate.call_count, 4)
         self.assertFalse(any("minute 4" in status for status in statuses))
         self.assertTrue(all(
             call.kwargs["prohibited_content_max_attempts"] == 1
             for call in generate.call_args_list
         ))
-        self.assertTrue(any("original audio" in status for status in statuses))
+        self.assertEqual(any("original audio" in status for status in statuses), not recover)
 
     def test_gemini_colon_milliseconds_preserve_exact_timestamp(self):
         self.assertAlmostEqual(_mmss_to_total_seconds("01:13:473"), 73.473)
