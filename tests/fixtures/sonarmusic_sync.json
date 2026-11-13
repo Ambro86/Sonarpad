@@ -1,0 +1,64 @@
+{
+  "sonarmusic": [
+    {
+      "id": "song:abcdefghijk",
+      "data": {
+        "kind": "song",
+        "id": "abcdefghijk",
+        "title": "Musica song",
+        "video_id": "abcdefghijk",
+        "browse_id": "",
+        "browse_params": "",
+        "artist": "Artista",
+        "duration": "3:10",
+        "subtitle": "Catalogo",
+        "available": true
+      }
+    },
+    {
+      "id": "album:MPREalbum",
+      "data": {
+        "kind": "album",
+        "id": "MPREalbum",
+        "title": "Musica album",
+        "video_id": "",
+        "browse_id": "MPREalbum",
+        "browse_params": "",
+        "artist": "Artista",
+        "duration": "",
+        "subtitle": "Catalogo",
+        "available": true
+      }
+    },
+    {
+      "id": "artist:UCartist",
+      "data": {
+        "kind": "artist",
+        "id": "UCartist",
+        "title": "Musica artist",
+        "video_id": "",
+        "browse_id": "UCartist",
+        "browse_params": "",
+        "artist": "Artista",
+        "duration": "",
+        "subtitle": "Catalogo",
+        "available": true
+      }
+    },
+    {
+      "id": "playlist:VLPLmix:mix-params",
+      "data": {
+        "kind": "playlist",
+        "id": "VLPLmix",
+        "title": "Musica playlist",
+        "video_id": "",
+        "browse_id": "VLPLmix",
+        "browse_params": "mix-params",
+        "artist": "Artista",
+        "duration": "",
+        "subtitle": "Catalogo",
+        "available": true
+      }
+    }
+  ]
+}

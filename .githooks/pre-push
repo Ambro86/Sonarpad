@@ -1,14 +1,26 @@
 #!/bin/sh
 set -e
 
-echo '+cargo test --all'
-cargo test --all
+if ! command -v rustup >/dev/null 2>&1; then
+  echo "ERROR: rustup is required to update Rust stable before pushing." >&2
+  exit 1
+fi
 
-echo '+cargo fmt --all -- --check'
-cargo fmt --all -- --check
+echo '[Pre-push] Checking and updating Rust stable to match GitHub CI...'
+if ! rustup update stable --no-self-update; then
+  echo "ERROR: Rust stable update failed. Check the connection and retry the push." >&2
+  exit 1
+fi
 
-echo '+cargo clippy --all'
-cargo clippy --all
+# Use the updated stable toolchain even if a local override is configured.
+echo '+cargo +stable test --all'
+cargo +stable test --all
+
+echo '+cargo +stable fmt --all -- --check'
+cargo +stable fmt --all -- --check
+
+echo '+cargo +stable clippy --all'
+cargo +stable clippy --all
 
 echo '+py bridge/run_audio_description_tests.py'
 py bridge/run_audio_description_tests.py

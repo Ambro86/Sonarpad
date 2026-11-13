@@ -8,6 +8,10 @@ Version 0.9.28 – 2026-11-13
 
 3. Terjemahan teks: integrasi DeepL yang tidak berfungsi telah dihapus. Terjemahan kini hanya menggunakan Google Translate, seperti di iPhone.
 
+4. Sinkronisasi cloud: ditambahkan favorit SonarMusic antara Windows, Mac, dan perangkat seluler, termasuk lagu, album, artis, dan daftar putar. Daftar yang ada digabungkan dan penghapusan eksplisit disinkronkan.
+
+5. Podcast: markah otomatis dan posisi pemutaran kini disinkronkan antara Windows, Mac, dan perangkat seluler, termasuk episode dari cache Windows. Posisi lama tidak menimpa posisi terbaru; penyelesaian pemutaran dan penghapusan markah juga disinkronkan.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube dan SonarMusic: memperbaiki masalah pemutaran yang tidak dapat dilanjutkan setelah jeda panjang. Audio dan video dilanjutkan dari posisi tersimpan.

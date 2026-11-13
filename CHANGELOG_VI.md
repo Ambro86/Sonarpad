@@ -8,6 +8,10 @@ Version 0.9.28 – 2026-11-13
 
 3. Dịch văn bản: đã loại bỏ tích hợp DeepL không còn hoạt động. Bản dịch hiện chỉ sử dụng Google Translate, giống như trên iPhone.
 
+4. Đồng bộ đám mây: thêm đồng bộ mục yêu thích SonarMusic giữa Windows, Mac và thiết bị di động, bao gồm bài hát, album, nghệ sĩ và danh sách phát. Các danh sách hiện có được hợp nhất và thao tác xóa rõ ràng được đồng bộ.
+
+5. Podcast: dấu trang tự động và vị trí nghe được đồng bộ giữa Windows, Mac và thiết bị di động, kể cả các tập phát từ bộ nhớ đệm Windows. Vị trí cũ không ghi đè vị trí mới; việc nghe xong và xóa dấu trang cũng được đồng bộ.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube và SonarMusic: sửa lỗi không thể tiếp tục phát sau khi tạm dừng lâu. Âm thanh và video tiếp tục từ vị trí đã lưu.

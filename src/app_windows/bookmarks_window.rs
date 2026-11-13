@@ -589,7 +589,10 @@ pub fn delete_selected(hwnd: HWND) {
                     .nth(sel as usize)
                     .map(|(index, _)| index)
             {
-                list.remove(index);
+                let removed = list.remove(index);
+                if removed.automatic {
+                    crate::reset_portable_podcast_bookmark(state, &storage_key);
+                }
                 if persist_to_disk {
                     crate::bookmarks::save_bookmarks(&state.bookmarks);
                 }

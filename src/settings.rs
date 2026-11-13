@@ -1008,6 +1008,10 @@ pub struct AppSettings {
     pub editor_up_down_moves_to_line_start: bool,
     #[serde(default)]
     pub automatic_bookmark: bool,
+    #[serde(default)]
+    pub podcast_bookmarks: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub podcast_cache_sources: std::collections::HashMap<String, String>,
     pub show_voice_panel: bool,
     pub show_favorite_panel: bool,
     pub check_updates_on_startup: bool,
@@ -1510,6 +1514,8 @@ impl Default for AppSettings {
             editor_escape_closes_window: false,
             editor_up_down_moves_to_line_start: false,
             automatic_bookmark: false,
+            podcast_bookmarks: Vec::new(),
+            podcast_cache_sources: std::collections::HashMap::new(),
             show_voice_panel: false,
             show_favorite_panel: false,
             check_updates_on_startup: true,

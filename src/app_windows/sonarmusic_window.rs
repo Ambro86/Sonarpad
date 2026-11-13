@@ -249,10 +249,14 @@ fn refresh_favorites(s: &State, selected_index: usize) {
         }
     }
 }
-fn persist_favorites(s: &State) {
+fn persist_favorites(s: &State, explicit_removal: bool) {
     if let Some(settings) = with_state(s.parent, |state| {
+        let before = state.settings.clone();
         state.settings.sonarmusic_favorites =
             s.favorites.iter().map(music::favorite_value).collect();
+        if explicit_removal {
+            crate::settings::record_explicit_cloud_deletions(&before, &state.settings);
+        }
         state.settings.clone()
     }) {
         crate::settings::save_settings(settings);
@@ -514,7 +518,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) ->
                                     music::remove_favorite(&mut values, &item);
                                 }
                                 s.favorites = music::favorite_items(&values);
-                                persist_favorites(s);
+                                persist_favorites(s, id != ADD_FAVORITE);
                                 refresh_favorites(s, index);
                                 set(
                                     s.status,

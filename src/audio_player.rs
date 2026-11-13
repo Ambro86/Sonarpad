@@ -1211,16 +1211,21 @@ pub fn start_audiobook_playback(hwnd: HWND, path: &Path) {
         crate::menu::update_playback_menu(hwnd, true);
 
         let (bookmark_pos, speed, pitch, volume, mix_export) = with_state(hwnd, |state| {
-            let pos = state
-                .bookmarks
-                .files
-                .get(&path_buf.to_string_lossy().to_string())
-                .and_then(|list| {
-                    list.iter()
-                        .rfind(|bookmark| bookmark.is_visible(state.settings.automatic_bookmark))
-                })
-                .map(|bm| bm.position)
-                .unwrap_or(0);
+            let pos = crate::portable_podcast_position(state, &path_buf)
+                .map(|v| v as i32)
+                .unwrap_or_else(|| {
+                    state
+                        .bookmarks
+                        .files
+                        .get(&path_buf.to_string_lossy().to_string())
+                        .and_then(|list| {
+                            list.iter().rfind(|bookmark| {
+                                bookmark.is_visible(state.settings.automatic_bookmark)
+                            })
+                        })
+                        .map(|bm| bm.position)
+                        .unwrap_or(0)
+                });
             (
                 pos,
                 state.settings.audiobook_playback_speed,
@@ -1253,6 +1258,7 @@ pub fn start_audiobook_playback(hwnd: HWND, path: &Path) {
 }
 
 pub fn toggle_audiobook_pause(hwnd: HWND) {
+    crate::save_active_portable_podcast_bookmark(hwnd);
     enum ToggleAction {
         StartFromDocument {
             path: PathBuf,
@@ -1559,6 +1565,7 @@ pub fn toggle_audiobook_pause(hwnd: HWND) {
 }
 
 pub fn pause_audiobook_if_playing(hwnd: HWND) -> bool {
+    crate::save_active_portable_podcast_bookmark(hwnd);
     with_state(hwnd, |state| {
         let player = state.active_audiobook.as_mut()?;
         if player.is_paused || player.output.is_stopped() {
@@ -1789,6 +1796,7 @@ pub fn seek_audiobook_to(hwnd: HWND, seconds: u64) -> Result<(), String> {
 
 #[track_caller]
 pub fn stop_audiobook_playback(hwnd: HWND) {
+    crate::save_active_portable_podcast_bookmark(hwnd);
     {
         crate::telemetry::set_audio_playing(false);
         let caller = std::panic::Location::caller();

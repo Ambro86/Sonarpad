@@ -8,6 +8,10 @@ Version 0.9.28 – 2026-11-13
 
 3. Teksto vertimas: pašalinta nebeveikianti DeepL integracija. Vertimui dabar naudojama tik Google Translate, kaip ir iPhone.
 
+4. Debesijos sinchronizavimas: pridėtas SonarMusic mėgstamiausių sinchronizavimas tarp Windows, Mac ir mobiliųjų įrenginių, įskaitant dainas, albumus, atlikėjus ir grojaraščius. Esami sąrašai sujungiami, o aiškiai atlikti pašalinimai sinchronizuojami.
+
+5. Tinklalaidės: automatinės žymės ir klausymo vieta sinchronizuojamos tarp Windows, Mac ir mobiliųjų įrenginių, taip pat grojant epizodus iš Windows podėlio. Senesnės vietos neperrašo naujesnių; atkūrimo pabaiga ir žymių pašalinimas taip pat sinchronizuojami.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube ir SonarMusic: ištaisyta klaida, dėl kurios po ilgos pauzės nepavykdavo tęsti atkūrimo. Garsas ir vaizdas atkuriami nuo išsaugotos vietos.

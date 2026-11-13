@@ -243,9 +243,45 @@ pub fn youtube_url(input: &str) -> String {
     }
     format!("https://www.youtube.com{}", u.path().trim_end_matches('/'))
 }
+const MUSIC_FIELDS: &[&str] = &[
+    "kind",
+    "id",
+    "title",
+    "video_id",
+    "browse_id",
+    "browse_params",
+    "artist",
+    "duration",
+    "subtitle",
+    "available",
+];
+fn music_id(data: &Value) -> String {
+    let params = text(data, "browse_params");
+    let base = format!("{}:{}", text(data, "kind"), text(data, "id"));
+    if params.is_empty() {
+        base
+    } else {
+        format!("{base}:{params}")
+    }
+}
+fn music_data(value: &Value) -> Value {
+    let mut data = json!({});
+    for key in MUSIC_FIELDS {
+        data[*key] = if *key == "available" {
+            json!(value[*key] != false)
+        } else {
+            json!(text(value, key))
+        };
+    }
+    data
+}
 pub fn export(s: &Value, mac: bool) -> Value {
     let lang = language(s, mac);
     let mut result = json!({
+        "podcast_bookmarks":list(&s["podcast_bookmarks"]).iter().map(|v| item(text(v,"url"), v.clone())).collect::<Vec<_>>(),
+        "sonarmusic":list(&s["sonarmusic_favorites"]).iter().filter(|v| !text(v,"id").is_empty()).map(|v| {
+            let data = music_data(v); item(&music_id(&data), data)
+        }).collect::<Vec<_>>(),
         "radio":list(&s["radio_favorites"]).iter().map(|v| item(text(v,"stream_url"),json!({"name":v["name"],"stream_url":v["stream_url"],"language_code":v["language_code"]}))).collect::<Vec<_>>(),
         "tv":list(&s["tv_favorites"]).iter().map(|v| item(&text(v,"name").trim().to_lowercase(),json!({"name":v["name"]}))).collect::<Vec<_>>(),
         "podcasts":list(&s["podcast_sources"]).iter().map(|v| item(text(v,"url"),json!({"title":v["title"],"url":v["url"]}))).collect::<Vec<_>>(),
@@ -322,6 +358,8 @@ pub fn project(remote: &Value, s: &Value, mac: bool) -> Result<Value, String> {
         ("tv", &["name"]),
         ("podcasts", &["title", "url"]),
         ("sonartube", &["title", "url"]),
+        ("sonarmusic", MUSIC_FIELDS),
+        ("podcast_bookmarks", crate::podcast_bookmarks::FIELDS),
         ("news_sources", &["language", "title", "url", "folder_path"]),
         ("news_folders", &["language", "path"]),
         ("news_articles", &["title", "link", "description"]),
@@ -361,6 +399,16 @@ pub fn project(remote: &Value, s: &Value, mac: bool) -> Result<Value, String> {
                         {
                             return Err("invalid_response".into());
                         }
+                    } else if name == "sonarmusic" && *key == "available" {
+                        if !value.is_boolean() {
+                            return Err("invalid_response".into());
+                        }
+                    } else if name == "podcast_bookmarks"
+                        && ["position_seconds", "updated_at"].contains(key)
+                    {
+                        if value.as_u64().is_none() {
+                            return Err("invalid_response".into());
+                        }
                     } else if !value.is_string() {
                         return Err("invalid_response".into());
                     }
@@ -372,6 +420,16 @@ pub fn project(remote: &Value, s: &Value, mac: bool) -> Result<Value, String> {
                         }
                     }
                     data[*key] = value.clone();
+                }
+                if name == "sonarmusic"
+                    && (text(&data, "id").is_empty()
+                        || text(&data, "kind").is_empty()
+                        || music_id(&data) != id)
+                {
+                    return Err("invalid_response".into());
+                }
+                if name == "podcast_bookmarks" && !crate::podcast_bookmarks::valid(&data, id) {
+                    return Err("invalid_response".into());
                 }
                 rows.push(item(id, data));
             }
@@ -441,6 +499,27 @@ pub fn apply(s: &mut Value, state: &Value, mac: bool) -> Result<(), String> {
         }
         s[field] = next.into();
     }
+    s["podcast_bookmarks"] = list(&state["podcast_bookmarks"])
+        .iter()
+        .map(|r| r["data"].clone())
+        .collect::<Vec<_>>()
+        .into();
+    let old_music = list(&s["sonarmusic_favorites"]);
+    s["sonarmusic_favorites"] = list(&state["sonarmusic"])
+        .iter()
+        .map(|row| {
+            let mut value = old_music
+                .iter()
+                .find(|v| music_id(v) == text(row, "id"))
+                .cloned()
+                .unwrap_or_else(|| json!({}));
+            for key in MUSIC_FIELDS {
+                value[*key] = row["data"][*key].clone();
+            }
+            value
+        })
+        .collect::<Vec<_>>()
+        .into();
     let lang = language(s, mac);
     let old = list(&s[source_field(mac)]);
     let mut next: Vec<Value> = old
@@ -728,6 +807,14 @@ pub fn deletion_review_text(review: &Value, italian: bool) -> String {
                 "tv" => "TV",
                 "podcasts" => "Podcast",
                 "sonartube" => "SonarTube",
+                "sonarmusic" => "SonarMusic",
+                "podcast_bookmarks" => {
+                    if italian {
+                        "Segnalibri podcast"
+                    } else {
+                        "Podcast bookmarks"
+                    }
+                }
                 "news_sources" => {
                     if italian {
                         "Fonti notizie"
@@ -782,6 +869,20 @@ pub fn merge(remote: &Value, base: &Value, local: &Value) -> Value {
             for row in &after {
                 let old = before.iter().find(|b| b["id"] == row["id"]);
                 let pos = current.iter().position(|v| v["id"] == row["id"]);
+                // A resume point is atomic; delayed/offline devices must not rewind it.
+                if name == "podcast_bookmarks" {
+                    if let Some(i) = pos {
+                        if old != Some(row)
+                            && row["data"]["updated_at"].as_u64().unwrap_or(0)
+                                > current[i]["data"]["updated_at"].as_u64().unwrap_or(0)
+                        {
+                            current[i] = row.clone();
+                        }
+                    } else if old.is_none() {
+                        current.push(row.clone());
+                    }
+                    continue;
+                }
                 match (old, pos) {
                     (Some(b), Some(i)) => {
                         if let Some(fields) = row["data"].as_object() {
@@ -1230,6 +1331,83 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn podcast_resume_wire_round_trip_and_private_cache() {
+        let wire: Value = serde_json::from_str(include_str!(
+            "../tests/fixtures/podcast_bookmarks_sync.json"
+        ))
+        .unwrap();
+        for mac in [false, true] {
+            let mut settings = json!({"podcast_cache_sources":{"C:\\cache\\random.mp3":"https://podcast.example/episode.mp3?episode=1"}});
+            let private_cache = settings["podcast_cache_sources"].clone();
+            apply(&mut settings, &wire, mac).unwrap();
+            assert_eq!(
+                export(&settings, mac)["podcast_bookmarks"],
+                wire["podcast_bookmarks"]
+            );
+            assert!(
+                export(&settings, mac)
+                    .get("podcast_cache_sources")
+                    .is_none()
+            );
+            assert_eq!(settings["podcast_cache_sources"], private_cache);
+            let rows = list(&settings["podcast_bookmarks"]);
+            assert_eq!(
+                crate::podcast_bookmarks::position(
+                    &rows,
+                    "https://podcast.example/episode.mp3?episode=1"
+                ),
+                Some(123)
+            );
+            assert_eq!(
+                crate::podcast_bookmarks::position(
+                    &rows,
+                    "https://podcast.example/episode.mp3?episode=2"
+                ),
+                Some(456)
+            );
+            apply(&mut settings, &json!({"radio":[]}), mac).unwrap();
+            assert_eq!(list(&settings["podcast_bookmarks"]), rows);
+            let before = settings.clone();
+            let mut invalid = wire.clone();
+            invalid["podcast_bookmarks"][0]["data"]["position_seconds"] = json!(-1);
+            assert!(apply(&mut settings, &invalid, mac).is_err());
+            assert_eq!(settings, before);
+        }
+    }
+
+    #[test]
+    fn podcast_resume_conflicts_keep_latest_atomic_point_including_reset() {
+        let base: Value = serde_json::from_str(include_str!(
+            "../tests/fixtures/podcast_bookmarks_sync.json"
+        ))
+        .unwrap();
+        let mut older = base.clone();
+        older["podcast_bookmarks"][0]["data"]["position_seconds"] = json!(180);
+        older["podcast_bookmarks"][0]["data"]["updated_at"] = json!(1794564200000u64);
+        let mut latest = base.clone();
+        latest["podcast_bookmarks"][0]["data"]["position_seconds"] = json!(0);
+        latest["podcast_bookmarks"][0]["data"]["updated_at"] = json!(1794564300000u64);
+        for initial in [&base, &json!({})] {
+            assert_eq!(
+                merge(&latest, initial, &older)["podcast_bookmarks"],
+                latest["podcast_bookmarks"]
+            );
+            assert_eq!(
+                merge(&older, initial, &latest)["podcast_bookmarks"],
+                latest["podcast_bookmarks"]
+            );
+        }
+        assert_eq!(
+            merge(&latest, &base, &base)["podcast_bookmarks"],
+            latest["podcast_bookmarks"]
+        );
+        assert_eq!(
+            merge(&latest, &json!({}), &json!({"radio":[]}))["podcast_bookmarks"],
+            latest["podcast_bookmarks"]
+        );
+    }
+
     use super::*;
     #[test]
     fn automatic_schedule_batches_retries_and_periodically_pulls() {
@@ -1490,6 +1668,33 @@ mod tests {
         assert_eq!(win["podcast_sources"][0]["cache"]["etag"], "local");
         assert_eq!(win["tv_favorites"][0]["url"], "https://example.invalid/tv");
         assert_eq!(win["stream_favorites"].as_array().map(Vec::len), Some(2));
+    }
+    #[test]
+    fn sonarmusic_shared_wire_round_trip_and_omitted_scope() {
+        let wire: Value =
+            serde_json::from_str(include_str!("../tests/fixtures/sonarmusic_sync.json")).unwrap();
+        for mac in [false, true] {
+            let mut settings =
+                json!({"sonarmusic_favorites":[], "sonarmusic_history":[{"id":"local-history"}]});
+            apply(&mut settings, &wire, mac).unwrap();
+            assert_eq!(export(&settings, mac)["sonarmusic"], wire["sonarmusic"]);
+            assert_eq!(
+                settings["sonarmusic_favorites"].as_array().unwrap().len(),
+                4
+            );
+            assert_eq!(
+                settings["sonarmusic_favorites"][3]["browse_params"],
+                "mix-params"
+            );
+            assert_eq!(settings["sonarmusic_history"][0]["id"], "local-history");
+            apply(&mut settings, &json!({"radio":[]}), mac).unwrap();
+            assert_eq!(export(&settings, mac)["sonarmusic"], wire["sonarmusic"]);
+            let before = settings.clone();
+            let mut invalid = wire.clone();
+            invalid["sonarmusic"][0]["id"] = json!("wrong");
+            assert!(apply(&mut settings, &invalid, mac).is_err());
+            assert_eq!(settings, before);
+        }
     }
     #[test]
     fn offline_deletion_wins_and_new_item_survives() {

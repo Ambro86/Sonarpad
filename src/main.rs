@@ -30,6 +30,7 @@ mod watchdog;
 use editor_manager::Document;
 use settings::*;
 mod bookmarks;
+mod podcast_bookmarks;
 use bookmarks::*;
 mod edge_gec_v2;
 mod tts_engine;
@@ -4721,6 +4722,9 @@ fn is_sonarmusic_bookmark(hwnd: HWND, path: Option<&Path>) -> bool {
 fn saved_audio_bookmark_position_secs(hwnd: HWND, path: &Path, title: Option<&str>) -> u64 {
     with_state(hwnd, |state| {
         let path_key = path.to_string_lossy().to_string();
+        if let Some(seconds) = portable_podcast_position(state, path) {
+            return seconds;
+        }
         if let Some((url, seconds)) = &state.pending_stream_bookmark
             && same_bookmark_stream_url(&path_key, url)
         {
@@ -10755,6 +10759,7 @@ pub(crate) struct AppState {
     active_podcast_title: Option<String>,
     active_podcast_episode_title: Option<String>,
     active_podcast_episode_cache: Option<PathBuf>,
+    podcast_bookmark_positions: std::collections::HashMap<String, u64>,
     active_podcast_episode_from_rai: RaiAudioOrigin,
     raiplay_live_audio_variants: Vec<RaiPlayLiveAudioVariant>,
     active_mpv_session: Option<MpvPlaybackSession>,
@@ -13003,6 +13008,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     active_podcast_title: None,
                     active_podcast_episode_title: None,
                     active_podcast_episode_cache: None,
+                    podcast_bookmark_positions: std::collections::HashMap::new(),
                     active_podcast_episode_from_rai: RaiAudioOrigin::None,
                     raiplay_live_audio_variants: Vec::new(),
                     active_mpv_session: None,
@@ -13551,6 +13557,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
             }
             WM_TIMER => {
                 if wparam.0 == app_windows::cloud_sync_window::TIMER {
+                    save_active_portable_podcast_bookmark(hwnd);
                     app_windows::cloud_sync_window::tick(hwnd);
                     return LRESULT(0);
                 }
@@ -14057,6 +14064,12 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 }
                 let payload = Box::from_raw(ptr);
                 close_podcast_play_progress_window(hwnd);
+                prepare_portable_podcast_bookmark(
+                    hwnd,
+                    &payload.cache_path,
+                    &payload.url,
+                    payload.title.as_deref().unwrap_or(&payload.url),
+                );
                 editor_manager::open_document(hwnd, &payload.cache_path);
                 if payload.prefer_title_for_document
                     && let Some(title) = podcast_episode_display_title(
@@ -23111,6 +23124,148 @@ fn clear_automatic_bookmark_for_storage_key(
     removed
 }
 
+// Keep the existing local player/bookmark machinery; only its portable identity
+// and synchronized resume position are added here.
+pub(crate) fn portable_podcast_position(state: &AppState, path: &Path) -> Option<u64> {
+    if !state.settings.automatic_bookmark {
+        return None;
+    }
+    let url = state
+        .settings
+        .podcast_cache_sources
+        .get(path.to_string_lossy().as_ref())?;
+    podcast_bookmarks::position(&state.settings.podcast_bookmarks, url)
+}
+
+pub(crate) fn reset_portable_podcast_bookmark(state: &mut AppState, key: &str) {
+    let Some(url) = state.settings.podcast_cache_sources.get(key).cloned() else {
+        return;
+    };
+    let title = state
+        .settings
+        .podcast_bookmarks
+        .iter()
+        .find(|r| r["url"] == url)
+        .and_then(|r| r["title"].as_str())
+        .unwrap_or(&url)
+        .to_string();
+    if podcast_bookmarks::save(&mut state.settings.podcast_bookmarks, &url, &title, 0) {
+        settings::save_settings(state.settings.clone());
+    }
+    state.bookmark_cleanup_suppressed.insert(key.to_string());
+}
+
+fn prepare_portable_podcast_bookmark(hwnd: HWND, path: &Path, url: &str, title: &str) {
+    with_state(hwnd, |state| {
+        let key = path.to_string_lossy().to_string();
+        state
+            .settings
+            .podcast_cache_sources
+            .insert(key.clone(), url.to_string());
+        if state.settings.automatic_bookmark {
+            let saved = podcast_bookmarks::position(&state.settings.podcast_bookmarks, url);
+            if let Some(seconds) = saved {
+                let list = state.bookmarks.files.entry(key.clone()).or_default();
+                list.retain(|v| !v.automatic);
+                if seconds > 0 {
+                    list.push(Bookmark::automatic(
+                        seconds as i32,
+                        title.to_string(),
+                        Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                    ));
+                }
+                save_bookmarks(&state.bookmarks);
+            } else {
+                let seconds = state
+                    .bookmarks
+                    .files
+                    .get(&key)
+                    .and_then(|rows| rows.iter().find(|r| r.automatic))
+                    .map(|r| r.position.max(0) as u64)
+                    .unwrap_or(0);
+                podcast_bookmarks::save(&mut state.settings.podcast_bookmarks, url, title, seconds);
+                if let Some(row) = state
+                    .settings
+                    .podcast_bookmarks
+                    .iter_mut()
+                    .find(|r| r["url"] == url)
+                {
+                    row["updated_at"] = serde_json::json!(0);
+                }
+            }
+            let initial =
+                podcast_bookmarks::position(&state.settings.podcast_bookmarks, url).unwrap_or(0);
+            state
+                .podcast_bookmark_positions
+                .entry(key)
+                .or_insert(initial);
+        }
+        settings::save_settings(state.settings.clone());
+    });
+}
+
+fn save_portable_podcast_bookmark(hwnd: HWND, path: &Path, seconds: u64) {
+    with_state(hwnd, |state| {
+        if !state.settings.automatic_bookmark {
+            return;
+        }
+        let key = path.to_string_lossy().to_string();
+        let Some(url) = state.settings.podcast_cache_sources.get(&key).cloned() else {
+            return;
+        };
+        if state.podcast_bookmark_positions.get(&key) == Some(&seconds) {
+            return;
+        }
+        state.podcast_bookmark_positions.insert(key, seconds);
+        let title = state
+            .settings
+            .podcast_bookmarks
+            .iter()
+            .find(|r| r["url"] == url)
+            .and_then(|r| r["title"].as_str())
+            .map(str::to_string)
+            .or_else(|| {
+                state
+                    .docs
+                    .iter()
+                    .find(|d| d.path.as_deref() == Some(path))
+                    .map(|d| d.title.clone())
+            })
+            .unwrap_or_else(|| url.clone());
+        if podcast_bookmarks::save(&mut state.settings.podcast_bookmarks, &url, &title, seconds) {
+            settings::save_settings(state.settings.clone());
+        }
+    });
+}
+
+fn save_active_portable_podcast_bookmark(hwnd: HWND) {
+    let index = with_state(hwnd, |state| {
+        if !state.settings.automatic_bookmark {
+            return None;
+        }
+        let path = state
+            .active_audiobook
+            .as_ref()
+            .map(|p| &p.path)
+            .or(state.active_podcast_episode_cache.as_ref())?;
+        if !state
+            .settings
+            .podcast_cache_sources
+            .contains_key(path.to_string_lossy().as_ref())
+        {
+            return None;
+        }
+        state
+            .docs
+            .iter()
+            .position(|d| d.path.as_ref() == Some(path))
+    })
+    .flatten();
+    if let Some(index) = index {
+        save_automatic_bookmark_for_document(hwnd, index);
+    }
+}
+
 pub(crate) fn save_automatic_bookmark_for_document(hwnd: HWND, doc_index: usize) -> bool {
     let Some((hwnd_edit, path, format, title, automatic_enabled)) = with_state(hwnd, |state| {
         state.docs.get(doc_index).map(|doc| {
@@ -23204,6 +23359,15 @@ pub(crate) fn save_automatic_bookmark_for_document(hwnd: HWND, doc_index: usize)
                 })
                 .flatten()
             });
+        if let Some(path) = path.as_deref() {
+            let seconds = if automatic_media_bookmark_reached_end(pos.max(0) as u64, duration_secs)
+            {
+                0
+            } else {
+                pos.max(0) as u64
+            };
+            save_portable_podcast_bookmark(hwnd, path, seconds);
+        }
         if automatic_media_bookmark_reached_end(pos.max(0) as u64, duration_secs) {
             crate::log_debug(&format!(
                 "Automatic media bookmark reached end, clearing: key={} pos={} duration={:?}",
@@ -23681,6 +23845,9 @@ fn clear_current_bookmarks(hwnd: HWND) -> bool {
     let (removed, bookmarks_window) = {
         with_state(hwnd, |state| {
             let removed = state.bookmarks.files.remove(&storage_key).is_some();
+            if removed {
+                reset_portable_podcast_bookmark(state, &storage_key);
+            }
             if removed && persist_to_disk {
                 save_bookmarks(&state.bookmarks);
             }

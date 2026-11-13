@@ -8,6 +8,10 @@ Version 0.9.28 – 2026-11-13
 
 3. Překlad textu: odstraněna nefunkční integrace DeepL. Překlad nyní používá pouze Google Translate, stejně jako na iPhonu.
 
+4. Cloudová synchronizace: přidány oblíbené položky SonarMusic mezi Windows, Macem a mobilními zařízeními, včetně skladeb, alb, interpretů a playlistů. Existující seznamy se sloučí a výslovná odstranění se synchronizují.
+
+5. Podcasty: automatické záložky a pozice přehrávání se synchronizují mezi Windows, Macem a mobilními zařízeními, i při přehrávání epizod z mezipaměti Windows. Starší pozice nepřepíšou novější; synchronizuje se také dokončení přehrávání a odstranění záložek.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube a SonarMusic: opravena chyba, která bránila obnovení přehrávání po delší pauze. Zvuk a video pokračují od uložené pozice.

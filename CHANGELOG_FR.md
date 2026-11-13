@@ -8,6 +8,10 @@ Version 0.9.28 – 2026-11-13
 
 3. Traduction du texte : suppression de l’intégration DeepL qui ne fonctionnait plus. La traduction utilise désormais uniquement Google Translate, comme sur iPhone.
 
+4. Synchronisation cloud : ajout des favoris SonarMusic entre Windows, Mac et mobile, y compris les titres, albums, artistes et playlists. Les listes existantes sont fusionnées et les suppressions explicites sont synchronisées.
+
+5. Podcasts : les signets automatiques et la position d’écoute sont désormais synchronisés entre Windows, Mac et mobile, y compris pour les épisodes lus depuis le cache Windows. Les anciennes positions ne remplacent pas les plus récentes ; la fin de lecture et la suppression des signets sont également synchronisées.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube et SonarMusic : correction d’un blocage empêchant la reprise de la lecture après une pause prolongée. L’audio et la vidéo reprennent à la position enregistrée.

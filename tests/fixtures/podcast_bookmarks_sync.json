@@ -1,0 +1,22 @@
+{
+  "podcast_bookmarks": [
+    {
+      "id": "https://podcast.example/episode.mp3?episode=1",
+      "data": {
+        "url": "https://podcast.example/episode.mp3?episode=1",
+        "title": "Primo episodio",
+        "position_seconds": 123,
+        "updated_at": 1794564000000
+      }
+    },
+    {
+      "id": "https://podcast.example/episode.mp3?episode=2",
+      "data": {
+        "url": "https://podcast.example/episode.mp3?episode=2",
+        "title": "Secondo episodio",
+        "position_seconds": 456,
+        "updated_at": 1794564100000
+      }
+    }
+  ]
+}
