@@ -1,10 +1,12 @@
 # Nhật ký thay đổi
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Trình soạn thảo: Ctrl+X và Sửa > Cắt giờ thông báo ngắn “Đã cắt” qua NVDA hoặc JAWS khi văn bản được chọn thực sự bị xóa.
 
 2. Tìm đài phát thanh: thêm Rock thay thế, Nhạc phim và Nhạc trò chơi. Bạn cũng có thể nhập thể loại tùy chỉnh và ứng dụng sẽ ghi nhớ.
+
+3. Dịch văn bản: đã loại bỏ tích hợp DeepL không còn hoạt động. Bản dịch hiện chỉ sử dụng Google Translate, giống như trên iPhone.
 
 Version 0.9.27 – 2026-11-11
 

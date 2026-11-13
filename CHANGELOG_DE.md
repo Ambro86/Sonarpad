@@ -1,10 +1,12 @@
 # Änderungsprotokoll
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Editor: Strg+X und Bearbeiten > Ausschneiden melden mit NVDA oder JAWS kurz „Ausgeschnitten“, wenn markierter Text tatsächlich entfernt wurde.
 
 2. Radiosuche: Alternative Rock, Soundtracks und Videospielmusik hinzugefügt. Eigene Genres lassen sich eingeben und werden gespeichert.
+
+3. Textübersetzung: Die nicht mehr funktionierende DeepL-Anbindung wurde entfernt. Übersetzungen verwenden jetzt ausschließlich Google Translate, wie auf dem iPhone.
 
 Version 0.9.27 – 2026-11-11
 

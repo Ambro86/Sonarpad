@@ -1,10 +1,12 @@
 # Changelog
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Editor: Ctrl+X e Editar > Cortar anunciam brevemente «Cortado» através do NVDA ou JAWS quando o texto selecionado é realmente removido.
 
 2. Pesquisa de rádios: adicionados Rock alternativo, Bandas sonoras e Música de videojogos. Também é possível escrever um género personalizado, que fica guardado.
+
+3. Tradução de texto: removida a integração com o DeepL que deixou de funcionar. A tradução utiliza agora apenas o Google Translate, como no iPhone.
 
 Version 0.9.27 – 2026-11-11
 

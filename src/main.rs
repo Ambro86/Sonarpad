@@ -96,9 +96,9 @@ use std::mem::size_of;
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::sync::Once;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, mpsc};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use chrono::Local;
 use serde::{Deserialize, Serialize};
@@ -20574,36 +20574,6 @@ fn record_editor_translate_recent_language(settings: &mut settings::AppSettings,
         .truncate(EDITOR_TRANSLATE_LANGUAGES.len());
 }
 
-const DEEPL_FREE_COOLDOWN_SECONDS: u64 = 10 * 60;
-static DEEPL_FREE_COOLDOWN_UNTIL: AtomicU64 = AtomicU64::new(0);
-
-fn unix_timestamp_seconds() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-}
-
-fn deepl_free_cooldown_remaining_seconds() -> u64 {
-    let now = unix_timestamp_seconds();
-    let until = DEEPL_FREE_COOLDOWN_UNTIL.load(Ordering::Relaxed);
-    until.saturating_sub(now)
-}
-
-fn mark_deepl_free_cooldown() {
-    let until = unix_timestamp_seconds().saturating_add(DEEPL_FREE_COOLDOWN_SECONDS);
-    DEEPL_FREE_COOLDOWN_UNTIL.store(until, Ordering::Relaxed);
-}
-
-fn is_deepl_too_many_requests_error(err: &translator::TranslatorError) -> bool {
-    match err {
-        translator::TranslatorError::HttpStatus { status, body } => {
-            *status == 429 || body.to_ascii_lowercase().contains("too many requests")
-        }
-        _ => false,
-    }
-}
-
 fn line_starts_with_uppercase_letter(line: &str) -> bool {
     line.trim_start()
         .chars()
@@ -20943,228 +20913,30 @@ fn start_editor_translation_text(
                     runtime.block_on(async {
                         let mut progress_tracker =
                             EditorProgressTracker::new(progress_dialog_value);
-                        let mut gemini_failed = false;
-                        let settings = crate::load_settings();
-                        if !settings.gemini_api_key.trim().is_empty() {
-                            let mut progress_callback = |completed: usize, total: usize| {
-                                progress_tracker.post_chunk(completed, total);
-                            };
-                            log_debug(&format!(
-                                "Editor translation worker: using Gemini (model={})",
-                                settings.gemini_model
-                            ));
-                            let gemini_translator = translator::TranslatorGemini::new(
-                                settings.gemini_api_key.clone(),
-                                settings.gemini_model.clone(),
-                                target.clone(),
-                                if source == "auto" { None } else { Some(source.clone()) },
-                            )
-                            .map_err(|err| err.to_string())?;
-
-                            match gemini_translator
-                                .translate_chunked_cancellable_with_progress(
-                                    &text,
-                                    cancel_token.as_ref(),
-                                    &mut progress_callback,
-                                )
-                                .await
-                            {
-                                Ok(translated) => {
-                                    return Ok(EditorTranslationSuccess {
-                                        text: translated,
-                                        provider: "Gemini",
-                                        fallback_from: None,
-                                    });
-                                }
-                                Err(err) => {
-                                    if gemini_model_uses_compat_fallback(&settings.gemini_model)
-                                        && !cancel_token.load(Ordering::Relaxed)
-                                    {
-                                        log_debug(&format!(
-                                            "Editor translation worker: Gemini model {} failed: {err}, retrying {}",
-                                            settings.gemini_model,
-                                            GEMINI_TRANSLATION_FALLBACK_MODEL
-                                        ));
-                                        let fallback_gemini = translator::TranslatorGemini::new(
-                                            settings.gemini_api_key.clone(),
-                                            GEMINI_TRANSLATION_FALLBACK_MODEL.to_string(),
-                                            target.clone(),
-                                            if source == "auto" {
-                                                None
-                                            } else {
-                                                Some(source.clone())
-                                            },
-                                        )
-                                        .map_err(|err| err.to_string())?;
-                                        match fallback_gemini
-                                            .translate_chunked_cancellable_with_progress(
-                                                &text,
-                                                cancel_token.as_ref(),
-                                                &mut progress_callback,
-                                            )
-                                            .await
-                                        {
-                                            Ok(translated) => {
-                                                return Ok(EditorTranslationSuccess {
-                                                    text: translated,
-                                                    provider: "Gemini 2.5 Flash",
-                                                    fallback_from: Some("Gemini 3.0"),
-                                                });
-                                            }
-                                            Err(fallback_err) => {
-                                                log_debug(&format!(
-                                                    "Editor translation worker: Gemini fallback model {} failed: {fallback_err}",
-                                                    GEMINI_TRANSLATION_FALLBACK_MODEL
-                                                ));
-                                            }
-                                        }
-                                    }
-                                    log_debug(&format!(
-                                        "Editor translation worker: Gemini failed: {err}, falling back to DeepL/Google"
-                                    ));
-                                    gemini_failed = true;
-                                }
-                            }
-                        }
-
                         let google_source = if source == target {
                             "auto".to_string()
                         } else {
                             source.clone()
                         };
-
-                        let translate_with_google = |deepl_status: String,
-                                                     google_source: String,
-                                                     target: String,
-                                                     text: String,
-                                                     fallback_from: &'static str,
-                                                     cancel_token: Arc<AtomicBool>,
-                                                     progress_dialog_value: isize,
-                                                     inherited_progress_pct: usize| async move {
-                            log_debug(&format!(
-                                "Editor translation worker: Google fallback source={} target={}",
-                                google_source, target
-                            ));
-                            let google_translator =
-                                translator::TranslatorGoogleFree::new(target.clone(), google_source)
-                                    .map_err(|err| err.to_string())?;
-                            let mut progress_tracker =
-                                EditorProgressTracker::new(progress_dialog_value);
-                            progress_tracker.last_pct = inherited_progress_pct;
-                            let mut progress_callback = |completed: usize, total: usize| {
-                                progress_tracker.post_chunk(completed, total);
-                            };
-                            google_translator
-                                .translate_chunked_cancellable_with_progress(
-                                    &text,
-                                    Some(cancel_token.as_ref()),
-                                    &mut progress_callback,
-                                )
-                                .await
-                                .map(|translated| EditorTranslationSuccess {
-                                    text: translated,
-                                    provider: "Google Translate",
-                                    fallback_from: Some(fallback_from),
-                                })
-                                .map_err(|google_err| {
-                                    format!(
-                                        "{deepl_status}; Google fallback failed: {google_err}"
-                                    )
-                                })
+                        let google_translator =
+                            translator::TranslatorGoogleFree::new(target.clone(), google_source)
+                                .map_err(|err| err.to_string())?;
+                        let mut progress_callback = |completed: usize, total: usize| {
+                            progress_tracker.post_chunk(completed, total);
                         };
-
-                        let cooldown_remaining = deepl_free_cooldown_remaining_seconds();
-                        if cooldown_remaining > 0 {
-                            let deepl_status =
-                                format!("DeepL cooldown active for {cooldown_remaining}s");
-                            let fallback_prov = if gemini_failed {
-                                "Gemini"
-                            } else {
-                                "DeepL"
-                            };
-                            log_debug(&format!(
-                                "Editor translation worker: {deepl_status}, using Google fallback directly"
-                            ));
-                            return translate_with_google(
-                                deepl_status,
-                                google_source,
-                                target,
-                                text,
-                                fallback_prov,
-                                cancel_token.clone(),
-                                progress_dialog_value,
-                                progress_tracker.last_pct,
-                            )
-                            .await;
-                        }
-
-                        let deepl_translator = if source == "auto" {
-                            translator::TranslatorDeepLFree::new(target.clone())
-                        } else {
-                            translator::TranslatorDeepLFree::with_source_lang(
-                                target.clone(),
-                                source.clone(),
-                            )
-                        }
-                        .map_err(|err| err.to_string())?;
-
-                        if cancel_token.load(Ordering::Relaxed) {
-                            return Err(translator::TranslatorError::Cancelled.to_string());
-                        }
-
-                        let deepl_result = {
-                            let mut progress_callback = |completed: usize, total: usize| {
-                                progress_tracker.post_chunk(completed, total);
-                            };
-                            deepl_translator
-                                .translate_chunked_cancellable_with_progress(
+                        google_translator
+                            .translate_chunked_cancellable_with_progress(
                                 &text,
                                 Some(cancel_token.as_ref()),
                                 &mut progress_callback,
                             )
                             .await
-                        };
-
-                        match deepl_result
-                        {
-                            Ok(translated) => Ok(EditorTranslationSuccess {
+                            .map(|translated| EditorTranslationSuccess {
                                 text: translated,
-                                provider: "DeepL",
-                                fallback_from: if !settings.gemini_api_key.trim().is_empty() {
-                                    Some("Gemini")
-                                } else {
-                                    None
-                                },
-                            }),
-                            Err(deepl_err) => {
-                                if is_deepl_too_many_requests_error(&deepl_err) {
-                                    mark_deepl_free_cooldown();
-                                    log_debug(&format!(
-                                        "Editor translation worker: DeepL too many requests, cooldown set for {}s",
-                                        DEEPL_FREE_COOLDOWN_SECONDS
-                                    ));
-                                }
-                                let deepl_status = format!("DeepL failed: {deepl_err}");
-                                log_debug(&format!(
-                                    "Editor translation worker: {deepl_status}, trying Google fallback"
-                                ));
-                                translate_with_google(
-                                    deepl_status,
-                                    google_source,
-                                    target,
-                                    text,
-                                    if !settings.gemini_api_key.trim().is_empty() {
-                                        "Gemini"
-                                    } else {
-                                        "DeepL"
-                                    },
-                                    cancel_token.clone(),
-                                    progress_dialog_value,
-                                    progress_tracker.last_pct,
-                                )
-                                .await
-                            }
-                        }
+                                provider: "Google Translate",
+                                fallback_from: None,
+                            })
+                            .map_err(|err| err.to_string())
                     })
                 });
             match &result {
@@ -21350,8 +21122,6 @@ fn start_editor_summary_text(
                         let gemini = translator::TranslatorGemini::new(
                             api_key.clone(),
                             model.clone(),
-                            String::new(),
-                            None,
                         )
                         .map_err(|err| err.to_string())?;
                         match gemini
@@ -21386,8 +21156,6 @@ fn start_editor_summary_text(
                                 let fallback_gemini = translator::TranslatorGemini::new(
                                     api_key,
                                     GEMINI_TRANSLATION_FALLBACK_MODEL.to_string(),
-                                    String::new(),
-                                    None,
                                 )
                                 .map_err(|err| err.to_string())?;
                                 match fallback_gemini
@@ -21449,8 +21217,6 @@ fn start_editor_summary_text(
                                 let fallback_gemini = translator::TranslatorGemini::new(
                                     api_key,
                                     GEMINI_TRANSLATION_FALLBACK_MODEL.to_string(),
-                                    String::new(),
-                                    None,
                                 )
                                 .map_err(|err| err.to_string())?;
                                 match fallback_gemini

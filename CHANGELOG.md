@@ -1,10 +1,12 @@
 # Changelog
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Editor: Ctrl+X and Edit > Cut now announce a short “Cut” through NVDA or JAWS when selected text is actually removed.
 
 2. Radio search: added Alternative Rock, Soundtracks and Game Scores. You can also type any genre and Sonarpad remembers the choice.
+
+3. Text translation: removed the non-working DeepL integration. Translation now uses only Google Translate, as on iPhone.
 
 Version 0.9.27 – 2026-11-11
 

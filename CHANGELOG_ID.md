@@ -1,10 +1,12 @@
 # Catatan perubahan
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Editor: Ctrl+X dan Edit > Potong kini mengumumkan singkat “Dipotong” melalui NVDA atau JAWS jika teks yang dipilih benar-benar dihapus.
 
 2. Pencarian radio: ditambahkan Rock alternatif, Soundtrack, dan Musik gim. Anda juga dapat mengetik genre sendiri dan pilihan tersebut akan diingat.
+
+3. Terjemahan teks: integrasi DeepL yang tidak berfungsi telah dihapus. Terjemahan kini hanya menggunakan Google Translate, seperti di iPhone.
 
 Version 0.9.27 – 2026-11-11
 

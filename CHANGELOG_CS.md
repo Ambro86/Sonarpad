@@ -1,10 +1,12 @@
 # Přehled změn
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Editor: Ctrl+X a Úpravy > Vyjmout nyní přes NVDA nebo JAWS stručně oznámí „Vyjmuto“, pokud byl vybraný text skutečně odstraněn.
 
 2. Vyhledávání rádií: přidán alternativní rock, filmová hudba a hudba z videoher. Lze také zadat vlastní žánr, který si aplikace zapamatuje.
+
+3. Překlad textu: odstraněna nefunkční integrace DeepL. Překlad nyní používá pouze Google Translate, stejně jako na iPhonu.
 
 Version 0.9.27 – 2026-11-11
 

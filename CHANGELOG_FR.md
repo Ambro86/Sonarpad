@@ -1,10 +1,12 @@
 # Journal des modifications
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Éditeur : Ctrl+X et Édition > Couper annoncent brièvement « Coupé » avec NVDA ou JAWS lorsque le texte sélectionné est réellement supprimé.
 
 2. Recherche de radios : ajout du rock alternatif, des bandes originales et des musiques de jeux vidéo. Il est aussi possible de saisir un genre personnalisé, qui sera mémorisé.
+
+3. Traduction du texte : suppression de l’intégration DeepL qui ne fonctionnait plus. La traduction utilise désormais uniquement Google Translate, comme sur iPhone.
 
 Version 0.9.27 – 2026-11-11
 

@@ -1,10 +1,12 @@
 # Ändringslogg
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Redigeraren: Ctrl+X och Redigera > Klipp ut ger nu den korta återkopplingen ”Utklippt” via NVDA eller JAWS när markerad text faktiskt tas bort.
 
 2. Radiosökning: Alternativ rock, Soundtracks och Spelmusik har lagts till. Du kan även skriva ett eget genreord som sparas.
+
+3. Textöversättning: den trasiga DeepL-integrationen har tagits bort. Översättningen använder nu endast Google Translate, precis som på iPhone.
 
 Version 0.9.27 – 2026-11-11
 

@@ -1,10 +1,12 @@
 # Dziennik zmian
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Edytor: Ctrl+X i Edycja > Wytnij krótko ogłaszają „Wycięto” przez NVDA lub JAWS, gdy zaznaczony tekst został rzeczywiście usunięty.
 
 2. Wyszukiwanie stacji radiowych: dodano rock alternatywny, ścieżki dźwiękowe i muzykę z gier. Można też wpisać własny gatunek, który zostanie zapamiętany.
+
+3. Tłumaczenie tekstu: usunięto niedziałającą integrację z DeepL. Tłumaczenie korzysta teraz wyłącznie z Google Translate, tak jak na iPhonie.
 
 Version 0.9.27 – 2026-11-11
 

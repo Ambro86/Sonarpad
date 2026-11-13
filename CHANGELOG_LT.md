@@ -1,10 +1,12 @@
 # Pakeitimų žurnalas
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Redaktorius: Ctrl+X ir Redaguoti > Iškirpti dabar per NVDA arba JAWS trumpai praneša „Iškirpta“, kai pažymėtas tekstas iš tikrųjų pašalinamas.
 
 2. Radijo paieška: pridėtas alternatyvus rokas, garso takeliai ir vaizdo žaidimų muzika. Galima įrašyti ir savo žanrą, kuris bus įsimintas.
+
+3. Teksto vertimas: pašalinta nebeveikianti DeepL integracija. Vertimui dabar naudojama tik Google Translate, kaip ir iPhone.
 
 Version 0.9.27 – 2026-11-11
 

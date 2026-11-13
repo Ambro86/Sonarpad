@@ -1,10 +1,12 @@
 # Changelog
 
-Version 0.9.28 – 2026-11-12
+Version 0.9.28 – 2026-11-13
 
 1. Editor: Ctrl+X e Modifica > Taglia ora annunciano semplicemente «Tagliato» con NVDA o JAWS quando il testo selezionato viene effettivamente rimosso.
 
 2. Ricerca radio: aggiunti Rock alternativo, Colonne sonore e Musiche dei videogiochi. È anche possibile scrivere un genere libero, che viene ricordato.
+
+3. Traduzione del testo: rimossa l’integrazione DeepL non più funzionante. La traduzione ora utilizza solo Google Translate, come su iPhone.
 
 Version 0.9.27 – 2026-11-11
 
