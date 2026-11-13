@@ -1259,7 +1259,13 @@ fn render_edited_node(node: &HtmlTextNode, plan: &NodePlan, html: &str) -> Strin
         {
             output.push_str(&html[raw_start..raw_end]);
         } else {
-            for index in char_index..group_end {
+            for (index, &ch) in node
+                .chars
+                .iter()
+                .enumerate()
+                .take(group_end)
+                .skip(char_index)
+            {
                 if index > char_index
                     && let Some(inserted) = plan.insertions.get(&index)
                 {
@@ -1268,7 +1274,7 @@ fn render_edited_node(node: &HtmlTextNode, plan: &NodePlan, html: &str) -> Strin
                     }
                 }
                 if !plan.deletions.contains(&index) {
-                    append_escaped_xml_char(&mut output, node.chars[index]);
+                    append_escaped_xml_char(&mut output, ch);
                 }
             }
         }

@@ -18957,11 +18957,7 @@ fn is_sentence_terminator(ch: char, prev: Option<char>, next: Option<char>) -> b
     match ch {
         '!' | '?' => true,
         '.' => {
-            if prev.is_some_and(|c| c.is_ascii_digit()) && next.is_some_and(|c| c.is_ascii_digit())
-            {
-                return false;
-            }
-            true
+            !(prev.is_some_and(|c| c.is_ascii_digit()) && next.is_some_and(|c| c.is_ascii_digit()))
         }
         _ => false,
     }

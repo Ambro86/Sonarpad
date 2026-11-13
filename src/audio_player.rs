@@ -2818,10 +2818,7 @@ fn clear_subtitle_hold(hwnd: HWND, path: &Path) -> bool {
             player.subtitle_hold = false;
             player.is_paused = false;
             player.start_instant = std::time::Instant::now();
-            if !player.play() {
-                return false;
-            }
-            true
+            player.play()
         })
         .unwrap_or(false)
     }
@@ -2893,10 +2890,7 @@ fn should_hold_for_edge_subtitles(hwnd: HWND, media_path: &Path) -> bool {
         return true;
     }
     let cache_ready = edge_cache_has_valid_mp3(&dir);
-    if !cache_ready {
-        return true;
-    }
-    false
+    !cache_ready
 }
 
 fn edge_subtitle_key(media_path: &Path, settings: &crate::settings::AppSettings) -> String {

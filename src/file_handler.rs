@@ -2659,10 +2659,7 @@ fn is_likely_garbage(s: &str) -> bool {
         }
     }
     max_digit_run = max_digit_run.max(current_digit_run);
-    if max_digit_run > 4 {
-        return true;
-    }
-    false
+    max_digit_run > 4
 }
 
 // --- RTF Parsing ---

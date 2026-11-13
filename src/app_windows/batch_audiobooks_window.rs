@@ -1987,10 +1987,7 @@ fn is_supported_batch_input_path(path: &Path) -> bool {
 fn is_temp_batch_path(path: &Path) -> bool {
     let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     let lower = name.to_ascii_lowercase();
-    if lower.ends_with(".tmp") || lower.ends_with(".part") {
-        return true;
-    }
-    false
+    lower.ends_with(".tmp") || lower.ends_with(".part")
 }
 
 fn is_checked(hwnd: HWND) -> bool {
