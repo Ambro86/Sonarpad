@@ -1,5 +1,11 @@
 # Pakeitimų žurnalas
 
+Version 0.9.28 – 2026-11-12
+
+1. Redaktorius: Ctrl+X ir Redaguoti > Iškirpti dabar per NVDA arba JAWS trumpai praneša „Iškirpta“, kai pažymėtas tekstas iš tikrųjų pašalinamas.
+
+2. Radijo paieška: pridėtas alternatyvus rokas, garso takeliai ir vaizdo žaidimų muzika. Galima įrašyti ir savo žanrą, kuris bus įsimintas.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube ir SonarMusic: ištaisyta klaida, dėl kurios po ilgos pauzės nepavykdavo tęsti atkūrimo. Garsas ir vaizdas atkuriami nuo išsaugotos vietos.

@@ -1,5 +1,11 @@
 # Nhật ký thay đổi
 
+Version 0.9.28 – 2026-11-12
+
+1. Trình soạn thảo: Ctrl+X và Sửa > Cắt giờ thông báo ngắn “Đã cắt” qua NVDA hoặc JAWS khi văn bản được chọn thực sự bị xóa.
+
+2. Tìm đài phát thanh: thêm Rock thay thế, Nhạc phim và Nhạc trò chơi. Bạn cũng có thể nhập thể loại tùy chỉnh và ứng dụng sẽ ghi nhớ.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube và SonarMusic: sửa lỗi không thể tiếp tục phát sau khi tạm dừng lâu. Âm thanh và video tiếp tục từ vị trí đã lưu.

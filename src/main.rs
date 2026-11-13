@@ -1766,6 +1766,28 @@ fn is_edit_control(hwnd: HWND) -> bool {
     is_edit
 }
 
+// Annuncia il taglio solo quando il testo selezionato è stato realmente rimosso.
+fn cut_edit_with_feedback(edit: HWND) {
+    let mut start = 0u32;
+    let mut end = 0u32;
+    send_message_w_safe(
+        edit,
+        crate::accessibility::EM_GETSEL,
+        WPARAM(&mut start as *mut u32 as usize),
+        LPARAM(&mut end as *mut u32 as isize),
+    );
+    let before_len = get_window_text_length_w_safe(edit);
+    send_message_w_safe(edit, WM_CUT, WPARAM(0), LPARAM(0));
+    if start != end && get_window_text_length_w_safe(edit) < before_len {
+        let language = settings::load_settings().language;
+        let delivered =
+            accessibility::screen_reader_speak(&i18n::tr(language, "edit.cut_feedback"));
+        log_debug(&format!(
+            "edit shortcut: cut feedback delivered={delivered}"
+        ));
+    }
+}
+
 pub(crate) fn handle_focused_edit_shortcut(msg: &MSG) -> bool {
     if msg.message != WM_KEYDOWN {
         return false;
@@ -1813,7 +1835,7 @@ pub(crate) fn handle_focused_edit_shortcut(msg: &MSG) -> bool {
         }
         key if key == 'X' as u32 => {
             log_debug("edit shortcut: Ctrl+X -> focused edit");
-            send_message_w_safe(focus, WM_CUT, WPARAM(0), LPARAM(0));
+            cut_edit_with_feedback(focus);
             true
         }
         key if key == 'V' as u32 => {
@@ -12395,6 +12417,14 @@ fn run_app(
             if handled {
                 continue;
             }
+            // Ctrl+X nell'editor principale deve passare dal taglio con feedback,
+            // altrimenti RichEdit lo esegue da solo senza annuncio NVDA/JAWS.
+            if msg.message == WM_KEYDOWN
+                && msg.wParam.0 as u32 == 'X' as u32
+                && handle_focused_edit_shortcut(&msg)
+            {
+                continue;
+            }
             if handle_custom_shortcuts(hwnd, &msg) {
                 continue;
             }
@@ -15280,7 +15310,9 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     }
                     IDM_EDIT_CUT => {
                         log_debug("Menu: Cut");
-                        editor_manager::send_to_active_edit(hwnd, WM_CUT);
+                        if let Some(edit) = get_active_edit(hwnd) {
+                            cut_edit_with_feedback(edit);
+                        }
                         LRESULT(0)
                     }
                     IDM_EDIT_COPY => {

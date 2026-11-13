@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+Version 0.9.28 – 2026-11-12
+
+1. Edytor: Ctrl+X i Edycja > Wytnij krótko ogłaszają „Wycięto” przez NVDA lub JAWS, gdy zaznaczony tekst został rzeczywiście usunięty.
+
+2. Wyszukiwanie stacji radiowych: dodano rock alternatywny, ścieżki dźwiękowe i muzykę z gier. Można też wpisać własny gatunek, który zostanie zapamiętany.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube i SonarMusic: naprawiono błąd uniemożliwiający wznowienie odtwarzania po dłuższej pauzie. Dźwięk i wideo są wznawiane od zapisanej pozycji.

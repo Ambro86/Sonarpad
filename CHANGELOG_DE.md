@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+Version 0.9.28 – 2026-11-12
+
+1. Editor: Strg+X und Bearbeiten > Ausschneiden melden mit NVDA oder JAWS kurz „Ausgeschnitten“, wenn markierter Text tatsächlich entfernt wurde.
+
+2. Radiosuche: Alternative Rock, Soundtracks und Videospielmusik hinzugefügt. Eigene Genres lassen sich eingeben und werden gespeichert.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube und SonarMusic: Ein Fehler wurde behoben, durch den die Wiedergabe nach einer längeren Pause nicht fortgesetzt wurde. Audio und Video werden an der gespeicherten Position fortgesetzt.

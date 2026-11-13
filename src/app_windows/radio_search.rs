@@ -49,6 +49,10 @@ impl SearchSession {
         }
     }
 
+    pub fn used_genre_fallback(&self) -> bool {
+        self.used_genre_fallback
+    }
+
     pub fn has_more(&self) -> bool {
         self.pending.iter().any(|pending| *pending)
     }

@@ -1,5 +1,11 @@
 # Changelog
 
+Version 0.9.28 – 2026-11-12
+
+1. Editor: Ctrl+X and Edit > Cut now announce a short “Cut” through NVDA or JAWS when selected text is actually removed.
+
+2. Radio search: added Alternative Rock, Soundtracks and Game Scores. You can also type any genre and Sonarpad remembers the choice.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube and SonarMusic: fixed playback failing to resume after a long pause. Audio and video resume from the saved position.

@@ -1,5 +1,11 @@
 # Changelog
 
+Version 0.9.28 – 2026-11-12
+
+1. Editor: Ctrl+X e Modifica > Taglia ora annunciano semplicemente «Tagliato» con NVDA o JAWS quando il testo selezionato viene effettivamente rimosso.
+
+2. Ricerca radio: aggiunti Rock alternativo, Colonne sonore e Musiche dei videogiochi. È anche possibile scrivere un genere libero, che viene ricordato.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube e SonarMusic: corretto un blocco della riproduzione dopo una pausa prolungata. Audio e video riprendono dalla posizione salvata.

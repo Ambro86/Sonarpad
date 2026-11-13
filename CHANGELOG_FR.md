@@ -1,5 +1,11 @@
 # Journal des modifications
 
+Version 0.9.28 – 2026-11-12
+
+1. Éditeur : Ctrl+X et Édition > Couper annoncent brièvement « Coupé » avec NVDA ou JAWS lorsque le texte sélectionné est réellement supprimé.
+
+2. Recherche de radios : ajout du rock alternatif, des bandes originales et des musiques de jeux vidéo. Il est aussi possible de saisir un genre personnalisé, qui sera mémorisé.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube et SonarMusic : correction d’un blocage empêchant la reprise de la lecture après une pause prolongée. L’audio et la vidéo reprennent à la position enregistrée.

@@ -164,6 +164,7 @@ struct RadioDialogState {
     search_session: Option<SearchSession>,
     search_id: u64,
     search_loading: bool,
+    pending_custom_genre: Option<String>,
     languages: Vec<(String, String)>,
     countries: Vec<(String, String)>,
     player_return_focus: Option<RadioReturnFocus>,
@@ -279,6 +280,12 @@ const GENRE_OPTIONS: &[GenreOption] = &[
         tag: Some("rock"),
     },
     GenreOption {
+        key: "radio.genre.alternative_rock",
+        label: "Rock alternativo",
+        value: "alternative rock",
+        tag: Some("alternative rock"),
+    },
+    GenreOption {
         key: "radio.genre.classical",
         label: "Classica",
         value: "classical",
@@ -379,6 +386,18 @@ const GENRE_OPTIONS: &[GenreOption] = &[
         label: "Ambient",
         value: "ambient",
         tag: Some("ambient"),
+    },
+    GenreOption {
+        key: "radio.genre.soundtrack",
+        label: "Colonne sonore",
+        value: "soundtrack",
+        tag: Some("soundtrack"),
+    },
+    GenreOption {
+        key: "radio.genre.game_scores",
+        label: "Musiche dei videogiochi",
+        value: "video game music",
+        tag: Some("video game music"),
     },
     GenreOption {
         key: "radio.genre.custom",
@@ -972,7 +991,9 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             WM_COMMAND => {
                 let id = wparam.0 & 0xffff;
                 let notification = (wparam.0 >> 16) & 0xffff;
-                if [ID_COMBO_LANGUAGE, ID_COMBO_COUNTRY, ID_COMBO_GENRE].contains(&id)
+                // Non scrivere le impostazioni a ogni freccia nella lista dei generi:
+                // il filtro viene salvato quando si avvia la ricerca.
+                if [ID_COMBO_LANGUAGE, ID_COMBO_COUNTRY].contains(&id)
                     && [1, 5].contains(&notification)
                 {
                     remember_radio_filters(hwnd);
@@ -1718,11 +1739,34 @@ fn create_controls(hwnd: HWND, parent: HWND) {
             LPARAM(wide.as_ptr() as isize),
         );
     }
-    let genre_index = GENRE_OPTIONS
+    if let Some(genre_index) = GENRE_OPTIONS
         .iter()
         .position(|g| g.value == saved_filters.radio_search_genre)
-        .unwrap_or(0);
-    crate::send_message_w_safe(combo_genre, CB_SETCURSEL, WPARAM(genre_index), LPARAM(0));
+    {
+        crate::send_message_w_safe(combo_genre, CB_SETCURSEL, WPARAM(genre_index), LPARAM(0));
+    } else if !saved_filters.radio_search_genre.trim().is_empty()
+        && saved_filters.radio_search_genre != "custom"
+    {
+        // Il genere libero salvato appare come voce selezionabile della lista.
+        let custom_genre = to_wide(&saved_filters.radio_search_genre);
+        let index = crate::send_message_w_safe(
+            combo_genre,
+            CB_ADDSTRING,
+            WPARAM(0),
+            LPARAM(custom_genre.as_ptr() as isize),
+        )
+        .0;
+        if index >= 0 {
+            crate::send_message_w_safe(
+                combo_genre,
+                CB_SETCURSEL,
+                WPARAM(index as usize),
+                LPARAM(0),
+            );
+        }
+    } else {
+        crate::send_message_w_safe(combo_genre, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+    }
 
     let mut state = Box::new(RadioDialogState {
         parent,
@@ -1742,6 +1786,7 @@ fn create_controls(hwnd: HWND, parent: HWND) {
         search_session: None,
         search_id: 0,
         search_loading: false,
+        pending_custom_genre: None,
         languages,
         countries,
         player_return_focus: None,
@@ -2632,26 +2677,149 @@ fn selected_language_code(state: &RadioDialogState) -> String {
 
 fn selected_genre_tag(state: &RadioDialogState) -> Option<String> {
     let idx = crate::send_message_w_safe(state.combo_genre, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
-    if idx >= 0 {
-        return GENRE_OPTIONS
-            .get(idx as usize)
-            .and_then(|genre| genre_tag_from_value(genre.value))
-            .map(str::to_string);
+    if idx < 0 {
+        return None;
     }
-    let typed = get_edit_text(state.combo_genre);
-    let typed = typed.trim();
-    if typed.is_empty() {
-        None
-    } else {
-        Some(typed.to_string())
+    if let Some(genre) = GENRE_OPTIONS.get(idx as usize) {
+        return genre.tag.map(str::to_string);
     }
+    // L'ultima voce, se presente, è un genere libero aggiunto dall'utente.
+    let custom = get_edit_text(state.combo_genre);
+    let custom = custom.trim();
+    (!custom.is_empty()).then(|| custom.to_string())
 }
 
+#[cfg(test)]
 fn genre_tag_from_value(value: &str) -> Option<&'static str> {
     GENRE_OPTIONS
         .iter()
         .find(|genre| genre.value == value)
         .and_then(|genre| genre.tag)
+}
+
+// Mostra il campo di testo soltanto dopo la scelta esplicita di "Altro genere..."
+// con Invio oppure con il pulsante Ricerca: le frecce restano silenziose.
+fn prompt_custom_genre_if_selected(hwnd: HWND) -> bool {
+    let Some((combo, language, is_custom)) = with_radio_state(hwnd, |state| {
+        // Una nuova ricerca sostituisce l’eventuale candidato ancora in attesa.
+        state.pending_custom_genre = None;
+        let index =
+            crate::send_message_w_safe(state.combo_genre, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
+        (
+            state.combo_genre,
+            state.language,
+            selected_browse_mode(state) == RadioBrowseMode::Genre
+                && index >= 0
+                && GENRE_OPTIONS
+                    .get(index as usize)
+                    .is_some_and(|genre| genre.value == "custom"),
+        )
+    }) else {
+        return false;
+    };
+    if !is_custom {
+        return true;
+    }
+
+    let previous = load_settings().radio_search_genre;
+    let default_value = if GENRE_OPTIONS.iter().any(|genre| genre.value == previous) {
+        ""
+    } else {
+        previous.as_str()
+    };
+    let title = tr(language, "radio.genre.custom", "Altro genere...");
+    let label = tr(language, "radio.genre", "Genere:");
+    let selected = crate::app_windows::prompt_window::prompt_user(
+        hwnd,
+        &title,
+        &label,
+        default_value,
+        language,
+    );
+    let Some(genre) = selected
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+    else {
+        crate::set_focus_safe(combo);
+        return false;
+    };
+
+    // Non aggiungere ancora il genere: aspettiamo radio effettivamente trovate.
+    with_radio_state(hwnd, |state| state.pending_custom_genre = Some(genre));
+    crate::set_focus_safe(combo);
+    true
+}
+
+// Inserisce il genere personalizzato solo dopo una ricerca riuscita.
+fn commit_verified_custom_genre(hwnd: HWND, genre: &str) {
+    let selected = with_radio_state(hwnd, |state| {
+        let combo = state.combo_genre;
+        // Manteniamo al massimo una voce personalizzata oltre a quelle predefinite.
+        const CB_GETCOUNT: u32 = 0x0146;
+        const CB_DELETESTRING: u32 = 0x0144;
+        let custom_index = GENRE_OPTIONS.len();
+        let count = crate::send_message_w_safe(combo, CB_GETCOUNT, WPARAM(0), LPARAM(0)).0;
+        if count > custom_index as isize {
+            crate::send_message_w_safe(combo, CB_DELETESTRING, WPARAM(custom_index), LPARAM(0));
+        }
+        let wide = to_wide(genre);
+        let index = crate::send_message_w_safe(
+            combo,
+            CB_ADDSTRING,
+            WPARAM(0),
+            LPARAM(wide.as_ptr() as isize),
+        )
+        .0;
+        if index < 0 {
+            crate::log_debug("Radio: impossibile aggiungere il genere verificato");
+            return false;
+        }
+        crate::send_message_w_safe(combo, CB_SETCURSEL, WPARAM(index as usize), LPARAM(0));
+        true
+    })
+    .unwrap_or(false);
+    if selected {
+        remember_radio_filters(hwnd);
+    }
+}
+
+// Una ricerca con fallback senza filtro di genere non convalida il genere.
+fn should_save_custom_genre(
+    page: usize,
+    result_count: usize,
+    search_failed: bool,
+    genre_fallback_used: bool,
+) -> bool {
+    page == 0 && result_count > 0 && !search_failed && !genre_fallback_used
+}
+
+#[cfg(test)]
+mod genre_option_tests {
+    use super::{genre_tag_from_value, should_save_custom_genre};
+
+    #[test]
+    fn radio_requested_genres_are_searchable_tags() {
+        assert_eq!(
+            genre_tag_from_value("alternative rock"),
+            Some("alternative rock")
+        );
+        assert_eq!(genre_tag_from_value("soundtrack"), Some("soundtrack"));
+        assert_eq!(
+            genre_tag_from_value("video game music"),
+            Some("video game music")
+        );
+        assert_eq!(genre_tag_from_value("all"), None);
+        assert_eq!(genre_tag_from_value("custom"), None);
+    }
+
+    #[test]
+    fn invalid_custom_genres_never_become_saved_filters() {
+        assert!(!should_save_custom_genre(0, 0, false, false));
+        assert!(!should_save_custom_genre(0, 5, true, false));
+        assert!(!should_save_custom_genre(0, 5, false, true));
+        assert!(!should_save_custom_genre(1, 5, false, false));
+        assert!(should_save_custom_genre(0, 5, false, false));
+    }
 }
 
 fn show_all(hwnd: HWND) {
@@ -2683,13 +2851,13 @@ fn remember_radio_filters(hwnd: HWND) {
         let index =
             crate::send_message_w_safe(state.combo_genre, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
         saved.radio_search_genre = if index >= 0 {
-            GENRE_OPTIONS
-                .get(index as usize)
-                .map(|g| g.value)
-                .unwrap_or("all")
-                .into()
+            match GENRE_OPTIONS.get(index as usize) {
+                Some(option) if option.value == "custom" => saved.radio_search_genre.clone(),
+                Some(option) => option.value.to_string(),
+                None => get_edit_text(state.combo_genre).trim().to_string(),
+            }
         } else {
-            get_edit_text(state.combo_genre)
+            "all".to_string()
         };
         crate::with_state(state.parent, |main| {
             main.settings.radio_search_language = saved.radio_search_language.clone();
@@ -2725,6 +2893,20 @@ fn reset_filters(hwnd: HWND) {
             WPARAM(country_index),
             LPARAM(0),
         );
+        // Rimuove anche un vecchio genere personalizzato salvato in precedenza.
+        const CB_GETCOUNT: u32 = 0x0146;
+        const CB_DELETESTRING: u32 = 0x0144;
+        let custom_index = GENRE_OPTIONS.len();
+        let genre_count =
+            crate::send_message_w_safe(state.combo_genre, CB_GETCOUNT, WPARAM(0), LPARAM(0)).0;
+        if genre_count > custom_index as isize {
+            crate::send_message_w_safe(
+                state.combo_genre,
+                CB_DELETESTRING,
+                WPARAM(custom_index),
+                LPARAM(0),
+            );
+        }
         crate::send_message_w_safe(state.combo_genre, CB_SETCURSEL, WPARAM(0), LPARAM(0));
         let empty = to_wide("");
         crate::log_if_err!(crate::set_window_text_w_safe(
@@ -2743,13 +2925,20 @@ fn reset_filters(hwnd: HWND) {
 }
 
 fn start_radio_search(hwnd: HWND, name_query: Option<String>) {
+    if !prompt_custom_genre_if_selected(hwnd) {
+        return;
+    }
+    remember_radio_filters(hwnd);
     let Some((language, code_result, genre)) = with_radio_state(hwnd, |state| {
         let mode = selected_browse_mode(state);
         (
             state.language,
             selected_browse_code(state),
             if mode == RadioBrowseMode::Genre {
-                selected_genre_tag(state)
+                state
+                    .pending_custom_genre
+                    .clone()
+                    .or_else(|| selected_genre_tag(state))
             } else {
                 None
             },
@@ -2845,6 +3034,18 @@ fn finish_radio_search(hwnd: HWND, complete: RadioSearchComplete) {
         return;
     }
     let empty = complete.session.results.is_empty();
+    let save_custom = should_save_custom_genre(
+        complete.page,
+        complete.session.results.len(),
+        complete.error.is_some(),
+        complete.session.used_genre_fallback(),
+    );
+    if complete.page == 0 {
+        let candidate = with_radio_state(hwnd, |state| state.pending_custom_genre.take()).flatten();
+        if save_custom && let Some(genre) = candidate {
+            commit_verified_custom_genre(hwnd, &genre);
+        }
+    }
     with_radio_state(hwnd, |state| {
         state.search_loading = false;
         state.all_results = complete.session.results.clone();

@@ -1,5 +1,11 @@
 # Přehled změn
 
+Version 0.9.28 – 2026-11-12
+
+1. Editor: Ctrl+X a Úpravy > Vyjmout nyní přes NVDA nebo JAWS stručně oznámí „Vyjmuto“, pokud byl vybraný text skutečně odstraněn.
+
+2. Vyhledávání rádií: přidán alternativní rock, filmová hudba a hudba z videoher. Lze také zadat vlastní žánr, který si aplikace zapamatuje.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube a SonarMusic: opravena chyba, která bránila obnovení přehrávání po delší pauze. Zvuk a video pokračují od uložené pozice.

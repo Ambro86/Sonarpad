@@ -1,5 +1,11 @@
 # Ändringslogg
 
+Version 0.9.28 – 2026-11-12
+
+1. Redigeraren: Ctrl+X och Redigera > Klipp ut ger nu den korta återkopplingen ”Utklippt” via NVDA eller JAWS när markerad text faktiskt tas bort.
+
+2. Radiosökning: Alternativ rock, Soundtracks och Spelmusik har lagts till. Du kan även skriva ett eget genreord som sparas.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube och SonarMusic: åtgärdat ett fel som hindrade uppspelningen från att återupptas efter en längre paus. Ljud och video fortsätter från den sparade positionen.

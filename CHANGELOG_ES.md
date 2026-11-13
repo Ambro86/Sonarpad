@@ -1,5 +1,11 @@
 # Changelog
 
+Version 0.9.28 – 2026-11-12
+
+1. Editor: Ctrl+X y Editar > Cortar anuncian brevemente «Cortado» con NVDA o JAWS cuando se elimina realmente el texto seleccionado.
+
+2. Búsqueda de radios: añadidos Rock alternativo, Bandas sonoras y Música de videojuegos. También se puede escribir cualquier género y se recuerda la elección.
+
 Version 0.9.27 – 2026-11-11
 
 1. SonarTube y SonarMusic: corregido un bloqueo que impedía reanudar la reproducción después de una pausa prolongada. El audio y el vídeo continúan desde la posición guardada.
