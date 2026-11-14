@@ -1,5 +1,9 @@
 # Änderungsprotokoll
 
+Version 0.9.29 – 2026-11-13
+
+1. Sprachausgabe: Gemini-Stimmen mit persönlichem Gemini-API-Schlüssel zum Vorlesen sowie für Hörbücher und Audiodeskriptionen hinzugefügt. Der Sonarpad-AI-Zugang wird für diese Sprachengine noch nicht unterstützt. Automatische Wiederholungen bei vorübergehenden Fehlern sowie leerem oder ungültigem Audio; Anfragen und Wartezeiten sind abbrechbar.
+
 Version 0.9.28 – 2026-11-13
 
 1. Editor: Strg+X und Bearbeiten > Ausschneiden melden mit NVDA oder JAWS kurz „Ausgeschnitten“, wenn markierter Text tatsächlich entfernt wurde.

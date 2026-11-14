@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Les voix Gemini nécessitent votre clé API Gemini personnelle dans les paramètres IA. Le code d’accès Sonarpad AI n’est pas encore utilisable.",
   "dictionary.changed_elsewhere": "Cette entrée du dictionnaire a été modifiée dans une autre fenêtre. Rouvrez le dictionnaire et réessayez.",
   "stream_audio.youtube_sign_in_required": "YouTube exige une connexion pour cette vidéo. Elle ne peut pas être lue ni téléchargée dans Sonarpad.",
   "places.new_search": "Nouvelle recherche",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "Playlists",
   "stream_audio.search_channels": "Chaînes",
   "stream_audio.search_courses": "Cours",
-  "stream_audio.search_podcasts": "Podcasts"
+  "stream_audio.search_podcasts": "Podcasts",
+  "audio_description.project.repair_text": "La description à {time} dure {actual} s ; le temps disponible est de {available} s. Voulez-vous raccourcir le texte ?"
 }

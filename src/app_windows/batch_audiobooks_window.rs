@@ -3043,6 +3043,28 @@ fn export_parts(
         };
         post_batch_progress_context(progress_hwnd, progress_base, total_units);
         match tts.tts_engine {
+            TtsEngine::Gemini => {
+                let chunks: Vec<_> = announced_chunks
+                    .iter()
+                    .flat_map(|text| {
+                        crate::tts_engine::split_into_tts_chunks(
+                            text,
+                            false,
+                            &[],
+                            TtsEngine::Gemini,
+                        )
+                    })
+                    .collect();
+                crate::tts_engine::render_mixed_audiobook_part(
+                    &chunks,
+                    &mut progress,
+                    options.output,
+                    &options,
+                    &crate::tts_engine::MixedAudiobookConfig {
+                        main_engine: TtsEngine::Gemini,
+                    },
+                )?;
+            }
             TtsEngine::Edge => {
                 run_tts_audiobook_part(&announced_chunks, &mut progress, &options)?;
             }

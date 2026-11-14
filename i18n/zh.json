@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Gemini 语音需要在 AI 设置中填写个人 Gemini API 密钥。暂时不能使用 Sonarpad AI 访问码。",
   "dictionary.changed_elsewhere": "此词典条目已在另一个窗口中更改。请重新打开词典后重试。",
   "stream_audio.youtube_sign_in_required": "YouTube 要求登录才能访问此视频。无法在 Sonarpad 中播放或下载此视频。",
   "places.new_search": "新搜索",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "播放列表",
   "stream_audio.search_channels": "频道",
   "stream_audio.search_courses": "课程",
-  "stream_audio.search_podcasts": "播客"
+  "stream_audio.search_podcasts": "播客",
+  "audio_description.project.repair_text": "{time} 处的描述时长为 {actual} 秒，可用时间为 {available} 秒。要缩短文本吗？"
 }

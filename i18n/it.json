@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Le voci Gemini richiedono la chiave API Gemini personale nelle impostazioni IA. Il codice di accesso Sonarpad AI non è ancora utilizzabile per questo motore.",
   "dictionary.changed_elsewhere": "Questa voce del dizionario è stata modificata in un’altra finestra. Riapri il dizionario e riprova.",
   "stream_audio.youtube_sign_in_required": "YouTube richiede l’accesso per questo video. Non è possibile riprodurlo o scaricarlo in Sonarpad.",
   "places.new_search": "Nuova ricerca",
@@ -2532,5 +2534,6 @@
   "stream_audio.search_playlists": "Playlist",
   "stream_audio.search_channels": "Canali",
   "stream_audio.search_courses": "Corsi",
-  "stream_audio.search_podcasts": "Podcast"
+  "stream_audio.search_podcasts": "Podcast",
+  "audio_description.project.repair_text": "La descrizione a {time} dura {actual} s; lo spazio disponibile è {available} s. Vuoi accorciare il testo?"
 }

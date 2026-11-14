@@ -1,5 +1,9 @@
 # Ändringslogg
 
+Version 0.9.29 – 2026-11-13
+
+1. Talsyntes: lagt till Gemini-röster med personlig Gemini API-nyckel för uppläsning, ljudböcker och syntolkning. Sonarpad AI stöds ännu inte för denna röstmotor. Automatiska återförsök vid tillfälliga fel och tomt eller ogiltigt ljud, med möjlighet att avbryta under anrop och väntan.
+
 Version 0.9.28 – 2026-11-13
 
 1. Redigeraren: Ctrl+X och Redigera > Klipp ut ger nu den korta återkopplingen ”Utklippt” via NVDA eller JAWS när markerad text faktiskt tas bort.

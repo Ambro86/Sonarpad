@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+Version 0.9.29 – 2026-11-13
+
+1. Synteza mowy: dodano głosy Gemini z osobistym kluczem Gemini API do czytania, audiobooków i audiodeskrypcji. Dostęp Sonarpad AI nie jest jeszcze obsługiwany przez ten silnik głosowy. Automatyczne ponawianie przy błędach tymczasowych oraz pustym lub nieprawidłowym dźwięku, z anulowaniem podczas żądań i oczekiwania.
+
 Version 0.9.28 – 2026-11-13
 
 1. Edytor: Ctrl+X i Edycja > Wytnij krótko ogłaszają „Wycięto” przez NVDA lub JAWS, gdy zaznaczony tekst został rzeczywiście usunięty.

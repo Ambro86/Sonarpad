@@ -200,6 +200,8 @@ pub enum TtsEngine {
     Sapi4,
     #[serde(rename = "google")]
     Google,
+    #[serde(rename = "gemini")]
+    Gemini,
 }
 
 pub const DEFAULT_VOICE_PROFILE_NAME: &str = "Default";
@@ -249,6 +251,10 @@ pub struct VoiceProfile {
     pub tts_volume: i32,
     pub edge_tts_tuning: TtsTuning,
     pub google_tts_tuning: TtsTuning,
+    #[serde(default)]
+    pub gemini_tts_tuning: TtsTuning,
+    #[serde(default)]
+    pub gemini_tts_language: String,
     pub sapi5_tts_tuning: TtsTuning,
     pub sapi4_tts_tuning: TtsTuning,
     pub use_dialogue_voice: bool,
@@ -278,6 +284,8 @@ impl Default for VoiceProfile {
             tts_volume: 100,
             edge_tts_tuning: TtsTuning::default(),
             google_tts_tuning: TtsTuning::default(),
+            gemini_tts_tuning: TtsTuning::default(),
+            gemini_tts_language: String::new(),
             sapi5_tts_tuning: TtsTuning::default(),
             sapi4_tts_tuning: TtsTuning::default(),
             use_dialogue_voice: false,
@@ -991,6 +999,10 @@ pub struct AppSettings {
     #[serde(default)]
     pub google_tts_tuning: TtsTuning,
     #[serde(default)]
+    pub gemini_tts_tuning: TtsTuning,
+    #[serde(default)]
+    pub gemini_tts_language: String,
+    #[serde(default)]
     pub sapi5_tts_tuning: TtsTuning,
     #[serde(default)]
     pub sapi4_tts_tuning: TtsTuning,
@@ -1180,6 +1192,8 @@ pub fn voice_profile_from_settings_fields(name: String, settings: &AppSettings) 
         tts_volume: settings.tts_volume,
         edge_tts_tuning: settings.edge_tts_tuning,
         google_tts_tuning: settings.google_tts_tuning,
+        gemini_tts_tuning: settings.gemini_tts_tuning,
+        gemini_tts_language: settings.gemini_tts_language.clone(),
         sapi5_tts_tuning: settings.sapi5_tts_tuning,
         sapi4_tts_tuning: settings.sapi4_tts_tuning,
         use_dialogue_voice: settings.use_dialogue_voice,
@@ -1204,6 +1218,8 @@ pub fn apply_voice_profile_to_settings_fields(settings: &mut AppSettings, profil
     settings.tts_manual_tuning = profile.tts_manual_tuning;
     settings.edge_tts_tuning = profile.edge_tts_tuning;
     settings.google_tts_tuning = profile.google_tts_tuning;
+    settings.gemini_tts_tuning = profile.gemini_tts_tuning;
+    settings.gemini_tts_language = profile.gemini_tts_language.clone();
     settings.sapi5_tts_tuning = profile.sapi5_tts_tuning;
     settings.sapi4_tts_tuning = profile.sapi4_tts_tuning;
     let active_tuning = tts_tuning_for_engine(settings, profile.tts_engine);
@@ -1247,6 +1263,7 @@ pub fn tts_tuning_for_engine(settings: &AppSettings, engine: TtsEngine) -> TtsTu
     match engine {
         TtsEngine::Edge => settings.edge_tts_tuning,
         TtsEngine::Google => settings.google_tts_tuning,
+        TtsEngine::Gemini => settings.gemini_tts_tuning,
         TtsEngine::Sapi5 => settings.sapi5_tts_tuning,
         TtsEngine::Sapi4 => settings.sapi4_tts_tuning,
     }
@@ -1256,6 +1273,7 @@ pub fn set_tts_tuning_for_engine(settings: &mut AppSettings, engine: TtsEngine, 
     match engine {
         TtsEngine::Edge => settings.edge_tts_tuning = tuning,
         TtsEngine::Google => settings.google_tts_tuning = tuning,
+        TtsEngine::Gemini => settings.gemini_tts_tuning = tuning,
         TtsEngine::Sapi5 => settings.sapi5_tts_tuning = tuning,
         TtsEngine::Sapi4 => settings.sapi4_tts_tuning = tuning,
     }
@@ -1505,6 +1523,8 @@ impl Default for AppSettings {
             tts_volume: 100,
             edge_tts_tuning: TtsTuning::default(),
             google_tts_tuning: TtsTuning::default(),
+            gemini_tts_tuning: TtsTuning::default(),
+            gemini_tts_language: String::new(),
             sapi5_tts_tuning: TtsTuning::default(),
             sapi4_tts_tuning: TtsTuning::default(),
             voice_profiles: Vec::new(),
@@ -2184,6 +2204,10 @@ fn normalize_voice_profiles(settings: &mut AppSettings) {
         match profile.tts_engine {
             TtsEngine::Edge => {
                 profile.edge_tts_tuning =
+                    TtsTuning::new(profile.tts_rate, profile.tts_pitch, profile.tts_volume);
+            }
+            TtsEngine::Gemini => {
+                profile.gemini_tts_tuning =
                     TtsTuning::new(profile.tts_rate, profile.tts_pitch, profile.tts_volume);
             }
             TtsEngine::Google => {

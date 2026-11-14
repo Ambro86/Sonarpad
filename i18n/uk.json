@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Для голосів Gemini потрібен особистий ключ Gemini API в налаштуваннях ШІ. Код доступу Sonarpad AI поки не підтримується.",
   "dictionary.changed_elsewhere": "Цей запис словника було змінено в іншому вікні. Відкрийте словник знову та повторіть спробу.",
   "stream_audio.youtube_sign_in_required": "Для доступу до цього відео YouTube вимагає входу в обліковий запис. Його неможливо відтворити чи завантажити в Sonarpad.",
   "places.new_search": "Новий пошук",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "Списки відтворення",
   "stream_audio.search_channels": "Канали",
   "stream_audio.search_courses": "Курси",
-  "stream_audio.search_podcasts": "Подкасти"
+  "stream_audio.search_podcasts": "Подкасти",
+  "audio_description.project.repair_text": "Опис о {time} триває {actual} с; доступний час — {available} с. Бажаєте скоротити текст?"
 }

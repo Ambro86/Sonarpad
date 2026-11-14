@@ -127,6 +127,7 @@ fn tts_cache_dir(media_path: &Path, settings: &AppSettings) -> Result<PathBuf, S
         crate::settings::TtsEngine::Sapi5 => "sapi5",
         crate::settings::TtsEngine::Sapi4 => "sapi4",
         crate::settings::TtsEngine::Google => "google",
+        crate::settings::TtsEngine::Gemini => "gemini",
     };
     hasher.update(engine_key.as_bytes());
     hasher.update(settings.tts_voice.as_bytes());
@@ -230,7 +231,7 @@ fn ensure_tts_cache(
                     }
                 }
             }
-            crate::settings::TtsEngine::Google => {
+            crate::settings::TtsEngine::Google | crate::settings::TtsEngine::Gemini => {
                 let cancel = Arc::new(std::sync::atomic::AtomicBool::new(false));
                 let options = tts_engine::AudiobookCommonOptions {
                     voice: &settings.tts_voice,

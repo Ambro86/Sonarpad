@@ -96,6 +96,22 @@ pub fn handle_navigation(hwnd: HWND, msg: &MSG) -> bool {
         focus_cancel_button(hwnd);
         return true;
     }
+    if msg.message == WM_KEYDOWN
+        && msg.wParam.0 as u32 == VK_TAB.0 as u32
+        && (msg.hwnd == hwnd || crate::is_child_safe(hwnd, msg.hwnd))
+        && let Some((field, cancel)) =
+            with_save_state(hwnd, |state| (state.status_field, state.cancel_button))
+        && field.0 != 0
+        && cancel.0 != 0
+    {
+        let next = if crate::get_focus_safe() == field {
+            cancel
+        } else {
+            field
+        };
+        crate::set_focus_safe(next);
+        return true;
+    }
     if msg.message == WM_KEYDOWN || msg.message == WM_SYSKEYDOWN {
         let key = msg.wParam.0 as u32;
         if key == VK_ESCAPE.0 as u32 {

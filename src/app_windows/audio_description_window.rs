@@ -1321,6 +1321,7 @@ fn engine_from_combo(combo: HWND) -> TtsEngine {
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         _ => TtsEngine::Edge,
     }
 }
@@ -1331,6 +1332,7 @@ fn engine_combo_index(engine: TtsEngine) -> usize {
         TtsEngine::Sapi5 => 1,
         TtsEngine::Sapi4 => 2,
         TtsEngine::Google => 3,
+        TtsEngine::Gemini => 4,
     }
 }
 
@@ -1852,6 +1854,7 @@ fn load_voices(hwnd: HWND, engine: TtsEngine) {
             TtsEngine::Sapi5 => crate::sapi5_engine::list_sapi_voices(),
             TtsEngine::Sapi4 => Ok(crate::sapi4_engine::get_voices()),
             TtsEngine::Google => Ok(crate::google_tts::installed_voices()),
+            TtsEngine::Gemini => Ok(crate::gemini_tts::voices()),
         };
         let payload = Box::new(result);
         post_boxed_message(
@@ -1888,6 +1891,7 @@ fn audio_description_voice_sources(
         sapi5,
         sapi4: crate::sapi4_engine::get_voices(),
         google: crate::google_tts::installed_voices(),
+        gemini: crate::gemini_tts::voices(),
     }
 }
 
@@ -2346,6 +2350,15 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
     let labels = labels(state.language);
     let use_sonarpad_ai = using_sonarpad_ai(state);
     let gemini_api_key = get_text(state.gemini_api_key_edit).trim().to_string();
+    if engine_from_combo(state.engine_combo) == TtsEngine::Gemini && gemini_api_key.is_empty() {
+        show_audio_description_error_and_focus(
+            hwnd,
+            state,
+            &i18n::tr(state.language, "gemini_tts.key_required"),
+            state.voice_settings_button,
+        );
+        return;
+    }
     let sonarpad_ai_access_code = get_text(state.sonarpad_code_edit).trim().to_string();
     if use_sonarpad_ai {
         if sonarpad_ai_access_code.is_empty() {
@@ -3575,6 +3588,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     "options.engine.sapi5",
                     "options.engine.sapi4",
                     "options.engine.google",
+                    "options.engine.gemini",
                 ] {
                     add_combo_item(engine_combo, &i18n::tr(language, key));
                 }

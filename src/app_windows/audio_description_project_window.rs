@@ -73,7 +73,6 @@ const ID_CONTEXT_PLAY: usize = 9677;
 const ID_CONTEXT_DELETE: usize = 9678;
 const ID_VOICE: usize = 9679;
 const ID_ENGINE: usize = 9680;
-const ID_CHANGE_VOICE: usize = 9681;
 const ID_EXPORT_SRT: usize = 9682;
 const ID_EXPORT_VTT: usize = 9683;
 const ID_SEARCH: usize = 9684;
@@ -90,6 +89,15 @@ const ID_APPLY_REANALYZED: usize = 9694;
 const ID_REANALYZE_BALANCE: usize = 9695;
 const ID_SOURCE_VOLUME: usize = 9696;
 const ID_STOP_MIX_PREVIEW: usize = 9697;
+
+const WM_PROJECT_REPAIR_TEXT: u32 = WM_APP + 203;
+struct VoiceRepairPrompt {
+    time: f64,
+    actual: f64,
+    available: f64,
+    text: String,
+    reply: Option<String>,
+}
 
 const WM_PROJECT_PROGRESS: u32 = WM_APP + 192;
 const WM_PROJECT_STATUS: u32 = WM_APP + 193;
@@ -136,7 +144,6 @@ struct Labels {
     text: String,
     engine: String,
     voice: String,
-    change_voice: String,
     speed: String,
     volume: String,
     test_voice: String,
@@ -211,7 +218,6 @@ struct WindowState {
     mix_preview: MixPreview,
     source_volume_dirty: bool,
     test_voice_button: HWND,
-    change_voice_button: HWND,
     voices: Vec<VoiceInfo>,
     progress: HWND,
     status: HWND,
@@ -243,6 +249,7 @@ struct WindowState {
     drafts: HashMap<usize, String>,
     running: bool,
     export_progress_dialog: HWND,
+    export_hidden_controls: Vec<HWND>,
     cancel: Option<Arc<AtomicBool>>,
     preview_cancel: Option<Arc<AtomicBool>>,
     preview_generation: Arc<AtomicU64>,
@@ -267,7 +274,6 @@ fn labels(language: Language) -> Labels {
         text: i18n::tr(language, "audio_description.project.text"),
         engine: i18n::tr(language, "audio_description.engine"),
         voice: i18n::tr(language, "audio_description.voice"),
-        change_voice: i18n::tr(language, "audio_description.project.change_voice"),
         speed: i18n::tr(language, "tts_tuning.label_speed"),
         volume: i18n::tr(language, "tts_tuning.label_volume"),
         test_voice: i18n::tr(language, "audio_description.voice_settings.test"),
@@ -363,6 +369,7 @@ fn engine_from_combo(combo: HWND) -> TtsEngine {
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         _ => TtsEngine::Edge,
     }
 }
@@ -373,6 +380,7 @@ fn engine_combo_index(engine: TtsEngine) -> usize {
         TtsEngine::Sapi5 => 1,
         TtsEngine::Sapi4 => 2,
         TtsEngine::Google => 3,
+        TtsEngine::Gemini => 4,
     }
 }
 
@@ -455,6 +463,7 @@ fn load_project_voices(hwnd: HWND, engine: TtsEngine) {
             TtsEngine::Sapi5 => crate::sapi5_engine::list_sapi_voices(),
             TtsEngine::Sapi4 => Ok(crate::sapi4_engine::get_voices()),
             TtsEngine::Google => Ok(crate::google_tts::installed_voices()),
+            TtsEngine::Gemini => Ok(crate::gemini_tts::voices()),
         };
         post_boxed_message(
             hwnd,
@@ -541,12 +550,10 @@ fn refill_project_voice_combo(
         if state.voices.is_empty() {
             EnableWindow(state.voice_combo, false);
             EnableWindow(state.test_voice_button, false);
-            EnableWindow(state.change_voice_button, false);
         } else {
             SendMessageW(state.voice_combo, CB_SETCURSEL, WPARAM(selected), LPARAM(0));
             EnableWindow(state.voice_combo, !state.running);
             EnableWindow(state.test_voice_button, !state.running);
-            EnableWindow(state.change_voice_button, !state.running);
         }
     }
 }
@@ -568,7 +575,6 @@ fn restore_project_voice_selection(hwnd: HWND, state: &mut WindowState) {
             SendMessageW(state.voice_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
             EnableWindow(state.voice_combo, false);
             EnableWindow(state.test_voice_button, false);
-            EnableWindow(state.change_voice_button, false);
         }
         set_text(state.status, &labels(state.language).loading_voices);
         load_project_voices(hwnd, state.project.tts_engine);
@@ -1632,7 +1638,6 @@ fn set_controls_enabled(state: &WindowState, enabled: bool) {
         let voices_available = !state.voices.is_empty();
         EnableWindow(state.voice_combo, enabled && voices_available);
         EnableWindow(state.test_voice_button, enabled && voices_available);
-        EnableWindow(state.change_voice_button, enabled && voices_available);
         EnableWindow(state.cancel_button, !enabled);
     }
 }
@@ -2117,6 +2122,13 @@ fn start_apply(hwnd: HWND, state: &mut WindowState) {
 }
 
 fn start_voice_change(hwnd: HWND, state: &mut WindowState) {
+    crate::log_debug(&format!(
+        "Audio description project: change voice requested selected={:?} saved_engine={:?} saved_voice={:?} pending_edit={}",
+        selected_project_voice_settings(state),
+        state.project.tts_engine,
+        state.project.tts_voice,
+        has_unapplied_edit(state)
+    ));
     if has_unapplied_edit(state) {
         show_project_error(
             hwnd,
@@ -2179,6 +2191,26 @@ fn start_voice_change(hwnd: HWND, state: &mut WindowState) {
                 })),
                 quota: None,
                 overload: None,
+            },
+            |time, actual, available, text| {
+                let mut prompt = VoiceRepairPrompt {
+                    time,
+                    actual,
+                    available,
+                    text: text.into(),
+                    reply: None,
+                };
+                if crate::is_window_handle_valid(hwnd) {
+                    unsafe {
+                        SendMessageW(
+                            hwnd,
+                            WM_PROJECT_REPAIR_TEXT,
+                            WPARAM(0),
+                            LPARAM(&mut prompt as *mut _ as isize),
+                        );
+                    }
+                }
+                prompt.reply
             },
         );
         post_boxed_message(
@@ -2365,23 +2397,12 @@ fn export_project_subtitles(hwnd: HWND, state: &WindowState, extension: &str) {
     }
 }
 
-fn start_export(hwnd: HWND, state: &mut WindowState) {
-    if has_unapplied_edit(state) {
-        show_error(
-            state.parent,
-            state.language,
-            &labels(state.language).apply_before_export,
-        );
+fn open_export_progress(hwnd: HWND, state: &mut WindowState) {
+    if state.export_progress_dialog.0 != 0 {
         return;
     }
-    stop_preview(state);
-    let project_path = state.project_path.clone();
-    let project = state.project.clone();
     let language_labels = labels(state.language);
-    // Use the same clean progress dialog as the other long-running tasks:
-    // a static status label, progress bar and Cancel button. Do not create
-    // a read-only Edit control (which would clutter NVDA/JAWS Tab navigation).
-    let dialog = podcast_save_window::open_with_labels(
+    let dialog = podcast_save_window::open_with_labels_and_status_field(
         hwnd,
         state.language,
         SaveDialogLabels {
@@ -2397,14 +2418,82 @@ fn start_export(hwnd: HWND, state: &mut WindowState) {
             ),
         },
         true,
+        true,
     );
     if dialog.0 != 0 {
         state.export_progress_dialog = dialog;
         podcast_save_window::disable_fake_progress(dialog);
         podcast_save_window::keep_window_title_static(dialog);
         podcast_save_window::enable_accessible_progress_context(dialog);
-        podcast_save_window::restrict_tab_to_cancel(dialog);
+        unsafe {
+            use windows::Win32::UI::WindowsAndMessaging::{
+                GW_CHILD, GW_HWNDNEXT, GetWindow, SW_HIDE, ShowWindow,
+            };
+            let mut child = GetWindow(hwnd, GW_CHILD);
+            while child.0 != 0 {
+                if IsWindowVisible(child).as_bool() {
+                    state.export_hidden_controls.push(child);
+                    ShowWindow(child, SW_HIDE);
+                }
+                child = GetWindow(child, GW_HWNDNEXT);
+            }
+        }
+        podcast_save_window::focus_primary_control(dialog);
     }
+}
+
+fn close_export_progress(state: &mut WindowState) {
+    unsafe {
+        use windows::Win32::UI::WindowsAndMessaging::{SW_SHOW, ShowWindow};
+        for control in state.export_hidden_controls.drain(..) {
+            ShowWindow(control, SW_SHOW);
+        }
+        let dialog = std::mem::replace(&mut state.export_progress_dialog, HWND(0));
+        if dialog.0 != 0 && crate::is_window_handle_valid(dialog) {
+            crate::log_if_err!(DestroyWindow(dialog));
+        }
+    }
+}
+
+fn start_export(hwnd: HWND, state: &mut WindowState) {
+    crate::log_debug(&format!(
+        "Audio description project: export requested selected={:?} saved_engine={:?} saved_voice={:?}",
+        selected_project_voice_settings(state),
+        state.project.tts_engine,
+        state.project.tts_voice
+    ));
+    if has_unapplied_edit(state) {
+        show_error(
+            state.parent,
+            state.language,
+            &labels(state.language).apply_before_export,
+        );
+        return;
+    }
+    // Changing voice already validates, renders and atomically saves the output
+    // and project. Use that path when Export is pressed with a pending selection.
+    let Some((engine, voice, rate, volume)) = selected_project_voice_settings(state) else {
+        return;
+    };
+    if engine != state.project.tts_engine
+        || !voice.eq_ignore_ascii_case(&state.project.tts_voice)
+        || rate != state.project.tts_rate
+        || volume != state.project.tts_volume
+    {
+        crate::log_debug(&format!(
+            "Audio description project: export applies selected voice engine={engine:?} voice={voice:?} rate={rate} volume={volume}"
+        ));
+        start_voice_change(hwnd, state);
+        if state.running {
+            open_export_progress(hwnd, state);
+        }
+        return;
+    }
+    stop_preview(state);
+    let project_path = state.project_path.clone();
+    let project = state.project.clone();
+    let language_labels = labels(state.language);
+    open_export_progress(hwnd, state);
     let cancel = Arc::new(AtomicBool::new(false));
     state.cancel = Some(cancel.clone());
     state.running = true;
@@ -2871,6 +2960,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     "options.engine.sapi5",
                     "options.engine.sapi4",
                     "options.engine.google",
+                    "options.engine.gemini",
                 ] {
                     add_combo_item(engine_combo, &i18n::tr(language, key));
                 }
@@ -2983,21 +3073,6 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     HINSTANCE(0),
                     None,
                 );
-                let change_voice_button = CreateWindowExW(
-                    Default::default(),
-                    WC_BUTTON,
-                    PCWSTR(to_wide(&labels.change_voice).as_ptr()),
-                    WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-                    592,
-                    624,
-                    184,
-                    30,
-                    hwnd,
-                    HMENU(ID_CHANGE_VOICE as isize),
-                    HINSTANCE(0),
-                    None,
-                );
-                EnableWindow(change_voice_button, false);
                 EnableWindow(test_voice_button, false);
                 let (_source_volume_label, source_volume_combo, stop_mix_preview_button) =
                     mix_preview::create_controls(
@@ -3138,7 +3213,6 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     volume_label,
                     volume_combo,
                     test_voice_button,
-                    change_voice_button,
                     status,
                     export_button,
                     export_srt_button,
@@ -3168,7 +3242,6 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     mix_preview: MixPreview::default(),
                     source_volume_dirty: false,
                     test_voice_button,
-                    change_voice_button,
                     voices: Vec::new(),
                     progress,
                     status,
@@ -3200,6 +3273,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     drafts: HashMap::new(),
                     running: false,
                     export_progress_dialog: HWND(0),
+                    export_hidden_controls: Vec::new(),
                     cancel: None,
                     preview_cancel: None,
                     preview_generation: Arc::new(AtomicU64::new(0)),
@@ -3301,7 +3375,6 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         SendMessageW(state.voice_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
                         EnableWindow(state.voice_combo, false);
                         EnableWindow(state.test_voice_button, false);
-                        EnableWindow(state.change_voice_button, false);
                         set_text(state.status, &labels(state.language).loading_voices);
                         load_project_voices(hwnd, engine_from_combo(state.engine_combo));
                     }
@@ -3309,7 +3382,6 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         stop_preview(state);
                         test_project_voice(state);
                     }
-                    ID_CHANGE_VOICE if !state.running => start_voice_change(hwnd, state),
                     ID_APPLY if !state.running => start_apply(hwnd, state),
                     ID_EXPORT if !state.running => start_export(hwnd, state),
                     ID_EXPORT_SRT if !state.running => export_project_subtitles(hwnd, state, "srt"),
@@ -3694,7 +3766,41 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         set_text(state.status, &error);
                         EnableWindow(state.voice_combo, false);
                         EnableWindow(state.test_voice_button, false);
-                        EnableWindow(state.change_voice_button, false);
+                    }
+                }
+                LRESULT(0)
+            }
+            WM_PROJECT_REPAIR_TEXT => {
+                let prompt = &mut *(lparam.0 as *mut VoiceRepairPrompt);
+                let pointer =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut WindowState;
+                if !pointer.is_null() {
+                    let language = (*pointer).language;
+                    let owner = if (*pointer).export_progress_dialog.0 != 0 {
+                        (*pointer).export_progress_dialog
+                    } else {
+                        hwnd
+                    };
+                    let title = i18n::tr(language, "audio_description.project.text");
+                    let message = i18n::tr(language, "audio_description.project.repair_text")
+                        .replace("{time}", &format_time(prompt.time))
+                        .replace("{actual}", &format!("{:.3}", prompt.actual))
+                        .replace("{available}", &format!("{:.3}", prompt.available));
+                    if MessageBoxW(
+                        owner,
+                        PCWSTR(to_wide(&message).as_ptr()),
+                        PCWSTR(to_wide(&title).as_ptr()),
+                        MB_YESNO | MB_ICONQUESTION,
+                    ) == IDYES
+                    {
+                        prompt.reply = crate::app_windows::prompt_window::prompt_user(
+                            owner,
+                            &title,
+                            &title,
+                            &prompt.text,
+                            language,
+                        );
                     }
                 }
                 LRESULT(0)
@@ -3712,12 +3818,14 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     return LRESULT(0);
                 }
                 let state = &mut *pointer;
+                close_export_progress(state);
                 state.running = false;
                 state.cancel = None;
                 set_controls_enabled(state, true);
                 match payload.result {
                     Ok(project) => {
                         state.project = project;
+                        refill_list(state, state.selected_index.unwrap_or(0));
                         restore_project_voice_selection(hwnd, state);
                         SendMessageW(state.progress, PBM_SETPOS, WPARAM(100), LPARAM(0));
                         let message = labels(state.language)
@@ -3844,13 +3952,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 // Close the clean modal before restoring the project controls
                 // and showing any success/error message. Its WM_NCDESTROY
                 // restores the owner, focus and normal editor accessibility.
-                let export_dialog = std::mem::replace(&mut state.export_progress_dialog, HWND(0));
-                if export_dialog.0 != 0 && crate::is_window_handle_valid(export_dialog) {
-                    crate::log_if_err!(
-                        DestroyWindow(export_dialog),
-                        "Audio description project: closing export progress dialog failed"
-                    );
-                }
+                close_export_progress(state);
                 state.running = false;
                 state.cancel = None;
                 set_controls_enabled(state, true);

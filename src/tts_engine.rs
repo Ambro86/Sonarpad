@@ -317,6 +317,7 @@ fn parse_voice_tag_override(tag: &str, default_engine: TtsEngine) -> Option<Voic
                 "sapi4" => Some(TtsEngine::Sapi4),
                 "sapi5" => Some(TtsEngine::Sapi5),
                 "google" => Some(TtsEngine::Google),
+                "gemini" => Some(TtsEngine::Gemini),
                 _ => None,
             };
         }
@@ -381,6 +382,7 @@ fn parse_voice_tag_override(tag: &str, default_engine: TtsEngine) -> Option<Voic
                 "sapi4" => Some(TtsEngine::Sapi4),
                 "sapi5" => Some(TtsEngine::Sapi5),
                 "google" => Some(TtsEngine::Google),
+                "gemini" => Some(TtsEngine::Gemini),
                 _ => None,
             };
             if engine.is_some() {
@@ -529,6 +531,7 @@ pub(crate) fn split_voice_tag_spans(
                     TtsEngine::Sapi5 => "sapi5",
                     TtsEngine::Sapi4 => "sapi4",
                     TtsEngine::Google => "google",
+                    TtsEngine::Gemini => "gemini",
                 })
                 .unwrap_or("(none)"),
             ov.as_ref().map(|o| o.voice.as_str()).unwrap_or("(none)"),
@@ -755,6 +758,7 @@ pub fn start_tts_from_caret(hwnd: HWND) {
                 TtsEngine::Sapi5 => "sapi5",
                 TtsEngine::Edge => "edge",
                 TtsEngine::Google => "google",
+                TtsEngine::Gemini => "gemini",
             };
             crate::log_debug(&format!(
                 "TTS: shared cursor progress enabled for engine={engine_label}"
@@ -783,19 +787,21 @@ pub fn start_tts_from_caret(hwnd: HWND) {
     }
 
     match tts_engine {
-        TtsEngine::Edge | TtsEngine::Google => queue_tts_playback_from_text(TtsQueuedPlayback {
-            hwnd,
-            engine: tts_engine,
-            text,
-            voice,
-            split_on_newline,
-            dictionary,
-            initial_caret_pos,
-            source_edit: hwnd_edit,
-            rate: tts_rate,
-            pitch: tts_pitch,
-            volume: tts_volume,
-        }),
+        TtsEngine::Edge | TtsEngine::Google | TtsEngine::Gemini => {
+            queue_tts_playback_from_text(TtsQueuedPlayback {
+                hwnd,
+                engine: tts_engine,
+                text,
+                voice,
+                split_on_newline,
+                dictionary,
+                initial_caret_pos,
+                source_edit: hwnd_edit,
+                rate: tts_rate,
+                pitch: tts_pitch,
+                volume: tts_volume,
+            })
+        }
         TtsEngine::Sapi4 => {
             stop_tts_playback(hwnd);
             let voice_idx = if let Some(hash_pos) = voice.find("#") {
@@ -920,19 +926,21 @@ pub fn speak_text_once(hwnd: HWND, text: String) {
         return;
     }
     match tts_engine {
-        TtsEngine::Edge | TtsEngine::Google => queue_tts_playback_from_text(TtsQueuedPlayback {
-            hwnd,
-            engine: tts_engine,
-            text,
-            voice,
-            split_on_newline,
-            dictionary,
-            initial_caret_pos,
-            source_edit: HWND(0),
-            rate: tts_rate,
-            pitch: tts_pitch,
-            volume: tts_volume,
-        }),
+        TtsEngine::Edge | TtsEngine::Google | TtsEngine::Gemini => {
+            queue_tts_playback_from_text(TtsQueuedPlayback {
+                hwnd,
+                engine: tts_engine,
+                text,
+                voice,
+                split_on_newline,
+                dictionary,
+                initial_caret_pos,
+                source_edit: HWND(0),
+                rate: tts_rate,
+                pitch: tts_pitch,
+                volume: tts_volume,
+            })
+        }
         TtsEngine::Sapi4 => {
             stop_tts_playback(hwnd);
             let voice_idx = if let Some(hash_pos) = voice.find("#") {
@@ -1296,6 +1304,17 @@ struct SynthesisConfig {
 
 async fn synthesize_segment_bytes(text: &str, config: &SynthesisConfig) -> Result<Vec<u8>, String> {
     match config.engine {
+        TtsEngine::Gemini => {
+            crate::gemini_tts::synthesize_wav_bytes(
+                text,
+                &config.voice,
+                config.rate,
+                config.pitch,
+                config.volume,
+                &config.cancel,
+            )
+            .await
+        }
         TtsEngine::Edge => {
             let request_id = Uuid::new_v4().simple().to_string();
             download_audio_chunk_with_cancel(DownloadAudioChunkRequest {
@@ -1809,6 +1828,7 @@ fn tts_playback_inner(req: TtsPlaybackRequest) {
     let engine_label = match tts_engine {
         TtsEngine::Edge => "edge",
         TtsEngine::Google => "google",
+        TtsEngine::Gemini => "gemini",
         TtsEngine::Sapi4 => "sapi4",
         TtsEngine::Sapi5 => "sapi5",
     };
@@ -2441,7 +2461,7 @@ struct DownloadAudioChunkRequest<'a> {
     cancel: Option<&'a AtomicBool>,
 }
 
-async fn async_sleep_with_cancellation(cancel: &AtomicBool, duration: Duration) -> bool {
+pub(crate) async fn async_sleep_with_cancellation(cancel: &AtomicBool, duration: Duration) -> bool {
     let started = Instant::now();
     loop {
         if cancel.load(Ordering::Relaxed) {
@@ -5788,7 +5808,7 @@ fn start_audiobook_with_text(
 
     let cleaned = strip_dashed_lines(&text);
     let use_epub_split = audiobook_split_by_epub_chapter && epub_chapters.as_ref().is_some();
-    let mixed_needed = tts_engine == TtsEngine::Google
+    let mixed_needed = matches!(tts_engine, TtsEngine::Google | TtsEngine::Gemini)
         || if use_epub_split {
             epub_chapters.as_ref().is_some_and(|chapters| {
                 chapters
@@ -6096,6 +6116,7 @@ fn start_audiobook_with_text(
             TtsEngine::Sapi5 => "sapi5",
             TtsEngine::Sapi4 => "sapi4",
             TtsEngine::Google => "google",
+            TtsEngine::Gemini => "gemini",
         };
         crate::log_debug(&format!(
             "Audiobook: export start engine={} bitrate={} output={:?}",
@@ -6237,7 +6258,7 @@ fn start_audiobook_with_text(
                         )
                     }
                 }
-                TtsEngine::Google => {
+                TtsEngine::Google | TtsEngine::Gemini => {
                     Err("Google TTS audiobook export must use the generic renderer.".to_string())
                 }
                 TtsEngine::Sapi5 => {
@@ -10682,6 +10703,8 @@ fn should_retry_audiobook_segment(engine: TtsEngine, attempt: usize, error: &str
         TtsEngine::Edge => {
             is_edge_audiobook_transient_error(error) || attempt < NON_GOOGLE_AUDIOBOOK_MAX_ATTEMPTS
         }
+        // Gemini already retries inside its shared synthesis path (also used for reading).
+        TtsEngine::Gemini => false,
         TtsEngine::Sapi5 | TtsEngine::Sapi4 => attempt < NON_GOOGLE_AUDIOBOOK_MAX_ATTEMPTS,
     }
 }
@@ -10725,6 +10748,7 @@ async fn synthesize_mixed_chunk_with_retry(
             TtsEngine::Sapi5 => "sapi5",
             TtsEngine::Sapi4 => "sapi4",
             TtsEngine::Google => "google",
+            TtsEngine::Gemini => "gemini",
         },
         synth.voice,
         synth.rate,
@@ -10766,6 +10790,7 @@ async fn synthesize_mixed_chunk_with_retry(
                 TtsEngine::Sapi5 => "sapi5",
                 TtsEngine::Sapi4 => "sapi4",
                 TtsEngine::Google => "google",
+                TtsEngine::Gemini => "gemini",
             },
             synth.voice,
             preview_for_log(&chunk.text_to_read, 120)
@@ -10778,6 +10803,7 @@ async fn synthesize_mixed_chunk_with_retry(
         TtsEngine::Sapi5 => "sapi5",
         TtsEngine::Sapi4 => "sapi4",
         TtsEngine::Google => "google",
+        TtsEngine::Gemini => "gemini",
     };
     let mut attempt = 1usize;
     loop {
@@ -10865,6 +10891,7 @@ pub(crate) fn audiobook_synthesis_parallelism(engine: TtsEngine, voice: &str) ->
     match engine {
         TtsEngine::Edge => MIXED_EDGE_PARALLELISM,
         TtsEngine::Google => google_audiobook_worker_limit(),
+        TtsEngine::Gemini => crate::gemini_tts::MAX_PARALLEL_REQUESTS,
         TtsEngine::Sapi5 => {
             sapi5_recover_interrupted_attempt();
             let automatic = std::thread::available_parallelism()
@@ -11260,6 +11287,7 @@ const MIXED_EDGE_PARALLELISM: usize = 8;
 fn mixed_edge_batch_parallelism(engine: TtsEngine) -> usize {
     match engine {
         TtsEngine::Edge => MIXED_EDGE_PARALLELISM,
+        TtsEngine::Gemini => crate::gemini_tts::MAX_PARALLEL_REQUESTS,
         TtsEngine::Google | TtsEngine::Sapi5 | TtsEngine::Sapi4 => 1,
     }
 }
@@ -11282,6 +11310,7 @@ pub(crate) fn render_mixed_audiobook_part(
         match config.main_engine {
             TtsEngine::Edge => "edge",
             TtsEngine::Google => "google",
+            TtsEngine::Gemini => "gemini",
             TtsEngine::Sapi5 => "sapi5",
             TtsEngine::Sapi4 => "sapi4",
         },
@@ -11308,15 +11337,15 @@ pub(crate) fn render_mixed_audiobook_part(
         channels: 1,
     };
     let mut temp_wavs: Vec<PathBuf> = Vec::new();
-    let edge_only = chunks.iter().all(|chunk| {
+    let parallel_cloud_only = chunks.iter().all(|chunk| {
         let (engine, _, _, _, _) = resolve_mixed_chunk_synth(chunk, options, config);
-        engine == TtsEngine::Edge
+        matches!(engine, TtsEngine::Edge | TtsEngine::Gemini)
     });
 
-    if edge_only {
+    if parallel_cloud_only {
         let edge_parallelism = mixed_edge_batch_parallelism(TtsEngine::Edge);
         crate::log_debug(&format!(
-            "Mixed audiobook: edge-only mode, parallel synthesis enabled with concurrency={}",
+            "Mixed audiobook: Edge/Gemini mode, parallel synthesis enabled with concurrency={}",
             edge_parallelism
         ));
         for batch_start in (0..chunks.len()).step_by(edge_parallelism) {
@@ -11444,6 +11473,7 @@ pub(crate) fn render_mixed_audiobook_part(
                     match engine {
                         TtsEngine::Edge => "edge",
                         TtsEngine::Google => "google",
+                        TtsEngine::Gemini => "gemini",
                         TtsEngine::Sapi5 => "sapi5",
                         TtsEngine::Sapi4 => "sapi4",
                     },
@@ -12133,6 +12163,7 @@ mod omni_audio_description_tts_port_tests {
     fn omni_port_edge_parallelism_is_bounded_to_eight() {
         assert_eq!(mixed_edge_batch_parallelism(TtsEngine::Edge), 8);
         assert_eq!(MIXED_EDGE_PARALLELISM, 8);
+        assert_eq!(mixed_edge_batch_parallelism(TtsEngine::Gemini), 8);
     }
 
     #[test]

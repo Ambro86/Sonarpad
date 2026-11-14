@@ -913,6 +913,7 @@ pub fn insert_voice_tag_at_caret(
         TtsEngine::Sapi5 => "sapi5",
         TtsEngine::Sapi4 => "sapi4",
         TtsEngine::Google => "google",
+        TtsEngine::Gemini => "gemini",
     };
     let voice = if engine == TtsEngine::Google {
         crate::google_tts::voice_id_from_stored(voice)

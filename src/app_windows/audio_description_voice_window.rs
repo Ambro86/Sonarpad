@@ -41,6 +41,7 @@ pub struct AudioDescriptionVoiceSources {
     pub sapi5: Vec<VoiceInfo>,
     pub sapi4: Vec<VoiceInfo>,
     pub google: Vec<VoiceInfo>,
+    pub gemini: Vec<VoiceInfo>,
 }
 
 impl AudioDescriptionVoiceSources {
@@ -50,6 +51,7 @@ impl AudioDescriptionVoiceSources {
             TtsEngine::Sapi5 => &self.sapi5,
             TtsEngine::Sapi4 => &self.sapi4,
             TtsEngine::Google => &self.google,
+            TtsEngine::Gemini => &self.gemini,
         }
     }
 
@@ -59,6 +61,7 @@ impl AudioDescriptionVoiceSources {
             TtsEngine::Sapi5 => &mut self.sapi5,
             TtsEngine::Sapi4 => &mut self.sapi4,
             TtsEngine::Google => &mut self.google,
+            TtsEngine::Gemini => &mut self.gemini,
         } = voices;
     }
 
@@ -86,7 +89,7 @@ struct DialogData {
     pitch_engine: TtsEngine,
     voice_languages: Vec<String>,
     result: Option<AudioDescriptionVoiceSettings>,
-    pending: [bool; 4],
+    pending: [bool; 5],
     completed: Arc<Mutex<Vec<VoiceLoadResult>>>,
 }
 
@@ -96,6 +99,7 @@ fn engine_index(engine: TtsEngine) -> usize {
         TtsEngine::Sapi5 => 1,
         TtsEngine::Sapi4 => 2,
         TtsEngine::Google => 3,
+        TtsEngine::Gemini => 4,
     }
 }
 
@@ -112,6 +116,7 @@ fn selected_engine(hwnd: HWND) -> TtsEngine {
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         _ => TtsEngine::Edge,
     }
 }
@@ -140,6 +145,7 @@ fn fill_engine_combo(hwnd: HWND, language: Language, selected: TtsEngine) {
         "options.engine.sapi5",
         "options.engine.sapi4",
         "options.engine.google",
+        "options.engine.gemini",
     ]
     .iter()
     .enumerate()
@@ -327,6 +333,7 @@ fn request_voices(hwnd: HWND, force: bool) {
                 TtsEngine::Sapi5 => crate::sapi5_engine::list_sapi_voices(),
                 TtsEngine::Sapi4 => Ok(crate::sapi4_engine::get_voices()),
                 TtsEngine::Google => Ok(crate::google_tts::installed_voices()),
+                TtsEngine::Gemini => Ok(crate::gemini_tts::voices()),
             };
             completed
                 .lock()
@@ -573,7 +580,7 @@ pub(crate) fn preview_voice_settings(
         crate::tts_engine::split_into_tts_chunks(&text, split_on_newline, &dictionary, engine);
 
     match engine {
-        TtsEngine::Edge | TtsEngine::Google => {
+        TtsEngine::Edge | TtsEngine::Google | TtsEngine::Gemini => {
             crate::tts_engine::start_tts_playback_with_chunks(
                 crate::tts_engine::TtsPlaybackOptions {
                     hwnd: main_parent,
@@ -1040,7 +1047,7 @@ pub fn open_dialog(
             language,
             main_parent,
             sources: sources.clone(),
-            pending: [false; 4],
+            pending: [false; 5],
             completed: Arc::new(Mutex::new(Vec::new())),
             pitch_engine: default.engine,
             default,
@@ -1106,6 +1113,7 @@ mod tests {
                     sapi5: vec![voice("Local voice", "it-IT")],
                     sapi4: vec![],
                     google: vec![],
+                    gemini: crate::gemini_tts::voices(),
                 },
                 default: AudioDescriptionVoiceSettings {
                     engine: TtsEngine::Sapi5,
@@ -1117,7 +1125,7 @@ mod tests {
                 pitch_engine: TtsEngine::Sapi5,
                 voice_languages: vec![],
                 result: None,
-                pending: [false; 4],
+                pending: [false; 5],
                 completed: Arc::new(Mutex::new(vec![])),
             };
             let hwnd = CreateWindowExW(

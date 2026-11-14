@@ -3647,7 +3647,7 @@ fn start_subtitle_reader(
                                 log_debug("Subtitle: main output missing, skipping cue.");
                             }
                         }
-                        crate::settings::TtsEngine::Google => {
+                        crate::settings::TtsEngine::Google | crate::settings::TtsEngine::Gemini => {
                             if let Some(pos) = wait_until_target(raw_pos, target) {
                                 raw_pos = pos;
                             } else {
@@ -3662,14 +3662,34 @@ fn start_subtitle_reader(
                                     *guard = None;
                                 }
                             }
-                            match crate::google_tts::synthesize_wav_bytes(
-                                &cue.text,
-                                &settings.tts_voice,
-                                settings.tts_rate,
-                                settings.tts_pitch,
-                                settings.tts_volume,
-                                &cancel_flag,
-                            ) {
+                            let result = if settings.tts_engine
+                                == crate::settings::TtsEngine::Gemini
+                            {
+                                tokio::runtime::Builder::new_current_thread()
+                                    .enable_all()
+                                    .build()
+                                    .map_err(|e| e.to_string())
+                                    .and_then(|runtime| {
+                                        runtime.block_on(crate::gemini_tts::synthesize_wav_bytes(
+                                            &cue.text,
+                                            &settings.tts_voice,
+                                            settings.tts_rate,
+                                            settings.tts_pitch,
+                                            settings.tts_volume,
+                                            &cancel_flag,
+                                        ))
+                                    })
+                            } else {
+                                crate::google_tts::synthesize_wav_bytes(
+                                    &cue.text,
+                                    &settings.tts_voice,
+                                    settings.tts_rate,
+                                    settings.tts_pitch,
+                                    settings.tts_volume,
+                                    &cancel_flag,
+                                )
+                            };
+                            match result {
                                 Ok(bytes) => {
                                     let playback_cancel =
                                         crate::tts_engine::play_edge_bytes_async(bytes, 100);
@@ -3686,7 +3706,7 @@ fn start_subtitle_reader(
                                     did_emit = true;
                                 }
                                 Err(err) => {
-                                    log_debug(&format!("Subtitle: Google TTS failed: {err}"));
+                                    log_debug(&format!("Subtitle: TTS failed: {err}"));
                                 }
                             }
                         }

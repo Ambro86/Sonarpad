@@ -1,5 +1,9 @@
 # Journal des modifications
 
+Version 0.9.29 – 2026-11-13
+
+1. Synthèse vocale : ajout des voix Gemini avec votre clé API Gemini personnelle pour la lecture, les livres audio et les audiodescriptions. L’accès Sonarpad AI n’est pas encore pris en charge pour ce moteur vocal. Nouvelles tentatives automatiques en cas d’erreur temporaire ou d’audio vide ou invalide, avec annulation pendant les requêtes et les attentes.
+
 Version 0.9.28 – 2026-11-13
 
 1. Éditeur : Ctrl+X et Édition > Couper annoncent brièvement « Coupé » avec NVDA ou JAWS lorsque le texte sélectionné est réellement supprimé.

@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.29 – 2026-11-13
+
+1. Síntesis de voz: añadidas las voces Gemini con la clave API Gemini personal para lectura, audiolibros y audiodescripciones. El acceso Sonarpad AI todavía no es compatible con este motor de voz. Reintentos automáticos ante errores temporales y audio vacío o no válido, con cancelación durante las solicitudes y esperas.
+
 Version 0.9.28 – 2026-11-13
 
 1. Editor: Ctrl+X y Editar > Cortar anuncian brevemente «Cortado» con NVDA o JAWS cuando se elimina realmente el texto seleccionado.

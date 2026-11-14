@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Gemini आवाज़ों के लिए AI सेटिंग में आपकी व्यक्तिगत Gemini API कुंजी आवश्यक है। Sonarpad AI एक्सेस कोड अभी उपयोग नहीं किया जा सकता।",
   "dictionary.changed_elsewhere": "शब्दकोश की यह प्रविष्टि किसी दूसरी विंडो में बदल दी गई है। शब्दकोश फिर से खोलें और दोबारा कोशिश करें।",
   "stream_audio.youtube_sign_in_required": "इस वीडियो के लिए YouTube में साइन इन करना ज़रूरी है। इसे Sonarpad में चलाया या डाउनलोड नहीं किया जा सकता।",
   "places.new_search": "नई खोज",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "प्लेलिस्ट",
   "stream_audio.search_channels": "चैनल",
   "stream_audio.search_courses": "पाठ्यक्रम",
-  "stream_audio.search_podcasts": "पॉडकास्ट"
+  "stream_audio.search_podcasts": "पॉडकास्ट",
+  "audio_description.project.repair_text": "{time} पर विवरण {actual} सेकंड का है; उपलब्ध समय {available} सेकंड है। क्या आप पाठ छोटा करना चाहते हैं?"
 }

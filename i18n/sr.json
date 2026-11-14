@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Gemini гласови захтевају лични Gemini API кључ у AI подешавањима. Sonarpad AI приступни код још није подржан.",
   "dictionary.changed_elsewhere": "Ова ставка речника је измењена у другом прозору. Поново отворите речник и покушајте поново.",
   "stream_audio.youtube_sign_in_required": "YouTube захтева пријаву за овај видео. Није га могуће репродуковати или преузети у Sonarpad-у.",
   "places.new_search": "Нова претрага",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "Plejliste",
   "stream_audio.search_channels": "Kanali",
   "stream_audio.search_courses": "Kursevi",
-  "stream_audio.search_podcasts": "Podkasti"
+  "stream_audio.search_podcasts": "Podkasti",
+  "audio_description.project.repair_text": "Опис на {time} траје {actual} с; доступно је {available} с. Желите ли да скратите текст?"
 }

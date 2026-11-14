@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Gemini-röster kräver din personliga Gemini API-nyckel i AI-inställningarna. Sonarpad AI-åtkomstkoden kan ännu inte användas.",
   "dictionary.changed_elsewhere": "Den här ordboksposten ändrades i ett annat fönster. Öppna ordboken igen och försök på nytt.",
   "stream_audio.youtube_sign_in_required": "YouTube kräver inloggning för den här videon. Den kan inte spelas upp eller laddas ned i Sonarpad.",
   "places.new_search": "Ny sökning",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "Spellistor",
   "stream_audio.search_channels": "Kanaler",
   "stream_audio.search_courses": "Kurser",
-  "stream_audio.search_podcasts": "Poddar"
+  "stream_audio.search_podcasts": "Poddar",
+  "audio_description.project.repair_text": "Beskrivningen vid {time} varar {actual} s; tillgänglig tid är {available} s. Vill du korta texten?"
 }

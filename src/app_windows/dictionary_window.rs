@@ -90,6 +90,7 @@ struct DictionaryLabels {
     engine_sapi5: String,
     engine_sapi4: String,
     engine_google: String,
+    engine_gemini: String,
     voices_empty: String,
 }
 
@@ -115,6 +116,7 @@ fn dictionary_labels(language: Language) -> DictionaryLabels {
         engine_sapi5: i18n::tr(language, "options.engine.sapi5"),
         engine_sapi4: i18n::tr(language, "options.engine.sapi4"),
         engine_google: i18n::tr(language, "options.engine.google"),
+        engine_gemini: i18n::tr(language, "options.engine.gemini"),
         voices_empty: i18n::tr(language, "voice_panel.voices_empty"),
     }
 }
@@ -807,6 +809,12 @@ fn dictionary_entry_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
                     WPARAM(0),
                     LPARAM(to_wide(&labels.engine_google).as_ptr() as isize),
                 );
+                SendMessageW(
+                    combo_engine,
+                    CB_ADDSTRING,
+                    WPARAM(0),
+                    LPARAM(to_wide(&labels.engine_gemini).as_ptr() as isize),
+                );
                 SendMessageW(combo_engine, CB_SETCURSEL, WPARAM(0), LPARAM(0));
 
                 let ok_button = CreateWindowExW(
@@ -1119,6 +1127,7 @@ fn populate_entry_voice_combo(hwnd: HWND, selected_voice: Option<&str>) {
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         _ => TtsEngine::Edge,
     };
 
@@ -1126,6 +1135,7 @@ fn populate_entry_voice_combo(hwnd: HWND, selected_voice: Option<&str>) {
         with_state(parent, |state| match engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -1230,6 +1240,7 @@ fn preview_entry_voice(hwnd: HWND) {
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         _ => TtsEngine::Edge,
     };
 
@@ -1237,6 +1248,7 @@ fn preview_entry_voice(hwnd: HWND) {
         with_state(parent, |state| match engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -1265,7 +1277,7 @@ fn preview_entry_voice(hwnd: HWND) {
     let volume = 100;
 
     match engine {
-        TtsEngine::Edge | TtsEngine::Google => {
+        TtsEngine::Edge | TtsEngine::Google | TtsEngine::Gemini => {
             let chunks = tts_engine::split_into_tts_chunks(&text, false, &[], engine);
             let options = tts_engine::TtsPlaybackOptions {
                 hwnd: parent,

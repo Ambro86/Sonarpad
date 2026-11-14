@@ -1,5 +1,9 @@
 # Pakeitimų žurnalas
 
+Version 0.9.29 – 2026-11-13
+
+1. Kalbos sintezė: pridėti Gemini balsai su asmeniniu Gemini API raktu skaitymui, garsinėms knygoms ir garsiniams aprašymams. Šis balso variklis dar nepalaiko Sonarpad AI prieigos. Automatiniai pakartotiniai bandymai esant laikinoms klaidoms ir tuščiam ar netinkamam garsui; galima atšaukti užklausas ir laukimą.
+
 Version 0.9.28 – 2026-11-13
 
 1. Redaktorius: Ctrl+X ir Redaguoti > Iškirpti dabar per NVDA arba JAWS trumpai praneša „Iškirpta“, kai pažymėtas tekstas iš tikrųjų pašalinamas.

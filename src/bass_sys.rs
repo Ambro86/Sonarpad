@@ -90,6 +90,7 @@ pub struct BassApi {
     pub channel_seconds2bytes: BassChannelSeconds2Bytes,
     pub channel_set_attribute: BassChannelSetAttribute,
     pub channel_is_active: BassChannelIsActive,
+    pub channel_get_data: unsafe extern "C" fn(Dword, *mut c_void, Dword) -> Dword,
 }
 
 pub struct BassFxApi {
@@ -134,6 +135,7 @@ fn load_bass_api(path: &Path) -> Result<BassApi, String> {
         channel_seconds2bytes: load_symbol(&lib, b"BASS_ChannelSeconds2Bytes\0")?,
         channel_set_attribute: load_symbol(&lib, b"BASS_ChannelSetAttribute\0")?,
         channel_is_active: load_symbol(&lib, b"BASS_ChannelIsActive\0")?,
+        channel_get_data: load_symbol(&lib, b"BASS_ChannelGetData\0")?,
         _lib: lib,
     })
 }

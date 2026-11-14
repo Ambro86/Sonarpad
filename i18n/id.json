@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Suara Gemini memerlukan kunci API Gemini pribadi di pengaturan AI. Kode akses Sonarpad AI belum dapat digunakan.",
   "dictionary.changed_elsewhere": "Entri kamus ini telah diubah di jendela lain. Buka kembali kamus dan coba lagi.",
   "stream_audio.youtube_sign_in_required": "YouTube mengharuskan Anda masuk untuk video ini. Video tidak dapat diputar atau diunduh di Sonarpad.",
   "places.new_search": "Pencarian baru",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "Playlist",
   "stream_audio.search_channels": "Channel",
   "stream_audio.search_courses": "Kursus",
-  "stream_audio.search_podcasts": "Podcast"
+  "stream_audio.search_podcasts": "Podcast",
+  "audio_description.project.repair_text": "Deskripsi pada {time} berdurasi {actual} dtk; waktu tersedia {available} dtk. Ingin mempersingkat teks?"
 }

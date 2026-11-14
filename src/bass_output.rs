@@ -560,3 +560,109 @@ impl BassOutput {
         // Edge subtitle audio is played through the TTS engine path (rodio).
     }
 }
+
+/// Decode a tempo-adjusted copy without changing pitch or playing any audio.
+pub(crate) fn accelerate_description_pcm(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    factor: f64,
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Result<Arc<[f32]>, String> {
+    use std::sync::atomic::Ordering;
+    if !factor.is_finite()
+        || !(1.0..=1.200001).contains(&factor)
+        || samples.is_empty()
+        || sample_rate == 0
+        || channels == 0
+    {
+        return Err("Invalid description tempo input".into());
+    }
+    if cancel.load(Ordering::Relaxed) {
+        return Err("cancelled".into());
+    }
+    init_bass_once()?;
+    let api = bass_api()?;
+    let fx = bass_fx_api()?;
+    let mut wav = std::io::Cursor::new(Vec::new());
+    {
+        let mut writer = hound::WavWriter::new(
+            &mut wav,
+            hound::WavSpec {
+                channels,
+                sample_rate,
+                bits_per_sample: 32,
+                sample_format: hound::SampleFormat::Float,
+            },
+        )
+        .map_err(|e| e.to_string())?;
+        for &sample in samples {
+            writer.write_sample(sample).map_err(|e| e.to_string())?;
+        }
+        writer.finalize().map_err(|e| e.to_string())?;
+    }
+    let bytes = wav.into_inner();
+    let source = unsafe {
+        (api.stream_create_file)(
+            1,
+            bytes.as_ptr().cast(),
+            0,
+            bytes.len() as u64,
+            BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT,
+        )
+    };
+    if source == 0 {
+        return Err(format!("BASS tempo source: {}", bass_error(api)));
+    }
+    let stream = unsafe {
+        (fx.tempo_create)(
+            source,
+            BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_FX_FREESOURCE,
+        )
+    };
+    if stream == 0 {
+        bass_stream_free_safe(api, source);
+        return Err(format!("BASS tempo create: {}", bass_error(api)));
+    }
+    let result = (|| {
+        if bass_channel_set_attribute_safe(
+            api,
+            stream,
+            BASS_ATTRIB_TEMPO,
+            ((factor - 1.0) * 100.0) as f32,
+        ) == 0
+        {
+            return Err(format!("BASS tempo set: {}", bass_error(api)));
+        }
+        let mut output = Vec::new();
+        let mut buffer = vec![0_f32; 16384];
+        loop {
+            if cancel.load(Ordering::Relaxed) {
+                return Err("cancelled".into());
+            }
+            let count = unsafe {
+                (api.channel_get_data)(
+                    stream,
+                    buffer.as_mut_ptr().cast(),
+                    (buffer.len() * 4) as u32,
+                )
+            };
+            if count == u32::MAX {
+                if bass_error(api) == 45 {
+                    break;
+                }
+                return Err(format!("BASS tempo decode: {}", bass_error(api)));
+            }
+            if count == 0 {
+                break;
+            }
+            output.extend_from_slice(&buffer[..count as usize / 4]);
+        }
+        if output.is_empty() || output.iter().any(|s| !s.is_finite()) {
+            return Err("Empty or invalid tempo audio".into());
+        }
+        Ok(Arc::from(output))
+    })();
+    bass_stream_free_safe(api, stream);
+    result
+}

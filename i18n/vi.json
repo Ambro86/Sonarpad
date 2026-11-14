@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Giọng Gemini yêu cầu khóa API Gemini cá nhân trong cài đặt AI. Chưa thể dùng mã truy cập Sonarpad AI.",
   "dictionary.changed_elsewhere": "Mục từ điển này đã được thay đổi trong cửa sổ khác. Hãy mở lại từ điển và thử lại.",
   "stream_audio.youtube_sign_in_required": "YouTube yêu cầu đăng nhập để xem video này. Không thể phát hoặc tải video xuống trong Sonarpad.",
   "places.new_search": "Tìm kiếm mới",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "Danh sách phát",
   "stream_audio.search_channels": "Kênh",
   "stream_audio.search_courses": "Khóa học",
-  "stream_audio.search_podcasts": "Podcast"
+  "stream_audio.search_podcasts": "Podcast",
+  "audio_description.project.repair_text": "Mô tả tại {time} dài {actual} giây; thời gian khả dụng là {available} giây. Bạn có muốn rút ngắn văn bản không?"
 }

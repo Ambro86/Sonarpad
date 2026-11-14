@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Hlasy Gemini vyžadují osobní klíč Gemini API v nastavení AI. Přístupový kód Sonarpad AI zatím nelze použít.",
   "dictionary.changed_elsewhere": "Tato položka slovníku byla změněna v jiném okně. Otevřete slovník znovu a zkuste to znovu.",
   "stream_audio.youtube_sign_in_required": "YouTube u tohoto videa vyžaduje přihlášení. V aplikaci Sonarpad jej nelze přehrát ani stáhnout.",
   "places.new_search": "Nové hledání",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "Playlisty",
   "stream_audio.search_channels": "Kanály",
   "stream_audio.search_courses": "Kurzy",
-  "stream_audio.search_podcasts": "Podcasty"
+  "stream_audio.search_podcasts": "Podcasty",
+  "audio_description.project.repair_text": "Popis v čase {time} trvá {actual} s; k dispozici je {available} s. Chcete text zkrátit?"
 }

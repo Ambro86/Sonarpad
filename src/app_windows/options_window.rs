@@ -1238,6 +1238,8 @@ struct OptionsDialogState {
     active_tts_engine: TtsEngine,
     edge_tts_tuning: TtsTuning,
     google_tts_tuning: TtsTuning,
+    gemini_tts_tuning: TtsTuning,
+    gemini_tts_language: String,
     sapi5_tts_tuning: TtsTuning,
     sapi4_tts_tuning: TtsTuning,
     active_tab: i32,
@@ -1427,6 +1429,7 @@ struct OptionsLabels {
     open_new_window: String,
     engine_edge: String,
     engine_google: String,
+    engine_gemini: String,
     engine_sapi5: String,
     engine_sapi4: String,
     subtitle_mode_off: String,
@@ -1867,6 +1870,7 @@ fn options_labels(language: Language) -> OptionsLabels {
         open_new_window: i18n::tr(language, "options.open.new_window"),
         engine_edge: i18n::tr(language, "options.engine.edge"),
         engine_google: i18n::tr(language, "options.engine.google"),
+        engine_gemini: i18n::tr(language, "options.engine.gemini"),
         engine_sapi5: i18n::tr(language, "options.engine.sapi5"),
         engine_sapi4: "SAPI 4".to_string(),
         subtitle_mode_off: i18n::tr(language, "options.subtitle_mode.off"),
@@ -2153,6 +2157,7 @@ fn voices_for_engine(parent: HWND, engine: TtsEngine) -> Vec<VoiceInfo> {
     with_state(parent, |state| match engine {
         TtsEngine::Edge => state.edge_voices.clone(),
         TtsEngine::Google => crate::google_tts::installed_voices(),
+        TtsEngine::Gemini => crate::gemini_tts::voices(),
         TtsEngine::Sapi5 => state.sapi_voices.clone(),
         TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
     })
@@ -2276,6 +2281,7 @@ fn apply_selected_voice_profile(hwnd: HWND) {
             TtsEngine::Sapi5 => 1,
             TtsEngine::Sapi4 => 2,
             TtsEngine::Google => 3,
+            TtsEngine::Gemini => 4,
         };
         SendMessageW(
             combo_tts_engine,
@@ -2289,6 +2295,7 @@ fn apply_selected_voice_profile(hwnd: HWND) {
             TtsEngine::Sapi5 => 1,
             TtsEngine::Sapi4 => 2,
             TtsEngine::Google => 3,
+            TtsEngine::Gemini => 4,
         };
         SendMessageW(
             combo_dialogue_engine,
@@ -2302,6 +2309,7 @@ fn apply_selected_voice_profile(hwnd: HWND) {
             TtsEngine::Sapi5 => 1,
             TtsEngine::Sapi4 => 2,
             TtsEngine::Google => 3,
+            TtsEngine::Gemini => 4,
         };
         SendMessageW(
             combo_dialogue_secondary_engine,
@@ -2472,6 +2480,8 @@ fn apply_selected_voice_profile(hwnd: HWND) {
         state.active_tts_engine = profile.tts_engine;
         state.edge_tts_tuning = profile.edge_tts_tuning;
         state.google_tts_tuning = profile.google_tts_tuning;
+        state.gemini_tts_tuning = profile.gemini_tts_tuning;
+        state.gemini_tts_language = profile.gemini_tts_language.clone();
         state.sapi5_tts_tuning = profile.sapi5_tts_tuning;
         state.sapi4_tts_tuning = profile.sapi4_tts_tuning;
     })
@@ -2877,6 +2887,7 @@ pub fn refresh_voices(hwnd: HWND) {
                 1 => TtsEngine::Sapi5,
                 2 => TtsEngine::Sapi4,
                 3 => TtsEngine::Google,
+                4 => TtsEngine::Gemini,
                 _ => TtsEngine::Edge,
             }
         } else {
@@ -2886,6 +2897,7 @@ pub fn refresh_voices(hwnd: HWND) {
         let voices = with_state(parent, |state| match engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -2897,6 +2909,7 @@ pub fn refresh_voices(hwnd: HWND) {
                 1 => TtsEngine::Sapi5,
                 2 => TtsEngine::Sapi4,
                 3 => TtsEngine::Google,
+                4 => TtsEngine::Gemini,
                 _ => TtsEngine::Edge,
             }
         } else {
@@ -2905,6 +2918,7 @@ pub fn refresh_voices(hwnd: HWND) {
         let dialogue_voices = with_state(parent, |state| match dialogue_engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -2921,6 +2935,7 @@ pub fn refresh_voices(hwnd: HWND) {
                 1 => TtsEngine::Sapi5,
                 2 => TtsEngine::Sapi4,
                 3 => TtsEngine::Google,
+                4 => TtsEngine::Gemini,
                 _ => TtsEngine::Edge,
             }
         } else {
@@ -2930,6 +2945,7 @@ pub fn refresh_voices(hwnd: HWND) {
             with_state(parent, |state| match dialogue_secondary_engine {
                 TtsEngine::Edge => state.edge_voices.clone(),
                 TtsEngine::Google => crate::google_tts::installed_voices(),
+                TtsEngine::Gemini => crate::gemini_tts::voices(),
                 TtsEngine::Sapi5 => state.sapi_voices.clone(),
                 TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
             })
@@ -2987,8 +3003,8 @@ pub fn refresh_voices(hwnd: HWND) {
             dialogue_secondary_engine == TtsEngine::Edge,
         );
 
-        let show_language_combo =
-            voice_tab_active && engine == TtsEngine::Edge && !only_multilingual;
+        let show_language_combo = voice_tab_active
+            && (engine == TtsEngine::Gemini || (engine == TtsEngine::Edge && !only_multilingual));
         ShowWindow(
             label_tts_voice_language,
             if show_language_combo {
@@ -3067,7 +3083,41 @@ pub fn refresh_voices(hwnd: HWND) {
         );
 
         let mut language_filter: Option<String> = None;
-        if show_language_combo {
+        if show_language_combo && engine == TtsEngine::Gemini {
+            let selected = with_options_state(hwnd, |state| state.gemini_tts_language.clone())
+                .unwrap_or_default();
+            SendMessageW(
+                combo_tts_voice_language,
+                CB_RESETCONTENT,
+                WPARAM(0),
+                LPARAM(0),
+            );
+            let mut selected_index = 0;
+            for (index, (code, key)) in crate::gemini_tts::LANGUAGES.iter().enumerate() {
+                let label = i18n::tr(settings.language, key);
+                SendMessageW(
+                    combo_tts_voice_language,
+                    CB_ADDSTRING,
+                    WPARAM(0),
+                    LPARAM(to_wide(&label).as_ptr() as isize),
+                );
+                if code.eq_ignore_ascii_case(&selected) {
+                    selected_index = index;
+                }
+            }
+            SendMessageW(
+                combo_tts_voice_language,
+                CB_SETCURSEL,
+                WPARAM(selected_index),
+                LPARAM(0),
+            );
+            with_options_state(hwnd, |state| {
+                state.tts_voice_language_codes = crate::gemini_tts::LANGUAGES
+                    .iter()
+                    .map(|(code, _)| (*code).to_string())
+                    .collect();
+            });
+        } else if show_language_combo {
             let previous_selection = with_options_state(hwnd, |state| {
                 let sel = SendMessageW(
                     state.combo_tts_voice_language,
@@ -7048,6 +7098,8 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     active_tts_engine: TtsEngine::Edge,
                     edge_tts_tuning: TtsTuning::default(),
                     google_tts_tuning: TtsTuning::default(),
+                    gemini_tts_tuning: TtsTuning::default(),
+                    gemini_tts_language: String::new(),
                     sapi5_tts_tuning: TtsTuning::default(),
                     sapi4_tts_tuning: TtsTuning::default(),
                     active_tab: OPTIONS_TAB_GENERAL,
@@ -7116,6 +7168,36 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     }
                     OPTIONS_ID_TTS_VOICE_LANGUAGE => {
                         if code == CBN_SELCHANGE {
+                            let gemini = with_options_state(hwnd, |state| {
+                                if SendMessageW(
+                                    state.combo_tts_engine,
+                                    CB_GETCURSEL,
+                                    WPARAM(0),
+                                    LPARAM(0),
+                                )
+                                .0 == 4
+                                {
+                                    let index = SendMessageW(
+                                        state.combo_tts_voice_language,
+                                        CB_GETCURSEL,
+                                        WPARAM(0),
+                                        LPARAM(0),
+                                    )
+                                    .0;
+                                    if let Some(language) =
+                                        state.tts_voice_language_codes.get(index as usize)
+                                    {
+                                        state.gemini_tts_language = language.clone();
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            })
+                            .unwrap_or(false);
+                            if gemini {
+                                return LRESULT(0);
+                            }
                             refresh_voices(hwnd);
                             relayout_active_tab_content(hwnd);
                         }
@@ -7234,6 +7316,7 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                                 1 => TtsEngine::Sapi5,
                                 2 => TtsEngine::Sapi4,
                                 3 => TtsEngine::Google,
+                                4 => TtsEngine::Gemini,
                                 _ => TtsEngine::Edge,
                             };
                             let previous_engine = with_options_state(hwnd, |s| s.active_tts_engine)
@@ -7980,6 +8063,8 @@ fn initialize_options_dialog(hwnd: HWND) {
             state.active_tts_engine = settings.tts_engine;
             state.edge_tts_tuning = settings.edge_tts_tuning;
             state.google_tts_tuning = settings.google_tts_tuning;
+            state.gemini_tts_tuning = settings.gemini_tts_tuning;
+            state.gemini_tts_language = settings.gemini_tts_language.clone();
             state.sapi5_tts_tuning = settings.sapi5_tts_tuning;
             state.sapi4_tts_tuning = settings.sapi4_tts_tuning;
         })
@@ -8196,12 +8281,19 @@ fn initialize_options_dialog(hwnd: HWND) {
             WPARAM(0),
             LPARAM(to_wide(&labels.engine_google).as_ptr() as isize),
         );
+        SendMessageW(
+            combo_tts_engine,
+            CB_ADDSTRING,
+            WPARAM(0),
+            LPARAM(to_wide(&labels.engine_gemini).as_ptr() as isize),
+        );
 
         let engine_index = match settings.tts_engine {
             TtsEngine::Edge => 0,
             TtsEngine::Sapi5 => 1,
             TtsEngine::Sapi4 => 2,
             TtsEngine::Google => 3,
+            TtsEngine::Gemini => 4,
         };
         SendMessageW(
             combo_tts_engine,
@@ -8235,11 +8327,18 @@ fn initialize_options_dialog(hwnd: HWND) {
             WPARAM(0),
             LPARAM(to_wide(&labels.engine_google).as_ptr() as isize),
         );
+        SendMessageW(
+            combo_dialogue_engine,
+            CB_ADDSTRING,
+            WPARAM(0),
+            LPARAM(to_wide(&labels.engine_gemini).as_ptr() as isize),
+        );
         let dialogue_engine_index = match settings.dialogue_tts_engine {
             TtsEngine::Edge => 0,
             TtsEngine::Sapi5 => 1,
             TtsEngine::Sapi4 => 2,
             TtsEngine::Google => 3,
+            TtsEngine::Gemini => 4,
         };
         SendMessageW(
             combo_dialogue_engine,
@@ -8277,11 +8376,18 @@ fn initialize_options_dialog(hwnd: HWND) {
             WPARAM(0),
             LPARAM(to_wide(&labels.engine_google).as_ptr() as isize),
         );
+        SendMessageW(
+            combo_dialogue_secondary_engine,
+            CB_ADDSTRING,
+            WPARAM(0),
+            LPARAM(to_wide(&labels.engine_gemini).as_ptr() as isize),
+        );
         let dialogue_secondary_engine_index = match settings.dialogue_secondary_tts_engine {
             TtsEngine::Edge => 0,
             TtsEngine::Sapi5 => 1,
             TtsEngine::Sapi4 => 2,
             TtsEngine::Google => 3,
+            TtsEngine::Gemini => 4,
         };
         SendMessageW(
             combo_dialogue_secondary_engine,
@@ -10336,7 +10442,7 @@ fn tts_tuning_limits_for_engine(engine: TtsEngine) -> TtsTuningLimits {
             volume_min: 0,
             volume_max: 100,
         },
-        TtsEngine::Sapi5 | TtsEngine::Sapi4 => TtsTuningLimits {
+        TtsEngine::Gemini | TtsEngine::Sapi5 | TtsEngine::Sapi4 => TtsTuningLimits {
             rate_min: TTS_RATE_MIN,
             rate_max: TTS_RATE_MAX,
             pitch_min: TTS_PITCH_MIN,
@@ -10366,6 +10472,7 @@ fn selected_tts_engine_from_combo(combo: HWND, fallback: TtsEngine) -> TtsEngine
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         0 => TtsEngine::Edge,
         _ => fallback,
     }
@@ -10622,6 +10729,7 @@ fn store_main_tts_tuning_draft(hwnd: HWND, engine: TtsEngine) -> Option<Option<i
     with_options_state(hwnd, |state| match engine {
         TtsEngine::Edge => state.edge_tts_tuning = tuning,
         TtsEngine::Google => state.google_tts_tuning = tuning,
+        TtsEngine::Gemini => state.gemini_tts_tuning = tuning,
         TtsEngine::Sapi5 => state.sapi5_tts_tuning = tuning,
         TtsEngine::Sapi4 => state.sapi4_tts_tuning = tuning,
     })?;
@@ -10632,6 +10740,7 @@ fn main_tts_tuning_draft(hwnd: HWND, engine: TtsEngine) -> Option<TtsTuning> {
     with_options_state(hwnd, |state| match engine {
         TtsEngine::Edge => state.edge_tts_tuning,
         TtsEngine::Google => state.google_tts_tuning,
+        TtsEngine::Gemini => state.gemini_tts_tuning,
         TtsEngine::Sapi5 => state.sapi5_tts_tuning,
         TtsEngine::Sapi4 => state.sapi4_tts_tuning,
     })
@@ -10641,6 +10750,7 @@ fn voice_profile_tuning_for_engine(profile: &VoiceProfile, engine: TtsEngine) ->
     match engine {
         TtsEngine::Edge => profile.edge_tts_tuning,
         TtsEngine::Google => profile.google_tts_tuning,
+        TtsEngine::Gemini => profile.gemini_tts_tuning,
         TtsEngine::Sapi5 => profile.sapi5_tts_tuning,
         TtsEngine::Sapi4 => profile.sapi4_tts_tuning,
     }
@@ -11299,12 +11409,14 @@ fn preview_voice(hwnd: HWND) {
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         _ => TtsEngine::Edge,
     };
     let voices = {
         with_state(parent, |state| match engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -11352,6 +11464,7 @@ fn preview_voice(hwnd: HWND) {
         match engine {
             TtsEngine::Edge => "edge",
             TtsEngine::Google => "google",
+            TtsEngine::Gemini => "gemini",
             TtsEngine::Sapi5 => "sapi5",
             TtsEngine::Sapi4 => "sapi4",
         },
@@ -11369,7 +11482,7 @@ fn preview_voice(hwnd: HWND) {
     ));
 
     match engine {
-        TtsEngine::Edge | TtsEngine::Google => {
+        TtsEngine::Edge | TtsEngine::Google | TtsEngine::Gemini => {
             let options = tts_engine::TtsPlaybackOptions {
                 hwnd: parent,
                 engine,
@@ -11491,12 +11604,14 @@ fn insert_voice_tag_from_options(hwnd: HWND) {
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         _ => TtsEngine::Edge,
     };
     let voices = {
         with_state(parent, |state| match engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -11671,12 +11786,14 @@ fn preview_dialogue_voice(hwnd: HWND) {
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         _ => TtsEngine::Edge,
     };
     let voices = {
         with_state(parent, |state| match engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -11731,7 +11848,7 @@ fn preview_dialogue_voice(hwnd: HWND) {
     };
 
     match engine {
-        TtsEngine::Edge | TtsEngine::Google => {
+        TtsEngine::Edge | TtsEngine::Google | TtsEngine::Gemini => {
             let chunks = tts_engine::split_into_tts_chunks(&text, false, &[], engine);
             let options = tts_engine::TtsPlaybackOptions {
                 hwnd: parent,
@@ -11867,12 +11984,14 @@ fn preview_dialogue_secondary_voice(hwnd: HWND) {
         1 => TtsEngine::Sapi5,
         2 => TtsEngine::Sapi4,
         3 => TtsEngine::Google,
+        4 => TtsEngine::Gemini,
         _ => TtsEngine::Edge,
     };
     let voices = {
         with_state(parent, |state| match engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -11933,7 +12052,7 @@ fn preview_dialogue_secondary_voice(hwnd: HWND) {
     };
 
     match engine {
-        TtsEngine::Edge | TtsEngine::Google => {
+        TtsEngine::Edge | TtsEngine::Google | TtsEngine::Gemini => {
             let chunks = tts_engine::split_into_tts_chunks(&text, false, &[], engine);
             let options = tts_engine::TtsPlaybackOptions {
                 hwnd: parent,
@@ -12369,6 +12488,7 @@ fn apply_options_dialog(hwnd: HWND) {
             1 => TtsEngine::Sapi5,
             2 => TtsEngine::Sapi4,
             3 => TtsEngine::Google,
+            4 => TtsEngine::Gemini,
             _ => TtsEngine::Edge,
         };
 
@@ -12378,6 +12498,7 @@ fn apply_options_dialog(hwnd: HWND) {
             1 => TtsEngine::Sapi5,
             2 => TtsEngine::Sapi4,
             3 => TtsEngine::Google,
+            4 => TtsEngine::Gemini,
             _ => TtsEngine::Edge,
         };
         let dialogue_secondary_engine_sel = SendMessageW(
@@ -12391,6 +12512,7 @@ fn apply_options_dialog(hwnd: HWND) {
             1 => TtsEngine::Sapi5,
             2 => TtsEngine::Sapi4,
             3 => TtsEngine::Google,
+            4 => TtsEngine::Gemini,
             _ => TtsEngine::Edge,
         };
         let mut clamped_manual_value: Option<i32> = None;
@@ -12403,11 +12525,12 @@ fn apply_options_dialog(hwnd: HWND) {
         {
             clamped_manual_value = Some(adjusted);
         }
-        if let Some((edge_tuning, google_tuning, sapi5_tuning, sapi4_tuning)) =
+        if let Some((edge_tuning, google_tuning, gemini_tuning, sapi5_tuning, sapi4_tuning)) =
             with_options_state(hwnd, |state| {
                 (
                     state.edge_tts_tuning,
                     state.google_tts_tuning,
+                    state.gemini_tts_tuning,
                     state.sapi5_tts_tuning,
                     state.sapi4_tts_tuning,
                 )
@@ -12415,9 +12538,12 @@ fn apply_options_dialog(hwnd: HWND) {
         {
             settings.edge_tts_tuning = edge_tuning;
             settings.google_tts_tuning = google_tuning;
+            settings.gemini_tts_tuning = gemini_tuning;
             settings.sapi5_tts_tuning = sapi5_tuning;
             settings.sapi4_tts_tuning = sapi4_tuning;
         }
+        settings.gemini_tts_language =
+            with_options_state(hwnd, |state| state.gemini_tts_language.clone()).unwrap_or_default();
         let active_tuning = tts_tuning_for_engine(&settings, settings.tts_engine);
         settings.tts_rate = active_tuning.rate;
         settings.tts_pitch = active_tuning.pitch;
@@ -12427,6 +12553,7 @@ fn apply_options_dialog(hwnd: HWND) {
             match settings.tts_engine {
                 TtsEngine::Edge => "edge",
                 TtsEngine::Google => "google",
+                TtsEngine::Gemini => "gemini",
                 TtsEngine::Sapi5 => "sapi5",
                 TtsEngine::Sapi4 => "sapi4",
             },
@@ -12859,6 +12986,7 @@ fn apply_options_dialog(hwnd: HWND) {
         let voices = with_state(parent, |state| match settings.tts_engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -12866,6 +12994,7 @@ fn apply_options_dialog(hwnd: HWND) {
         let dialogue_voices = with_state(parent, |state| match settings.dialogue_tts_engine {
             TtsEngine::Edge => state.edge_voices.clone(),
             TtsEngine::Google => crate::google_tts::installed_voices(),
+            TtsEngine::Gemini => crate::gemini_tts::voices(),
             TtsEngine::Sapi5 => state.sapi_voices.clone(),
             TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
         })
@@ -12874,6 +13003,7 @@ fn apply_options_dialog(hwnd: HWND) {
             match settings.dialogue_secondary_tts_engine {
                 TtsEngine::Edge => state.edge_voices.clone(),
                 TtsEngine::Google => crate::google_tts::installed_voices(),
+                TtsEngine::Gemini => crate::gemini_tts::voices(),
                 TtsEngine::Sapi5 => state.sapi_voices.clone(),
                 TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
             }

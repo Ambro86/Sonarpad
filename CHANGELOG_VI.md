@@ -1,5 +1,9 @@
 # Nhật ký thay đổi
 
+Version 0.9.29 – 2026-11-13
+
+1. Tổng hợp giọng nói: thêm giọng Gemini dùng khóa API Gemini cá nhân để đọc, tạo sách nói và mô tả âm thanh. Công cụ giọng nói này chưa hỗ trợ truy cập Sonarpad AI. Tự động thử lại khi có lỗi tạm thời hoặc âm thanh trống hay không hợp lệ; có thể hủy trong lúc gửi yêu cầu và chờ.
+
 Version 0.9.28 – 2026-11-13
 
 1. Trình soạn thảo: Ctrl+X và Sửa > Cắt giờ thông báo ngắn “Đã cắt” qua NVDA hoặc JAWS khi văn bản được chọn thực sự bị xóa.

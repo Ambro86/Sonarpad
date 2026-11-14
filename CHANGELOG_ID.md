@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+Version 0.9.29 – 2026-11-13
+
+1. Sintesis suara: menambahkan suara Gemini dengan kunci API Gemini pribadi untuk membaca, buku audio, dan deskripsi audio. Akses Sonarpad AI belum didukung untuk mesin suara ini. Percobaan ulang otomatis untuk kesalahan sementara dan audio kosong atau tidak valid, dengan pembatalan saat permintaan dan menunggu.
+
 Version 0.9.28 – 2026-11-13
 
 1. Editor: Ctrl+X dan Edit > Potong kini mengumumkan singkat “Dipotong” melalui NVDA atau JAWS jika teks yang dipilih benar-benar dihapus.

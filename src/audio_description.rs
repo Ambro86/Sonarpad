@@ -2732,7 +2732,7 @@ where
                     let cancel = cancel.clone();
                     handles.push(scope.spawn(move || {
                         let mut overridden_job;
-                        let synthesis_job = if let Some(rate) = task.tts_rate_override {
+                        let synthesis_job = if let Some(rate) = task.tts_rate_override.filter(|_| job.tts_engine != TtsEngine::Gemini) {
                             overridden_job = job.clone();
                             overridden_job.tts_rate = rate;
                             &overridden_job
@@ -2744,7 +2744,7 @@ where
                             task.synthesis_index,
                             synthesis_job,
                             cache_dir,
-                            cancel,
+                            cancel.clone(),
                             parallel_batch,
                         );
                         let (samples, sample_rate, channels) = match synthesis {
@@ -2760,6 +2760,12 @@ where
                             }
                             Err(error) => return Err(error),
                         };
+                        let samples = if job.tts_engine == TtsEngine::Gemini {
+                            if let Some(rate) = task.tts_rate_override {
+                                crate::bass_output::accelerate_description_pcm(&samples, sample_rate, channels,
+                                    ((f64::from(rate) + 100.0) / (f64::from(job.tts_rate) + 100.0)).clamp(1.0, 1.2), &cancel)?
+                            } else { samples }
+                        } else { samples };
                         Ok::<Option<SynthesizedDescription>, String>(Some(
                             SynthesizedDescription {
                                 tts_rate_override: task.tts_rate_override,
@@ -2909,6 +2915,30 @@ fn speech_free_intervals(protected: &[(f64, f64)], duration_sec: f64) -> Vec<(f6
         free.push((cursor, duration_sec));
     }
     free
+}
+
+#[cfg(test)]
+#[test]
+fn maximum_description_space_matches_actual_reserved_gap() {
+    let free = subtract_reserved_intervals(&[(1050.406, 1053.695)], &[(1050.406, 1050.806)]);
+    let available = maximum_description_space(&free, 1050.331);
+    assert!((available - 2.889).abs() < 0.00001);
+    assert!(choose_slot(&free, 1050.406, 1050.331, 3.120, 0.0).is_none());
+    assert!(choose_slot(&free, 1050.406, 1050.331, available - 0.001, 0.0).is_some());
+    assert_eq!(maximum_description_space(&[(0.0, 3.0)], 20.0), 0.0);
+    assert_eq!(maximum_description_space(&[(0.0, 10.0)], 8.0), 7.0);
+}
+
+// Use the same visual-start bounds as choose_slot, on gaps after reservations.
+fn maximum_description_space(free: &[(f64, f64)], visual_start: f64) -> f64 {
+    let lower = (visual_start - MAX_SHIFT_SEC).max(0.0);
+    let upper = visual_start + MAX_SHIFT_SEC;
+    free.iter()
+        .filter_map(|(start, end)| {
+            let start = start.max(lower);
+            (start <= upper && *end > start).then_some(*end - start)
+        })
+        .fold(0.0, f64::max)
 }
 
 fn choose_slot(
@@ -3107,7 +3137,9 @@ fn schedule_synthesized_descriptions(
 }
 
 // Called only after the normal scheduler has finished. Accepted cues are never moved.
+#[allow(clippy::too_many_arguments)]
 fn recover_descriptions_with_native_rate<F>(
+    gemini_tempo: Option<&Arc<AtomicBool>>,
     descriptions: &[SynthesizedDescription],
     protected_intervals: &[BridgeInterval],
     duration_sec: f64,
@@ -3141,7 +3173,7 @@ where
         })
         .collect();
     let mut remaining = Vec::new();
-    for rejected in dropped.iter() {
+    'rejected: for rejected in dropped.iter() {
         let Some(original) = descriptions
             .iter()
             .find(|cue| cue.original_index == rejected.original_index)
@@ -3149,7 +3181,7 @@ where
             remaining.push(rejected.clone());
             continue;
         };
-        // A saved accelerated cue must not gain another 10-15% on each export.
+        // A saved accelerated cue must not gain another 10-20% on each export.
         if original.tts_rate_override.is_some() {
             remaining.push(rejected.clone());
             continue;
@@ -3160,11 +3192,16 @@ where
         } else {
             available
         };
-        let selected_rate = [110_i64, 115].into_iter().find_map(|percent| {
+        let rates = [110_i64, 115, 120].into_iter().filter_map(|percent| {
             let baseline = i64::from(base_rate) + 100;
             let rate = i32::try_from(baseline * percent / 100 - 100).ok()?;
             if rate <= base_rate {
                 return None;
+            }
+            // Gemini must validate the rendered audio, including after a text edit.
+            // Never skip local tempo attempts on the basis of the duration estimate.
+            if gemini_tempo.is_some() {
+                return Some(rate);
             }
             let multiplier = (f64::from(rate) + 100.0) / baseline as f64;
             choose_slot(
@@ -3176,60 +3213,69 @@ where
             )
             .map(|_| rate)
         });
-        let Some(rate) = selected_rate else {
-            remaining.push(rejected.clone());
-            continue;
-        };
-        let (samples, sample_rate, channels) = match resynthesize(original, rate) {
-            Ok(audio) => audio,
-            Err(error) if error == "cancelled" => return Err(error),
-            Err(error) => {
-                crate::log_debug(&format!(
-                    "Audio description: native-rate fallback failed cue={} rate={} error={error}",
-                    original.original_index, rate,
-                ));
-                remaining.push(rejected.clone());
-                continue;
-            }
-        };
-        let actual = samples.len() as f64 / channels.max(1) as f64 / sample_rate.max(1) as f64;
-        let start = if actual > 0.0 && audio_description_samples_have_signal(&samples) {
-            choose_slot(
-                &candidates,
-                original.desired_start_sec,
-                original.visual_start_sec,
+        for rate in rates {
+            let audio = if let Some(cancel) = gemini_tempo {
+                crate::bass_output::accelerate_description_pcm(
+                    &original.samples,
+                    original.sample_rate,
+                    original.channels,
+                    (f64::from(rate) + 100.0) / (f64::from(base_rate) + 100.0),
+                    cancel,
+                )
+                .map(|samples| (samples, original.sample_rate, original.channels))
+            } else {
+                resynthesize(original, rate)
+            };
+            let (samples, sample_rate, channels) = match audio {
+                Ok(audio) => audio,
+                Err(error) if error == "cancelled" => return Err(error),
+                Err(error) => {
+                    crate::log_debug(&format!(
+                        "Audio description: native-rate fallback failed cue={} rate={} error={error}",
+                        original.original_index, rate,
+                    ));
+                    break;
+                }
+            };
+            let actual = samples.len() as f64 / channels.max(1) as f64 / sample_rate.max(1) as f64;
+            let start = if actual > 0.0 && audio_description_samples_have_signal(&samples) {
+                choose_slot(
+                    &candidates,
+                    original.desired_start_sec,
+                    original.visual_start_sec,
+                    actual,
+                    0.0,
+                )
+            } else {
+                None
+            };
+            crate::log_debug(&format!(
+                "Audio description: native-rate fallback cue={} base_rate={} retry_rate={} original={:.3}s actual={:.3}s accepted={}",
+                original.original_index,
+                base_rate,
+                rate,
+                rejected.tts_duration_sec,
                 actual,
-                0.0,
-            )
-        } else {
-            None
-        };
-        crate::log_debug(&format!(
-            "Audio description: native-rate fallback cue={} base_rate={} retry_rate={} original={:.3}s actual={:.3}s accepted={}",
-            original.original_index,
-            base_rate,
-            rate,
-            rejected.tts_duration_sec,
-            actual,
-            start.is_some(),
-        ));
-        if let Some(start) = start {
-            reserved.push((start, start + actual));
-            scheduled.push(ScheduledDescription {
-                tts_rate_override: Some(rate),
-                original_index: original.original_index,
-                text: original.text.clone(),
-                desired_start_sec: original.visual_start_sec,
-                visual_evidence_time_sec: original.visual_evidence_time_sec,
-                start_sec: start,
-                samples,
-                sample_rate,
-                channels,
-                extended_pause: false,
-            });
-        } else {
-            remaining.push(rejected.clone());
+                start.is_some(),
+            ));
+            if let Some(start) = start {
+                reserved.push((start, start + actual));
+                scheduled.push(ScheduledDescription {
+                    tts_rate_override: Some(rate),
+                    original_index: original.original_index,
+                    text: original.text.clone(),
+                    desired_start_sec: original.visual_start_sec,
+                    visual_evidence_time_sec: original.visual_evidence_time_sec,
+                    start_sec: start,
+                    samples,
+                    sample_rate,
+                    channels,
+                    extended_pause: false,
+                });
+                continue 'rejected;
+            }
         }
+        remaining.push(rejected.clone());
     }
     *dropped = remaining;
     scheduled.sort_by(|left, right| left.start_sec.total_cmp(&right.start_sec));
@@ -3248,6 +3294,7 @@ fn retry_dropped_descriptions_at_native_rate(
     // Allocate a synthesis folder only if a cue actually qualifies for recovery.
     let mut cache_dir = None;
     let result = recover_descriptions_with_native_rate(
+        (job.tts_engine == TtsEngine::Gemini).then_some(cancel),
         descriptions,
         protected_intervals,
         duration_sec,
@@ -3284,7 +3331,9 @@ fn retry_dropped_descriptions_at_native_rate(
 }
 
 // Final fallback only: existing cues (including native-rate recoveries) are immutable.
+#[allow(clippy::too_many_arguments)]
 fn recover_deferred_descriptions<F>(
+    gemini_tempo: Option<&Arc<AtomicBool>>,
     candidates: &[BridgeDescription],
     first_index: usize,
     protected_intervals: &[BridgeInterval],
@@ -3356,6 +3405,7 @@ where
         );
         scheduled.extend(accepted);
         recover_descriptions_with_native_rate(
+            gemini_tempo,
             std::slice::from_ref(&cue),
             protected_intervals,
             duration_sec,
@@ -3392,6 +3442,7 @@ fn retry_deferred_descriptions_with_exact_tts(
     let initial_count = scheduled.len();
     let mut cache_dir = None;
     let result = recover_deferred_descriptions(
+        (job.tts_engine == TtsEngine::Gemini).then_some(cancel),
         candidates,
         first_index,
         protected_intervals,
@@ -4432,7 +4483,10 @@ pub fn synthesize_audio_description_project_preview(
     }
 
     let mut job = audio_description_job_from_project(project);
-    if let Some(rate) = current.tts_rate_override {
+    if let Some(rate) = current
+        .tts_rate_override
+        .filter(|_| job.tts_engine != TtsEngine::Gemini)
+    {
         job.tts_rate = rate;
     }
     let cache_dir = temporary_job_dir()?;
@@ -4443,6 +4497,21 @@ pub fn synthesize_audio_description_project_preview(
         &cache_dir,
         cancel.clone(),
     );
+    let synthesis_result = synthesis_result.and_then(|(samples, sample_rate, channels)| {
+        if job.tts_engine == TtsEngine::Gemini
+            && let Some(rate) = current.tts_rate_override
+        {
+            return crate::bass_output::accelerate_description_pcm(
+                &samples,
+                sample_rate,
+                channels,
+                ((f64::from(rate) + 100.0) / (f64::from(job.tts_rate) + 100.0)).clamp(1.0, 1.2),
+                &cancel,
+            )
+            .map(|samples| (samples, sample_rate, channels));
+        }
+        Ok((samples, sample_rate, channels))
+    });
     let (samples, sample_rate, channels) = match synthesis_result {
         Ok(values) => values,
         Err(error) => {
@@ -5075,6 +5144,7 @@ pub fn change_audio_description_project_voice(
     settings: &AudioDescriptionProjectVoiceSettings,
     cancel: Arc<AtomicBool>,
     mut callbacks: AudioDescriptionCallbacks,
+    mut repair_text: impl FnMut(f64, f64, f64, &str) -> Option<String>,
 ) -> Result<AudioDescriptionProject, AudioDescriptionProjectVoiceError> {
     let voice = settings.voice.trim();
     if voice.is_empty() {
@@ -5158,24 +5228,129 @@ pub fn change_audio_description_project_voice(
             end_sec: interval.end_sec,
         })
         .collect::<Vec<_>>();
-    let (scheduled, dropped) = schedule_synthesized_descriptions(
+    let (mut scheduled, mut dropped) = schedule_synthesized_descriptions(
         &synthesized,
         &protected_intervals,
         project.source_duration_sec,
         project.allow_extended_pauses,
     );
-    if let Some(first) = dropped.first() {
-        let source_start_sec = project
+    retry_dropped_descriptions_at_native_rate(
+        &synthesized,
+        &protected_intervals,
+        project.source_duration_sec,
+        &job,
+        &cancel,
+        &mut scheduled,
+        &mut dropped,
+    )
+    .map_err(|error| {
+        if error == "cancelled" || cancel.load(Ordering::Relaxed) {
+            AudioDescriptionProjectVoiceError::Cancelled
+        } else {
+            AudioDescriptionProjectVoiceError::Other(error)
+        }
+    })?;
+    while !dropped.is_empty() {
+        if cancel.load(Ordering::Relaxed) {
+            return Err(AudioDescriptionProjectVoiceError::Cancelled);
+        }
+        let first = dropped.remove(0);
+        let index = project
             .descriptions
             .iter()
-            .find(|description| description.id == first.original_index)
-            .map(|description| description.source_start_sec)
-            .unwrap_or(first.desired_start_sec);
-        return Err(AudioDescriptionProjectVoiceError::DoesNotFit {
-            source_start_sec,
-            synthesized_sec: first.tts_duration_sec,
-        });
+            .position(|d| d.id == first.original_index)
+            .ok_or(AudioDescriptionProjectVoiceError::DoesNotFit {
+                source_start_sec: first.desired_start_sec,
+                synthesized_sec: first.tts_duration_sec,
+            })?;
+        let mut cue = synthesized
+            .iter()
+            .find(|d| d.original_index == first.original_index)
+            .cloned()
+            .ok_or_else(|| {
+                AudioDescriptionProjectVoiceError::Other("Synthesized description not found".into())
+            })?;
+        let mut actual = first.tts_duration_sec;
+        loop {
+            let start = project.descriptions[index].source_start_sec;
+            let free = speech_free_intervals(
+                &normalize_intervals(&protected_intervals, project.source_duration_sec),
+                project.source_duration_sec,
+            );
+            let reserved: Vec<_> = scheduled
+                .iter()
+                .map(|d| {
+                    (
+                        d.start_sec,
+                        d.start_sec
+                            + if d.extended_pause {
+                                MIN_EXTENDED_ANCHOR_SEC
+                            } else {
+                                scheduled_duration_sec(d)
+                            },
+                    )
+                })
+                .collect();
+            let available = maximum_description_space(
+                &subtract_reserved_intervals(&free, &reserved),
+                cue.visual_start_sec,
+            );
+            let Some(text) = repair_text(start, actual, available, &cue.text) else {
+                return Err(AudioDescriptionProjectVoiceError::Cancelled);
+            };
+            if text.trim().is_empty() {
+                continue;
+            }
+            cue.text = text.trim().to_string();
+            cue.tts_rate_override = None;
+            let dir = temporary_job_dir().map_err(AudioDescriptionProjectVoiceError::Other)?;
+            let result =
+                synthesize_description(&cue.text, cue.original_index, &job, &dir, cancel.clone());
+            crate::log_if_err!(fs::remove_dir_all(&dir));
+            let (samples, sample_rate, channels) = result.map_err(|error| {
+                if cancel.load(Ordering::Relaxed) || error == "cancelled" {
+                    AudioDescriptionProjectVoiceError::Cancelled
+                } else {
+                    AudioDescriptionProjectVoiceError::Other(error)
+                }
+            })?;
+            cue.samples = samples;
+            cue.sample_rate = sample_rate;
+            cue.channels = channels;
+            let mut occupied = protected_intervals.clone();
+            occupied.extend(scheduled.iter().map(|d| BridgeInterval {
+                start_sec: d.start_sec,
+                end_sec: d.start_sec
+                    + if d.extended_pause {
+                        MIN_EXTENDED_ANCHOR_SEC
+                    } else {
+                        scheduled_duration_sec(d)
+                    },
+            }));
+            let (accepted, mut rejected) = schedule_synthesized_descriptions(
+                std::slice::from_ref(&cue),
+                &occupied,
+                project.source_duration_sec,
+                project.allow_extended_pauses,
+            );
+            scheduled.extend(accepted);
+            retry_dropped_descriptions_at_native_rate(
+                std::slice::from_ref(&cue),
+                &protected_intervals,
+                project.source_duration_sec,
+                &job,
+                &cancel,
+                &mut scheduled,
+                &mut rejected,
+            )
+            .map_err(AudioDescriptionProjectVoiceError::Other)?;
+            if rejected.is_empty() {
+                break;
+            }
+            actual = rejected[0].tts_duration_sec;
+        }
     }
+    scheduled.sort_by(|a, b| a.start_sec.total_cmp(&b.start_sec));
     if cancel.load(Ordering::Relaxed) {
         return Err(AudioDescriptionProjectVoiceError::Cancelled);
     }
@@ -7937,6 +8112,7 @@ mod tests {
             let original = scheduled[0].clone();
             let mut calls = Vec::new();
             let rejected = super::recover_deferred_descriptions(
+                None,
                 &[deferred_test_candidate(2.0)],
                 100,
                 &protected,
@@ -7998,8 +8174,8 @@ mod tests {
                 assert_eq!(rejected.len(), 1);
             }
             assert_eq!(calls[0], 0);
-            assert!(calls.len() <= 2);
-            assert!(calls.iter().all(|rate| [0, 10, 15].contains(rate)));
+            assert!(calls.len() <= 4);
+            assert!(calls.iter().all(|rate| [0, 10, 15, 20].contains(rate)));
         }
         Ok(())
     }
@@ -8014,6 +8190,7 @@ mod tests {
         let mut scheduled = Vec::new();
         let mut calls = 0;
         let rejected = super::recover_deferred_descriptions(
+            None,
             &[
                 deferred_test_candidate(1.0),
                 deferred_test_candidate(1.5),
@@ -8041,12 +8218,20 @@ mod tests {
             serde_json::from_str(r#"{"ok":true,"descriptions":[]}"#).unwrap();
         assert!(legacy.deferred_descriptions.is_empty());
         let mut scheduled = Vec::new();
-        super::recover_deferred_descriptions(&[], 0, &[], 10.0, 0, &mut scheduled, |_, _, _| {
-            panic!("empty fallback must not synthesize")
-        })
+        super::recover_deferred_descriptions(
+            None,
+            &[],
+            0,
+            &[],
+            10.0,
+            0,
+            &mut scheduled,
+            |_, _, _| panic!("empty fallback must not synthesize"),
+        )
         .unwrap();
         let candidate = deferred_test_candidate(1.0);
         let result = super::recover_deferred_descriptions(
+            None,
             std::slice::from_ref(&candidate),
             0,
             &[],
@@ -8058,6 +8243,7 @@ mod tests {
         assert!(result.is_ok());
         assert!(scheduled.is_empty());
         let result = super::recover_deferred_descriptions(
+            None,
             &[candidate],
             0,
             &[],
@@ -8070,14 +8256,95 @@ mod tests {
     }
 
     #[test]
-    fn native_rate_fallback_selects_one_retry_and_checks_actual_duration()
+    #[ignore = "requires the Windows BASS runtime and an audio device"]
+    fn gemini_audio_tempo_recovers_without_resynthesis_and_keeps_pitch() {
+        crate::embedded_deps::extract_all().unwrap();
+        let mut cue = native_rate_test_cue(3500);
+        cue.sample_rate = 24000;
+        cue.samples = (0..84000)
+            .map(|i| ((i as f32 * 440.0 * std::f32::consts::TAU / 24000.0).sin()) * 0.3)
+            .collect::<Vec<_>>()
+            .into();
+        let cues = [cue];
+        let (mut scheduled, mut dropped) =
+            super::schedule_synthesized_descriptions(&cues, &[], 5.0, false);
+        assert_eq!(dropped.len(), 1);
+        // An estimate that cannot fit even at +20% must not suppress actual rendering.
+        dropped[0].tts_duration_sec = 3.7;
+        let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let probe = crate::bass_output::accelerate_description_pcm(
+            &cues[0].samples,
+            24000,
+            1,
+            1.2,
+            &cancel,
+        )
+        .unwrap();
+        assert!(
+            probe.len() < 72000,
+            "tempo duration {}",
+            probe.len() as f64 / 24000.0
+        );
+        super::recover_descriptions_with_native_rate(
+            Some(&cancel),
+            &cues,
+            &[],
+            5.0,
+            0,
+            &mut scheduled,
+            &mut dropped,
+            |_, _| panic!("Gemini must not regenerate faster"),
+        )
+        .unwrap();
+        assert!(dropped.is_empty());
+        assert_eq!(scheduled[0].tts_rate_override, Some(20));
+        let samples = &scheduled[0].samples;
+        let duration = samples.len() as f64 / 24000.0;
+        assert!((duration - 3.5 / 1.2).abs() < 0.04, "{duration}");
+        let middle = &samples[2400..samples.len() - 2400];
+        let crossings = middle
+            .windows(2)
+            .filter(|w| w[0] <= 0.0 && w[1] > 0.0)
+            .count();
+        let frequency = crossings as f64 * 24000.0 / middle.len() as f64;
+        assert!(
+            (frequency - 440.0).abs() < 3.0,
+            "pitch changed: {frequency}"
+        );
+        cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        assert_eq!(
+            crate::bass_output::accelerate_description_pcm(
+                &cues[0].samples,
+                24000,
+                1,
+                1.2,
+                &cancel
+            )
+            .unwrap_err(),
+            "cancelled"
+        );
+        assert!(
+            crate::bass_output::accelerate_description_pcm(
+                &cues[0].samples,
+                24000,
+                1,
+                1.3,
+                &cancel
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn native_rate_fallback_checks_actual_duration_up_to_twenty_percent()
     -> Result<(), Box<dyn std::error::Error>> {
         // Three seconds available: +10%, +15%, no possible recovery, and
         // a native voice whose real duration does not match the estimate.
         for (original_ms, actual_ms, expected_rate, accepted) in [
             (3200, 2900, Some(10), true),
             (3400, 2950, Some(15), true),
-            (3500, 2900, None, false),
+            (3500, 2900, Some(20), true),
+            (3700, 2900, None, false),
             (3200, 3100, Some(10), false),
             (3200, 0, Some(10), false),
             (2900, 2900, None, true),
@@ -8087,6 +8354,7 @@ mod tests {
                 super::schedule_synthesized_descriptions(&cues, &[], 5.0, false);
             let mut rates = Vec::new();
             super::recover_descriptions_with_native_rate(
+                None,
                 &cues,
                 &[],
                 5.0,
@@ -8098,7 +8366,14 @@ mod tests {
                     Ok((std::sync::Arc::from(vec![0.2; actual_ms]), 1000, 1))
                 },
             )?;
-            assert_eq!(rates, expected_rate.into_iter().collect::<Vec<_>>());
+            assert_eq!(
+                rates,
+                if !accepted && expected_rate.is_some() {
+                    vec![10, 15, 20]
+                } else {
+                    expected_rate.into_iter().collect::<Vec<_>>()
+                }
+            );
             assert_eq!(scheduled.len(), usize::from(accepted));
             assert_eq!(dropped.len(), usize::from(!accepted));
             if accepted {
@@ -8132,6 +8407,32 @@ mod tests {
     }
 
     #[test]
+    fn native_rate_fallback_stops_at_twenty_percent_when_audio_is_still_too_long() {
+        let cues = [native_rate_test_cue(3500)];
+        let (mut scheduled, mut dropped) =
+            super::schedule_synthesized_descriptions(&cues, &[], 5.0, false);
+        let mut rates = Vec::new();
+        super::recover_descriptions_with_native_rate(
+            None,
+            &cues,
+            &[],
+            5.0,
+            0,
+            &mut scheduled,
+            &mut dropped,
+            |_, rate| {
+                rates.push(rate);
+                let actual_ms = if rate <= 20 { 3060 } else { 2900 };
+                Ok((std::sync::Arc::from(vec![0.2; actual_ms]), 1000, 1))
+            },
+        )
+        .unwrap();
+        assert_eq!(rates, vec![20]);
+        assert_eq!(dropped.len(), 1);
+        assert!(scheduled.is_empty());
+    }
+
+    #[test]
     fn native_rate_fallback_preserves_reserved_audio_and_never_stacks_rates()
     -> Result<(), Box<dyn std::error::Error>> {
         let mut cues = vec![native_rate_test_cue(3200), native_rate_test_cue(1000)];
@@ -8141,6 +8442,7 @@ mod tests {
         assert_eq!(scheduled.len(), 1);
         let accepted_samples = scheduled[0].samples.clone();
         super::recover_descriptions_with_native_rate(
+            None,
             &cues,
             &[],
             5.0,
@@ -8156,6 +8458,7 @@ mod tests {
         cues[0].tts_rate_override = Some(10);
         scheduled.clear();
         super::recover_descriptions_with_native_rate(
+            None,
             &cues,
             &[],
             5.0,
@@ -8175,6 +8478,7 @@ mod tests {
             let (mut scheduled, mut dropped) =
                 super::schedule_synthesized_descriptions(&cues, &[], 5.0, false);
             let result = super::recover_descriptions_with_native_rate(
+                None,
                 &cues,
                 &[],
                 5.0,

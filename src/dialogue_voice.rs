@@ -31,6 +31,7 @@ pub fn parse_engine_input(input: &str) -> Option<TtsEngine> {
         "sapi5" | "sapi 5" => Some(TtsEngine::Sapi5),
         "sapi4" | "sapi 4" => Some(TtsEngine::Sapi4),
         "google" | "google tts" => Some(TtsEngine::Google),
+        "gemini" => Some(TtsEngine::Gemini),
         _ => None,
     }
 }
@@ -41,6 +42,7 @@ pub fn engine_to_key(engine: TtsEngine) -> &'static str {
         TtsEngine::Sapi5 => "sapi5",
         TtsEngine::Sapi4 => "sapi4",
         TtsEngine::Google => "google",
+        TtsEngine::Gemini => "gemini",
     }
 }
 

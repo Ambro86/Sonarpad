@@ -1,5 +1,9 @@
 # Přehled změn
 
+Version 0.9.29 – 2026-11-13
+
+1. Hlasový výstup: přidány hlasy Gemini s osobním klíčem Gemini API pro čtení, audioknihy a zvukové popisy. Přístup Sonarpad AI zatím není pro tento hlasový modul podporován. Automatické opakování při dočasných chybách a prázdném či neplatném zvuku; požadavky i čekání lze zrušit.
+
 Version 0.9.28 – 2026-11-13
 
 1. Editor: Ctrl+X a Úpravy > Vyjmout nyní přes NVDA nebo JAWS stručně oznámí „Vyjmuto“, pokud byl vybraný text skutečně odstraněn.

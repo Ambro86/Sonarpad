@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.29 – 2026-11-13
+
+1. Speech: added Gemini voices using your personal Gemini API key, for reading, audiobooks and audio descriptions. Sonarpad AI access is not yet supported for this voice engine. Automatic retries for transient errors and empty or invalid audio, with cancellation during requests and waits.
+
 Version 0.9.28 – 2026-11-13
 
 1. Editor: Ctrl+X and Edit > Cut now announce a short “Cut” through NVDA or JAWS when selected text is actually removed.

@@ -12,6 +12,7 @@ mod com_guard;
 mod curl_client;
 mod direct_catalog;
 mod embedded_deps;
+mod gemini_tts;
 mod google_tts;
 mod macros;
 mod result_labels;
@@ -16391,6 +16392,7 @@ struct VoicePanelLabels {
     engine_sapi: String,
     engine_sapi4: String,
     engine_google: String,
+    engine_gemini: String,
     voices_empty: String,
     favorites_empty: String,
     add_favorite: String,
@@ -16414,6 +16416,7 @@ fn voice_panel_labels(language: Language) -> VoicePanelLabels {
         engine_sapi: i18n::tr(language, "voice_panel.engine_sapi"),
         engine_sapi4: i18n::tr(language, "voice_panel.engine_sapi4"),
         engine_google: i18n::tr(language, "options.engine.google"),
+        engine_gemini: i18n::tr(language, "options.engine.gemini"),
         voices_empty: i18n::tr(language, "voice_panel.voices_empty"),
         favorites_empty: i18n::tr(language, "voice_panel.favorites_empty"),
         add_favorite: i18n::tr(language, "voice_panel.add_favorite"),
@@ -16547,7 +16550,7 @@ fn tts_tuning_limits_for_engine(engine: TtsEngine) -> TtsTuningLimits {
             volume_min: SAPI_TTS_VOLUME_MIN,
             volume_max: SAPI_TTS_VOLUME_MAX,
         },
-        TtsEngine::Sapi5 | TtsEngine::Sapi4 => TtsTuningLimits {
+        TtsEngine::Gemini | TtsEngine::Sapi5 | TtsEngine::Sapi4 => TtsTuningLimits {
             rate_min: TTS_RATE_MIN,
             rate_max: TTS_RATE_MAX,
             pitch_min: TTS_PITCH_MIN,
@@ -17598,11 +17601,18 @@ pub(crate) fn refresh_voice_panel(hwnd: HWND) {
                 WPARAM(0),
                 LPARAM(to_wide(&labels.engine_google).as_ptr() as isize),
             );
+            SendMessageW(
+                combo_engine,
+                CB_ADDSTRING,
+                WPARAM(0),
+                LPARAM(to_wide(&labels.engine_gemini).as_ptr() as isize),
+            );
             let engine_index = match settings.tts_engine {
                 TtsEngine::Edge => 0,
                 TtsEngine::Sapi5 => 1,
                 TtsEngine::Sapi4 => 2,
                 TtsEngine::Google => 3,
+                TtsEngine::Gemini => 4,
             };
             SendMessageW(combo_engine, CB_SETCURSEL, WPARAM(engine_index), LPARAM(0));
             let is_google = matches!(settings.tts_engine, TtsEngine::Google);
@@ -17804,6 +17814,7 @@ pub(crate) fn refresh_voice_panel(hwnd: HWND) {
                 with_state(hwnd, |state| match settings.tts_engine {
                     TtsEngine::Edge => state.edge_voices.clone(),
                     TtsEngine::Google => crate::google_tts::installed_voices(),
+                    TtsEngine::Gemini => crate::gemini_tts::voices(),
                     TtsEngine::Sapi5 => state.sapi_voices.clone(),
                     TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
                 })
@@ -17947,6 +17958,7 @@ fn refresh_voice_panel_voice_list(hwnd: HWND) {
             with_state(hwnd, |state| match settings.tts_engine {
                 TtsEngine::Edge => state.edge_voices.clone(),
                 TtsEngine::Google => crate::google_tts::installed_voices(),
+                TtsEngine::Gemini => crate::gemini_tts::voices(),
                 TtsEngine::Sapi5 => state.sapi_voices.clone(),
                 TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
             })
@@ -18165,6 +18177,7 @@ fn populate_favorites_combo(
                 TtsEngine::Sapi5 => &labels.engine_sapi,
                 TtsEngine::Sapi4 => &labels.engine_sapi,
                 TtsEngine::Google => &labels.engine_google,
+                TtsEngine::Gemini => &labels.engine_gemini,
             };
             let favorite_name = if fav.engine == TtsEngine::Google {
                 crate::google_tts::voice_display_name(&fav.short_name)
@@ -18212,6 +18225,7 @@ fn handle_voice_panel_engine_change(hwnd: HWND) {
             1 => TtsEngine::Sapi5,
             2 => TtsEngine::Sapi4,
             3 => TtsEngine::Google,
+            4 => TtsEngine::Gemini,
             _ => TtsEngine::Edge,
         };
         let (old_engine, old_voice) = with_state(hwnd, |state| {
@@ -18726,6 +18740,7 @@ fn current_voice_selection(hwnd: HWND, engine: TtsEngine) -> Option<String> {
             let list = match engine {
                 TtsEngine::Edge => state.edge_voices.clone(),
                 TtsEngine::Google => crate::google_tts::installed_voices(),
+                TtsEngine::Gemini => crate::gemini_tts::voices(),
                 TtsEngine::Sapi5 => state.sapi_voices.clone(),
                 TtsEngine::Sapi4 => crate::sapi4_engine::get_voices(),
             };

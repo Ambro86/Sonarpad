@@ -1,4 +1,6 @@
 {
+  "options.engine.gemini": "Gemini",
+  "gemini_tts.key_required": "Gemini balsams reikia asmeninio Gemini API rakto DI nustatymuose. Sonarpad AI prieigos kodas dar nepalaikomas.",
   "dictionary.changed_elsewhere": "Šis žodyno įrašas buvo pakeistas kitame lange. Iš naujo atverkite žodyną ir bandykite dar kartą.",
   "stream_audio.youtube_sign_in_required": "Norint žiūrėti šį vaizdo įrašą, „YouTube“ reikalauja prisijungti. Jo negalima paleisti ar atsisiųsti naudojant „Sonarpad“.",
   "places.new_search": "Nauja paieška",
@@ -2480,5 +2482,6 @@
   "stream_audio.search_playlists": "Grojaraščiai",
   "stream_audio.search_channels": "Kanalai",
   "stream_audio.search_courses": "Kursai",
-  "stream_audio.search_podcasts": "Tinklalaidės"
+  "stream_audio.search_podcasts": "Tinklalaidės",
+  "audio_description.project.repair_text": "Aprašymas ties {time} trunka {actual} s; galima trukmė yra {available} s. Ar norite sutrumpinti tekstą?"
 }
