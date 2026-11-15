@@ -1149,7 +1149,9 @@ def _generate_blocked_chunk_by_minutes(
             if enable_glossary:
                 recovered_glossary.extend(glossary or [])
                 if glossary:
-                    _update_character_continuity(character_continuity, glossary)
+                    _update_character_continuity(
+                        character_continuity, glossary, max_characters=96
+                    )
             app_logger.info(
                 "Blocked chunk %d fallback minute %d kept %d descriptions.",
                 chunk_number, minute_label, len(normalized),
@@ -3458,7 +3460,10 @@ def _build_unified_prompts(user_prompt, model_name_to_use, dialogue_free_windows
             "catalog is authoritative. Reuse an established catalog name and ID when the "
             "person is confidently recognized, even if that name is not spoken again in this "
             "clip. For a genuinely new character, use a proper name only after it is clearly "
-            "revealed in dialogue. Do not invent names or duplicate an established identity."
+            "revealed in dialogue and clearly linked to that person. A name merely mentioned "
+            "in dialogue does not identify the person on screen. If the link between a name "
+            "and a person is uncertain, use a concise visual label rather than forcing a name. "
+            "Do not invent names or duplicate an established identity."
         )
         subject_repetition_directive = (
             "6.  **AVOID REPEATING THE SUBJECT'S NAME:** When immediately consecutive "
@@ -3474,7 +3479,7 @@ def _build_unified_prompts(user_prompt, model_name_to_use, dialogue_free_windows
         glossary_schema = f"""1.  **"character_glossary":** An array of objects, where each object represents a distinct character. Each character object must contain:
     *   `"id"`: The permanent identity key. If the character matches an established saved-catalog entry, return EXACTLY that existing ID, character-for-character. Never shorten it, regenerate it from the visible/spoken name, or create an alias ID. Only a genuinely new character may receive a new unique descriptive ID (e.g., "man_in_red_shirt").
     *   `"description"`: For a genuinely new character, provide a definitive physical description in {target_language_name}. For an ESTABLISHED catalog character, do NOT rewrite, summarize, correct, or paraphrase the saved biography. Return only genuinely NEW visual appearance information observed in this clip (for example a new outfit, hat, bandage, glasses, injury, or other distinguishing visible detail). If there is no genuinely new visual fact, repeat the established description exactly rather than inventing a variation. Never add or alter relationships, names, ages, roles, backstory, or other non-visual facts for an established character.
-    *   `"name"`: For an established character, keep the established catalog name. For a genuinely new character, use a proper name only if it is spoken clearly in the video; otherwise use a concise visual label."""
+    *   `"name"`: For an established character, keep the established catalog name. For a genuinely new character, use a proper name only if it is spoken clearly in the video and unambiguously linked to that person; a mere mention is not enough. Otherwise use a concise visual label."""
         example_glossary_json = json.dumps(
             [{"id": "man_in_suit", "description": glossary_example, "name": "David"}],
             ensure_ascii=False,
