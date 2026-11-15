@@ -2,7 +2,7 @@
 
 Version 0.9.29 – 2026-11-13
 
-1. Tổng hợp giọng nói: thêm giọng Gemini dùng khóa API Gemini cá nhân để đọc, tạo sách nói và mô tả âm thanh. Công cụ giọng nói này chưa hỗ trợ truy cập Sonarpad AI. Tự động thử lại khi có lỗi tạm thời hoặc âm thanh trống hay không hợp lệ; có thể hủy trong lúc gửi yêu cầu và chờ.
+1. **Mới: giọng Gemini trong toàn bộ Sonarpad!** Giọng nói tự nhiên, biểu cảm, gần với giọng người thật để tạo sách nói và mô tả âm thanh, đọc tin tức, sách và tài liệu cũng như sử dụng tổng hợp giọng nói trong các chức năng của chương trình. Bạn có thể chọn Sonarpad AI với mã truy cập hoặc khóa API Gemini cá nhân: không cần cả hai.
 
 Version 0.9.28 – 2026-11-13
 

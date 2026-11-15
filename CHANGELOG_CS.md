@@ -2,7 +2,7 @@
 
 Version 0.9.29 – 2026-11-13
 
-1. Hlasový výstup: přidány hlasy Gemini s osobním klíčem Gemini API pro čtení, audioknihy a zvukové popisy. Přístup Sonarpad AI zatím není pro tento hlasový modul podporován. Automatické opakování při dočasných chybách a prázdném či neplatném zvuku; požadavky i čekání lze zrušit.
+1. **Novinka: hlasy Gemini v celém Sonarpadu!** Přirozené a výrazné hlasy blízké lidskému hlasu pro tvorbu audioknih a audiopopisů, čtení zpráv, knih a dokumentů a hlasový výstup ve funkcích programu. Můžete zvolit Sonarpad AI se svým přístupovým kódem nebo osobní klíč Gemini API: nepotřebujete obojí.
 
 Version 0.9.28 – 2026-11-13
 

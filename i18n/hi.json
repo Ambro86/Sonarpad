@@ -1,6 +1,6 @@
 {
   "options.engine.gemini": "Gemini",
-  "gemini_tts.key_required": "Gemini आवाज़ों के लिए AI सेटिंग में आपकी व्यक्तिगत Gemini API कुंजी आवश्यक है। Sonarpad AI एक्सेस कोड अभी उपयोग नहीं किया जा सकता।",
+  "gemini_tts.key_required": "Gemini आवाज़ों के लिए अपने एक्सेस कोड से Sonarpad AI या अपनी व्यक्तिगत Gemini API कुंजी कॉन्फ़िगर करें। OK दबाकर AI से ऑडियो विवरण बनाएँ खोलें और सेवा चुनें।",
   "dictionary.changed_elsewhere": "शब्दकोश की यह प्रविष्टि किसी दूसरी विंडो में बदल दी गई है। शब्दकोश फिर से खोलें और दोबारा कोशिश करें।",
   "stream_audio.youtube_sign_in_required": "इस वीडियो के लिए YouTube में साइन इन करना ज़रूरी है। इसे Sonarpad में चलाया या डाउनलोड नहीं किया जा सकता।",
   "places.new_search": "नई खोज",

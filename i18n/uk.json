@@ -1,6 +1,6 @@
 {
   "options.engine.gemini": "Gemini",
-  "gemini_tts.key_required": "Для голосів Gemini потрібен особистий ключ Gemini API в налаштуваннях ШІ. Код доступу Sonarpad AI поки не підтримується.",
+  "gemini_tts.key_required": "Щоб використовувати голоси Gemini, налаштуйте Sonarpad AI зі своїм кодом доступу або особистий ключ API Gemini. Натисніть OK, щоб відкрити створення аудіоописів зі ШІ та вибрати сервіс.",
   "dictionary.changed_elsewhere": "Цей запис словника було змінено в іншому вікні. Відкрийте словник знову та повторіть спробу.",
   "stream_audio.youtube_sign_in_required": "Для доступу до цього відео YouTube вимагає входу в обліковий запис. Його неможливо відтворити чи завантажити в Sonarpad.",
   "places.new_search": "Новий пошук",

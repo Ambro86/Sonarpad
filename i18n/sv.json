@@ -1,6 +1,6 @@
 {
   "options.engine.gemini": "Gemini",
-  "gemini_tts.key_required": "Gemini-röster kräver din personliga Gemini API-nyckel i AI-inställningarna. Sonarpad AI-åtkomstkoden kan ännu inte användas.",
+  "gemini_tts.key_required": "För Gemini-röster, konfigurera Sonarpad AI med din åtkomstkod eller din personliga Gemini API-nyckel. Tryck på OK för att öppna Skapa syntolkningar med AI och välja tjänst.",
   "dictionary.changed_elsewhere": "Den här ordboksposten ändrades i ett annat fönster. Öppna ordboken igen och försök på nytt.",
   "stream_audio.youtube_sign_in_required": "YouTube kräver inloggning för den här videon. Den kan inte spelas upp eller laddas ned i Sonarpad.",
   "places.new_search": "Ny sökning",

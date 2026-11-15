@@ -1,6 +1,6 @@
 {
   "options.engine.gemini": "Gemini",
-  "gemini_tts.key_required": "Gemini-Stimmen benötigen Ihren persönlichen Gemini-API-Schlüssel in den KI-Einstellungen. Der Sonarpad-AI-Zugangscode kann noch nicht verwendet werden.",
+  "gemini_tts.key_required": "Konfigurieren Sie für Gemini-Stimmen Sonarpad AI mit Ihrem Zugangscode oder Ihren persönlichen Gemini-API-Schlüssel. Mit OK öffnen Sie Audiodeskriptionen mit KI erstellen und wählen den Dienst aus.",
   "dictionary.changed_elsewhere": "Dieser Wörterbucheintrag wurde in einem anderen Fenster geändert. Öffnen Sie das Wörterbuch erneut und versuchen Sie es noch einmal.",
   "stream_audio.youtube_sign_in_required": "YouTube verlangt für dieses Video eine Anmeldung. Es kann in Sonarpad nicht abgespielt oder heruntergeladen werden.",
   "places.new_search": "Neue Suche",

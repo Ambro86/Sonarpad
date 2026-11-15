@@ -1,6 +1,6 @@
 {
   "options.engine.gemini": "Gemini",
-  "gemini_tts.key_required": "Giọng Gemini yêu cầu khóa API Gemini cá nhân trong cài đặt AI. Chưa thể dùng mã truy cập Sonarpad AI.",
+  "gemini_tts.key_required": "Để dùng giọng Gemini, hãy cấu hình Sonarpad AI bằng mã truy cập hoặc khóa API Gemini cá nhân. Nhấn OK để mở Tạo mô tả âm thanh bằng AI và chọn dịch vụ.",
   "dictionary.changed_elsewhere": "Mục từ điển này đã được thay đổi trong cửa sổ khác. Hãy mở lại từ điển và thử lại.",
   "stream_audio.youtube_sign_in_required": "YouTube yêu cầu đăng nhập để xem video này. Không thể phát hoặc tải video xuống trong Sonarpad.",
   "places.new_search": "Tìm kiếm mới",

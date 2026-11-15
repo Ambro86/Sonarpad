@@ -1,6 +1,6 @@
 {
   "options.engine.gemini": "Gemini",
-  "gemini_tts.key_required": "Gemini balsams reikia asmeninio Gemini API rakto DI nustatymuose. Sonarpad AI prieigos kodas dar nepalaikomas.",
+  "gemini_tts.key_required": "Norėdami naudoti Gemini balsus, nustatykite Sonarpad AI su savo prieigos kodu arba asmeninį Gemini API raktą. Paspauskite OK, kad atidarytumėte garsinių aprašymų kūrimą su DI ir pasirinktumėte paslaugą.",
   "dictionary.changed_elsewhere": "Šis žodyno įrašas buvo pakeistas kitame lange. Iš naujo atverkite žodyną ir bandykite dar kartą.",
   "stream_audio.youtube_sign_in_required": "Norint žiūrėti šį vaizdo įrašą, „YouTube“ reikalauja prisijungti. Jo negalima paleisti ar atsisiųsti naudojant „Sonarpad“.",
   "places.new_search": "Nauja paieška",

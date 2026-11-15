@@ -2,7 +2,7 @@
 
 Version 0.9.29 – 2026-11-13
 
-1. Kalbos sintezė: pridėti Gemini balsai su asmeniniu Gemini API raktu skaitymui, garsinėms knygoms ir garsiniams aprašymams. Šis balso variklis dar nepalaiko Sonarpad AI prieigos. Automatiniai pakartotiniai bandymai esant laikinoms klaidoms ir tuščiam ar netinkamam garsui; galima atšaukti užklausas ir laukimą.
+1. **Naujiena: Gemini balsai visame Sonarpad!** Natūralūs ir išraiškingi, į žmogaus balsą panašūs balsai garsinėms knygoms ir garsiniams aprašymams kurti, naujienoms, knygoms ir dokumentams skaityti bei kalbos sintezei programos funkcijose. Rinkitės Sonarpad AI su savo prieigos kodu arba asmeninį Gemini API raktą: abiejų nereikia.
 
 Version 0.9.28 – 2026-11-13
 

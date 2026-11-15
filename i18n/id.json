@@ -1,6 +1,6 @@
 {
   "options.engine.gemini": "Gemini",
-  "gemini_tts.key_required": "Suara Gemini memerlukan kunci API Gemini pribadi di pengaturan AI. Kode akses Sonarpad AI belum dapat digunakan.",
+  "gemini_tts.key_required": "Untuk menggunakan suara Gemini, atur Sonarpad AI dengan kode akses Anda atau kunci API Gemini pribadi. Tekan OK untuk membuka Buat deskripsi audio dengan AI dan memilih layanan.",
   "dictionary.changed_elsewhere": "Entri kamus ini telah diubah di jendela lain. Buka kembali kamus dan coba lagi.",
   "stream_audio.youtube_sign_in_required": "YouTube mengharuskan Anda masuk untuk video ini. Video tidak dapat diputar atau diunduh di Sonarpad.",
   "places.new_search": "Pencarian baru",

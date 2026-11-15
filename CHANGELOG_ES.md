@@ -2,7 +2,7 @@
 
 Version 0.9.29 – 2026-11-13
 
-1. Síntesis de voz: añadidas las voces Gemini con la clave API Gemini personal para lectura, audiolibros y audiodescripciones. El acceso Sonarpad AI todavía no es compatible con este motor de voz. Reintentos automáticos ante errores temporales y audio vacío o no válido, con cancelación durante las solicitudes y esperas.
+1. **¡Novedad: voces Gemini en todo Sonarpad!** Voces naturales y expresivas, cercanas a la voz humana, para crear audiolibros y audiodescripciones, leer noticias, libros y documentos y utilizar la síntesis de voz en las funciones del programa. Puedes elegir Sonarpad AI con tu código de acceso o tu clave API Gemini personal: no necesitas ambos.
 
 Version 0.9.28 – 2026-11-13
 

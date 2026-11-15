@@ -735,6 +735,30 @@ pub fn open(parent: HWND) {
     }
 }
 
+pub(crate) fn open_credentials(parent: HWND) {
+    // Reuse the dialog without resetting any selected video or project.
+    let hwnd = open_window(parent);
+    if hwnd.0 == 0 || !crate::is_window_handle_valid(hwnd) {
+        return;
+    }
+    unsafe {
+        ShowWindow(hwnd, SW_SHOW);
+        SetForegroundWindow(hwnd);
+        let pointer =
+            GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                as *mut WindowState;
+        if let Some(state) = pointer.as_ref()
+            && !state.running
+        {
+            SetFocus(if using_sonarpad_ai(state) {
+                state.sonarpad_code_edit
+            } else {
+                state.gemini_api_key_edit
+            });
+        }
+    }
+}
+
 pub fn open_with_input(parent: HWND, input_path: PathBuf) {
     if !input_path.is_file() || !crate::file_handler::is_video_path(input_path.as_path()) {
         crate::log_debug(&format!(
@@ -2350,7 +2374,10 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
     let labels = labels(state.language);
     let use_sonarpad_ai = using_sonarpad_ai(state);
     let gemini_api_key = get_text(state.gemini_api_key_edit).trim().to_string();
-    if engine_from_combo(state.engine_combo) == TtsEngine::Gemini && gemini_api_key.is_empty() {
+    if engine_from_combo(state.engine_combo) == TtsEngine::Gemini
+        && !use_sonarpad_ai
+        && gemini_api_key.is_empty()
+    {
         show_audio_description_error_and_focus(
             hwnd,
             state,

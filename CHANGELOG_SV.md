@@ -2,7 +2,7 @@
 
 Version 0.9.29 – 2026-11-13
 
-1. Talsyntes: lagt till Gemini-röster med personlig Gemini API-nyckel för uppläsning, ljudböcker och syntolkning. Sonarpad AI stöds ännu inte för denna röstmotor. Automatiska återförsök vid tillfälliga fel och tomt eller ogiltigt ljud, med möjlighet att avbryta under anrop och väntan.
+1. **Nyhet: Gemini-röster i hela Sonarpad!** Naturliga och uttrycksfulla röster som liknar mänskliga röster för att skapa ljudböcker och syntolkningar, läsa upp nyheter, böcker och dokument samt använda talsyntes i programmets funktioner. Välj Sonarpad AI med din åtkomstkod eller din personliga Gemini API-nyckel: båda behövs inte.
 
 Version 0.9.28 – 2026-11-13
 

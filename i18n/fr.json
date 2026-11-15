@@ -1,6 +1,6 @@
 {
   "options.engine.gemini": "Gemini",
-  "gemini_tts.key_required": "Les voix Gemini nécessitent votre clé API Gemini personnelle dans les paramètres IA. Le code d’accès Sonarpad AI n’est pas encore utilisable.",
+  "gemini_tts.key_required": "Pour utiliser les voix Gemini, configurez Sonarpad AI avec votre code d’accès ou votre clé API Gemini personnelle. Appuyez sur OK pour ouvrir Créer des audiodescriptions avec l’IA et choisir le service.",
   "dictionary.changed_elsewhere": "Cette entrée du dictionnaire a été modifiée dans une autre fenêtre. Rouvrez le dictionnaire et réessayez.",
   "stream_audio.youtube_sign_in_required": "YouTube exige une connexion pour cette vidéo. Elle ne peut pas être lue ni téléchargée dans Sonarpad.",
   "places.new_search": "Nouvelle recherche",

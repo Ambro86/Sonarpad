@@ -2,7 +2,7 @@
 
 Version 0.9.29 – 2026-11-13
 
-1. Speech: added Gemini voices using your personal Gemini API key, for reading, audiobooks and audio descriptions. Sonarpad AI access is not yet supported for this voice engine. Automatic retries for transient errors and empty or invalid audio, with cancellation during requests and waits.
+1. **New: Gemini voices throughout Sonarpad!** Natural, expressive voices with a human-like sound for creating audiobooks and audio descriptions, reading news, books and documents, and using text-to-speech across the application. Choose Sonarpad AI with your access code or your personal Gemini API key: you do not need both.
 
 Version 0.9.28 – 2026-11-13
 

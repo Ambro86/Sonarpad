@@ -1,4 +1,4 @@
-//! Gemini speech with the user's existing, encrypted-at-rest API key.
+//! Gemini speech through the selected audio-description AI provider.
 use base64::Engine;
 use serde_json::{Value, json};
 use std::io::Cursor;
@@ -185,6 +185,21 @@ fn response_audio(response: &Value, volume: i32) -> Result<Vec<u8>, String> {
     Ok(output.into_inner())
 }
 
+pub(crate) fn missing_credentials_error(
+    message: &str,
+    language: crate::settings::Language,
+) -> bool {
+    message.contains(&crate::i18n::tr(language, "gemini_tts.key_required"))
+}
+
+pub(crate) fn credentials_available(settings: &crate::settings::AppSettings) -> bool {
+    if settings.audio_description_use_sonarpad_ai {
+        !settings.sonarpad_ai_access_code.trim().is_empty()
+    } else {
+        !settings.gemini_api_key.trim().is_empty()
+    }
+}
+
 pub async fn synthesize_wav_bytes(
     text: &str,
     voice: &str,
@@ -194,7 +209,7 @@ pub async fn synthesize_wav_bytes(
     cancel: &AtomicBool,
 ) -> Result<Vec<u8>, String> {
     let settings = crate::settings::load_settings();
-    if settings.gemini_api_key.trim().is_empty() {
+    if !credentials_available(&settings) {
         return Err(crate::i18n::tr(
             settings.language,
             "gemini_tts.key_required",
@@ -212,10 +227,22 @@ pub async fn synthesize_wav_bytes(
         .build()
         .map_err(|e| e.to_string())?;
     let body = request_body(text, voice, rate, pitch, &settings.gemini_tts_language);
+    let request_key = format!("speech-{}", uuid::Uuid::new_v4());
+    let refreshed = AtomicBool::new(false);
     retry_synthesis(|| async {
         let _permit = REQUEST_SLOTS.acquire().await.map_err(|_| SynthesisError {
             message: "Gemini TTS: request queue closed.".into(), retry: false,
         })?;
+        if settings.audio_description_use_sonarpad_ai {
+            let data = sonarpad_speech_request(&client, SONARPAD_AI_BASE,
+                settings.sonarpad_ai_access_code.trim(), settings.sonarpad_ai_device_id.trim(),
+                "Sonarpad Windows", &body, &request_key, &refreshed).await?;
+            // Paid audio is not retained server-side. Never mint a new request
+            // automatically after a billed but empty/malformed response.
+            return response_audio(&data, volume).map_err(|_| SynthesisError {
+                message: "Sonarpad AI: invalid speech response; request not repeated.".into(), retry: false,
+            });
+        }
         let response = client
             .post(format!("https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"))
             .header("x-goog-api-key", settings.gemini_api_key.trim())
@@ -238,6 +265,122 @@ pub async fn synthesize_wav_bytes(
     }, cancel, Duration::from_secs(5)).await
 }
 
+const SONARPAD_AI_BASE: &str = "https://sonarpad.com/sonarpad-ai/v1";
+struct SonarpadSession {
+    base: String,
+    code: String,
+    device: String,
+    token: String,
+}
+static SONARPAD_SESSION: tokio::sync::Mutex<Option<SonarpadSession>> =
+    tokio::sync::Mutex::const_new(None);
+
+fn sonarpad_error(status: u16, data: &Value) -> SynthesisError {
+    let code = data["error"].as_str().unwrap_or("");
+    let message = match code {
+        "insufficient_credit"
+        | "provider_spend_cap_reached"
+        | "global_provider_spend_cap_reached"
+        | "device_limit_reached"
+        | "invalid_session"
+        | "invalid_access_code"
+        | "billing_reconciliation_required"
+        | "speech_audio_not_retained"
+        | "generation_in_progress"
+        | "maintenance" => format!("Sonarpad AI: {code} (HTTP {status})"),
+        _ => format!("Sonarpad AI: HTTP {status}"),
+    };
+    SynthesisError {
+        message,
+        retry: retryable_status(status),
+    }
+}
+
+async fn sonarpad_token(
+    client: &reqwest::Client,
+    base: &str,
+    code: &str,
+    device: &str,
+    device_name: &str,
+) -> Result<String, SynthesisError> {
+    let mut cached = SONARPAD_SESSION.lock().await;
+    if let Some(session) = cached.as_ref()
+        && session.base == base
+        && session.code == code
+        && session.device == device
+    {
+        return Ok(session.token.clone());
+    }
+    let response = client
+        .post(format!("{base}/activate"))
+        .json(&json!({"code":code,"device_id":device,"device_name":device_name}))
+        .send()
+        .await
+        .map_err(transport_error)?;
+    let status = response.status().as_u16();
+    let data: Value = response.json().await.map_err(transport_error)?;
+    if status != 200 {
+        return Err(sonarpad_error(status, &data));
+    }
+    let token = data["session_token"]
+        .as_str()
+        .filter(|s| s.starts_with("sst_"))
+        .ok_or_else(|| SynthesisError {
+            message: "Sonarpad AI: invalid session response".into(),
+            retry: false,
+        })?
+        .to_string();
+    *cached = Some(SonarpadSession {
+        base: base.into(),
+        code: code.into(),
+        device: device.into(),
+        token: token.clone(),
+    });
+    Ok(token)
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn sonarpad_speech_request(
+    client: &reqwest::Client,
+    base: &str,
+    code: &str,
+    device: &str,
+    device_name: &str,
+    body: &Value,
+    request_key: &str,
+    refreshed: &AtomicBool,
+) -> Result<Value, SynthesisError> {
+    let token = sonarpad_token(client, base, code, device, device_name).await?;
+    let response = client
+        .post(format!("{base}/generate"))
+        .bearer_auth(&token)
+        .header("X-Idempotency-Key", request_key)
+        .json(body)
+        .send()
+        .await
+        .map_err(transport_error)?;
+    let status = response.status().as_u16();
+    let data: Value = response.json().await.map_err(transport_error)?;
+    if status == 401 && !refreshed.swap(true, Ordering::Relaxed) {
+        let mut cached = SONARPAD_SESSION.lock().await;
+        if cached
+            .as_ref()
+            .is_some_and(|session| session.token == token)
+        {
+            *cached = None;
+        }
+        return Err(SynthesisError {
+            message: "Sonarpad AI: refreshing expired session".into(),
+            retry: true,
+        });
+    }
+    if status != 200 {
+        return Err(sonarpad_error(status, &data));
+    }
+    Ok(data)
+}
+
+#[derive(Debug)]
 struct SynthesisError {
     message: String,
     retry: bool,
@@ -624,5 +767,129 @@ mod tests {
         assert_eq!(reader.spec().sample_rate, 24000);
         assert_eq!(reader.samples::<i16>().next().unwrap().unwrap(), 500);
         assert!(response_audio(&json!({"steps": []}), 100).is_err());
+    }
+
+    #[test]
+    fn gemini_sonarpad_transport_refreshes_and_preserves_paid_request_key() {
+        use std::io::{BufRead, BufReader, Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let steps = [
+                ("/activate", 200, json!({"session_token":"sst_first"})),
+                ("/generate", 401, json!({"error":"invalid_session"})),
+                ("/activate", 200, json!({"session_token":"sst_second"})),
+                ("/generate", 503, json!({"error":"generation_in_progress"})),
+                ("/generate", 200, json!({"ok":true})),
+                ("/generate", 402, json!({"error":"insufficient_credit"})),
+                (
+                    "/generate",
+                    409,
+                    json!({"error":"speech_audio_not_retained"}),
+                ),
+            ];
+            for (index, (path, status, response)) in steps.into_iter().enumerate() {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut line = String::new();
+                reader.read_line(&mut line).unwrap();
+                assert!(line.starts_with(&format!("POST {path} ")));
+                let mut headers = String::new();
+                let mut length = 0;
+                loop {
+                    line.clear();
+                    reader.read_line(&mut line).unwrap();
+                    if line == "\r\n" {
+                        break;
+                    }
+                    let lower = line.to_ascii_lowercase();
+                    if let Some(value) = lower.strip_prefix("content-length:") {
+                        length = value.trim().parse::<usize>().unwrap();
+                    }
+                    headers.push_str(&lower);
+                }
+                let mut bytes = vec![0; length];
+                reader.read_exact(&mut bytes).unwrap();
+                let body: Value = serde_json::from_slice(&bytes).unwrap();
+                assert!(!headers.contains("x-goog-api-key"));
+                if path == "/activate" {
+                    assert_eq!(body["code"], "sp_mock");
+                    assert_eq!(body["device_id"], "device_mock");
+                } else {
+                    assert!(headers.contains("x-idempotency-key: speech-stable-mock"));
+                    assert!(headers.contains(if index == 1 {
+                        "authorization: bearer sst_first"
+                    } else {
+                        "authorization: bearer sst_second"
+                    }));
+                    assert_eq!(body["generationConfig"]["responseModalities"][0], "AUDIO");
+                }
+                let response = response.to_string();
+                write!(stream, "HTTP/1.1 {status} Test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response}", response.len()).unwrap();
+            }
+        });
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let client = reqwest::Client::builder()
+                .timeout(Duration::from_secs(5))
+                .build()
+                .unwrap();
+            let refreshed = AtomicBool::new(false);
+            let body = request_body("Test", "Kore", 0, 0, "it");
+            for expected in [401, 503, 200, 402, 409] {
+                let result = sonarpad_speech_request(
+                    &client,
+                    &base,
+                    "sp_mock",
+                    "device_mock",
+                    "Test",
+                    &body,
+                    "speech-stable-mock",
+                    &refreshed,
+                )
+                .await;
+                match expected {
+                    200 => assert_eq!(result.unwrap()["ok"], true),
+                    401 | 503 => assert!(result.unwrap_err().retry),
+                    _ => assert!(!result.unwrap_err().retry),
+                }
+            }
+        });
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn gemini_credentials_follow_selected_provider_without_fallback() {
+        let mut settings = crate::settings::AppSettings::default();
+        settings.gemini_api_key = "personal_mock".into();
+        assert!(credentials_available(&settings));
+        settings.audio_description_use_sonarpad_ai = true;
+        assert!(!credentials_available(&settings));
+        settings.sonarpad_ai_access_code = "sp_mock".into();
+        settings.gemini_api_key.clear();
+        assert!(credentials_available(&settings));
+        settings.audio_description_use_sonarpad_ai = false;
+        assert!(!credentials_available(&settings));
+    }
+    #[test]
+    fn gemini_missing_credentials_message_routes_only_configuration_errors() {
+        use crate::settings::Language;
+        for language in [Language::Italian, Language::English] {
+            let message = crate::i18n::tr(language, "gemini_tts.key_required");
+            assert!(message.contains("Sonarpad AI"));
+            assert!(message.contains("Gemini"));
+            assert!(missing_credentials_error(&message, language));
+            assert!(missing_credentials_error(
+                &format!("TTS: {message}"),
+                language
+            ));
+            assert!(!missing_credentials_error("Gemini TTS: HTTP 403", language));
+            assert!(!missing_credentials_error(
+                "Sonarpad AI: insufficient_credit",
+                language
+            ));
+        }
     }
 }

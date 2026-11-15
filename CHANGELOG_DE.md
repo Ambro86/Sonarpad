@@ -2,7 +2,7 @@
 
 Version 0.9.29 – 2026-11-13
 
-1. Sprachausgabe: Gemini-Stimmen mit persönlichem Gemini-API-Schlüssel zum Vorlesen sowie für Hörbücher und Audiodeskriptionen hinzugefügt. Der Sonarpad-AI-Zugang wird für diese Sprachengine noch nicht unterstützt. Automatische Wiederholungen bei vorübergehenden Fehlern sowie leerem oder ungültigem Audio; Anfragen und Wartezeiten sind abbrechbar.
+1. **Neu: Gemini-Stimmen in ganz Sonarpad!** Natürliche, ausdrucksstarke Stimmen, die der menschlichen Stimme nahekommen, zum Erstellen von Hörbüchern und Audiodeskriptionen, zum Vorlesen von Nachrichten, Büchern und Dokumenten sowie für die Sprachausgabe in den Programmfunktionen. Wählen Sie Sonarpad AI mit Ihrem Zugangscode oder Ihren persönlichen Gemini-API-Schlüssel: Beides zusammen ist nicht erforderlich.
 
 Version 0.9.28 – 2026-11-13
 

@@ -2,7 +2,7 @@
 
 Version 0.9.29 – 2026-11-13
 
-1. Synteza mowy: dodano głosy Gemini z osobistym kluczem Gemini API do czytania, audiobooków i audiodeskrypcji. Dostęp Sonarpad AI nie jest jeszcze obsługiwany przez ten silnik głosowy. Automatyczne ponawianie przy błędach tymczasowych oraz pustym lub nieprawidłowym dźwięku, z anulowaniem podczas żądań i oczekiwania.
+1. **Nowość: głosy Gemini w całym Sonarpad!** Naturalne i ekspresyjne głosy, zbliżone do ludzkiego głosu, do tworzenia audiobooków i audiodeskrypcji, czytania wiadomości, książek i dokumentów oraz korzystania z syntezy mowy w funkcjach programu. Wybierz Sonarpad AI ze swoim kodem dostępu lub osobisty klucz API Gemini: nie potrzebujesz obu.
 
 Version 0.9.28 – 2026-11-13
 

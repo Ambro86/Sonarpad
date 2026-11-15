@@ -14743,6 +14743,11 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                 } else {
                     restore_editor_focus(hwnd);
                 }
+                if !payload.success
+                    && gemini_tts::missing_credentials_error(&payload.message, language)
+                {
+                    app_windows::audio_description_window::open_credentials(hwnd);
+                }
                 LRESULT(0)
             }
             WM_FOCUS_EDITOR => {
@@ -18967,14 +18972,17 @@ fn sentence_start_offsets_utf16(text: &str) -> Vec<i32> {
     let chars: Vec<char> = text.chars().collect();
     for (index, ch) in chars.iter().copied().enumerate() {
         let start = offset;
-        if start_of_sentence && !ch.is_whitespace() {
+        let prev = index.checked_sub(1).and_then(|i| chars.get(i)).copied();
+        let next = chars.get(index + 1).copied();
+        let terminator = is_sentence_terminator(ch, prev, next);
+        // Consecutive terminators belong to the same sentence, not new
+        // punctuation-only sentences that can trap backward navigation.
+        if start_of_sentence && !ch.is_whitespace() && !terminator {
             starts.push(start as i32);
             start_of_sentence = false;
         }
         offset += ch.len_utf16();
-        let prev = index.checked_sub(1).and_then(|i| chars.get(i)).copied();
-        let next = chars.get(index + 1).copied();
-        if is_sentence_terminator(ch, prev, next) {
+        if terminator {
             start_of_sentence = true;
         }
     }
@@ -24476,6 +24484,57 @@ mod tests {
     }
 
     #[test]
+    fn sentence_navigation_skips_repeated_punctuation() {
+        for punctuation in ["!!!", "...", "?!", "!?", "!?!...!!!", "! ! !", ". . ."] {
+            for separator in [" ", "\r\n", ""] {
+                let text = format!(
+                    "Prima frase{punctuation}{separator}Seconda frase{punctuation}{separator}Terza frase."
+                );
+                let second = text[..text.find("Seconda").unwrap()].encode_utf16().count() as i32;
+                let third = text[..text.find("Terza").unwrap()].encode_utf16().count() as i32;
+                assert_eq!(
+                    sentence_start_offsets_utf16(&text),
+                    vec![0, second, third],
+                    "{text}"
+                );
+                assert_eq!(
+                    sentence_navigation_target(&text, third, SentenceNavigationDirection::Previous),
+                    Some(second),
+                    "{text}"
+                );
+                assert_eq!(
+                    sentence_navigation_target(
+                        &text,
+                        second,
+                        SentenceNavigationDirection::Previous
+                    ),
+                    Some(0),
+                    "{text}"
+                );
+                assert_eq!(
+                    sentence_navigation_target(&text, 0, SentenceNavigationDirection::Previous),
+                    None
+                );
+                assert_eq!(
+                    sentence_navigation_target(&text, 0, SentenceNavigationDirection::Next),
+                    Some(second)
+                );
+                assert_eq!(
+                    sentence_navigation_target(&text, second, SentenceNavigationDirection::Next),
+                    Some(third)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn sentence_navigation_punctuation_preserves_utf16_offsets() {
+        let text = "Prima 😀 frase!!! Seconda frase?! Terza frase...";
+        assert_eq!(sentence_start_offsets_utf16(text), vec![0, 18, 34]);
+        assert!(sentence_start_offsets_utf16("!!! ... ?! !?").is_empty());
+    }
+
+    #[test]
     fn audiobook_previous_skips_current_bookmark_after_seek() {
         let bookmarks = vec![
             Bookmark::manual(2, String::new(), String::new()),
@@ -26378,6 +26437,9 @@ pub(crate) fn show_error_with_id(
         PCWSTR(title.as_ptr()),
         MB_OK | MB_ICONERROR,
     );
+    if gemini_tts::missing_credentials_error(message, language) {
+        app_windows::audio_description_window::open_credentials(hwnd);
+    }
 }
 
 pub(crate) fn show_info(hwnd: HWND, language: Language, message: &str) {

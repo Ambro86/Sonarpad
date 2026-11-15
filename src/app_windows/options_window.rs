@@ -845,6 +845,11 @@ fn show_options_error(hwnd: HWND, language: Language, message: &str) {
     {
         crate::set_focus_safe(previous_focus);
     }
+    if crate::gemini_tts::missing_credentials_error(message, language)
+        && let Some(parent) = with_options_state(hwnd, |state| state.parent)
+    {
+        super::audio_description_window::open_credentials(parent);
+    }
 }
 
 fn move_options_focus_tab(hwnd: HWND, backwards: bool) {

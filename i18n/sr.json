@@ -1,6 +1,6 @@
 {
   "options.engine.gemini": "Gemini",
-  "gemini_tts.key_required": "Gemini гласови захтевају лични Gemini API кључ у AI подешавањима. Sonarpad AI приступни код још није подржан.",
+  "gemini_tts.key_required": "За Gemini гласове подесите Sonarpad AI са својим приступним кодом или лични Gemini API кључ. Притисните OK да отворите прављење аудио-описа помоћу AI и изаберете услугу.",
   "dictionary.changed_elsewhere": "Ова ставка речника је измењена у другом прозору. Поново отворите речник и покушајте поново.",
   "stream_audio.youtube_sign_in_required": "YouTube захтева пријаву за овај видео. Није га могуће репродуковати или преузети у Sonarpad-у.",
   "places.new_search": "Нова претрага",

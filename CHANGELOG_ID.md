@@ -2,7 +2,7 @@
 
 Version 0.9.29 – 2026-11-13
 
-1. Sintesis suara: menambahkan suara Gemini dengan kunci API Gemini pribadi untuk membaca, buku audio, dan deskripsi audio. Akses Sonarpad AI belum didukung untuk mesin suara ini. Percobaan ulang otomatis untuk kesalahan sementara dan audio kosong atau tidak valid, dengan pembatalan saat permintaan dan menunggu.
+1. **Baru: suara Gemini di seluruh Sonarpad!** Suara alami dan ekspresif yang mendekati suara manusia untuk membuat buku audio dan deskripsi audio, membaca berita, buku dan dokumen, serta menggunakan sintesis suara dalam berbagai fungsi aplikasi. Pilih Sonarpad AI dengan kode akses Anda atau kunci API Gemini pribadi: tidak perlu keduanya.
 
 Version 0.9.28 – 2026-11-13
 
