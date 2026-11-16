@@ -1,8 +1,10 @@
 # Ändringslogg
 
-Version 0.9.29 – 2026-11-13
+Version 0.9.29 – 2026-11-16
 
-1. **Nyhet: Gemini-röster i hela Sonarpad!** Naturliga och uttrycksfulla röster som liknar mänskliga röster för att skapa ljudböcker och syntolkningar, läsa upp nyheter, böcker och dokument samt använda talsyntes i programmets funktioner. Välj Sonarpad AI med din åtkomstkod eller din personliga Gemini API-nyckel: båda behövs inte.
+1. Syntolkning med rollista och foton från TMDB: ange filmens eller seriens titel och valfritt år, välj sedan produktion, säsong och avsnitt. Gemini får namn och skådespelarfoton som ledtrådar, aldrig som bekräftade identiteter. Sparade kataloger behåller fotolänkar för återanvändning. För animerat innehåll kan syntolkningen inte använda denna tjänst eftersom den tillhandahåller foton av röstskådespelare, som inte skulle hjälpa till att känna igen tecknade figurer. Införandet av detta system garanterar inte att figurerna känns igen till 100 %, eftersom TMDB ibland inte tillhandahåller foton för alla figurer i rollistan. Det ökar dock igenkänningens tillförlitlighet avsevärt.
+
+2. **Nyhet: Gemini-röster i hela Sonarpad!** Naturliga och uttrycksfulla röster som liknar mänskliga röster för att skapa ljudböcker och syntolkningar, läsa upp nyheter, böcker och dokument samt använda talsyntes i programmets funktioner. Välj Sonarpad AI med din åtkomstkod eller din personliga Gemini API-nyckel.
 
 Version 0.9.28 – 2026-11-13
 

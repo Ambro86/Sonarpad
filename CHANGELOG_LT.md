@@ -1,8 +1,10 @@
 # Pakeitimų žurnalas
 
-Version 0.9.29 – 2026-11-13
+Version 0.9.29 – 2026-11-16
 
-1. **Naujiena: Gemini balsai visame Sonarpad!** Natūralūs ir išraiškingi, į žmogaus balsą panašūs balsai garsinėms knygoms ir garsiniams aprašymams kurti, naujienoms, knygoms ir dokumentams skaityti bei kalbos sintezei programos funkcijose. Rinkitės Sonarpad AI su savo prieigos kodu arba asmeninį Gemini API raktą: abiejų nereikia.
+1. Garsinis vaizdavimas su TMDB aktoriais ir nuotraukomis: įveskite filmo ar serialo pavadinimą ir pasirinktinai metus, tada pasirinkite kūrinį, sezoną ir seriją. Gemini gauna vardus bei aktorių nuotraukas kaip pagalbinę informaciją, o ne patvirtintą tapatybę. Kataloguose išsaugomos nuorodos į nuotraukas kitam naudojimui. Animuotam turiniui garsinis vaizdavimas negali naudoti šios paslaugos, nes ji pateikia įgarsintojų nuotraukas, kurios nepadėtų atpažinti animacinių veikėjų. Šios sistemos įdiegimas negarantuoja, kad veikėjai bus atpažinti 100 %, nes kartais TMDB nepateikia visų veikėjų nuotraukų. Tačiau ji labai padidina atpažinimo patikimumą.
+
+2. **Naujiena: Gemini balsai visame Sonarpad!** Natūralūs ir išraiškingi, į žmogaus balsą panašūs balsai garsinėms knygoms ir garsiniams aprašymams kurti, naujienoms, knygoms ir dokumentams skaityti bei kalbos sintezei programos funkcijose. Rinkitės Sonarpad AI su savo prieigos kodu arba asmeninį Gemini API raktą.
 
 Version 0.9.28 – 2026-11-13
 

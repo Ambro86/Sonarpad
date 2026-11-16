@@ -1,8 +1,10 @@
 # Catatan perubahan
 
-Version 0.9.29 – 2026-11-13
+Version 0.9.29 – 2026-11-16
 
-1. **Baru: suara Gemini di seluruh Sonarpad!** Suara alami dan ekspresif yang mendekati suara manusia untuk membuat buku audio dan deskripsi audio, membaca berita, buku dan dokumen, serta menggunakan sintesis suara dalam berbagai fungsi aplikasi. Pilih Sonarpad AI dengan kode akses Anda atau kunci API Gemini pribadi: tidak perlu keduanya.
+1. Deskripsi audio dengan pemeran dan foto TMDB: masukkan judul film atau serial dan tahun opsional, lalu pilih produksi, musim, dan episode. Gemini menerima nama dan foto pemeran sebagai petunjuk, bukan identitas terkonfirmasi. Katalog menyimpan tautan foto untuk digunakan kembali. Untuk konten animasi, deskripsi audio tidak dapat menggunakan layanan ini karena layanan tersebut menyediakan foto pengisi suara, yang tidak akan membantu mengenali karakter kartun. Penerapan sistem ini tidak menjamin pengenalan karakter 100%, karena terkadang TMDB tidak menyediakan foto untuk semua karakter dalam daftar pemeran. Namun, sistem ini sangat meningkatkan keandalan pengenalan.
+
+2. **Baru: suara Gemini di seluruh Sonarpad!** Suara alami dan ekspresif yang mendekati suara manusia untuk membuat buku audio dan deskripsi audio, membaca berita, buku dan dokumen, serta menggunakan sintesis suara dalam berbagai fungsi aplikasi. Pilih Sonarpad AI dengan kode akses Anda atau kunci API Gemini pribadi.
 
 Version 0.9.28 – 2026-11-13
 

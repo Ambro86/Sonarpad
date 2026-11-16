@@ -2,6 +2,7 @@ pub mod about_window;
 pub(crate) mod audio_description_mix_preview;
 pub mod audio_description_project_window;
 pub mod audio_description_resume_window;
+mod audio_description_tmdb;
 pub mod audio_description_voice_window;
 pub mod audio_description_window;
 pub mod audiobook_window;

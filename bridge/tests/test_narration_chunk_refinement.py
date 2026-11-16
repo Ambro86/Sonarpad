@@ -23,9 +23,16 @@ class NarrationRestartTests(unittest.TestCase):
             [(183.56, 318.524), (318.524, 360.996)],
         )
 
+    def test_capri_36_second_gap_restarts_before_the_boat_description(self):
+        self.assertEqual(
+            ad._narration_restart_ranges([(1147.216, 1183.840)], 1261.511,
+                                        1080.664, 1261.511, 1.5),
+            [(1080.664, 1183.840), (1183.840, 1261.511)],
+        )
+
     def test_threshold_and_short_pauses(self):
-        self.assertEqual(ad._narration_restart_ranges([(10,55)], 180, 0, 180, 3.0), [(0,55),(55,180)])
-        self.assertIsNone(ad._narration_restart_ranges([(10,54.99)], 180, 0, 180, 3.0))
+        self.assertEqual(ad._narration_restart_ranges([(10,45)], 180, 0, 180, 3.0), [(0,45),(45,180)])
+        self.assertIsNone(ad._narration_restart_ranges([(10,44.99)], 180, 0, 180, 3.0))
         self.assertEqual(ad._narration_restart_ranges([(10,30),(31,50),(52,65)],180,0,180,3.0), [(0,65),(65,180)])
 
     def test_normal_chunks_and_existing_boundaries_unchanged(self):

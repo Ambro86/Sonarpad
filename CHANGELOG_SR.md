@@ -1,8 +1,10 @@
 # Dnevnik izmena
 
-Version 0.9.29 – 2026-11-13
+Version 0.9.29 – 2026-11-16
 
-1. **Ново: Gemini гласови у целом Sonarpad-у!** Природни и изражајни гласови, блиски људском гласу, за прављење аудио-књига и аудио-описа, читање вести, књига и докумената и коришћење синтезе говора у функцијама програма. Изаберите Sonarpad AI са својим приступним кодом или лични Gemini API кључ: нису потребна оба.
+1. Audio-opisi sa glumačkom ekipom i fotografijama sa TMDB-a: unesite naziv filma ili serije i opciono godinu, pa izaberite produkciju, sezonu i epizodu. Gemini dobija imena i fotografije glumaca kao tragove, a ne potvrđene identitete. Katalozi čuvaju linkove fotografija za ponovnu upotrebu. Za animirani sadržaj audio-opis ne može da koristi ovu uslugu, jer ona pruža fotografije glasovnih glumaca, koje ne bi pomogle u prepoznavanju likova iz crtanih filmova. Uvođenje ovog sistema ne garantuje stoprocentno prepoznavanje likova, jer TMDB ponekad ne pruža fotografije svih likova iz glumačke postave. Međutim, znatno povećava pouzdanost prepoznavanja.
+
+2. **Ново: Gemini гласови у целом Sonarpad-у!** Природни и изражајни гласови, блиски људском гласу, за прављење аудио-књига и аудио-описа, читање вести, књига и докумената и коришћење синтезе говора у функцијама програма. Изаберите Sonarpad AI са својим приступним кодом или лични Gemini API кључ.
 
 Version 0.9.28 – 2026-11-13
 

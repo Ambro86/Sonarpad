@@ -367,6 +367,8 @@ fn normalized_catalog_character(character: &BridgeCharacter) -> Option<BridgeCha
         id: character.id.trim().to_string(),
         name,
         description,
+        tmdb: character.tmdb.clone(),
+        provisional: character.provisional,
     })
 }
 
@@ -388,6 +390,12 @@ fn find_catalog_identity(
     candidate: &BridgeCharacter,
 ) -> Option<usize> {
     let candidate_id = candidate.id.trim().to_lowercase();
+    // Cast candidates must not overwrite user-verified identities with the same name.
+    if candidate.tmdb.is_some() {
+        return characters
+            .iter()
+            .position(|entry| entry.tmdb.is_some() && entry.id == candidate.id);
+    }
     if !candidate_id.is_empty() {
         let mut matches = characters
             .iter()
@@ -519,6 +527,10 @@ fn merge_catalog_characters(
             continue;
         };
         if let Some(index) = find_catalog_identity(&merged, &candidate) {
+            if merged[index].provisional && merged[index].tmdb.is_none() {
+                merged[index] = candidate;
+                continue;
+            }
             let description =
                 merge_catalog_description(&merged[index].description, &candidate.description);
             merged[index].description = description;
@@ -536,6 +548,15 @@ fn merge_catalog_characters(
             continue;
         };
         if let Some(index) = find_catalog_identity(&merged, &candidate) {
+            // Never turn an inferred face match into permanent TMDB evidence.
+            // The cast row contains verified casting, not a verified visual biography.
+            if merged[index].tmdb.is_some() && candidate.tmdb.is_none() {
+                continue;
+            }
+            if merged[index].provisional && merged[index].tmdb.is_none() {
+                merged[index] = candidate;
+                continue;
+            }
             let description =
                 merge_catalog_description(&merged[index].description, &candidate.description);
             merged[index].description = description;
@@ -664,6 +685,10 @@ fn save_audio_description_character_catalog(
     context: &AudioDescriptionCharacterCatalogContext,
     characters: &[BridgeCharacter],
 ) -> Result<(), String> {
+    // An optional TMDB lookup may supply a catalog for this job only.
+    if context.path.as_os_str().is_empty() {
+        return Ok(());
+    }
     let characters = merge_catalog_characters(&context.characters, characters);
     let parent = context.path.parent().unwrap_or_else(|| Path::new("."));
     fs::create_dir_all(parent).map_err(|error| {
@@ -7571,7 +7596,10 @@ pub fn create_audio_description(
     let (character_catalog_path, character_catalog_warning) =
         if let Some(catalog) = job.character_catalog.as_ref() {
             match save_audio_description_character_catalog(catalog, &analysis.character_glossary) {
-                Ok(()) => (Some(catalog.path.clone()), None),
+                Ok(()) => (
+                    (!catalog.path.as_os_str().is_empty()).then(|| catalog.path.clone()),
+                    None,
+                ),
                 Err(error) => (None, Some(error)),
             }
         } else {
@@ -7889,7 +7917,10 @@ pub fn create_audio_description_dialogue_overlap_fallback(
         job.character_catalog.as_ref()
     {
         match save_audio_description_character_catalog(catalog, &checkpoint.character_glossary) {
-            Ok(()) => (Some(catalog.path.clone()), None),
+            Ok(()) => (
+                (!catalog.path.as_os_str().is_empty()).then(|| catalog.path.clone()),
+                None,
+            ),
             Err(error) => (None, Some(error)),
         }
     } else {
@@ -9625,11 +9656,15 @@ mod tests {
             &context,
             &[
                 BridgeCharacter {
+                    tmdb: None,
+                    provisional: false,
                     id: "c1".to_string(),
                     name: "Anna".to_string(),
                     description: "Donna dai capelli scuri".to_string(),
                 },
                 BridgeCharacter {
+                    tmdb: None,
+                    provisional: false,
                     id: "c2".to_string(),
                     name: "Marco".to_string(),
                     description: "Uomo con barba corta".to_string(),
@@ -9644,11 +9679,15 @@ mod tests {
         assert_eq!(loaded.characters.len(), 2);
         let mut second_episode = loaded.characters.clone();
         second_episode.push(BridgeCharacter {
+            tmdb: None,
+            provisional: false,
             id: "c1".to_string(),
             name: "Anna".to_string(),
             description: "Donna dai capelli scuri, occhi verdi e cappotto rosso".to_string(),
         });
         second_episode.push(BridgeCharacter {
+            tmdb: None,
+            provisional: false,
             id: "c3".to_string(),
             name: "Luca".to_string(),
             description: "Ragazzo alto con capelli ricci".to_string(),
@@ -9687,6 +9726,8 @@ mod tests {
     #[test]
     fn character_catalog_single_entry_normalization_does_not_index_empty_alias_matches() {
         let characters = vec![BridgeCharacter {
+            tmdb: None,
+            provisional: false,
             id: "flo".to_string(),
             name: "Flo".to_string(),
             description: "Protagonista della serie.".to_string(),
@@ -9715,6 +9756,8 @@ mod tests {
             name: "Serie".to_string(),
             path: path.clone(),
             characters: vec![BridgeCharacter {
+                tmdb: None,
+                provisional: false,
                 id: "anna_robinson".to_string(),
                 name: "Anna Robinson".to_string(),
                 description: authoritative_description.clone(),
@@ -9723,6 +9766,8 @@ mod tests {
         save_audio_description_character_catalog(
             &context,
             &[BridgeCharacter {
+                tmdb: None,
+                provisional: false,
                 id: "anna".to_string(),
                 name: "Anna".to_string(),
                 description: "Indossa un abito azzurro chiaro con colletto alto.".to_string(),
@@ -9769,17 +9814,23 @@ mod tests {
     fn character_catalog_does_not_merge_ambiguous_first_name_only() {
         let established = vec![
             BridgeCharacter {
+                tmdb: None,
+                provisional: false,
                 id: "eric_capretto".to_string(),
                 name: "Capretto Eric".to_string(),
                 description: "Capretto giovane.".to_string(),
             },
             BridgeCharacter {
+                tmdb: None,
+                provisional: false,
                 id: "eric_beths".to_string(),
                 name: "Eric Beths".to_string(),
                 description: "Naufrago adulto.".to_string(),
             },
         ];
         let detected = vec![BridgeCharacter {
+            tmdb: None,
+            provisional: false,
             id: "eric".to_string(),
             name: "Eric".to_string(),
             description: "Figura vista nel filmato.".to_string(),

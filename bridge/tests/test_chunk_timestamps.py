@@ -22,6 +22,7 @@ from audio_describer.core.audio_describer import (
     get_visual_evidence_time,
     _requires_per_chunk_upload,
     _should_use_per_chunk_uploads,
+    _remove_consecutive_duplicates,
     _suppress_repeated_leading_character_names,
     _format_character_continuity,
     _format_recent_description_context,
@@ -35,7 +36,8 @@ from audio_describer.core.audio_describer import (
 
 
 class ChunkTimestampTests(unittest.TestCase):
-    def test_repeated_character_name_filter_is_generic_and_context_safe(self):
+    @mock.patch("audio_describer.core.audio_describer.config_model.get_setting", return_value="it")
+    def test_repeated_character_name_filter_is_generic_and_context_safe(self, _setting):
         glossary = [
             {"name": "Janet"},
             {"name": "Mark"},
@@ -70,6 +72,70 @@ class ChunkTimestampTests(unittest.TestCase):
             "La lancia via.",
             "Bruce Nolan torna alla porta.",
         ])
+
+    @mock.patch("audio_describer.core.audio_describer.config_model.get_setting", return_value="it")
+    def test_repeated_name_accepts_unique_first_name_and_full_name(self, _setting):
+        descriptions = [
+            (2461.569, 2469.569, "Massimo si allontana dal tavolo."),
+            (2470.569, 2478.569, "Massimo osserva il computer."),
+            (2479, 2481, "Massimo Galiano apre la porta."),
+            (2482, 2484, "Massimo entra."),
+            (2485, 2487, "Massimo e Greta sorridono."),
+            (2488, 2490, "Massimo cammina."),
+            (2520, 2522, "Massimo torna."),
+        ]
+        glossary = [{"name": "Massimo Galiano"}, {"name": "Massimo Galiano"}]
+        result = _suppress_repeated_leading_character_names(descriptions, glossary)
+        self.assertEqual([x[2] for x in result], [
+            "Massimo si allontana dal tavolo.", "Osserva il computer.",
+            "Apre la porta.", "Entra.", "Massimo e Greta sorridono.",
+            "Massimo cammina.", "Massimo torna.",
+        ])
+
+    @mock.patch("audio_describer.core.audio_describer.config_model.get_setting", return_value="it")
+    def test_repeated_name_preserves_ambiguous_first_names(self, _setting):
+        descriptions = [(0, 2, "Massimo cammina."), (3, 5, "Massimo entra.")]
+        for other_name in ("Massimo Rossi", "Massimo"):
+            with self.subTest(other_name=other_name):
+                glossary = [{"name": "Massimo Galiano"}, {"name": other_name}]
+                self.assertEqual(
+                    _suppress_repeated_leading_character_names(descriptions, glossary),
+                    descriptions,
+                )
+
+    def test_repeated_subject_filter_is_only_italian_including_regional_codes(self):
+        glossary = [{"name": "Vittoria"}]
+        descriptions = [(0, 2, "Vittoria apre la porta."), (3, 5, "Vittoria cammina."),
+                        (6, 8, "Vittoria sale la scala.")]
+        for language in ["it", "it-IT", "it_CH", "en", "fr", "de", "es", "pt-BR", ""]:
+            with self.subTest(language=language), mock.patch(
+                "audio_describer.core.audio_describer.config_model.get_setting", return_value=language
+            ):
+                result = _suppress_repeated_leading_character_names(descriptions, glossary)
+                if language.startswith("it"):
+                    self.assertEqual([x[2] for x in result], ["Vittoria apre la porta.", "Cammina.", "Sale la scala."])
+                else:
+                    self.assertEqual(result, descriptions)
+
+
+    def test_final_deduplication_keeps_explicit_subjects_for_different_actions(self):
+        descriptions = [
+            (0.0, 2.0, "Reginella entra nella stanza."),
+            (3.0, 5.0, "Reginella porta una tazza."),
+            (6.0, 8.0, "Totonno osserva Reginella."),
+            (9.0, 11.0, "Reginella posa la tazza."),
+        ]
+        self.assertEqual(_remove_consecutive_duplicates(descriptions), descriptions)
+        self.assertEqual(_remove_consecutive_duplicates(descriptions + [descriptions[-1]]), descriptions)
+
+    def test_subject_clarity_has_priority_with_and_without_character_names(self):
+        for enabled in (True, False):
+            with mock.patch("audio_describer.core.audio_describer.config_model.get_setting",
+                            side_effect=lambda key: {"application_language": "it", "enable_character_glossary": enabled}.get(key)):
+                system, _ = _build_unified_prompts("", "model")
+            self.assertIn("spoken descriptions alone", system)
+            self.assertIn("repeating a name is preferable to an ambiguous subject", system)
+            self.assertNotIn("name only in the first description", system)
 
     def test_video_metadata_offsets_remove_float_artifacts(self):
         with mock.patch(
@@ -714,7 +780,7 @@ class ChunkTimestampTests(unittest.TestCase):
 
         self.assertIn("RECENT DESCRIPTIONS IMMEDIATELY BEFORE THIS CLIP", prompt)
         self.assertIn("Bruce Nolan la stringe", prompt)
-        self.assertIn("repeating that subject's name", prompt)
+        self.assertIn("Prioritize subject", prompt)
 
     def test_physical_chunk_preparation_is_delegated_to_sonarpad_rust(self):
         with self.assertRaises(gemini_helpers.GeminiAPIError) as raised:
@@ -864,7 +930,7 @@ class ChunkTimestampTests(unittest.TestCase):
         self.assertIn("slot boundaries are only the allowed container", prompt)
         self.assertIn("Never delay an action to a later part of the same slot", prompt)
         self.assertIn("returned start/end must coincide with the moment", system)
-        self.assertIn("AVOID REPETITIVE SUBJECT LABELS", system)
+        self.assertIn("MAKE THE ACTING SUBJECT CLEAR", system)
         self.assertIn("Do not introduce a name", system)
 
     def test_intensive_prompt_explains_long_silence_partitions_without_second_pass(self):

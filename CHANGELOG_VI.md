@@ -1,8 +1,10 @@
 # Nhật ký thay đổi
 
-Version 0.9.29 – 2026-11-13
+Version 0.9.29 – 2026-11-16
 
-1. **Mới: giọng Gemini trong toàn bộ Sonarpad!** Giọng nói tự nhiên, biểu cảm, gần với giọng người thật để tạo sách nói và mô tả âm thanh, đọc tin tức, sách và tài liệu cũng như sử dụng tổng hợp giọng nói trong các chức năng của chương trình. Bạn có thể chọn Sonarpad AI với mã truy cập hoặc khóa API Gemini cá nhân: không cần cả hai.
+1. Mô tả âm thanh với dàn diễn viên và ảnh từ TMDB: nhập tên phim hoặc loạt phim, thêm năm nếu muốn, rồi chọn tác phẩm, mùa và tập. Gemini nhận tên và ảnh diễn viên làm bằng chứng hỗ trợ, không coi là danh tính đã xác nhận. Danh mục lưu liên kết ảnh để dùng lại. Đối với nội dung hoạt hình, mô tả âm thanh không thể sử dụng dịch vụ này vì dịch vụ cung cấp ảnh diễn viên lồng tiếng, vốn không giúp nhận diện các nhân vật hoạt hình. Việc triển khai hệ thống này không đảm bảo nhận diện nhân vật chính xác 100%, vì đôi khi TMDB không cung cấp ảnh cho tất cả các nhân vật trong dàn diễn viên. Tuy nhiên, hệ thống giúp tăng đáng kể độ tin cậy của việc nhận diện.
+
+2. **Mới: giọng Gemini trong toàn bộ Sonarpad!** Giọng nói tự nhiên, biểu cảm, gần với giọng người thật để tạo sách nói và mô tả âm thanh, đọc tin tức, sách và tài liệu cũng như sử dụng tổng hợp giọng nói trong các chức năng của chương trình. Bạn có thể chọn Sonarpad AI với mã truy cập hoặc khóa API Gemini cá nhân.
 
 Version 0.9.28 – 2026-11-13
 

@@ -1,8 +1,10 @@
 # Přehled změn
 
-Version 0.9.29 – 2026-11-13
+Version 0.9.29 – 2026-11-16
 
-1. **Novinka: hlasy Gemini v celém Sonarpadu!** Přirozené a výrazné hlasy blízké lidskému hlasu pro tvorbu audioknih a audiopopisů, čtení zpráv, knih a dokumentů a hlasový výstup ve funkcích programu. Můžete zvolit Sonarpad AI se svým přístupovým kódem nebo osobní klíč Gemini API: nepotřebujete obojí.
+1. Audiopopis s obsazením a fotografiemi z TMDB: zadejte název filmu nebo seriálu a volitelně rok, poté vyberte produkci, řadu a díl. Gemini dostane jména a fotografie herců jako vodítka, nikoli potvrzené identity. Katalogy ukládají odkazy na fotografie pro další použití. U animovaného obsahu nemůže audiopopis tuto službu využívat, protože poskytuje fotografie dabérů, které by nepomohly rozpoznat animované postavy. Zavedení tohoto systému nezaručuje stoprocentní rozpoznání postav, protože TMDB někdy neposkytuje fotografie všech postav z obsazení. Výrazně však zvyšuje spolehlivost rozpoznávání.
+
+2. **Novinka: hlasy Gemini v celém Sonarpadu!** Přirozené a výrazné hlasy blízké lidskému hlasu pro tvorbu audioknih a audiopopisů, čtení zpráv, knih a dokumentů a hlasový výstup ve funkcích programu. Můžete zvolit Sonarpad AI se svým přístupovým kódem nebo osobní klíč Gemini API.
 
 Version 0.9.28 – 2026-11-13
 

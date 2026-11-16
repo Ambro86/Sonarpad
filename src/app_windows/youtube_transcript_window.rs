@@ -7754,6 +7754,14 @@ struct StreamSaveOptionsState {
     result: Arc<Mutex<Option<PlaylistDownloadOptions>>>,
 }
 
+type DependentComboLoader = Arc<dyn Fn(usize) -> Result<Vec<String>, String> + Send + Sync>;
+
+struct DependentComboOptions {
+    label: String,
+    load: DependentComboLoader,
+    result: Arc<Mutex<Option<usize>>>,
+}
+
 struct StreamTrackDialogInit {
     parent: HWND,
     language: Language,
@@ -7761,15 +7769,20 @@ struct StreamTrackDialogInit {
     options: Vec<String>,
     default_selection: usize,
     result: Arc<Mutex<Option<usize>>>,
+    dependent: Option<DependentComboOptions>,
 }
 
 struct StreamTrackDialogState {
+    dependent_combo: HWND,
+    dependent_options: Vec<String>,
+    dependent_receiver: Option<std::sync::mpsc::Receiver<Result<Vec<String>, String>>>,
     parent: HWND,
     language: Language,
     combo: HWND,
     ok_button: HWND,
     options: Vec<String>,
     result: Arc<Mutex<Option<usize>>>,
+    dependent: Option<DependentComboOptions>,
 }
 
 impl StreamOutputFormat {
@@ -11749,6 +11762,44 @@ fn probe_stream_audio_tracks_responsive(
     result
 }
 
+const STREAM_TRACK_ID_DEPENDENT: usize = 9324;
+const STREAM_TRACK_DEPENDENT_TIMER: usize = 9325;
+
+fn load_dependent_combo(hwnd: HWND) {
+    with_stream_track_dialog_state(hwnd, |state| {
+        let Some(dependent) = state.dependent.as_ref() else {
+            return;
+        };
+        let index = crate::send_message_w_safe(state.combo, CB_GETCURSEL, WPARAM(0), LPARAM(0)).0;
+        if index < 0 {
+            return;
+        }
+        state.dependent_options.clear();
+        unsafe {
+            EnableWindow(state.ok_button, false);
+            EnableWindow(state.dependent_combo, false);
+            SendMessageW(state.dependent_combo, CB_RESETCONTENT, WPARAM(0), LPARAM(0));
+            let loading = to_wide(&i18n::tr(state.language, "podcasts.loading"));
+            SendMessageW(
+                state.dependent_combo,
+                CB_ADDSTRING,
+                WPARAM(0),
+                LPARAM(loading.as_ptr() as isize),
+            );
+            SendMessageW(state.dependent_combo, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+        }
+        let load = dependent.load.clone();
+        let (sender, receiver) = std::sync::mpsc::channel();
+        // Replacing the receiver discards a result from a previously selected season.
+        state.dependent_receiver = Some(receiver);
+        std::thread::spawn(move || {
+            if sender.send(load(index as usize)).is_err() {
+                crate::log_debug("Dependent selection closed before options were loaded");
+            }
+        });
+    });
+}
+
 unsafe extern "system" fn stream_track_dialog_wndproc(
     hwnd: HWND,
     msg: u32,
@@ -11812,13 +11863,50 @@ fn stream_track_dialog_wndproc_inner(
                     HINSTANCE(0),
                     None,
                 );
+                let dependent_combo = if let Some(dependent) = init.dependent.as_ref() {
+                    let label = CreateWindowExW(
+                        Default::default(),
+                        WC_STATIC,
+                        PCWSTR(to_wide(&plain_label(&dependent.label)).as_ptr()),
+                        WS_CHILD | WS_VISIBLE,
+                        16,
+                        58,
+                        120,
+                        20,
+                        hwnd,
+                        HMENU(0),
+                        HINSTANCE(0),
+                        None,
+                    );
+                    let control = CreateWindowExW(
+                        WS_EX_CLIENTEDGE,
+                        WC_COMBOBOXW,
+                        PCWSTR::null(),
+                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(CBS_DROPDOWNLIST as u32),
+                        140,
+                        56,
+                        300,
+                        220,
+                        hwnd,
+                        HMENU(STREAM_TRACK_ID_DEPENDENT as isize),
+                        HINSTANCE(0),
+                        None,
+                    );
+                    for child in [label, control] {
+                        SendMessageW(child, WM_SETFONT, WPARAM(hfont.0 as usize), LPARAM(1));
+                    }
+                    control
+                } else {
+                    HWND(0)
+                };
+                let button_y = if init.dependent.is_some() { 96 } else { 56 };
                 let ok_button = CreateWindowExW(
                     Default::default(),
                     WC_BUTTON,
                     PCWSTR(to_wide(&i18n::tr(init.language, "youtube.ok")).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(BS_DEFPUSHBUTTON as u32),
                     260,
-                    56,
+                    button_y,
                     88,
                     28,
                     hwnd,
@@ -11832,7 +11920,7 @@ fn stream_track_dialog_wndproc_inner(
                     PCWSTR(to_wide(&i18n::tr(init.language, "youtube.cancel")).as_ptr()),
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                     352,
-                    56,
+                    button_y,
                     88,
                     28,
                     hwnd,
@@ -11856,7 +11944,12 @@ fn stream_track_dialog_wndproc_inner(
                     .min(init.options.len().saturating_sub(1));
                 SendMessageW(combo, CB_SETCURSEL, WPARAM(default_selection), LPARAM(0));
 
+                let has_dependent = init.dependent.is_some();
                 let state = Box::new(StreamTrackDialogState {
+                    dependent_combo,
+                    dependent_options: Vec::new(),
+                    dependent_receiver: None,
+                    dependent: init.dependent,
                     parent: init.parent,
                     language: init.language,
                     combo,
@@ -11865,12 +11958,69 @@ fn stream_track_dialog_wndproc_inner(
                     result: init.result,
                 });
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, Box::into_raw(state) as isize);
+                if has_dependent {
+                    SetTimer(hwnd, STREAM_TRACK_DEPENDENT_TIMER, 100, None);
+                    load_dependent_combo(hwnd);
+                }
                 SetFocus(combo);
+                LRESULT(0)
+            }
+            WM_TIMER if wparam.0 == STREAM_TRACK_DEPENDENT_TIMER => {
+                let error = with_stream_track_dialog_state(hwnd, |state| {
+                    let value = state
+                        .dependent_receiver
+                        .as_ref()
+                        .and_then(|receiver| receiver.try_recv().ok());
+                    let value = value?;
+                    state.dependent_receiver = None;
+                    match value {
+                        Ok(options) => {
+                            SendMessageW(
+                                state.dependent_combo,
+                                CB_RESETCONTENT,
+                                WPARAM(0),
+                                LPARAM(0),
+                            );
+                            for option in &options {
+                                let wide = to_wide(option);
+                                SendMessageW(
+                                    state.dependent_combo,
+                                    CB_ADDSTRING,
+                                    WPARAM(0),
+                                    LPARAM(wide.as_ptr() as isize),
+                                );
+                            }
+                            SendMessageW(state.dependent_combo, CB_SETCURSEL, WPARAM(0), LPARAM(0));
+                            EnableWindow(state.dependent_combo, !options.is_empty());
+                            EnableWindow(state.ok_button, !options.is_empty());
+                            state.dependent_options = options;
+                            None
+                        }
+                        Err(error) => Some((state.language, error)),
+                    }
+                })
+                .flatten();
+                if let Some((language, error)) = error {
+                    show_error(hwnd, language, &error);
+                }
                 LRESULT(0)
             }
             WM_COMMAND => {
                 let cmd_id = wparam.0 & 0xffff;
+                if cmd_id == STREAM_TRACK_ID_COMBO && (wparam.0 >> 16) == CBN_SELCHANGE as usize {
+                    load_dependent_combo(hwnd);
+                    return LRESULT(0);
+                }
                 if cmd_id == STREAM_TRACK_ID_OK || cmd_id == 1 {
+                    let ready = with_stream_track_dialog_state(hwnd, |state| {
+                        state.dependent.is_none()
+                            || (!state.dependent_options.is_empty()
+                                && state.dependent_receiver.is_none())
+                    })
+                    .unwrap_or(false);
+                    if !ready {
+                        return LRESULT(0);
+                    }
                     if with_stream_track_dialog_state(hwnd, |state| {
                         let msg = i18n::tr(state.language, "podcasts.loading");
                         if !screen_reader_speak(&msg) {
@@ -11880,6 +12030,19 @@ fn stream_track_dialog_wndproc_inner(
                         let selected = (idx >= 0)
                             .then_some(idx as usize)
                             .filter(|idx| *idx < state.options.len());
+                        if let Some(dependent) = state.dependent.as_ref() {
+                            let index = SendMessageW(
+                                state.dependent_combo,
+                                CB_GETCURSEL,
+                                WPARAM(0),
+                                LPARAM(0),
+                            )
+                            .0;
+                            *dependent.result.lock().unwrap_or_else(|e| e.into_inner()) = (index
+                                >= 0)
+                                .then_some(index as usize)
+                                .filter(|index| *index < state.dependent_options.len());
+                        }
                         if let Some(selected) = selected {
                             *state.result.lock().unwrap_or_else(|e| e.into_inner()) =
                                 Some(selected);
@@ -11931,6 +12094,7 @@ fn stream_track_dialog_wndproc_inner(
                 LRESULT(0)
             }
             WM_DESTROY => {
+                crate::log_if_err!(KillTimer(hwnd, STREAM_TRACK_DEPENDENT_TIMER));
                 if with_stream_track_dialog_state(hwnd, |state| {
                     EnableWindow(state.parent, true);
                     let accepted = state
@@ -11969,6 +12133,53 @@ pub(crate) fn choose_combo_option_dialog(
     options: Vec<String>,
     default_selection: usize,
 ) -> Option<usize> {
+    choose_combo_option_dialog_impl(
+        parent,
+        language,
+        title,
+        label,
+        options,
+        default_selection,
+        None,
+    )
+}
+
+pub(crate) fn choose_dependent_combo_options_dialog(
+    parent: HWND,
+    language: Language,
+    title: String,
+    label: String,
+    options: Vec<String>,
+    dependent_label: String,
+    load: DependentComboLoader,
+) -> Option<(usize, usize)> {
+    let result = Arc::new(Mutex::new(None));
+    let first = choose_combo_option_dialog_impl(
+        parent,
+        language,
+        title,
+        label,
+        options,
+        0,
+        Some(DependentComboOptions {
+            label: dependent_label,
+            load,
+            result: result.clone(),
+        }),
+    )?;
+    let second = (*result.lock().unwrap_or_else(|e| e.into_inner()))?;
+    Some((first, second))
+}
+
+fn choose_combo_option_dialog_impl(
+    parent: HWND,
+    language: Language,
+    title: String,
+    label: String,
+    options: Vec<String>,
+    default_selection: usize,
+    dependent: Option<DependentComboOptions>,
+) -> Option<usize> {
     if options.is_empty() {
         return None;
     }
@@ -11988,7 +12199,9 @@ pub(crate) fn choose_combo_option_dialog(
         RegisterClassW(&wc);
     }
     let result = Arc::new(Mutex::new(None));
+    let dialog_height = if dependent.is_some() { 180 } else { 140 };
     let init = Box::new(StreamTrackDialogInit {
+        dependent,
         parent,
         language,
         label,
@@ -12006,7 +12219,7 @@ pub(crate) fn choose_combo_option_dialog(
             CW_USEDEFAULT,
             CW_USEDEFAULT,
             470,
-            140,
+            dialog_height,
             parent,
             HMENU(0),
             hinstance,

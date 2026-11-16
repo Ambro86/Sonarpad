@@ -1,8 +1,10 @@
 # Changelog
 
-Version 0.9.29 – 2026-11-13
+Version 0.9.29 – 2026-11-16
 
-1. **¡Novedad: voces Gemini en todo Sonarpad!** Voces naturales y expresivas, cercanas a la voz humana, para crear audiolibros y audiodescripciones, leer noticias, libros y documentos y utilizar la síntesis de voz en las funciones del programa. Puedes elegir Sonarpad AI con tu código de acceso o tu clave API Gemini personal: no necesitas ambos.
+1. Audiodescripciones con reparto y fotos de TMDB: introduce el título de una película o serie y un año opcional; elige la producción, temporada y episodio. Gemini recibe nombres y fotos de actores como indicios, nunca como identidades confirmadas. Los catálogos guardan los enlaces de las fotos para reutilizarlas. Para los contenidos animados, la audiodescripción no puede utilizar este servicio, ya que proporciona fotos de los actores de doblaje, que no ayudarían a reconocer a los personajes de dibujos animados. La implementación de este sistema no garantiza un reconocimiento de los personajes del 100 %, ya que a veces TMDB no proporciona fotos de todos los personajes del reparto. Sin embargo, aumenta enormemente la fiabilidad del reconocimiento.
+
+2. **¡Novedad: voces Gemini en todo Sonarpad!** Voces naturales y expresivas, cercanas a la voz humana, para crear audiolibros y audiodescripciones, leer noticias, libros y documentos y utilizar la síntesis de voz en las funciones del programa. Puedes elegir Sonarpad AI con tu código de acceso o tu clave API Gemini personal.
 
 Version 0.9.28 – 2026-11-13
 

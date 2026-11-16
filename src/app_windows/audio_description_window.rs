@@ -93,6 +93,8 @@ const ID_SOURCE_VOLUME: usize = 9686;
 const ID_STOP_MIX_PREVIEW: usize = 9687;
 const ID_ALLOW_DIALOGUE_OVERLAP: usize = 9689;
 const ID_BITRATE: usize = 9688;
+const ID_TMDB_TITLE: usize = 9690;
+const ID_TMDB_YEAR: usize = 9691;
 const EM_SETPASSWORDCHAR: u32 = 0x00CC;
 const SONARPAD_AI_SERVICE_URL: &str = "https://sonarpad.com/sonarpad-ai";
 
@@ -109,6 +111,8 @@ const WM_AD_RESET_NEW: u32 = WM_APP + 197;
 const WM_AD_OVERLOAD: u32 = WM_APP + 198;
 const WM_AD_RESTORE_RUNNING_FOCUS: u32 = WM_APP + 199;
 const WM_AD_SONARPAD_BALANCE: u32 = WM_APP + 200;
+const WM_AD_TMDB_CHOICE: u32 = WM_APP + 201;
+const WM_AD_TMDB_READY: u32 = WM_APP + 202;
 const AUDIO_DESCRIPTION_NO_DESCRIPTIONS_ERROR: &str =
     "Audio description: Gemini returned no descriptions";
 const AUDIO_DESCRIPTION_NO_SAFE_TTS_SLOT_ERROR: &str =
@@ -211,6 +215,8 @@ struct WindowState {
     character_catalog_combo: HWND,
     character_catalog_name_label: HWND,
     character_catalog_name_edit: HWND,
+    tmdb_title: HWND,
+    tmdb_year: HWND,
     character_catalogs: Vec<AudioDescriptionCharacterCatalogSummary>,
     save_project_checkbox: HWND,
     create_video_checkbox: HWND,
@@ -271,6 +277,119 @@ struct QuotaPromptRequest {
     model: String,
     error: String,
     response: mpsc::SyncSender<AudioDescriptionQuotaDecision>,
+}
+
+struct TmdbChoiceRequest {
+    label: String,
+    options: Vec<String>,
+    response: mpsc::SyncSender<Option<usize>>,
+}
+
+struct TmdbTvChoiceRequest {
+    series_id: i64,
+    seasons: Vec<(i64, String)>,
+    response: mpsc::SyncSender<Option<(i64, Option<i64>)>>,
+}
+
+struct TmdbReady {
+    job: AudioDescriptionJob,
+    input_to_trash: Option<PathBuf>,
+    result: Result<Vec<crate::tools::audio_description_bridge::BridgeCharacter>, String>,
+}
+
+fn start_tmdb_lookup(
+    hwnd: HWND,
+    state: &mut WindowState,
+    job: AudioDescriptionJob,
+    input_to_trash: Option<PathBuf>,
+) {
+    let title = get_text(state.tmdb_title).trim().to_string();
+    let year = get_text(state.tmdb_year).trim().to_string();
+    let language = state.language;
+    let cancel = Arc::new(AtomicBool::new(false));
+    state.cancel = Some(cancel.clone());
+    state.running = true;
+    set_controls_enabled(state, false);
+    set_progress_percent(state, 0);
+    set_progress_segment(
+        state,
+        Some(&i18n::tr(language, "audio_description.tmdb.searching")),
+    );
+    thread::spawn(move || {
+        let result = super::audio_description_tmdb::lookup(
+            &title,
+            &year,
+            language,
+            |key, options| {
+                if cancel.load(Ordering::Relaxed) {
+                    return Err("cancelled".into());
+                }
+                let (response, receiver) = mpsc::sync_channel(1);
+                post_boxed_message(
+                    hwnd,
+                    WM_AD_TMDB_CHOICE,
+                    WPARAM(0),
+                    Box::new(TmdbChoiceRequest {
+                        label: i18n::tr(language, &format!("audio_description.tmdb.{key}")),
+                        options,
+                        response,
+                    }),
+                );
+                loop {
+                    if cancel.load(Ordering::Relaxed) {
+                        return Err("cancelled".into());
+                    }
+                    match receiver.recv_timeout(Duration::from_millis(200)) {
+                        Ok(Some(index)) => return Ok(index),
+                        Ok(None) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+                            cancel.store(true, Ordering::Relaxed);
+                            return Err("cancelled".into());
+                        }
+                        Err(mpsc::RecvTimeoutError::Timeout) => {}
+                    }
+                }
+            },
+            |series_id, seasons| {
+                if cancel.load(Ordering::Relaxed) {
+                    return Err("cancelled".into());
+                }
+                let (response, receiver) = mpsc::sync_channel(1);
+                post_boxed_message(
+                    hwnd,
+                    WM_AD_TMDB_CHOICE,
+                    WPARAM(1),
+                    Box::new(TmdbTvChoiceRequest {
+                        series_id,
+                        seasons,
+                        response,
+                    }),
+                );
+                loop {
+                    if cancel.load(Ordering::Relaxed) {
+                        return Err("cancelled".into());
+                    }
+                    match receiver.recv_timeout(Duration::from_millis(200)) {
+                        Ok(Some(selection)) => return Ok(selection),
+                        Ok(None) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+                            cancel.store(true, Ordering::Relaxed);
+                            return Err("cancelled".into());
+                        }
+                        Err(mpsc::RecvTimeoutError::Timeout) => {}
+                    }
+                }
+            },
+        );
+        post_boxed_message(
+            hwnd,
+            WM_AD_TMDB_READY,
+            WPARAM(0),
+            Box::new(TmdbReady {
+                job,
+                input_to_trash,
+                result,
+            }),
+        );
+    });
 }
 
 struct OverloadPromptRequest {
@@ -1600,6 +1719,8 @@ fn update_character_catalog_visibility(state: &WindowState) {
     }
     let keep = recognize && checkbox_checked(state.keep_character_catalog_checkbox);
     unsafe {
+        EnableWindow(state.tmdb_title, recognize && !state.running);
+        EnableWindow(state.tmdb_year, recognize && !state.running);
         ShowWindow(
             state.keep_character_catalog_checkbox,
             if recognize { SW_SHOW } else { SW_HIDE },
@@ -2649,6 +2770,25 @@ fn start_job(hwnd: HWND, state: &mut WindowState) {
         (job, input_to_trash)
     };
     let (job, input_to_trash) = job;
+    if !state.resume_mode
+        && job.recognize_characters
+        && !get_text(state.tmdb_title).trim().is_empty()
+    {
+        let year = get_text(state.tmdb_year);
+        let year = year.trim();
+        if !year.is_empty() && (year.len() != 4 || !year.bytes().all(|byte| byte.is_ascii_digit()))
+        {
+            show_audio_description_error_and_focus(
+                hwnd,
+                state,
+                &i18n::tr(state.language, "audio_description.tmdb.invalid_year"),
+                state.tmdb_year,
+            );
+            return;
+        }
+        start_tmdb_lookup(hwnd, state, job, input_to_trash);
+        return;
+    }
     state.retry_job = Some(job.clone());
     state.retry_input_to_trash = input_to_trash.clone();
     state.short_silence_retry_used = false;
@@ -3737,6 +3877,50 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     HINSTANCE(0),
                     None,
                 );
+                let tmdb_title_label = create_label(
+                    hwnd,
+                    &i18n::tr(language, "audio_description.tmdb.title"),
+                    16,
+                    836,
+                    200,
+                    hfont,
+                );
+                let tmdb_title = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_EDIT,
+                    PCWSTR::null(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(ES_AUTOHSCROLL as u32),
+                    220,
+                    832,
+                    245,
+                    24,
+                    hwnd,
+                    HMENU(ID_TMDB_TITLE as isize),
+                    HINSTANCE(0),
+                    None,
+                );
+                let tmdb_year_label = create_label(
+                    hwnd,
+                    &i18n::tr(language, "audio_description.tmdb.year"),
+                    475,
+                    836,
+                    120,
+                    hfont,
+                );
+                let tmdb_year = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    WC_EDIT,
+                    PCWSTR::null(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WINDOW_STYLE(ES_AUTOHSCROLL as u32),
+                    600,
+                    832,
+                    66,
+                    24,
+                    hwnd,
+                    HMENU(ID_TMDB_YEAR as isize),
+                    HINSTANCE(0),
+                    None,
+                );
                 let voice_settings_button = CreateWindowExW(
                     Default::default(),
                     WC_BUTTON,
@@ -3859,6 +4043,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     character_catalog_combo,
                     character_catalog_name_label,
                     character_catalog_name_edit,
+                    tmdb_title_label,
+                    tmdb_title,
+                    tmdb_year_label,
+                    tmdb_year,
                     save_project_checkbox,
                     create_video_checkbox,
                     delete_video_after_checkbox,
@@ -3901,6 +4089,8 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     character_catalog_combo,
                     character_catalog_name_label,
                     character_catalog_name_edit,
+                    tmdb_title,
+                    tmdb_year,
                     character_catalogs,
                     save_project_checkbox,
                     create_video_checkbox,
@@ -3975,6 +4165,10 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         character_catalog_combo,
                         character_catalog_name_label,
                         character_catalog_name_edit,
+                        tmdb_title_label,
+                        tmdb_title,
+                        tmdb_year_label,
+                        tmdb_year,
                         save_project_checkbox,
                         create_video_checkbox,
                         delete_video_after_checkbox,
@@ -4575,6 +4769,183 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 }
                 LRESULT(0)
             }
+            WM_AD_TMDB_CHOICE => {
+                if wparam.0 == 1 {
+                    let request = *Box::from_raw(lparam.0 as *mut TmdbTvChoiceRequest);
+                    let pointer = GetWindowLongPtrW(
+                        hwnd,
+                        windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA,
+                    ) as *mut WindowState;
+                    let selection = if pointer.is_null()
+                        || (*pointer)
+                            .cancel
+                            .as_ref()
+                            .is_none_or(|flag| flag.load(Ordering::Relaxed))
+                    {
+                        None
+                    } else {
+                        let language = (*pointer).language;
+                        let seasons = Arc::new(request.seasons);
+                        let cache = Arc::new(std::sync::Mutex::new(std::collections::HashMap::<
+                            usize,
+                            Vec<(i64, String)>,
+                        >::new(
+                        )));
+                        let cached = cache.clone();
+                        let choices = seasons.clone();
+                        let season_label = i18n::tr(language, "audio_description.tmdb.season");
+                        let episode_label = i18n::tr(language, "audio_description.tmdb.episode");
+                        let selected =
+                            super::youtube_transcript_window::choose_dependent_combo_options_dialog(
+                                hwnd,
+                                language,
+                                format!("{season_label} / {episode_label}"),
+                                season_label,
+                                seasons.iter().map(|(_, label)| label.clone()).collect(),
+                                episode_label,
+                                Arc::new(move |index| {
+                                    if let Some(options) =
+                                        cached.lock().unwrap_or_else(|e| e.into_inner()).get(&index)
+                                    {
+                                        return Ok(options
+                                            .iter()
+                                            .map(|(_, label)| label.clone())
+                                            .collect());
+                                    }
+                                    let season =
+                                        choices.get(index).ok_or("Invalid season selection")?.0;
+                                    let options = super::audio_description_tmdb::episode_options(
+                                        request.series_id,
+                                        season,
+                                        language,
+                                    )?;
+                                    let labels =
+                                        options.iter().map(|(_, label)| label.clone()).collect();
+                                    cached
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner())
+                                        .insert(index, options);
+                                    Ok(labels)
+                                }),
+                            );
+                        selected.and_then(|(season_index, episode_index)| {
+                            let season = seasons.get(season_index)?.0;
+                            let episode = cache
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .get(&season_index)?
+                                .get(episode_index)?
+                                .0;
+                            Some((season, (episode > 0).then_some(episode)))
+                        })
+                    };
+                    crate::log_if_err!(
+                        request.response.send(selection),
+                        "TMDB season/episode selection receiver closed"
+                    );
+                    return LRESULT(0);
+                }
+                let request = *Box::from_raw(lparam.0 as *mut TmdbChoiceRequest);
+                let pointer =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut WindowState;
+                let selected = if pointer.is_null()
+                    || (*pointer)
+                        .cancel
+                        .as_ref()
+                        .is_none_or(|flag| flag.load(Ordering::Relaxed))
+                {
+                    None
+                } else {
+                    crate::app_windows::youtube_transcript_window::choose_combo_option_dialog(
+                        hwnd,
+                        (*pointer).language,
+                        request.label.clone(),
+                        request.label,
+                        request.options,
+                        0,
+                    )
+                };
+                crate::log_if_err!(
+                    request.response.send(selected),
+                    "TMDB selection receiver closed"
+                );
+                LRESULT(0)
+            }
+            WM_AD_TMDB_READY => {
+                let mut ready = *Box::from_raw(lparam.0 as *mut TmdbReady);
+                let pointer =
+                    GetWindowLongPtrW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWLP_USERDATA)
+                        as *mut WindowState;
+                if pointer.is_null() {
+                    return LRESULT(0);
+                }
+                let state = &mut *pointer;
+                let cancelled = state
+                    .cancel
+                    .as_ref()
+                    .is_none_or(|flag| flag.load(Ordering::Relaxed));
+                state.running = false;
+                state.cancel = None;
+                set_progress_segment(state, None);
+                set_controls_enabled(state, true);
+                if cancelled {
+                    return LRESULT(0);
+                }
+                match ready.result {
+                    Ok(characters) => {
+                        if characters.iter().any(|character| {
+                            character
+                                .tmdb
+                                .as_ref()
+                                .is_some_and(|reference| reference.animation)
+                        }) {
+                            show_info(
+                                hwnd,
+                                state.language,
+                                &i18n::tr(state.language, "audio_description.tmdb.animation"),
+                            );
+                        }
+                        let catalog = ready.job.character_catalog.get_or_insert_with(|| {
+                            AudioDescriptionCharacterCatalogContext {
+                                name: get_text(state.tmdb_title),
+                                path: PathBuf::new(),
+                                characters: Vec::new(),
+                            }
+                        });
+                        // Keep user-authored catalog identities intact; TMDB candidates remain separately marked.
+                        // An explicit new lookup replaces prior TMDB candidates (including
+                        // those from a different season), keeping the user's own catalog.
+                        catalog
+                            .characters
+                            .retain(|character| character.tmdb.is_none());
+                        catalog.characters.extend(characters);
+                    }
+                    Err(error) => {
+                        crate::log_debug(&format!("Optional TMDB lookup failed: {error}"));
+                        let message = format!(
+                            "{}\n\n{error}",
+                            i18n::tr(state.language, "audio_description.tmdb.continue_without")
+                        );
+                        crate::watchdog::enter_modal_dialog();
+                        let choice = MessageBoxW(
+                            hwnd,
+                            PCWSTR(to_wide(&message).as_ptr()),
+                            PCWSTR(to_wide("TMDB").as_ptr()),
+                            MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2,
+                        );
+                        crate::watchdog::exit_modal_dialog();
+                        if choice != IDYES {
+                            return LRESULT(0);
+                        }
+                    }
+                }
+                state.retry_job = Some(ready.job.clone());
+                state.retry_input_to_trash = ready.input_to_trash.clone();
+                state.short_silence_retry_used = false;
+                launch_audio_description_job(hwnd, state, ready.job, ready.input_to_trash);
+                LRESULT(0)
+            }
             WM_AD_DONE => {
                 let payload = lparam.0 as *mut AudioDescriptionDonePayload;
                 if payload.is_null() {
@@ -4913,6 +5284,8 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     set_text(state.input, "");
                     set_text(state.output, "");
                     set_text(state.character_catalog_name_edit, "");
+                    set_text(state.tmdb_title, "");
+                    set_text(state.tmdb_year, "");
                     set_text(state.gemini_model_label, &current_labels.gemini_model);
                     set_text(state.start_button, &current_labels.start);
                     set_text(hwnd, &current_labels.title);

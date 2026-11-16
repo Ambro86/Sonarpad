@@ -66,6 +66,24 @@ impl Default for CinemaClient {
 }
 
 impl CinemaClient {
+    /// Optional character lookup uses the same authenticated proxy as Cinema.
+    pub(crate) fn character_lookup(
+        &self,
+        action: &str,
+        language: Language,
+        parameters: &[(&str, String)],
+    ) -> Result<serde_json::Value, String> {
+        self.client
+            .get(BASE_URL)
+            .header(TOKEN_HEADER, CLIENT_TOKEN)
+            .query(&[("action", action), ("language", tmdb_language(language))])
+            .query(parameters)
+            .send()
+            .and_then(|response| response.error_for_status())
+            .and_then(|response| response.json())
+            .map_err(|error| format!("TMDB: {error}"))
+    }
+
     pub fn now_playing(&self, language: Language) -> Result<Vec<CinemaMovie>, String> {
         self.movie_list("now_playing", language)
     }
