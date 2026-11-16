@@ -8,15 +8,17 @@ SAVE = (ROOT / 'src/app_windows/podcast_save_window.rs').read_text('utf-8')
 
 class ProjectCleanExportDialogTests(unittest.TestCase):
     def test_standalone_progress_has_cancel_and_status(self):
-        export = PROJECT.split('fn start_export(',1)[1].split('fn window_proc_inner(',1)[0]
-        self.assertIn('podcast_save_window::open_with_labels(', export)
-        self.assertNotIn('open_with_labels_and_status_field(', export)
+        export = PROJECT.split('fn open_export_progress(',1)[1].split('fn close_export_progress(',1)[0]
+        self.assertIn('podcast_save_window::open_with_labels_and_status_field(', export)
+        self.assertIn('true,\n        true,', export)
         self.assertIn('language_labels.exporting.clone()', export)
         self.assertIn('language_labels.cancel.clone()', export)
         self.assertIn('audio_description.project.export_cancel_confirm', export)
         self.assertIn('podcast_save_window::enable_accessible_progress_context(dialog)', export)
-        self.assertIn('podcast_save_window::restrict_tab_to_cancel(dialog)', export)
-        self.assertIn('set_controls_enabled(state, false)',export)
+        self.assertIn('podcast_save_window::focus_primary_control(dialog)', export)
+        self.assertIn('ShowWindow(child, SW_HIDE)', export)
+        self.assertNotIn('restrict_tab_to_cancel', export)
+        self.assertIn('set_controls_enabled(state, false)', PROJECT.split('fn start_export(',1)[1])
     def test_message_routing_and_real_cancel(self):
         self.assertIn('podcast_save_window::handle_navigation(export_dialog, msg)', PROJECT)
         self.assertIn('podcast_save_window::WM_PODCAST_SAVE_CANCEL => {', PROJECT)
@@ -25,9 +27,12 @@ class ProjectCleanExportDialogTests(unittest.TestCase):
         self.assertIn('podcast_save_window::set_status_text(',PROJECT)
         self.assertIn('podcast_save_window::WM_PODCAST_SAVE_PROGRESS',PROJECT)
     def test_modal_closes_before_success_or_error(self):
+        close = PROJECT.split('fn close_export_progress(', 1)[1].split('fn start_export(', 1)[0]
+        self.assertIn('DestroyWindow(dialog)', close)
+        self.assertIn('ShowWindow(control, SW_SHOW)', close)
         done=PROJECT.split('WM_PROJECT_DONE => {',1)[1].split('WM_SETFOCUS => {',1)[0]
-        self.assertLess(done.index('DestroyWindow(export_dialog)'),done.index('set_controls_enabled(state, true)'))
-        self.assertLess(done.index('DestroyWindow(export_dialog)'),done.index('match result'))
+        self.assertLess(done.index('close_export_progress(state)'),done.index('set_controls_enabled(state, true)'))
+        self.assertLess(done.index('close_export_progress(state)'),done.index('match result'))
     def test_no_fake_progress_and_dialog_is_genuine(self):
         self.assertIn('podcast_save_window::disable_fake_progress(dialog)',PROJECT)
         self.assertIn('EnableWindow(parent, false)',SAVE)

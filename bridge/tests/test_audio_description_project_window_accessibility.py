@@ -509,7 +509,9 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertLess(export, project_save)
         self.assertIn('project.output_is_video,', validation[export:project_save])
         self.assertLess(project_save, commit)
-        self.assertIn('if let Some(first) = dropped.first()', validation)
+        self.assertIn('while !dropped.is_empty()', validation)
+        self.assertIn('repair_text(start, actual, available, &cue.text)', validation)
+        self.assertIn('retry_dropped_descriptions_at_native_rate(', validation)
         self.assertIn('AudioDescriptionProjectVoiceError::DoesNotFit', validation)
         self.assertIn('job.tts_engine = settings.engine;', validation)
         self.assertIn('job.tts_voice = voice.to_string();', validation)
@@ -532,19 +534,21 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertNotIn('synthesize_description_tasks_parallel(', between)
         self.assertIn('samples: description.samples.clone()', between)
 
-    def test_project_voice_change_is_explicit_and_tab_order_is_accessible(self):
+    def test_project_voice_change_applies_on_export_and_tab_order_is_accessible(self):
         create = PROJECT[PROJECT.index('WM_CREATE =>'):PROJECT.index('WM_COMMAND =>')]
         edit = create.index('let edit = CreateWindowExW(')
         apply_button = create.index('let apply_button = CreateWindowExW(')
         engine_combo = create.index('let engine_combo = CreateWindowExW(')
         voice_combo = create.index('let voice_combo = CreateWindowExW(')
-        change_button = create.index('let change_voice_button = CreateWindowExW(')
+        self.assertNotIn('change_voice_button', create)
         self.assertLess(edit, apply_button)
         self.assertLess(apply_button, engine_combo)
         self.assertLess(engine_combo, voice_combo)
-        self.assertLess(voice_combo, change_button)
         command = PROJECT[PROJECT.index('WM_COMMAND =>'):PROJECT.index('WM_CONTEXTMENU =>')]
-        self.assertIn('ID_CHANGE_VOICE if !state.running => start_voice_change(hwnd, state)', command)
+        self.assertIn('ID_EXPORT if !state.running => start_export(hwnd, state)', command)
+        export = PROJECT[PROJECT.index('fn start_export('):PROJECT.index('fn window_proc_inner(')]
+        self.assertLess(export.index('selected_project_voice_settings(state)'), export.index('start_voice_change(hwnd, state)'))
+        self.assertLess(export.index('start_voice_change(hwnd, state)'), export.index('reexport_audio_description_project('))
         self.assertNotIn('ID_VOICE if notification == CBN_SELCHANGE', command)
         self.assertIn('ID_ENGINE if notification == CBN_SELCHANGE', command)
 
@@ -555,12 +559,11 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         rate_combo = create.index('let rate_combo = CreateWindowExW(')
         volume_combo = create.index('let volume_combo = CreateWindowExW(')
         test_button = create.index('let test_voice_button = CreateWindowExW(')
-        change_button = create.index('let change_voice_button = CreateWindowExW(')
+        self.assertNotIn('change_voice_button', create)
         self.assertLess(engine_combo, voice_combo)
         self.assertLess(voice_combo, rate_combo)
         self.assertLess(rate_combo, volume_combo)
         self.assertLess(volume_combo, test_button)
-        self.assertLess(test_button, change_button)
         self.assertIn('tts_tuning.label_speed', PROJECT)
         self.assertIn('tts_tuning.label_volume', PROJECT)
         self.assertIn('audio_description.voice_settings.test', PROJECT)
@@ -582,16 +585,17 @@ class AudioDescriptionProjectWindowAccessibilityTests(unittest.TestCase):
         self.assertNotIn('run_audio_description_bridge', validation)
         self.assertNotIn('Gemini', validation)
 
-    def test_project_engine_selection_only_reloads_voices_until_change_button_is_pressed(self):
+    def test_project_engine_selection_reloads_voices_until_export(self):
         command = PROJECT[PROJECT.index('WM_COMMAND =>'):PROJECT.index('WM_CONTEXTMENU =>')]
         engine_branch = command[
             command.index('ID_ENGINE if notification == CBN_SELCHANGE'):
-            command.index('ID_CHANGE_VOICE if !state.running')
+            command.index('ID_TEST_VOICE if !state.running')
         ]
         self.assertIn('load_project_voices(hwnd, engine_from_combo(state.engine_combo))', engine_branch)
         self.assertNotIn('start_voice_change', engine_branch)
-        self.assertIn('EnableWindow(state.change_voice_button, false)', engine_branch)
-        self.assertIn('audio_description.project.change_voice', PROJECT)
+        self.assertIn('EnableWindow(state.voice_combo, false)', engine_branch)
+        self.assertIn('EnableWindow(state.test_voice_button, false)', engine_branch)
+        self.assertNotIn('ID_CHANGE_VOICE', command)
 
     def test_project_voice_loader_supports_all_creation_engines(self):
         loader = PROJECT[
