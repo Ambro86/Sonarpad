@@ -28,10 +28,8 @@
   "route.departure_zone": "Fuso orario della partenza",
   "route.departure_hour": "Ore",
   "route.departure_minute": "Minuti",
-
   "route.recent_routes": "Percorsi recenti",
   "route.clear_history": "Cancella cronologia",
-
   "route.profile.transit": "Mezzi pubblici",
   "places.detail.category": "Categoria",
   "places.detail.address": "Indirizzo",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Domani",
   "places.detail.range": "dalle %start% alle %end%",
   "places.detail.next_day": " del giorno successivo",
-
   "places.address": "Indirizzo (facoltativo)",
   "places.city": "Città",
   "places.query": "Inserisci luogo o attività",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Creazione audiolibro in corso. Avanzamento: {pct}%",
   "audiobook.sapi4_threads_body": "Quanti processi contemporanei vuoi usare per velocizzare la creazione? (Consigliato: 10-30).\nNota: un numero troppo alto potrebbe rallentare il sistema o causare errori nel motore vocale SAPI4.\nIntervallo consentito: 1-64.",
   "audiobook.sapi4_threads_title": "Processi SAPI4",
-  "audiobook.segment_failed": "La creazione dell’audiolibro è stata interrotta perché non è stato possibile sintetizzare il segmento {chunk} con {engine}. Nessun testo è stato omesso. Consulta il log per i dettagli tecnici.",
+  "audiobook.segment_failed": "La sintesi vocale è stata interrotta perché non è stato possibile sintetizzare il segmento {chunk} con {engine}. Nessun testo è stato omesso. Consulta il log per i dettagli tecnici.",
   "audiobook.title": "Creazione Audiolibro",
   "batch_audiobooks.add_files": "Aggiungi file...",
   "batch_audiobooks.add_folder": "Aggiungi cartella...",
@@ -2549,5 +2546,8 @@
   "stream_audio.search_channels": "Canali",
   "stream_audio.search_courses": "Corsi",
   "stream_audio.search_podcasts": "Podcast",
-  "audio_description.project.repair_text": "La descrizione a {time} dura {actual} s; lo spazio disponibile è {available} s. Vuoi accorciare il testo?"
+  "audio_description.project.repair_text": "La descrizione a {time} dura {actual} s; lo spazio disponibile è {available} s. Vuoi accorciare il testo?",
+  "options.lang.tr": "Turco",
+  "favorites.sort_alphabetically": "Riordina alfabeticamente",
+  "favorites.sorted_alphabetically": "Elenco riordinato alfabeticamente."
 }

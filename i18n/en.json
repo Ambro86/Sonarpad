@@ -28,10 +28,8 @@
   "route.departure_zone": "Departure time zone",
   "route.departure_hour": "Hours",
   "route.departure_minute": "Minutes",
-
   "route.recent_routes": "Recent routes",
   "route.clear_history": "Clear history",
-
   "route.profile.transit": "Public transport",
   "places.detail.category": "Category",
   "places.detail.address": "Address",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Tomorrow",
   "places.detail.range": "from %start% to %end%",
   "places.detail.next_day": " the following day",
-
   "places.address": "Address (optional)",
   "places.city": "City",
   "places.query": "Enter a place or business",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Creating audiobook. Progress: {pct}%",
   "audiobook.sapi4_threads_body": "How many concurrent processes do you want to use to speed up creation? (Recommended: 10-30).\nNote: too many processes might slow down the system or cause errors in the SAPI4 engine.\nAllowed range: 1-64.",
   "audiobook.sapi4_threads_title": "SAPI4 Processes",
-  "audiobook.segment_failed": "Audiobook creation stopped because segment {chunk} could not be synthesized with {engine}. No text was omitted. See the log for technical details.",
+  "audiobook.segment_failed": "Speech synthesis stopped because segment {chunk} could not be synthesized with {engine}. No text was omitted. See the log for technical details.",
   "audiobook.title": "Creating Audiobook",
   "batch_audiobooks.add_files": "Add Files...",
   "batch_audiobooks.add_folder": "Add Folder...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Channels",
   "stream_audio.search_courses": "Courses",
   "stream_audio.search_podcasts": "Podcasts",
-  "audio_description.project.repair_text": "The description at {time} lasts {actual} s; the available space is {available} s. Would you like to shorten the text?"
+  "audio_description.project.repair_text": "The description at {time} lasts {actual} s; the available space is {available} s. Would you like to shorten the text?",
+  "options.lang.tr": "Turkish",
+  "favorites.sort_alphabetically": "Sort alphabetically",
+  "favorites.sorted_alphabetically": "List sorted alphabetically."
 }

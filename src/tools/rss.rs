@@ -375,6 +375,7 @@ fn google_news_locale(language: Language) -> (&'static str, &'static str, &'stat
         Language::Chinese => ("zh-CN", "CN", "zh-Hans"),
         Language::Hindi => ("hi", "IN", "hi"),
         Language::Indonesian => ("id", "ID", "id"),
+        Language::Turkish => ("tr", "TR", "tr"),
     }
 }
 

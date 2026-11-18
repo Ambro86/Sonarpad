@@ -54,6 +54,7 @@ pub fn app_locale(language: Language) -> &'static str {
         Language::Chinese => "zh",
         Language::Hindi => "hi",
         Language::Indonesian => "id",
+        Language::Turkish => "tr",
     }
 }
 
@@ -553,6 +554,7 @@ mod tests {
             Language::Chinese,
             Language::Hindi,
             Language::Indonesian,
+            Language::Turkish,
         ] {
             assert!(language_name(language, "ace").is_some());
             assert!(language_name(language, "en-us").is_some());

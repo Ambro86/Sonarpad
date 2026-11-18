@@ -1,5 +1,9 @@
 # Pakeitimų žurnalas
 
+Version 0.9.31 – 2026-11-17
+
+1. Mėgstamiausi: į SonarTube, SonarMusic, radijo ir TV kontekstinį meniu pridėta komanda „Rikiuoti abėcėlės tvarka“, taip pat tiesiogiai pasiekiama tinklalaidžių prenumeratoms. Tvarka išsaugoma, o ekrano skaitytuvas praneša apie užbaigimą.
+
 Version 0.9.29 – 2026-11-16
 
 1. Garsinis vaizdavimas su TMDB aktoriais ir nuotraukomis: įveskite filmo ar serialo pavadinimą ir pasirinktinai metus, tada pasirinkite kūrinį, sezoną ir seriją. Gemini gauna vardus bei aktorių nuotraukas kaip pagalbinę informaciją, o ne patvirtintą tapatybę. Kataloguose išsaugomos nuorodos į nuotraukas kitam naudojimui. Animuotam turiniui garsinis vaizdavimas negali naudoti šios paslaugos, nes ji pateikia įgarsintojų nuotraukas, kurios nepadėtų atpažinti animacinių veikėjų. Šios sistemos įdiegimas negarantuoja, kad veikėjai bus atpažinti 100 %, nes kartais TMDB nepateikia visų veikėjų nuotraukų. Tačiau ji labai padidina atpažinimo patikimumą.

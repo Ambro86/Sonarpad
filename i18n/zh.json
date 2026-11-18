@@ -28,10 +28,8 @@
   "route.departure_zone": "出发地时区",
   "route.departure_hour": "小时",
   "route.departure_minute": "分钟",
-
   "route.recent_routes": "最近路线",
   "route.clear_history": "清除历史记录",
-
   "route.profile.transit": "公共交通",
   "places.detail.category": "类别",
   "places.detail.address": "地址",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "明天",
   "places.detail.range": "%start% 至 %end%",
   "places.detail.next_day": "（次日）",
-
   "places.address": "地址（可选）",
   "places.city": "城市",
   "places.query": "输入地点或商家",
@@ -359,7 +356,7 @@
   "audiobook.progress": "创建有声书。进度：{pct}%",
   "audiobook.sapi4_threads_body": "您希望使用多少个并发进程来加速创建过程？（推荐：10-30）。注意：进程过多可能导致系统运行缓慢或引发SAPI4引擎错误。\n允许范围：1–64。",
   "audiobook.sapi4_threads_title": "SAPI4 进程",
-  "audiobook.segment_failed": "有声书创建已停止，因为无法使用 {engine} 合成第 {chunk} 个片段。没有省略任何文本。技术详情请查看日志。",
+  "audiobook.segment_failed": "语音合成已停止，因为无法使用 {engine} 合成第 {chunk} 个片段。没有省略任何文本。技术详情请查看日志。",
   "audiobook.title": "创建有声读物",
   "batch_audiobooks.add_files": "添加文件...",
   "batch_audiobooks.add_folder": "添加文件夹...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "频道",
   "stream_audio.search_courses": "课程",
   "stream_audio.search_podcasts": "播客",
-  "audio_description.project.repair_text": "{time} 处的描述时长为 {actual} 秒，可用时间为 {available} 秒。要缩短文本吗？"
+  "audio_description.project.repair_text": "{time} 处的描述时长为 {actual} 秒，可用时间为 {available} 秒。要缩短文本吗？",
+  "options.lang.tr": "土耳其语",
+  "favorites.sort_alphabetically": "按字母顺序排序",
+  "favorites.sorted_alphabetically": "列表已按字母顺序排序。"
 }

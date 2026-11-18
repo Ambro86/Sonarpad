@@ -19,10 +19,14 @@ const LT_JSON: &str = include_str!("../i18n/lt.json");
 const RU_JSON: &str = include_str!("../i18n/ru.json");
 const ZH_JSON: &str = include_str!("../i18n/zh.json");
 const ID_JSON: &str = include_str!("../i18n/id.json");
+const TR_JSON: &str = include_str!("../i18n/tr.json");
 const HI_JSON: &str = include_str!("../i18n/hi.json");
 const TRECCANI_IT_JSON: &str = include_str!("../i18n/features/treccani_it.json");
+const TRECCANI_TR_JSON: &str = include_str!("../i18n/features/treccani_tr.json");
 const TV_IT_JSON: &str = include_str!("../i18n/features/tv/it.json");
+const TV_TR_JSON: &str = include_str!("../i18n/features/tv/tr.json");
 const LA7_PLAY_IT_JSON: &str = include_str!("../i18n/features/la7_play/it.json");
+const LA7_PLAY_TR_JSON: &str = include_str!("../i18n/features/la7_play/tr.json");
 
 fn load_map(raw: &str) -> HashMap<String, String> {
     let mut map: HashMap<String, String> = serde_json::from_str(raw).unwrap_or_default();
@@ -200,6 +204,7 @@ fn map_for_language(language: Language) -> &'static HashMap<String, String> {
     static RU: OnceLock<HashMap<String, String>> = OnceLock::new();
     static ZH: OnceLock<HashMap<String, String>> = OnceLock::new();
     static ID: OnceLock<HashMap<String, String>> = OnceLock::new();
+    static TR: OnceLock<HashMap<String, String>> = OnceLock::new();
     static HI: OnceLock<HashMap<String, String>> = OnceLock::new();
     match language {
         Language::Italian => IT.get_or_init(|| load_map(IT_JSON)),
@@ -218,6 +223,7 @@ fn map_for_language(language: Language) -> &'static HashMap<String, String> {
         Language::Chinese => ZH.get_or_init(|| load_map(ZH_JSON)),
         Language::Hindi => HI.get_or_init(|| load_map(HI_JSON)),
         Language::Indonesian => ID.get_or_init(|| load_map(ID_JSON)),
+        Language::Turkish => TR.get_or_init(|| load_map(TR_JSON)),
         Language::German => DE.get_or_init(|| load_map(DE_JSON)),
         Language::English => EN.get_or_init(|| load_map(EN_JSON)),
     }
@@ -290,22 +296,37 @@ pub(crate) fn dialog_filter_pairs(language: Language, key: &str) -> Vec<(String,
     vec![(tr(language, "dialog.all_files"), "*.*".to_string())]
 }
 
-pub fn tr_treccani(key: &str) -> String {
-    static TRECCANI_IT: OnceLock<HashMap<String, String>> = OnceLock::new();
-    TRECCANI_IT
-        .get_or_init(|| load_map(TRECCANI_IT_JSON))
+fn tr_feature(
+    key: &str,
+    italian: &'static OnceLock<HashMap<String, String>>,
+    turkish: &'static OnceLock<HashMap<String, String>>,
+    italian_json: &str,
+    turkish_json: &str,
+) -> String {
+    // These legacy feature helpers have no explicit Language parameter.
+    // Read the current application setting so switching to Turkish updates them too.
+    if crate::settings::load_settings().language == Language::Turkish
+        && let Some(value) = turkish.get_or_init(|| load_map(turkish_json)).get(key)
+    {
+        return value.clone();
+    }
+    italian
+        .get_or_init(|| load_map(italian_json))
         .get(key)
         .cloned()
         .unwrap_or_else(|| key.to_string())
 }
 
+pub fn tr_treccani(key: &str) -> String {
+    static IT: OnceLock<HashMap<String, String>> = OnceLock::new();
+    static TR: OnceLock<HashMap<String, String>> = OnceLock::new();
+    tr_feature(key, &IT, &TR, TRECCANI_IT_JSON, TRECCANI_TR_JSON)
+}
+
 pub fn tr_tv(key: &str) -> String {
-    static TV_IT: OnceLock<HashMap<String, String>> = OnceLock::new();
-    TV_IT
-        .get_or_init(|| load_map(TV_IT_JSON))
-        .get(key)
-        .cloned()
-        .unwrap_or_else(|| key.to_string())
+    static IT: OnceLock<HashMap<String, String>> = OnceLock::new();
+    static TR: OnceLock<HashMap<String, String>> = OnceLock::new();
+    tr_feature(key, &IT, &TR, TV_IT_JSON, TV_TR_JSON)
 }
 
 fn replace_named_args(mut text: String, args: &[(&str, &str)]) -> String {
@@ -321,12 +342,9 @@ pub fn tr_tv_f(key: &str, args: &[(&str, &str)]) -> String {
 }
 
 pub fn tr_la7_play(key: &str) -> String {
-    static LA7_PLAY_IT: OnceLock<HashMap<String, String>> = OnceLock::new();
-    LA7_PLAY_IT
-        .get_or_init(|| load_map(LA7_PLAY_IT_JSON))
-        .get(key)
-        .cloned()
-        .unwrap_or_else(|| key.to_string())
+    static IT: OnceLock<HashMap<String, String>> = OnceLock::new();
+    static TR: OnceLock<HashMap<String, String>> = OnceLock::new();
+    tr_feature(key, &IT, &TR, LA7_PLAY_IT_JSON, LA7_PLAY_TR_JSON)
 }
 
 pub fn tr_la7_play_f(key: &str, args: &[(&str, &str)]) -> String {
@@ -415,6 +433,7 @@ mod tests {
             Language::Chinese,
             Language::Hindi,
             Language::Indonesian,
+            Language::Turkish,
         ];
         for language in languages {
             let pairs = dialog_filter_pairs(language, "dialog.open_filter");

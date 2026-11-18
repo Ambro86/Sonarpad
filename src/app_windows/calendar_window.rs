@@ -2468,6 +2468,16 @@ fn holiday_for_date(language: Language, date: NaiveDate) -> Option<String> {
             (26, 12) => "2. svátek vánoční",
             _ => return None,
         },
+        Language::Turkish => match (day, month) {
+            (1, 1) => "Yılbaşı",
+            (23, 4) => "Ulusal Egemenlik ve Çocuk Bayramı",
+            (1, 5) => "Emek ve Dayanışma Günü",
+            (19, 5) => "Atatürk’ü Anma, Gençlik ve Spor Bayramı",
+            (15, 7) => "Demokrasi ve Millî Birlik Günü",
+            (30, 8) => "Zafer Bayramı",
+            (29, 10) => "Cumhuriyet Bayramı",
+            _ => return None,
+        },
         _ => return None,
     };
     Some(value.to_string())
@@ -2494,6 +2504,20 @@ fn localized_date(language: Language, date: NaiveDate) -> String {
     )
 }
 
+const WEEKDAYS_TR: [&str; 7] = [
+    "Pazartesi",
+    "Salı",
+    "Çarşamba",
+    "Perşembe",
+    "Cuma",
+    "Cumartesi",
+    "Pazar",
+];
+const MONTHS_TR: [&str; 12] = [
+    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim",
+    "Kasım", "Aralık",
+];
+
 fn localized_date_names(
     language: Language,
 ) -> (&'static [&'static str; 7], &'static [&'static str; 12]) {
@@ -2513,6 +2537,7 @@ fn localized_date_names(
         Language::Chinese => (&WEEKDAYS_ZH, &MONTHS_ZH),
         Language::Hindi => (&WEEKDAYS_HI, &MONTHS_HI),
         Language::Indonesian => (&WEEKDAYS_ID, &MONTHS_ID),
+        Language::Turkish => (&WEEKDAYS_TR, &MONTHS_TR),
         Language::German => (&WEEKDAYS_DE, &MONTHS_DE),
         Language::English => (&WEEKDAYS_EN, &MONTHS_EN),
     }
@@ -2538,6 +2563,7 @@ fn language_code(language: Language) -> &'static str {
         Language::Chinese => "zh",
         Language::Hindi => "hi",
         Language::Indonesian => "id",
+        Language::Turkish => "tr",
     }
 }
 

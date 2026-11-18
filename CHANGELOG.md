@@ -1,5 +1,13 @@
 # Changelog
 
+Version 0.9.31 – 2026-11-17
+
+1. Favourites: added “Sort alphabetically” to the context menu in SonarTube, SonarMusic, radio and TV, also available directly for podcast subscriptions. The order is saved and a screen reader announces completion.
+
+Version 0.9.30 – 2026-11-16
+
+1. Complete Turkish translation of Sonarpad Windows: interface, options, calendar (365 saints' days and 128 quotes), audio descriptions, language selectors, help, donations and changelog. Turkish is now available across the program.
+
 Version 0.9.29 – 2026-11-16
 
 1. Audio descriptions with TMDB cast and photos: enter a film or series title and an optional year, then choose the production, season and episode. Gemini receives cast names and actor photos as supporting evidence, never as confirmed identities. Saved catalogs retain image links for reuse. For animated content, audio description cannot use this service because it provides photos of voice actors, which would not help identify animated characters. Implementing this system does not guarantee 100% character recognition, as TMDB sometimes does not provide photos for every character in the cast. However, it greatly increases recognition reliability.

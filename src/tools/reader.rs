@@ -481,6 +481,7 @@ fn author_prefix(language: Language) -> &'static str {
         Language::Chinese => "作者",
         Language::Hindi => "द्वारा",
         Language::Indonesian => "Oleh",
+        Language::Turkish => "Yazan",
     }
 }
 
@@ -903,6 +904,7 @@ mod tests {
             Language::Chinese,
             Language::Hindi,
             Language::Indonesian,
+            Language::Turkish,
         ];
 
         for language in languages {
@@ -925,6 +927,7 @@ mod tests {
                 Language::Chinese => "Chinese",
                 Language::Hindi => "Hindi",
                 Language::Indonesian => "Indonesian",
+                Language::Turkish => "Turkish",
             };
             assert!(
                 !prefix.trim().is_empty(),

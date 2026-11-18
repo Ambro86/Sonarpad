@@ -948,6 +948,7 @@ fn populate_language_combo(
         (i18n::tr(language, "options.lang.lt"), "lt"),
         (i18n::tr(language, "options.lang.zh"), "zh"),
         (i18n::tr(language, "options.lang.hi"), "hi"),
+        (i18n::tr(language, "options.lang.tr"), "tr"),
     ];
     let saved_pref = with_state(parent, |state| state.settings.wikipedia_language.clone())
         .unwrap_or_else(|| "auto".to_string())
@@ -985,6 +986,7 @@ fn selected_language_pref(combo: HWND) -> String {
         12 => "lt",
         13 => "zh",
         14 => "hi",
+        15 => "tr",
         _ => "auto",
     }
     .to_string()

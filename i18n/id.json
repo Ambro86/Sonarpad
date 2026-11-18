@@ -28,10 +28,8 @@
   "route.departure_zone": "Zona waktu keberangkatan",
   "route.departure_hour": "Jam",
   "route.departure_minute": "Menit",
-
   "route.recent_routes": "Rute terbaru",
   "route.clear_history": "Hapus riwayat",
-
   "route.profile.transit": "Transportasi umum",
   "places.detail.category": "Kategori",
   "places.detail.address": "Alamat",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Besok",
   "places.detail.range": "dari %start% hingga %end%",
   "places.detail.next_day": " hari berikutnya",
-
   "places.address": "Alamat (opsional)",
   "places.city": "Kota",
   "places.query": "Masukkan tempat atau usaha",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Membuat buku audio. Progres: {pct}%",
   "audiobook.sapi4_threads_body": "Berapa banyak proses bersamaan yang ingin digunakan untuk mempercepat pembuatan? (Disarankan: 10-30).\nCatatan: terlalu banyak proses dapat memperlambat sistem atau menyebabkan kesalahan pada mesin SAPI4.\nRentang yang diizinkan: 1-64.",
   "audiobook.sapi4_threads_title": "Proses SAPI4",
-  "audiobook.segment_failed": "Pembuatan buku audio dihentikan karena bagian {chunk} tidak dapat diubah menjadi suara dengan {engine}. Tidak ada teks yang dilewati. Lihat log untuk detail teknis.",
+  "audiobook.segment_failed": "Sintesis suara dihentikan karena bagian {chunk} tidak dapat diubah menjadi suara dengan {engine}. Tidak ada teks yang dilewati. Lihat log untuk detail teknis.",
   "audiobook.title": "Membuat Buku Audio",
   "batch_audiobooks.add_files": "Tambah Berkas...",
   "batch_audiobooks.add_folder": "Tambah Folder...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Channel",
   "stream_audio.search_courses": "Kursus",
   "stream_audio.search_podcasts": "Podcast",
-  "audio_description.project.repair_text": "Deskripsi pada {time} berdurasi {actual} dtk; waktu tersedia {available} dtk. Ingin mempersingkat teks?"
+  "audio_description.project.repair_text": "Deskripsi pada {time} berdurasi {actual} dtk; waktu tersedia {available} dtk. Ingin mempersingkat teks?",
+  "options.lang.tr": "Bahasa Turki",
+  "favorites.sort_alphabetically": "Urutkan menurut abjad",
+  "favorites.sorted_alphabetically": "Daftar telah diurutkan menurut abjad."
 }

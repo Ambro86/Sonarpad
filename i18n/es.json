@@ -28,10 +28,8 @@
   "route.departure_zone": "Zona horaria de salida",
   "route.departure_hour": "Horas",
   "route.departure_minute": "Minutos",
-
   "route.recent_routes": "Rutas recientes",
   "route.clear_history": "Borrar historial",
-
   "route.profile.transit": "Transporte público",
   "places.detail.category": "Categoría",
   "places.detail.address": "Dirección",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Mañana",
   "places.detail.range": "de %start% a %end%",
   "places.detail.next_day": " del día siguiente",
-
   "places.address": "Dirección (opcional)",
   "places.city": "Ciudad",
   "places.query": "Introduce un lugar o negocio",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Creando audiolibro. Progreso: {pct}%",
   "audiobook.sapi4_threads_body": "¿Cuántos procesos concurrentes quieres usar para acelerar la creación? (Recomendado: 10-30).\nNota: demasiados procesos pueden ralentizar el sistema o causar errores en el motor SAPI4.\nRango permitido: 1-64.",
   "audiobook.sapi4_threads_title": "Procesos SAPI4",
-  "audiobook.segment_failed": "La creación del audiolibro se detuvo porque no se pudo sintetizar el segmento {chunk} con {engine}. No se omitió ningún texto. Consulta el registro para ver los detalles técnicos.",
+  "audiobook.segment_failed": "La síntesis de voz se detuvo porque no se pudo sintetizar el segmento {chunk} con {engine}. No se omitió ningún texto. Consulta el registro para ver los detalles técnicos.",
   "audiobook.title": "Creando Audiolibro",
   "batch_audiobooks.add_files": "Agregar archivos...",
   "batch_audiobooks.add_folder": "Agregar carpeta...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Canales",
   "stream_audio.search_courses": "Cursos",
   "stream_audio.search_podcasts": "Pódcasts",
-  "audio_description.project.repair_text": "La descripción en {time} dura {actual} s; el espacio disponible es de {available} s. ¿Quieres acortar el texto?"
+  "audio_description.project.repair_text": "La descripción en {time} dura {actual} s; el espacio disponible es de {available} s. ¿Quieres acortar el texto?",
+  "options.lang.tr": "Turco",
+  "favorites.sort_alphabetically": "Ordenar alfabéticamente",
+  "favorites.sorted_alphabetically": "Lista ordenada alfabéticamente."
 }

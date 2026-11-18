@@ -1,5 +1,9 @@
 # Dnevnik izmena
 
+Version 0.9.31 – 2026-11-17
+
+1. Omiljeni: dodata je radnja „Poređaj po abecedi“ u kontekstni meni za SonarTube, SonarMusic, radio i TV, dostupna i direktno za pretplate na podkaste. Redosled se čuva, a čitač ekrana najavljuje završetak.
+
 Version 0.9.29 – 2026-11-16
 
 1. Audio-opisi sa glumačkom ekipom i fotografijama sa TMDB-a: unesite naziv filma ili serije i opciono godinu, pa izaberite produkciju, sezonu i epizodu. Gemini dobija imena i fotografije glumaca kao tragove, a ne potvrđene identitete. Katalozi čuvaju linkove fotografija za ponovnu upotrebu. Za animirani sadržaj audio-opis ne može da koristi ovu uslugu, jer ona pruža fotografije glasovnih glumaca, koje ne bi pomogle u prepoznavanju likova iz crtanih filmova. Uvođenje ovog sistema ne garantuje stoprocentno prepoznavanje likova, jer TMDB ponekad ne pruža fotografije svih likova iz glumačke postave. Međutim, znatno povećava pouzdanost prepoznavanja.

@@ -28,10 +28,8 @@
   "route.departure_zone": "Vremenska zona polaska",
   "route.departure_hour": "Sati",
   "route.departure_minute": "Minuti",
-
   "route.recent_routes": "Nedavne rute",
   "route.clear_history": "Obriši istoriju",
-
   "route.profile.transit": "Javni prevoz",
   "places.detail.category": "Kategorija",
   "places.detail.address": "Adresa",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Sutra",
   "places.detail.range": "od %start% do %end%",
   "places.detail.next_day": " sledećeg dana",
-
   "places.address": "Adresa (opciono)",
   "places.city": "Grad",
   "places.query": "Unesite mesto ili preduzeće",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Kreiranje audio-knjige. Napredak: {pct}%",
   "audiobook.sapi4_threads_body": "Koliko istovremenih procesa želiš da koristiš za ubrzanje kreiranja? (Preporučeno: 10–30).\nNapomena: previše procesa može usporiti sistem ili izazvati greške u SAPI4 mehanizmu.\nDozvoljeni opseg: 1–64.",
   "audiobook.sapi4_threads_title": "SAPI4 procesi",
-  "audiobook.segment_failed": "Pravljenje audio-knjige je zaustavljeno jer segment {chunk} nije mogao da se sintetizuje pomoću {engine}. Nijedan tekst nije izostavljen. Tehnički detalji se nalaze u evidenciji.",
+  "audiobook.segment_failed": "Sinteza govora je zaustavljena jer segment {chunk} nije mogao da se sintetizuje pomoću {engine}. Nijedan tekst nije izostavljen. Tehnički detalji se nalaze u evidenciji.",
   "audiobook.title": "Kreiranje audio-knjige",
   "batch_audiobooks.add_files": "Dodaj datoteke...",
   "batch_audiobooks.add_folder": "Dodaj fasciklu...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Kanali",
   "stream_audio.search_courses": "Kursevi",
   "stream_audio.search_podcasts": "Podkasti",
-  "audio_description.project.repair_text": "Опис на {time} траје {actual} с; доступно је {available} с. Желите ли да скратите текст?"
+  "audio_description.project.repair_text": "Опис на {time} траје {actual} с; доступно је {available} с. Желите ли да скратите текст?",
+  "options.lang.tr": "Turski",
+  "favorites.sort_alphabetically": "Poređaj po abecedi",
+  "favorites.sorted_alphabetically": "Lista je poređana po abecedi."
 }

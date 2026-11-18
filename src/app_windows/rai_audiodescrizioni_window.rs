@@ -793,6 +793,7 @@ fn app_language_label(language: Language) -> &'static str {
         Language::Chinese => "中文",
         Language::Hindi => "हिंदी",
         Language::Indonesian => "Bahasa Indonesia",
+        Language::Turkish => "Türkçe",
     }
 }
 

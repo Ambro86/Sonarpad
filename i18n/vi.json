@@ -28,10 +28,8 @@
   "route.departure_zone": "Múi giờ khởi hành",
   "route.departure_hour": "Giờ",
   "route.departure_minute": "Phút",
-
   "route.recent_routes": "Lộ trình gần đây",
   "route.clear_history": "Xóa lịch sử",
-
   "route.profile.transit": "Phương tiện công cộng",
   "places.detail.category": "Danh mục",
   "places.detail.address": "Địa chỉ",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Ngày mai",
   "places.detail.range": "từ %start% đến %end%",
   "places.detail.next_day": " ngày hôm sau",
-
   "places.address": "Địa chỉ (không bắt buộc)",
   "places.city": "Thành phố",
   "places.query": "Nhập địa điểm hoặc doanh nghiệp",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Đang tạo sách nói. Tiến độ: {pct}%",
   "audiobook.sapi4_threads_body": "Bạn muốn dùng bao nhiêu tiến trình đồng thời để tăng tốc tạo? (Khuyến nghị: 10–30).\nLưu ý: quá nhiều tiến trình có thể làm chậm hệ thống hoặc gây lỗi cho bộ máy SAPI4.\nPhạm vi cho phép: 1–64.",
   "audiobook.sapi4_threads_title": "Tiến trình SAPI4",
-  "audiobook.segment_failed": "Việc tạo sách nói đã dừng vì không thể tổng hợp đoạn {chunk} bằng {engine}. Không có văn bản nào bị bỏ qua. Hãy xem nhật ký để biết chi tiết kỹ thuật.",
+  "audiobook.segment_failed": "Quá trình tổng hợp giọng nói đã dừng vì không thể tổng hợp đoạn {chunk} bằng {engine}. Không có văn bản nào bị bỏ qua. Hãy xem nhật ký để biết chi tiết kỹ thuật.",
   "audiobook.title": "Đang tạo sách nói",
   "batch_audiobooks.add_files": "Thêm tệp...",
   "batch_audiobooks.add_folder": "Thêm thư mục...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Kênh",
   "stream_audio.search_courses": "Khóa học",
   "stream_audio.search_podcasts": "Podcast",
-  "audio_description.project.repair_text": "Mô tả tại {time} dài {actual} giây; thời gian khả dụng là {available} giây. Bạn có muốn rút ngắn văn bản không?"
+  "audio_description.project.repair_text": "Mô tả tại {time} dài {actual} giây; thời gian khả dụng là {available} giây. Bạn có muốn rút ngắn văn bản không?",
+  "options.lang.tr": "Tiếng Thổ Nhĩ Kỳ",
+  "favorites.sort_alphabetically": "Sắp xếp theo bảng chữ cái",
+  "favorites.sorted_alphabetically": "Danh sách đã được sắp xếp theo bảng chữ cái."
 }

@@ -74,7 +74,7 @@ pub const IDM_SPELLCHECK_SUGGESTION_MAX: usize = 10;
 pub const IDM_SPELLCHECK_ADD_TO_DICTIONARY: usize = 12100;
 pub const IDM_SPELLCHECK_IGNORE_ONCE: usize = 12101;
 pub const IDM_EDIT_TRANSLATE_TARGET_BASE: usize = 12200;
-pub const IDM_EDIT_TRANSLATE_TARGET_MAX: usize = 14;
+pub const IDM_EDIT_TRANSLATE_TARGET_MAX: usize = 15;
 pub const IDM_PLAYBACK_PLAY_PAUSE: usize = 8001;
 pub const IDM_PLAYBACK_STOP: usize = 8002;
 pub const IDM_PLAYBACK_SEEK_FORWARD: usize = 8003;
@@ -2540,6 +2540,7 @@ mod tests {
             (Language::Chinese, "zh"),
             (Language::Hindi, "hi"),
             (Language::Indonesian, "id"),
+            (Language::Turkish, "tr"),
         ];
 
         for (language, code) in languages {
@@ -2571,6 +2572,7 @@ mod tests {
             (Language::Chinese, "zh"),
             (Language::Hindi, "hi"),
             (Language::Indonesian, "id"),
+            (Language::Turkish, "tr"),
         ];
 
         for (language, code) in languages {
@@ -2634,6 +2636,7 @@ mod tests {
             (Language::Chinese, "zh"),
             (Language::Hindi, "hi"),
             (Language::Indonesian, "id"),
+            (Language::Turkish, "tr"),
         ];
 
         for (language, code) in languages {

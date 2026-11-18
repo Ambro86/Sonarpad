@@ -28,10 +28,8 @@
   "route.departure_zone": "Strefa czasowa odjazdu",
   "route.departure_hour": "Godziny",
   "route.departure_minute": "Minuty",
-
   "route.recent_routes": "Ostatnie trasy",
   "route.clear_history": "Wyczyść historię",
-
   "route.profile.transit": "Transport publiczny",
   "places.detail.category": "Kategoria",
   "places.detail.address": "Adres",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Jutro",
   "places.detail.range": "od %start% do %end%",
   "places.detail.next_day": " następnego dnia",
-
   "places.address": "Adres (opcjonalnie)",
   "places.city": "Miasto",
   "places.query": "Wpisz miejsce lub firmę",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Tworzenie audiobooka. Postęp: {pct}%",
   "audiobook.sapi4_threads_body": "Ile równoległych procesów chcesz użyć, aby przyspieszyć tworzenie? (Zalecane: 10-30).\nUwaga: zbyt wiele procesów może spowolnić system lub spowodować błędy w silniku SAPI4.\nDozwolony zakres: 1-64.",
   "audiobook.sapi4_threads_title": "Procesy SAPI4",
-  "audiobook.segment_failed": "Tworzenie audiobooka zostało zatrzymane, ponieważ segmentu {chunk} nie udało się zsyntetyzować przy użyciu {engine}. Żaden tekst nie został pominięty. Szczegóły techniczne znajdują się w dzienniku.",
+  "audiobook.segment_failed": "Synteza mowy została zatrzymana, ponieważ segmentu {chunk} nie udało się zsyntetyzować przy użyciu {engine}. Żaden tekst nie został pominięty. Szczegóły techniczne znajdują się w dzienniku.",
   "audiobook.title": "Tworzenie audiobooka",
   "batch_audiobooks.add_files": "Dodaj pliki...",
   "batch_audiobooks.add_folder": "Dodaj folder...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Kanały",
   "stream_audio.search_courses": "Kursy",
   "stream_audio.search_podcasts": "Podcasty",
-  "audio_description.project.repair_text": "Opis w {time} trwa {actual} s; dostępny czas to {available} s. Czy chcesz skrócić tekst?"
+  "audio_description.project.repair_text": "Opis w {time} trwa {actual} s; dostępny czas to {available} s. Czy chcesz skrócić tekst?",
+  "options.lang.tr": "Turecki",
+  "favorites.sort_alphabetically": "Sortuj alfabetycznie",
+  "favorites.sorted_alphabetically": "Lista posortowana alfabetycznie."
 }

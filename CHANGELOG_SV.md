@@ -1,5 +1,9 @@
 # Ändringslogg
 
+Version 0.9.31 – 2026-11-17
+
+1. Favoriter: ”Sortera alfabetiskt” har lagts till i snabbmenyn i SonarTube, SonarMusic, radio och TV, även direkt tillgängligt för poddprenumerationer. Ordningen sparas och skärmläsaren meddelar när sorteringen är klar.
+
 Version 0.9.29 – 2026-11-16
 
 1. Syntolkning med rollista och foton från TMDB: ange filmens eller seriens titel och valfritt år, välj sedan produktion, säsong och avsnitt. Gemini får namn och skådespelarfoton som ledtrådar, aldrig som bekräftade identiteter. Sparade kataloger behåller fotolänkar för återanvändning. För animerat innehåll kan syntolkningen inte använda denna tjänst eftersom den tillhandahåller foton av röstskådespelare, som inte skulle hjälpa till att känna igen tecknade figurer. Införandet av detta system garanterar inte att figurerna känns igen till 100 %, eftersom TMDB ibland inte tillhandahåller foton för alla figurer i rollistan. Det ökar dock igenkänningens tillförlitlighet avsevärt.

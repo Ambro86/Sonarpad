@@ -28,10 +28,8 @@
   "route.departure_zone": "प्रस्थान का समय क्षेत्र",
   "route.departure_hour": "घंटे",
   "route.departure_minute": "मिनट",
-
   "route.recent_routes": "हाल के मार्ग",
   "route.clear_history": "इतिहास साफ़ करें",
-
   "route.profile.transit": "सार्वजनिक परिवहन",
   "places.detail.category": "श्रेणी",
   "places.detail.address": "पता",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "कल",
   "places.detail.range": "%start% से %end% तक",
   "places.detail.next_day": " अगले दिन",
-
   "places.address": "पता (वैकल्पिक)",
   "places.city": "शहर",
   "places.query": "स्थान या व्यवसाय दर्ज करें",
@@ -359,7 +356,7 @@
   "audiobook.progress": "ऑडियोबुक बनाई जा रही है। प्रगति: {pct}%",
   "audiobook.sapi4_threads_body": "निर्माण को तेज़ करने के लिए आप कितनी समकालिक प्रक्रियाएँ उपयोग करना चाहते हैं? (अनुशंसित: 10-30)।\nनोट: बहुत अधिक प्रक्रियाएँ सिस्टम को धीमा कर सकती हैं या SAPI4 इंजन में त्रुटियाँ पैदा कर सकती हैं।\nस्वीकृत सीमा: 1–64।",
   "audiobook.sapi4_threads_title": "SAPI4 प्रक्रियाएँ",
-  "audiobook.segment_failed": "ऑडियोबुक बनाना रोक दिया गया क्योंकि खंड {chunk} को {engine} से संश्लेषित नहीं किया जा सका। कोई पाठ छोड़ा नहीं गया। तकनीकी विवरण के लिए लॉग देखें。",
+  "audiobook.segment_failed": "वाक् संश्लेषण रोक दिया गया क्योंकि खंड {chunk} को {engine} से संश्लेषित नहीं किया जा सका। कोई पाठ छोड़ा नहीं गया। तकनीकी विवरण के लिए लॉग देखें。",
   "audiobook.title": "ऑडियोबुक बनाई जा रही है",
   "batch_audiobooks.add_files": "फ़ाइलें जोड़ें...",
   "batch_audiobooks.add_folder": "फ़ोल्डर जोड़ें...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "चैनल",
   "stream_audio.search_courses": "पाठ्यक्रम",
   "stream_audio.search_podcasts": "पॉडकास्ट",
-  "audio_description.project.repair_text": "{time} पर विवरण {actual} सेकंड का है; उपलब्ध समय {available} सेकंड है। क्या आप पाठ छोटा करना चाहते हैं?"
+  "audio_description.project.repair_text": "{time} पर विवरण {actual} सेकंड का है; उपलब्ध समय {available} सेकंड है। क्या आप पाठ छोटा करना चाहते हैं?",
+  "options.lang.tr": "तुर्की",
+  "favorites.sort_alphabetically": "वर्णानुक्रम में क्रमबद्ध करें",
+  "favorites.sorted_alphabetically": "सूची वर्णानुक्रम में क्रमबद्ध की गई।"
 }

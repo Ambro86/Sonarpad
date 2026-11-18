@@ -1,0 +1,19 @@
+Bağışlar
+Sonarpad başlangıçta kişisel ihtiyaçları karşılamak için geliştirilmiş bir programdı; zamanla büyüyerek çok daha kapsamlı hâle geldi. Yeni özellikler eklemek, hataları düzeltmek, yeni fikirler araştırmak ve programın her bölümünü ayrıntılı biçimde test etmek sürekli emek gerektiriyor.
+Programı yararlı buluyor ve geliştirilmesini desteklemek istiyorsanız bağış yapabilirsiniz.
+PayPal
+Aşağıdaki bağlantı üzerinden PayPal ile bağış yapabilirsiniz:
+https://www.paypal.me/ambrogio86
+Mümkünse açıklama bölümüne “Sonarpad” yazın.
+Banka havalesi
+Ambrogio Riili adına açılmış hesaba banka havalesiyle de katkıda bulunabilirsiniz.
+IBAN: IT77W0306901020100000064149
+Mümkünse açıklama bölümünde “Sonarpad” gibi anlaşılır bir ifade kullanın.
+Projeyi destekleyen herkese, anonim kalmayı ya da bir takma ad kullanılmasını istemediği sürece, programda ve GitHub deposunun destekçiler bölümünde teşekkür edilir.
+
+Katkıları için Jiri Holzinger ve Paola Vagata'ya teşekkürler.
+Vietnamca çeviri için Anh Đức Nguyễn'e teşekkürler.
+Çekçe çeviri için Radek Žalud ve Jiri Holzinger'e teşekkürler.
+İspanyolca çeviri için Arturo Fernandez Rivas'a teşekkürler.
+Sırpça çeviri için Mila Kuran'a teşekkürler.
+Ukraynaca çeviri için Ivan Shtefuriak'a teşekkürler.

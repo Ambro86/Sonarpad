@@ -28,10 +28,8 @@
   "route.departure_zone": "Išvykimo laiko juosta",
   "route.departure_hour": "Valandos",
   "route.departure_minute": "Minutės",
-
   "route.recent_routes": "Naujausi maršrutai",
   "route.clear_history": "Išvalyti istoriją",
-
   "route.profile.transit": "Viešasis transportas",
   "places.detail.category": "Kategorija",
   "places.detail.address": "Adresas",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Rytoj",
   "places.detail.range": "nuo %start% iki %end%",
   "places.detail.next_day": " kitą dieną",
-
   "places.address": "Adresas (neprivaloma)",
   "places.city": "Miestas",
   "places.query": "Įveskite vietą ar įmonę",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Garso knygos kūrimas. Pažanga: {pct}%",
   "audiobook.sapi4_threads_body": "Kiek vienu metu vykstančių procesų norite naudoti, kad pagreitintumėte kūrimą? (Rekomenduojama: 10–30). Pastaba: per daug procesų gali sulėtinti sistemą arba sukelti klaidas SAPI4 variklyje.\nLeistinas diapazonas: 1–64.",
   "audiobook.sapi4_threads_title": "SAPI4 procesai",
-  "audiobook.segment_failed": "Garsinės knygos kūrimas sustabdytas, nes segmento {chunk} nepavyko susintetinti naudojant {engine}. Tekstas nebuvo praleistas. Techninė informacija pateikta žurnale.",
+  "audiobook.segment_failed": "Kalbos sintezė sustabdyta, nes segmento {chunk} nepavyko susintetinti naudojant {engine}. Tekstas nebuvo praleistas. Techninė informacija pateikta žurnale.",
   "audiobook.title": "Garso knygos kūrimas",
   "batch_audiobooks.add_files": "Pridėti failus...",
   "batch_audiobooks.add_folder": "Pridėti aplanką...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Kanalai",
   "stream_audio.search_courses": "Kursai",
   "stream_audio.search_podcasts": "Tinklalaidės",
-  "audio_description.project.repair_text": "Aprašymas ties {time} trunka {actual} s; galima trukmė yra {available} s. Ar norite sutrumpinti tekstą?"
+  "audio_description.project.repair_text": "Aprašymas ties {time} trunka {actual} s; galima trukmė yra {available} s. Ar norite sutrumpinti tekstą?",
+  "options.lang.tr": "Turkų",
+  "favorites.sort_alphabetically": "Rikiuoti abėcėlės tvarka",
+  "favorites.sorted_alphabetically": "Sąrašas surikiuotas abėcėlės tvarka."
 }

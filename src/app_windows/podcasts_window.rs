@@ -123,6 +123,7 @@ const PODCAST_DIRECTORY_COUNTRIES: &[(&str, &str)] = &[
     ("hn", "Honduras"),
     ("hu", "Hungary"),
     ("id", "Indonesia"),
+    ("tr", "Türkiye"),
     ("in", "India"),
     ("ie", "Ireland"),
     ("is", "Iceland"),
@@ -574,6 +575,7 @@ fn format_timestamp_for_list(
         crate::settings::Language::Russian => ("%d.%m.%Y", "%H:%M"),
         crate::settings::Language::Hindi => ("%d/%m/%Y", "%H:%M"),
         crate::settings::Language::Indonesian => ("%d/%m/%Y", "%H:%M"),
+        crate::settings::Language::Turkish => ("%d/%m/%Y", "%H:%M"),
     };
     let show_date = matches!(date_mode, ListDateDisplayMode::Always);
     let show_time = match time_mode {
@@ -631,6 +633,7 @@ fn format_timestamp_for_language(
         crate::settings::Language::Russian => ("%d.%m.%Y", "%H:%M"),
         crate::settings::Language::Hindi => ("%d/%m/%Y", "%H:%M"),
         crate::settings::Language::Indonesian => ("%d/%m/%Y", "%H:%M"),
+        crate::settings::Language::Turkish => ("%d/%m/%Y", "%H:%M"),
     };
     let now = Local::now().date_naive();
     let item_day = dt.date_naive();
@@ -5583,6 +5586,12 @@ fn show_tree_context_menu(hwnd: HWND, x: i32, y: i32, use_hit_test: bool) {
                     ID_CTX_UNDO_DELETE,
                     PCWSTR(to_wide(&undo_label).as_ptr()),
                 ) {}
+                crate::log_if_err!(AppendMenuW(
+                    menu,
+                    MF_STRING,
+                    ID_CTX_SORT_ASC,
+                    PCWSTR(to_wide(&i18n::tr(language, "favorites.sort_alphabetically")).as_ptr()),
+                ));
                 let total = with_podcast_state(hwnd, |s| {
                     with_state(s.parent, |ps| ps.settings.podcast_sources.len()).unwrap_or(0)
                 })
@@ -6896,6 +6905,10 @@ fn handle_sort_action(hwnd: HWND, order: crate::settings::SortOrder) {
             crate::settings::save_settings(ps.settings.clone());
         });
         reload_tree(hwnd);
+        if matches!(order, crate::settings::SortOrder::TitleAsc) {
+            let language = with_podcast_state(hwnd, |s| s.language).unwrap_or_default();
+            crate::screen_reader_speak(&i18n::tr(language, "favorites.sorted_alphabetically"));
+        }
     }
 }
 
@@ -9055,6 +9068,7 @@ fn podcastindex_language_code(language: Language) -> &'static str {
         Language::German => "de",
         Language::Hindi => "hi",
         Language::Indonesian => "id",
+        Language::Turkish => "tr",
         Language::Spanish => "es",
         Language::Portuguese | Language::PortugueseBrazilian => "pt",
         Language::Swedish => "sv",
@@ -9138,6 +9152,7 @@ fn apple_categories(language: Language) -> Vec<Category> {
         | Language::Chinese
         | Language::English
         | Language::Indonesian
+        | Language::Turkish
         | Language::Hindi => (
             "Arts",
             "Business",
@@ -9642,6 +9657,7 @@ fn apple_subcategories(language: Language) -> Vec<Category> {
         | Language::Chinese
         | Language::English
         | Language::Indonesian
+        | Language::Turkish
         | Language::Hindi => &[
             // Arts
             (1482, "Books"),
@@ -10970,6 +10986,7 @@ fn podcastindex_categories(language: Language) -> Vec<Category> {
         | Language::Chinese
         | Language::English
         | Language::Indonesian
+        | Language::Turkish
         | Language::Hindi => &[
             (1, "Arts"),
             (2, "Books"),

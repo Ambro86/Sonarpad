@@ -1,0 +1,19 @@
+{
+  "menu.treccani": "&Enciclopedia Treccani...\tCtrl+Shift+E",
+  "treccani.close": "Kapat",
+  "treccani.import_all_article": "Makalenin tamamını okuyun",
+  "treccani.import_button": "Oku",
+  "treccani.import_error": "Makale Treccani'den yüklenemiyor.",
+  "treccani.importing": "Makale yükleniyor...",
+  "treccani.language_italian": "İtalyan",
+  "treccani.language_label": "Dil:",
+  "treccani.loading": "Aranıyor...",
+  "treccani.no_query": "Bir arama terimi girin.",
+  "treccani.no_results": "Sonuç yok.",
+  "treccani.results_label": "Sonuçlar:",
+  "treccani.search_button": "Ara",
+  "treccani.search_error": "Treccani'de arama yapılırken hata oluştu.",
+  "treccani.search_label": "Arama:",
+  "treccani.sections_label": "Okuma:",
+  "treccani.title": "Treccani Ansiklopedisi"
+}

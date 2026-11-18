@@ -1,5 +1,9 @@
 # Journal des modifications
 
+Version 0.9.31 – 2026-11-17
+
+1. Favoris : ajout de « Trier par ordre alphabétique » au menu contextuel de SonarTube, SonarMusic, radio et TV, également accessible directement pour les abonnements aux podcasts. L’ordre est enregistré et le lecteur d’écran annonce la fin du tri.
+
 Version 0.9.29 – 2026-11-16
 
 1. Audiodescriptions avec distribution et photos TMDB : saisissez le titre du film ou de la série et une année facultative, puis choisissez la production, la saison et l’épisode. Gemini utilise les noms et photos des acteurs comme indices, sans les considérer comme des identités certaines. Les catalogues conservent les liens des photos pour les réutiliser. Pour les contenus animés, l’audiodescription ne peut pas utiliser ce service, car il fournit des photos des comédiens de doublage, qui n’aideraient pas à reconnaître les personnages des dessins animés. La mise en œuvre de ce système ne garantit pas une reconnaissance des personnages à 100 %, car TMDB ne fournit parfois pas de photos pour tous les personnages de la distribution. Elle améliore toutefois considérablement la fiabilité de la reconnaissance.

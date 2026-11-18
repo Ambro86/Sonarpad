@@ -28,10 +28,8 @@
   "route.departure_zone": "Fuseau horaire du départ",
   "route.departure_hour": "Heures",
   "route.departure_minute": "Minutes",
-
   "route.recent_routes": "Itinéraires récents",
   "route.clear_history": "Effacer l'historique",
-
   "route.profile.transit": "Transports en commun",
   "places.detail.category": "Catégorie",
   "places.detail.address": "Adresse",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Demain",
   "places.detail.range": "de %start% à %end%",
   "places.detail.next_day": " le lendemain",
-
   "places.address": "Adresse (facultative)",
   "places.city": "Ville",
   "places.query": "Saisissez un lieu ou une activité",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Création du livre audio. Progression : {pct} %",
   "audiobook.sapi4_threads_body": "Combien de processus simultanés souhaitez-vous utiliser pour accélérer la création ? (Recommandé : 10-30).\nNote : un nombre trop élevé peut ralentir le système ou provoquer des erreurs dans le moteur SAPI4.\nPlage autorisée : 1 à 64.",
   "audiobook.sapi4_threads_title": "Processus SAPI4",
-  "audiobook.segment_failed": "La création du livre audio a été arrêtée, car le segment {chunk} n’a pas pu être synthétisé avec {engine}. Aucun texte n’a été omis. Consultez le journal pour les détails techniques.",
+  "audiobook.segment_failed": "La synthèse vocale a été arrêtée, car le segment {chunk} n’a pas pu être synthétisé avec {engine}. Aucun texte n’a été omis. Consultez le journal pour les détails techniques.",
   "audiobook.title": "Création de livre audio",
   "batch_audiobooks.add_files": "Ajouter des fichiers...",
   "batch_audiobooks.add_folder": "Ajouter un dossier...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Chaînes",
   "stream_audio.search_courses": "Cours",
   "stream_audio.search_podcasts": "Podcasts",
-  "audio_description.project.repair_text": "La description à {time} dure {actual} s ; le temps disponible est de {available} s. Voulez-vous raccourcir le texte ?"
+  "audio_description.project.repair_text": "La description à {time} dure {actual} s ; le temps disponible est de {available} s. Voulez-vous raccourcir le texte ?",
+  "options.lang.tr": "Turc",
+  "favorites.sort_alphabetically": "Trier par ordre alphabétique",
+  "favorites.sorted_alphabetically": "Liste triée par ordre alphabétique."
 }

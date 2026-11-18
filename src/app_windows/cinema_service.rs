@@ -185,5 +185,6 @@ fn tmdb_language(language: Language) -> &'static str {
         Language::Chinese => "zh-CN",
         Language::Hindi => "hi-IN",
         Language::Indonesian => "id-ID",
+        Language::Turkish => "tr-TR",
     }
 }

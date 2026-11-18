@@ -153,6 +153,7 @@ const FEED_PL_DATA: &str = include_str!("../../i18n/feed_pl.txt");
 const FEED_FR_DATA: &str = include_str!("../../i18n/feed_fr.txt");
 const FEED_SR_DATA: &str = include_str!("../../i18n/feed_sr HR.txt");
 const FEED_RU_DATA: &str = include_str!("../../i18n/feed_ru.txt");
+const FEED_TR_DATA: &str = include_str!("../../i18n/feed_tr.txt");
 const FEED_HI_DATA: &str = include_str!("../../i18n/feed_hi.txt");
 const EM_SETSEL: u32 = 0x00B1;
 const EM_LIMITTEXT: u32 = 0x00C5;
@@ -163,7 +164,9 @@ const COMMUNITY_NEWS_SOURCES_URL: &str = "https://sonarpad.com/api/get_community
 const ADD_COMMUNITY_NEWS_SOURCE_URL: &str =
     "https://sonarpad.com/api/add_community_news_source.php";
 const COMMUNITY_USER_AGENT: &str = "SonarpadWindows/0.7 (https://sonarpad.com)";
-const NEWS_LANGUAGE_CODES: [&str; 9] = ["it", "en", "de", "fr", "es", "pt", "pt-br", "pl", "cs"];
+const NEWS_LANGUAGE_CODES: [&str; 10] = [
+    "it", "en", "de", "fr", "es", "pt", "pt-br", "pl", "cs", "tr",
+];
 
 fn default_news_language_code(language: crate::settings::Language) -> &'static str {
     match language {
@@ -175,6 +178,7 @@ fn default_news_language_code(language: crate::settings::Language) -> &'static s
         crate::settings::Language::PortugueseBrazilian => "pt-br",
         crate::settings::Language::Polish => "pl",
         crate::settings::Language::Czech => "cs",
+        crate::settings::Language::Turkish => "tr",
         _ => "it",
     }
 }
@@ -196,6 +200,7 @@ fn news_language_as_app_language(code: &str) -> crate::settings::Language {
         "pt-br" => crate::settings::Language::PortugueseBrazilian,
         "pl" => crate::settings::Language::Polish,
         "cs" => crate::settings::Language::Czech,
+        "tr" => crate::settings::Language::Turkish,
         _ => crate::settings::Language::Italian,
     }
 }
@@ -1133,6 +1138,7 @@ fn format_timestamp_for_list(
         crate::settings::Language::Russian => ("%d.%m.%Y", "%H:%M"),
         crate::settings::Language::Hindi => ("%d/%m/%Y", "%H:%M"),
         crate::settings::Language::Indonesian => ("%d/%m/%Y", "%H:%M"),
+        crate::settings::Language::Turkish => ("%d/%m/%Y", "%H:%M"),
     };
     let show_date = matches!(date_mode, ListDateDisplayMode::Always);
     let show_time = match time_mode {
@@ -1190,6 +1196,7 @@ fn format_timestamp_for_language(
         crate::settings::Language::Russian => ("%d.%m.%Y", "%H:%M"),
         crate::settings::Language::Hindi => ("%d/%m/%Y", "%H:%M"),
         crate::settings::Language::Indonesian => ("%d/%m/%Y", "%H:%M"),
+        crate::settings::Language::Turkish => ("%d/%m/%Y", "%H:%M"),
     };
     let now = Local::now().date_naive();
     let item_day = dt.date_naive();
@@ -2368,6 +2375,7 @@ fn append_load_more_node(
 
 fn default_feed_path(language: crate::settings::Language) -> Option<PathBuf> {
     let file_name = match language {
+        crate::settings::Language::Turkish => "feed_tr.txt",
         crate::settings::Language::German => "feed_de.txt",
         crate::settings::Language::Ukrainian => "feed_uk.txt",
         crate::settings::Language::English
@@ -2402,6 +2410,7 @@ fn default_feed_path(language: crate::settings::Language) -> Option<PathBuf> {
 
 fn embedded_default_feeds(language: crate::settings::Language) -> &'static str {
     match language {
+        crate::settings::Language::Turkish => FEED_TR_DATA,
         crate::settings::Language::German => FEED_DE_DATA,
         crate::settings::Language::Ukrainian => FEED_UK_DATA,
         crate::settings::Language::English
@@ -2455,6 +2464,7 @@ fn is_default_key(
         | crate::settings::Language::Ukrainian
         | crate::settings::Language::English
         | crate::settings::Language::Indonesian
+        | crate::settings::Language::Turkish
         | crate::settings::Language::Lithuanian
         | crate::settings::Language::Chinese
         | crate::settings::Language::Russian => settings
@@ -3980,6 +3990,7 @@ fn app_language_code(language: crate::settings::Language) -> &'static str {
         crate::settings::Language::Chinese => "zh",
         crate::settings::Language::Hindi => "hi",
         crate::settings::Language::Indonesian => "id",
+        crate::settings::Language::Turkish => "tr",
     }
 }
 
@@ -9039,6 +9050,7 @@ fn removed_default_list_mut(
         crate::settings::Language::Hindi => &mut settings.rss_removed_default_hi,
         crate::settings::Language::English
         | crate::settings::Language::Indonesian
+        | crate::settings::Language::Turkish
         | crate::settings::Language::Swedish
         | crate::settings::Language::Ukrainian
         | crate::settings::Language::Lithuanian
@@ -9270,6 +9282,7 @@ fn handle_delete(hwnd: HWND) {
                         news_language,
                         crate::settings::Language::English
                             | crate::settings::Language::Indonesian
+                            | crate::settings::Language::Turkish
                             | crate::settings::Language::German
                             | crate::settings::Language::Swedish
                             | crate::settings::Language::Italian
@@ -9297,6 +9310,7 @@ fn handle_delete(hwnd: HWND) {
                                     crate::settings::Language::Ukrainian
                                     | crate::settings::Language::English
                                     | crate::settings::Language::Indonesian
+                                    | crate::settings::Language::Turkish
                                     | crate::settings::Language::Lithuanian
                                     | crate::settings::Language::Chinese
                                     | crate::settings::Language::Russian => {
@@ -9583,6 +9597,7 @@ fn undo_last_delete(hwnd: HWND) {
                             crate::settings::Language::Ukrainian
                             | crate::settings::Language::English
                             | crate::settings::Language::Indonesian
+                            | crate::settings::Language::Turkish
                             | crate::settings::Language::Lithuanian
                             | crate::settings::Language::Chinese
                             | crate::settings::Language::Russian => {

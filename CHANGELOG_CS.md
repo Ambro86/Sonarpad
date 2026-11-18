@@ -1,5 +1,9 @@
 # Přehled změn
 
+Version 0.9.31 – 2026-11-17
+
+1. Oblíbené: do kontextové nabídky SonarTube, SonarMusic, rádia a TV byla přidána akce „Seřadit abecedně“, dostupná také přímo u odběrů podcastů. Pořadí se uloží a odečítač obrazovky oznámí dokončení.
+
 Version 0.9.29 – 2026-11-16
 
 1. Audiopopis s obsazením a fotografiemi z TMDB: zadejte název filmu nebo seriálu a volitelně rok, poté vyberte produkci, řadu a díl. Gemini dostane jména a fotografie herců jako vodítka, nikoli potvrzené identity. Katalogy ukládají odkazy na fotografie pro další použití. U animovaného obsahu nemůže audiopopis tuto službu využívat, protože poskytuje fotografie dabérů, které by nepomohly rozpoznat animované postavy. Zavedení tohoto systému nezaručuje stoprocentní rozpoznání postav, protože TMDB někdy neposkytuje fotografie všech postav z obsazení. Výrazně však zvyšuje spolehlivost rozpoznávání.

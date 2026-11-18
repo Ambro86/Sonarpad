@@ -396,6 +396,10 @@ const EDITOR_TRANSLATE_LANGUAGES: [EditorTranslateLanguage; menu::IDM_EDIT_TRANS
         key: "zh",
         target: "zh",
     },
+    EditorTranslateLanguage {
+        key: "tr",
+        target: "tr",
+    },
 ];
 
 struct EditorTranslationResult {
@@ -2131,6 +2135,7 @@ fn dictionary_cache_key(language: Language, pref: &str, word: &str) -> String {
         Language::Chinese => "zh",
         Language::Hindi => "hi",
         Language::Indonesian => "id",
+        Language::Turkish => "tr",
     };
     format!(
         "{}|{}|{}",
@@ -8871,6 +8876,7 @@ fn whisper_audio_language_from_setting(code: &str, fallback: Language) -> Langua
         "zh" => Language::Chinese,
         "hi" => Language::Hindi,
         "id" => Language::Indonesian,
+        "tr" => Language::Turkish,
         _ => fallback,
     }
 }
@@ -9777,6 +9783,7 @@ fn dictation_language_name(language: Language) -> &'static str {
         Language::Chinese => "zh",
         Language::Hindi => "hi",
         Language::Indonesian => "id",
+        Language::Turkish => "tr",
     }
 }
 
@@ -24287,8 +24294,8 @@ mod tests {
     }
 
     #[test]
-    fn editor_translation_includes_german_and_brazilian_portuguese() {
-        for (key, target) in [("de", "de"), ("pt_br", "pt-BR")] {
+    fn editor_translation_includes_german_brazilian_portuguese_and_turkish() {
+        for (key, target) in [("de", "de"), ("pt_br", "pt-BR"), ("tr", "tr")] {
             let index = editor_translate_language_index_by_key(key)
                 .expect("translation language should be available");
             let language = editor_translate_language_for_menu_id(

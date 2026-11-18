@@ -28,10 +28,8 @@
   "route.departure_zone": "Часовий пояс відправлення",
   "route.departure_hour": "Години",
   "route.departure_minute": "Хвилини",
-
   "route.recent_routes": "Недавні маршрути",
   "route.clear_history": "Очистити історію",
-
   "route.profile.transit": "Громадський транспорт",
   "places.detail.category": "Категорія",
   "places.detail.address": "Адреса",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Завтра",
   "places.detail.range": "з %start% до %end%",
   "places.detail.next_day": " наступного дня",
-
   "places.address": "Адреса (необов’язково)",
   "places.city": "Місто",
   "places.query": "Введіть місце або підприємство",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Створення аудіокниги. Перебіг: {pct}%",
   "audiobook.sapi4_threads_body": "Скільки паралельних процесів використовувати для прискорення створення? (Рекомендовано: 10-30).\nПримітка: занадто велика кількість процесів може уповільнити систему або спричинити помилки в рушії SAPI4.\nДопустимий діапазон: 1–64.",
   "audiobook.sapi4_threads_title": "Процеси SAPI4",
-  "audiobook.segment_failed": "Створення аудіокниги зупинено, оскільки сегмент {chunk} не вдалося синтезувати за допомогою {engine}. Жоден текст не пропущено. Технічні подробиці наведено в журналі.",
+  "audiobook.segment_failed": "Синтез мовлення зупинено, оскільки сегмент {chunk} не вдалося синтезувати за допомогою {engine}. Жоден текст не пропущено. Технічні подробиці наведено в журналі.",
   "audiobook.title": "Створення аудіокниги",
   "batch_audiobooks.add_files": "Додати файли...",
   "batch_audiobooks.add_folder": "Додати папку...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Канали",
   "stream_audio.search_courses": "Курси",
   "stream_audio.search_podcasts": "Подкасти",
-  "audio_description.project.repair_text": "Опис о {time} триває {actual} с; доступний час — {available} с. Бажаєте скоротити текст?"
+  "audio_description.project.repair_text": "Опис о {time} триває {actual} с; доступний час — {available} с. Бажаєте скоротити текст?",
+  "options.lang.tr": "Турецька",
+  "favorites.sort_alphabetically": "Сортувати за абеткою",
+  "favorites.sorted_alphabetically": "Список відсортовано за абеткою."
 }

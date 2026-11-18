@@ -28,10 +28,8 @@
   "route.departure_zone": "Zeitzone der Abfahrt",
   "route.departure_hour": "Stunden",
   "route.departure_minute": "Minuten",
-
   "route.recent_routes": "Letzte Routen",
   "route.clear_history": "Verlauf löschen",
-
   "route.profile.transit": "Öffentliche Verkehrsmittel",
   "places.detail.category": "Kategorie",
   "places.detail.address": "Adresse",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Morgen",
   "places.detail.range": "von %start% bis %end%",
   "places.detail.next_day": " am folgenden Tag",
-
   "places.address": "Adresse (optional)",
   "places.city": "Stadt",
   "places.query": "Ort oder Unternehmen eingeben",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Hörbuch wird erstellt. Fortschritt: {pct} %",
   "audiobook.sapi4_threads_body": "Wie viele gleichzeitige Prozesse möchten Sie verwenden, um die Erstellung zu beschleunigen? (Empfohlen: 10–30).\nHinweis: Zu viele Prozesse können das System verlangsamen oder Fehler in der SAPI4-Engine verursachen.\nZulässiger Bereich: 1–64.",
   "audiobook.sapi4_threads_title": "SAPI4-Prozesse",
-  "audiobook.segment_failed": "Die Erstellung des Audiobuchs wurde beendet, weil Segment {chunk} mit {engine} nicht synthetisiert werden konnte. Es wurde kein Text ausgelassen. Technische Einzelheiten stehen im Protokoll.",
+  "audiobook.segment_failed": "Die Sprachsynthese wurde beendet, weil Segment {chunk} mit {engine} nicht synthetisiert werden konnte. Es wurde kein Text ausgelassen. Technische Einzelheiten stehen im Protokoll.",
   "audiobook.title": "Hörbuch wird erstellt",
   "batch_audiobooks.add_files": "Dateien hinzufügen...",
   "batch_audiobooks.add_folder": "Ordner hinzufügen...",
@@ -2549,5 +2546,8 @@
   "stream_audio.search_channels": "Kanäle",
   "stream_audio.search_courses": "Kurse",
   "stream_audio.search_podcasts": "Podcasts",
-  "audio_description.project.repair_text": "Die Beschreibung bei {time} dauert {actual} s; verfügbar sind {available} s. Möchten Sie den Text kürzen?"
+  "audio_description.project.repair_text": "Die Beschreibung bei {time} dauert {actual} s; verfügbar sind {available} s. Möchten Sie den Text kürzen?",
+  "options.lang.tr": "Türkisch",
+  "favorites.sort_alphabetically": "Alphabetisch sortieren",
+  "favorites.sorted_alphabetically": "Liste alphabetisch sortiert."
 }

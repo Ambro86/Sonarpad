@@ -28,10 +28,8 @@
   "route.departure_zone": "Часовой пояс отправления",
   "route.departure_hour": "Часы",
   "route.departure_minute": "Минуты",
-
   "route.recent_routes": "Недавние маршруты",
   "route.clear_history": "Очистить историю",
-
   "route.profile.transit": "Общественный транспорт",
   "places.detail.category": "Категория",
   "places.detail.address": "Адрес",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Завтра",
   "places.detail.range": "с %start% до %end%",
   "places.detail.next_day": " следующего дня",
-
   "places.address": "Адрес (необязательно)",
   "places.city": "Город",
   "places.query": "Введите место или организацию",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Создание аудиокниги. Прогресс: {pct}%",
   "audiobook.sapi4_threads_body": "Сколько одновременных процессов вы хотите использовать для ускорения создания? (Рекомендуется: 10-30).\r\nПримечание: слишком большое количество процессов может замедлить систему или вызвать ошибки в движке SAPI4.\nДопустимый диапазон: 1–64.",
   "audiobook.sapi4_threads_title": "Процессы SAPI4",
-  "audiobook.segment_failed": "Создание аудиокниги остановлено, поскольку сегмент {chunk} не удалось синтезировать с помощью {engine}. Текст не был пропущен. Технические подробности приведены в журнале.",
+  "audiobook.segment_failed": "Синтез речи остановлен, поскольку сегмент {chunk} не удалось синтезировать с помощью {engine}. Текст не был пропущен. Технические подробности приведены в журнале.",
   "audiobook.title": "Создание аудиокниги",
   "batch_audiobooks.add_files": "Добавить файлы...",
   "batch_audiobooks.add_folder": "Добавить папку...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Каналы",
   "stream_audio.search_courses": "Курсы",
   "stream_audio.search_podcasts": "Подкасты",
-  "audio_description.project.repair_text": "Описание в {time} длится {actual} с; доступно {available} с. Хотите сократить текст?"
+  "audio_description.project.repair_text": "Описание в {time} длится {actual} с; доступно {available} с. Хотите сократить текст?",
+  "options.lang.tr": "Турецкий",
+  "favorites.sort_alphabetically": "Сортировать по алфавиту",
+  "favorites.sorted_alphabetically": "Список отсортирован по алфавиту."
 }

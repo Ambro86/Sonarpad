@@ -28,10 +28,8 @@
   "route.departure_zone": "Časové pásmo odjezdu",
   "route.departure_hour": "Hodiny",
   "route.departure_minute": "Minuty",
-
   "route.recent_routes": "Nedávné trasy",
   "route.clear_history": "Vymazat historii",
-
   "route.profile.transit": "Veřejná doprava",
   "places.detail.category": "Kategorie",
   "places.detail.address": "Adresa",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Zítra",
   "places.detail.range": "od %start% do %end%",
   "places.detail.next_day": " následujícího dne",
-
   "places.address": "Adresa (nepovinné)",
   "places.city": "Město",
   "places.query": "Zadejte místo nebo firmu",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Vytváření audioknihy. Průběh: {pct}%",
   "audiobook.sapi4_threads_body": "Kolik souběžných procesů chcete použít k urychlení vytváření? (Doporučeno: 10-30).\nPoznámka: příliš mnoho procesů může zpomalit systém nebo způsobit chyby v SAPI4.\nPovolený rozsah: 1–64.",
   "audiobook.sapi4_threads_title": "Procesy SAPI4",
-  "audiobook.segment_failed": "Vytváření audioknihy bylo zastaveno, protože segment {chunk} nešlo syntetizovat pomocí {engine}. Žádný text nebyl vynechán. Technické podrobnosti najdete v protokolu.",
+  "audiobook.segment_failed": "Syntéza řeči byla zastavena, protože segment {chunk} nešlo syntetizovat pomocí {engine}. Žádný text nebyl vynechán. Technické podrobnosti najdete v protokolu.",
   "audiobook.title": "Vytváření audioknihy",
   "batch_audiobooks.add_files": "Přidat soubory...",
   "batch_audiobooks.add_folder": "Přidat složku...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Kanály",
   "stream_audio.search_courses": "Kurzy",
   "stream_audio.search_podcasts": "Podcasty",
-  "audio_description.project.repair_text": "Popis v čase {time} trvá {actual} s; k dispozici je {available} s. Chcete text zkrátit?"
+  "audio_description.project.repair_text": "Popis v čase {time} trvá {actual} s; k dispozici je {available} s. Chcete text zkrátit?",
+  "options.lang.tr": "Turečtina",
+  "favorites.sort_alphabetically": "Seřadit abecedně",
+  "favorites.sorted_alphabetically": "Seznam byl seřazen abecedně."
 }

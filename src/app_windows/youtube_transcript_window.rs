@@ -1032,6 +1032,7 @@ fn youtube_ui_language_code(language: Language) -> &'static str {
         Language::Chinese => "zh",
         Language::Hindi => "hi",
         Language::Indonesian => "id",
+        Language::Turkish => "tr",
     }
 }
 
@@ -9461,6 +9462,10 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                         crate::log_if_err!(DestroyMenu(menu));
                         return false;
                     }
+                    crate::log_if_err!(AppendMenuW(
+                        menu, MF_STRING, 2,
+                        PCWSTR(to_wide(&i18n::tr(state.language, "favorites.sort_alphabetically")).as_ptr()),
+                    ));
                     let point = if lparam.0 == -1 {
                         let mut pt = POINT::default();
                         if let Err(err) = GetCursorPos(&mut pt) {
@@ -9488,6 +9493,22 @@ fn stream_dialog_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                         None,
                     );
                     crate::log_if_err!(DestroyMenu(menu));
+                    if command.0 == 2 {
+                        let selected_url = state.favorites[selected as usize].url.clone();
+                        state.favorites.sort_by_key(|favorite| {
+                            let label = if favorite.label.trim().is_empty() { &favorite.url } else { &favorite.label };
+                            label.trim().to_lowercase()
+                        });
+                        with_state(state.parent, |app| {
+                            app.settings.stream_favorites = state.favorites.clone();
+                            save_settings(app.settings.clone());
+                        });
+                        let selection = state.favorites.iter().position(|item| item.url == selected_url);
+                        refill_stream_favorites_combo(state, selection);
+                        SetFocus(state.favorites_combo);
+                        crate::screen_reader_speak(&i18n::tr(state.language, "favorites.sorted_alphabetically"));
+                        return true;
+                    }
                     if command.0 != 1 {
                         return true;
                     }
@@ -10211,7 +10232,7 @@ mod stream_startup_wait_tests {
         assert!(!message.contains("non ha caricato"));
         for locale in [
             "it", "en", "de", "es", "pt", "pt-BR", "sv", "vi", "cs", "pl", "fr", "sr", "uk", "lt",
-            "ru", "zh", "hi", "id",
+            "ru", "zh", "hi", "id", "tr",
         ] {
             let language: Language = serde_json::from_value(serde_json::json!(locale)).unwrap();
             for key in [

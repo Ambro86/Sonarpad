@@ -176,6 +176,8 @@ pub enum Language {
     Hindi,
     #[serde(rename = "id")]
     Indonesian,
+    #[serde(rename = "tr")]
+    Turkish,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -2025,6 +2027,9 @@ fn system_language() -> Language {
         }
         if lower.starts_with("zh") {
             return Language::Chinese;
+        }
+        if lower.starts_with("tr") {
+            return Language::Turkish;
         }
         if lower.starts_with("id") {
             return Language::Indonesian;

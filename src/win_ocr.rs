@@ -28,6 +28,7 @@ fn language_tag(language: Language) -> HSTRING {
         Language::Chinese => HSTRING::from("zh-CN"),
         Language::Hindi => HSTRING::from("hi-IN"),
         Language::Indonesian => HSTRING::from("id-ID"),
+        Language::Turkish => HSTRING::from("tr-TR"),
     }
 }
 

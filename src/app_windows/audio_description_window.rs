@@ -1957,6 +1957,7 @@ fn language_from_combo(combo: HWND) -> Language {
         15 => Language::Chinese,
         16 => Language::Hindi,
         17 => Language::Indonesian,
+        18 => Language::Turkish,
         _ => Language::Italian,
     }
 }
@@ -1981,6 +1982,7 @@ fn language_combo_index(language: Language) -> usize {
         Language::Chinese => 15,
         Language::Hindi => 16,
         Language::Indonesian => 17,
+        Language::Turkish => 18,
     }
 }
 
@@ -3144,6 +3146,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     add_combo_item(language_combo, &translated);
                 }
                 add_combo_item(language_combo, "Bahasa Indonesia");
+                add_combo_item(language_combo, &i18n::tr(language, "voice.lang.tr"));
                 SendMessageW(
                     language_combo,
                     CB_SETCURSEL,

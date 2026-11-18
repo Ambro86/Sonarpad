@@ -442,7 +442,11 @@ fn browse_catalog(parent: HWND, language: Language, catalog: Arc<TvCatalog>) {
                 search_button_label: i18n::tr_tv("tv.search_button"),
                 show_search_edit: true,
                 secondary_action_label: None,
-                context_actions: tv_context_actions(Arc::clone(&catalog)),
+                context_actions: tv_context_actions(
+                    Arc::clone(&catalog),
+                    language,
+                    page == TvPage::Favorites,
+                ),
                 // Freccia destra apre sia le pagine sia il canale selezionato.
                 // Dopo l'apertura di una pagina aspettiamo il rilascio del tasto
                 // prima di mostrare la lista successiva, così la stessa pressione
@@ -625,7 +629,11 @@ fn tv_favorite_matches_channel(favorite: &TvFavorite, channel: &TvChannel) -> bo
                 && favorite.tvg_id.eq_ignore_ascii_case(&channel.tvg_id)))
 }
 
-fn tv_context_actions(catalog: Arc<TvCatalog>) -> Vec<InterpreterContextAction> {
+fn tv_context_actions(
+    catalog: Arc<TvCatalog>,
+    language: Language,
+    favorites_page: bool,
+) -> Vec<InterpreterContextAction> {
     let add_catalog = Arc::clone(&catalog);
     let add_enabled = Arc::new(move |id: &str| {
         let Some(channel) = selected_channel_from_id(&add_catalog, id) else {
@@ -750,7 +758,7 @@ fn tv_context_actions(catalog: Arc<TvCatalog>) -> Vec<InterpreterContextAction> 
         close_tv_browser_dialog();
     });
 
-    vec![
+    let mut actions = vec![
         InterpreterContextAction {
             label: i18n::tr_tv("tv.action.add_favorite"),
             ctrl_c_shortcut: false,
@@ -791,7 +799,27 @@ fn tv_context_actions(catalog: Arc<TvCatalog>) -> Vec<InterpreterContextAction> 
             enabled: schedule_enabled,
             handler: schedule_handler,
         },
-    ]
+    ];
+    if favorites_page {
+        actions.push(InterpreterContextAction {
+            label: i18n::tr(language, "favorites.sort_alphabetically"),
+            ctrl_c_shortcut: false,
+            delete_shortcut: false,
+            children: Vec::new(),
+            enabled: Arc::new(|_| !load_settings().tv_favorites.is_empty()),
+            handler: Arc::new(move |_| {
+                let mut settings = load_settings();
+                settings
+                    .tv_favorites
+                    .sort_by_key(|item| item.name.trim().to_lowercase());
+                save_settings(settings);
+                crate::screen_reader_speak(&i18n::tr(language, "favorites.sorted_alphabetically"));
+                set_tv_deferred_action(TvDeferredAction::Refresh);
+                close_tv_browser_dialog();
+            }),
+        });
+    }
+    actions
 }
 
 fn record_tv_channel(parent: HWND, language: Language, channel: &TvChannel) {

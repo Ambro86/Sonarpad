@@ -22,6 +22,7 @@ mod settings {
         Chinese,
         Hindi,
         Indonesian,
+        Turkish,
     }
 }
 
@@ -31,6 +32,7 @@ mod i18n {
     pub fn tr(language: Language, key: &str) -> String {
         match key {
             "reader.no_title" => match language {
+                Language::Turkish => "Başlık yok".to_string(),
                 Language::Italian => "Nessun titolo".to_string(),
                 Language::French => "Sans titre".to_string(),
                 Language::German => "Kein Titel".to_string(),
@@ -50,6 +52,7 @@ mod i18n {
                 }
             },
             "reader.external_link" => match language {
+                Language::Turkish => "Dış bağlantı:\n{url}".to_string(),
                 Language::Italian => "Link esterno:\n{url}".to_string(),
                 Language::French => "Lien externe :\n{url}".to_string(),
                 Language::German => "Externer Link:\n{url}".to_string(),

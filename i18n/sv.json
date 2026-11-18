@@ -28,10 +28,8 @@
   "route.departure_zone": "Avresans tidszon",
   "route.departure_hour": "Timmar",
   "route.departure_minute": "Minuter",
-
   "route.recent_routes": "Senaste rutter",
   "route.clear_history": "Rensa historik",
-
   "route.profile.transit": "Kollektivtrafik",
   "places.detail.category": "Kategori",
   "places.detail.address": "Adress",
@@ -47,7 +45,6 @@
   "places.detail.tomorrow": "Imorgon",
   "places.detail.range": "från %start% till %end%",
   "places.detail.next_day": " följande dag",
-
   "places.address": "Adress (valfritt)",
   "places.city": "Stad",
   "places.query": "Ange en plats eller ett företag",
@@ -359,7 +356,7 @@
   "audiobook.progress": "Skapar ljudbok. Förlopp: {pct}%",
   "audiobook.sapi4_threads_body": "Hur många samtidiga processer vill du använda för att snabba upp skapandet? (Rekommenderat: 10–30).\nObs: för många processer kan göra systemet långsammare eller orsaka fel i SAPI4-motorn.\nTillåtet intervall: 1–64.",
   "audiobook.sapi4_threads_title": "SAPI4-processer",
-  "audiobook.segment_failed": "Skapandet av ljudboken stoppades eftersom segment {chunk} inte kunde syntetiseras med {engine}. Ingen text utelämnades. Tekniska detaljer finns i loggen.",
+  "audiobook.segment_failed": "Talsyntesen stoppades eftersom segment {chunk} inte kunde syntetiseras med {engine}. Ingen text utelämnades. Tekniska detaljer finns i loggen.",
   "audiobook.title": "Skapar ljudbok",
   "batch_audiobooks.add_files": "Lägg till filer...",
   "batch_audiobooks.add_folder": "Lägg till mapp...",
@@ -2497,5 +2494,8 @@
   "stream_audio.search_channels": "Kanaler",
   "stream_audio.search_courses": "Kurser",
   "stream_audio.search_podcasts": "Poddar",
-  "audio_description.project.repair_text": "Beskrivningen vid {time} varar {actual} s; tillgänglig tid är {available} s. Vill du korta texten?"
+  "audio_description.project.repair_text": "Beskrivningen vid {time} varar {actual} s; tillgänglig tid är {available} s. Vill du korta texten?",
+  "options.lang.tr": "Turkiska",
+  "favorites.sort_alphabetically": "Sortera alfabetiskt",
+  "favorites.sorted_alphabetically": "Listan har sorterats alfabetiskt."
 }

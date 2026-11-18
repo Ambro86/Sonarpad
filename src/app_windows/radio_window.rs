@@ -88,6 +88,7 @@ const ID_CONTEXT_REMOVE_FAVORITE: usize = 2;
 const ID_CONTEXT_COPY_STREAM_URL: usize = 3;
 const ID_CONTEXT_RECORD_AND_PLAY: usize = 4;
 const ID_CONTEXT_SCHEDULE_RECORDING: usize = 5;
+const ID_CONTEXT_SORT_FAVORITES: usize = 6;
 
 #[derive(Clone, Deserialize)]
 struct RadioStation {
@@ -843,6 +844,17 @@ fn show_station_context_menu(hwnd: HWND, wparam: WPARAM, lparam: LPARAM) -> bool
         }
     }
 
+    if is_fav {
+        crate::log_if_err!(unsafe {
+            AppendMenuW(
+                menu,
+                MF_STRING,
+                ID_CONTEXT_SORT_FAVORITES,
+                PCWSTR(to_wide(&i18n::tr(language, "favorites.sort_alphabetically")).as_ptr()),
+            )
+        });
+    }
+
     let record_label = to_wide(&tr(
         language,
         "radio.record_and_play",
@@ -930,6 +942,7 @@ fn show_station_context_menu(hwnd: HWND, wparam: WPARAM, lparam: LPARAM) -> bool
     match command.0 as usize {
         ID_CONTEXT_ADD_FAVORITE => add_selected_favorite(hwnd),
         ID_CONTEXT_REMOVE_FAVORITE => remove_selected_favorite(hwnd),
+        ID_CONTEXT_SORT_FAVORITES => sort_favorites_alphabetically(hwnd),
         ID_CONTEXT_COPY_STREAM_URL => copy_selected_stream_url(hwnd),
         ID_CONTEXT_RECORD_AND_PLAY => record_and_play_selected_radio(hwnd),
         ID_CONTEXT_SCHEDULE_RECORDING => schedule_selected_radio(hwnd),
@@ -1551,6 +1564,7 @@ fn app_language_code(language: Language) -> &'static str {
         Language::Chinese => "zh",
         Language::Hindi => "hi",
         Language::Indonesian => "id",
+        Language::Turkish => "tr",
     }
 }
 
@@ -2615,6 +2629,7 @@ fn default_country_code(language: Language) -> &'static str {
         Language::Chinese => "cn",
         Language::Hindi => "in",
         Language::Indonesian => "id",
+        Language::Turkish => "tr",
         _ => "it",
     }
 }
@@ -3474,6 +3489,33 @@ fn add_selected_favorite(hwnd: HWND) {
         crate::set_focus_safe(state.list_favorites);
     });
 }
+fn sort_favorites_alphabetically(hwnd: HWND) {
+    let selected = selected_result(hwnd, RadioListKind::Favorites);
+    let mut settings = load_settings();
+    settings
+        .radio_favorites
+        .sort_by_key(|item| canonical_radio_name(&item.name));
+    let favorites = settings.radio_favorites.clone();
+    let language = settings.language;
+    save_settings(settings);
+    with_radio_state(hwnd, |state| state.favorite_results = favorites);
+    populate_favorites(hwnd);
+    with_radio_state(hwnd, |state| {
+        let index = selected
+            .as_ref()
+            .and_then(|item| {
+                state
+                    .favorite_results
+                    .iter()
+                    .position(|candidate| candidate.stream_url == item.stream_url)
+            })
+            .unwrap_or(0);
+        crate::send_message_w_safe(state.list_favorites, LB_SETCURSEL, WPARAM(index), LPARAM(0));
+        crate::set_focus_safe(state.list_favorites);
+    });
+    crate::screen_reader_speak(&i18n::tr(language, "favorites.sorted_alphabetically"));
+}
+
 fn remove_selected_favorite(hwnd: HWND) {
     let Some(kind) = selected_radio_list_kind(hwnd) else {
         return;

@@ -1,5 +1,9 @@
 # Nhật ký thay đổi
 
+Version 0.9.31 – 2026-11-17
+
+1. Yêu thích: thêm “Sắp xếp theo bảng chữ cái” vào menu ngữ cảnh của SonarTube, SonarMusic, radio và TV, cũng có sẵn trực tiếp cho các podcast đã đăng ký. Thứ tự được lưu và trình đọc màn hình thông báo khi hoàn tất.
+
 Version 0.9.29 – 2026-11-16
 
 1. Mô tả âm thanh với dàn diễn viên và ảnh từ TMDB: nhập tên phim hoặc loạt phim, thêm năm nếu muốn, rồi chọn tác phẩm, mùa và tập. Gemini nhận tên và ảnh diễn viên làm bằng chứng hỗ trợ, không coi là danh tính đã xác nhận. Danh mục lưu liên kết ảnh để dùng lại. Đối với nội dung hoạt hình, mô tả âm thanh không thể sử dụng dịch vụ này vì dịch vụ cung cấp ảnh diễn viên lồng tiếng, vốn không giúp nhận diện các nhân vật hoạt hình. Việc triển khai hệ thống này không đảm bảo nhận diện nhân vật chính xác 100%, vì đôi khi TMDB không cung cấp ảnh cho tất cả các nhân vật trong dàn diễn viên. Tuy nhiên, hệ thống giúp tăng đáng kể độ tin cậy của việc nhận diện.

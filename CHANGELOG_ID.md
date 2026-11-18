@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+Version 0.9.31 – 2026-11-17
+
+1. Favorit: menambahkan “Urutkan menurut abjad” ke menu konteks SonarTube, SonarMusic, radio dan TV, juga tersedia langsung untuk langganan podcast. Urutan disimpan dan pembaca layar mengumumkan penyelesaian.
+
 Version 0.9.29 – 2026-11-16
 
 1. Deskripsi audio dengan pemeran dan foto TMDB: masukkan judul film atau serial dan tahun opsional, lalu pilih produksi, musim, dan episode. Gemini menerima nama dan foto pemeran sebagai petunjuk, bukan identitas terkonfirmasi. Katalog menyimpan tautan foto untuk digunakan kembali. Untuk konten animasi, deskripsi audio tidak dapat menggunakan layanan ini karena layanan tersebut menyediakan foto pengisi suara, yang tidak akan membantu mengenali karakter kartun. Penerapan sistem ini tidak menjamin pengenalan karakter 100%, karena terkadang TMDB tidak menyediakan foto untuk semua karakter dalam daftar pemeran. Namun, sistem ini sangat meningkatkan keandalan pengenalan.

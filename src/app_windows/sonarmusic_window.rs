@@ -35,6 +35,7 @@ const REMOVE_FAVORITE: usize = 117;
 const REMOVE_SAVED: usize = 118;
 const COPY_LINK_RESULT: usize = 119;
 const COPY_LINK_FAVORITE: usize = 120;
+const SORT_FAVORITES: usize = 121;
 #[derive(Clone, Default)]
 struct SearchSnapshot {
     query: String,
@@ -327,7 +328,12 @@ fn result_actions(s: &State) -> Vec<usize> {
 fn show_result_menu(hwnd: HWND, s: &State, position: LPARAM, favorites: bool) {
     let actions = if favorites {
         if s.receiver.is_none() && s.favorites.get(selected(s.favorites_combo)).is_some() {
-            vec![OPEN_FAVORITE, COPY_LINK_FAVORITE, REMOVE_SAVED]
+            vec![
+                OPEN_FAVORITE,
+                COPY_LINK_FAVORITE,
+                REMOVE_SAVED,
+                SORT_FAVORITES,
+            ]
         } else {
             Vec::new()
         }
@@ -348,6 +354,7 @@ fn show_result_menu(hwnd: HWND, s: &State, position: LPARAM, favorites: bool) {
                 ADD_FAVORITE => label(s, "add_favorite"),
                 REMOVE_FAVORITE | REMOVE_SAVED => label(s, "remove_favorite"),
                 OPEN_FAVORITE => label(s, "open_favorite"),
+                SORT_FAVORITES => i18n::tr(language, "favorites.sort_alphabetically"),
                 MORE => label(s, "next_results"),
                 PREVIOUS => label(s, "previous_results"),
                 SAVE => i18n::tr(language, "playback.download_episode"),
@@ -486,6 +493,26 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) ->
                         return LRESULT(0);
                     }
                     match id {
+                        SORT_FAVORITES => {
+                            let previous = s.favorites.get(selected(s.favorites_combo)).cloned();
+                            s.favorites
+                                .sort_by_key(|item| item.title.trim().to_lowercase());
+                            persist_favorites(s, false);
+                            let index = previous
+                                .as_ref()
+                                .and_then(|item| {
+                                    s.favorites
+                                        .iter()
+                                        .position(|candidate| music::same_favorite(candidate, item))
+                                })
+                                .unwrap_or(0);
+                            refresh_favorites(s, index);
+                            let language = with_state(s.parent, |state| state.settings.language)
+                                .unwrap_or_default();
+                            let message = i18n::tr(language, "favorites.sorted_alphabetically");
+                            set(s.status, &message);
+                            crate::screen_reader_speak(&message);
+                        }
                         COPY_LINK_RESULT | COPY_LINK_FAVORITE => {
                             if let Some(url) = selected_share_url(s, id == COPY_LINK_FAVORITE) {
                                 crate::app_windows::rai_audiodescrizioni_window::copy_text_to_clipboard(hwnd, &url);

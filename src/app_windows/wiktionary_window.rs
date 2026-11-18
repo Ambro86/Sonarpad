@@ -189,6 +189,7 @@ fn language_from_code(code: &str, fallback: Language) -> Language {
         "zh" => Language::Chinese,
         "hi" => Language::Hindi,
         "id" => Language::Indonesian,
+        "tr" => Language::Turkish,
         _ => fallback,
     }
 }
@@ -364,6 +365,7 @@ fn wiktionary_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM
                     (i18n::tr(language, "options.lang.lt"), "lt"),
                     (i18n::tr(language, "options.lang.zh"), "zh"),
                     (i18n::tr(language, "options.lang.hi"), "hi"),
+                    (i18n::tr(language, "options.lang.tr"), "tr"),
                 ];
                 let saved_lookup_pref = with_state(parent, |state| {
                     state.settings.dictionary_lookup_language.clone()
@@ -785,6 +787,7 @@ fn run_lookup(hwnd: HWND) {
             13 => "lt",
             14 => "zh",
             15 => "hi",
+            16 => "tr",
             _ => "auto",
         }
         .to_string()

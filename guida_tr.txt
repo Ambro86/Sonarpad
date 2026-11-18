@@ -1,0 +1,266 @@
+Program Rehberi
+
+Dosyalar:
+Yeni: Yeni bir belge oluşturun (Ctrl+N).
+Aç: Metin, PDF, EPUB, MP3 ve desteklenen diğer formatları açar (Ctrl+O).
+Kaydet: belgeyi kaydedin (Ctrl+S).
+Farklı Kaydet: Yeni bir adla kaydedin.
+Tümünü Kaydet: Tüm belgeleri kaydedin (Ctrl+Shift+S).
+Son Dosyalar: Son kullanılan bir dosyayı açar.
+
+Medya dosyaları:
+Bir medya dosyasını (MP3, WAV, MP4, AVI) açtığınızda Sonarpad bir ses oynatıcısına dönüşür.
+Klavye komutları:
+- SPACE: Oynat / Duraklat.
+- SAĞ OK: 1 dakika ileri.
+- SOL OK: 1 dakika geri gidin.
+- YUKARI OK: Sesi artırın.
+- AŞAĞI OK: Sesi azaltır.
+- +: Oynatma hızını artırır.
+- -: Oynatma hızını azaltır.
+- SHIFT +: Perdeyi artırın.
+- SHIFT -: Perdeyi azaltır.
+- CTRL+I: Oynatma süresini duyurur.
+- CTRL+T: Belirli bir zamana gidin.
+- CTRL+B: Tam dakikaya bir yer imi ekleyin.
+
+
+Mevcut medya bölümü:
+Yerel bir medya dosyası açıkken, Medyayı Böl işlevi Oynat menüsünden kullanılabilir.
+Dosyayı iki şekilde bölebilirsiniz:
+- Parçalarda: Dosyanın 2'den 999'a kadar kaç parçaya bölüneceğini seçin.
+- Zamana göre: saniye, dd:ss veya ss:dd:ss biçimini kullanarak her bir bölümün süresini seçin.
+Bu özellik MP3, MP4 ve diğer desteklenen formatlar gibi yerel dosyalar için kullanılabilir.
+Bölme sırasında Sonarpad ilerlemeyi yüzde olarak görüntüler.
+Tamamlandığında, elde edilen dosyalar programın belirttiği klasöre kaydedilir.
+
+Düzenle:
+Geri Al: Son işlemi geri alın (Ctrl+Z).
+Kes: seçilen metni kaldırır ve panoya kopyalar (Ctrl+X).
+Kopyala: Seçilen metni panoya kopyalayın (Ctrl+C).
+Yapıştır: Pano içeriğini belgeye yapıştırır (Ctrl+V).
+Tümünü Seç: Tüm metni seçin (Ctrl+A).
+Bul: Belgedeki metni arayın (Ctrl+F).
+Dosyalarda bul: Birden fazla dosyada metin arayın (Ctrl+Shift+F).
+Sonrakini Bul: Sonraki örneği bulun (F3).
+Değiştir: Metni arar ve değiştirir (Ctrl+H).
+Boşlukları Normalleştir: Baştaki/sondaki boşlukları ve birden çok boşluğu kaldırın (Ctrl+Shift+Enter).
+Satırları Birleştir: Paragrafın veya seçimin satırlarını birleştirir (Ctrl+Shift+J).
+Satırları Yeniden Biçimlendir: Paragrafı veya seçimi yeniden biçimlendirir (Ctrl+Shift+H).
+Temizleme İşaretleme Metni: İşaretleme biçimlendirmesini kaldırır (Ctrl+Shift+M).
+Satırları Sırala: Paragrafın veya seçimin satırlarını sıralayın (Alt+Shift+O).
+Yinelenenleri Kaldır: Paragraftaki veya seçimdeki yinelenen satırları kaldırın (Alt+Shift+K).
+Satırları Ters Çevir: Paragraftaki veya seçimdeki satırların sırasını tersine çevirir (Alt+Shift+Z).
+Yorum satırları: Paragrafın veya seçimin satırlarına bir önek ekler (Ctrl+Q).
+Satırların açıklamasını kaldır: paragraftaki veya seçimdeki satırlardan öneki kaldırır (Ctrl+Shift+Q).
+Metin İstatistikleri: Seçimdeki veya belgedeki karakter, sözcük ve satır sayısını gösterir (Alt+Y).
+Yazım hatası navigasyonu: F7 önceki hata, F8 sonraki hata.
+
+Görünüm:
+Girişleri düzenleyicide görüntüle: Giriş sistemi, giriş listesi ve çoklu dil filtresine ilişkin kontrolleri gösterir.
+Favori Sesleri Görüntüle: Düzenleyicideki favori seslerin listesini gösterir.
+Metin Rengi: Metnin rengini değiştirin (açık ve koyu renkler dahil).
+Metin Boyutu: Metin boyutunu değiştirin (küçük, normal, büyük, ekstra büyük, ekstra büyük).
+Öğe listesi görünür olduğunda Sekme, odağı düzenleyiciler ve kontroller arasında taşır, Shift+Sekme geri gider.
+Favorilere bir giriş eklemek veya favorilerden bir girişi kaldırmak için, girişler listesinde gezinin ve uygulama tuşunu veya sağ fare düğmesini kullanarak ekleyin veya kaldırın. Favori girişler listesinden, önceden eklenmiş girişleri kaldırmak için uygulama tuşuna da basabilirsiniz.
+Hızlı tuşlar: Okuma sırasında favorilere eklenen öğeler arasında değişiklik yapmak için F9 ve F10 tuşlarına basmak mümkündür.
+
+Yer imleri:
+Yer İşareti Ekle: Geçerli imleç konumunu veya sesli kitap temposunu kaydedin (Ctrl+B).
+Yer imlerini yönetin: Kaydedilmiş yer imlerini görüntüleyin, atlayın veya silin. Yer imi eklenmiş bir dosyayı açarken, imleç veya oynatma otomatik olarak ilk kullanılabilir dosyadan yeniden başlayacaktır.
+
+Ses ve ses:
+Okuma: F5 okumaya başlar, F4 duraklat/devam ettir, F6 okumayı durdurur.
+Önceki cümle: Shift+F5 okurken bir önceki cümleye atlar.
+Sonraki cümle: Ctrl+F5 okurken bir sonraki cümleye atlar.
+Okurken favoriler: F9 önceki favori öğe, F10 sonraki favori öğe.
+Sesli kitap kaydet: Geçerli metinden bir MP3 dosyası oluşturun (Ctrl+R).
+Toplu Kayıt: Dosya listesini sesli kitaplara dönüştürün (Ctrl+Shift+B).
+Podcast oluştur: Mikrofondan ve/veya sistem sesinden (Ctrl+Shift+R) bir podcast oluşturun.
+Sesi Dönüştür: Ses/video dosyalarını diğer ses formatlarına dönüştürün (Ctrl+Shift+A).
+Dosyayı çalıştır: Geçerli dosyayı yapılandırılmış yorumlayıcıyla çalıştırın (Ctrl+Shift+F5).
+
+Araçlar:
+Sesli kitaplar sırayla: dosya listesini (veya tüm klasörü) sesli kitaplara dönüştürmek için pencereyi açar.
+- Sıraya dosya/klasör ekleyin.
+- Hedef klasörü ve formatı seçin (MP3 veya WAV).
+- Alt klasörler oluşturma ve üzerine yazmayı önleme seçenekleri.
+- Her şeyi arka planda işlemek için Başlat'a basın.
+Sözlük: Sözlük penceresini açar. Listede yukarı/aşağı oklarla gezinilir.
+Sekme, Enter veya Space ile etkinleştirilen "Sözlüğe giriş ekle" düğmesine yönlendirir.
+Ekle/düzenle penceresinde: “Orijinal Kelime”yi girin, ardından Sekme tuşuyla “Yedek Kelime”ye gidin, ardından Tamam veya İptal (Giriş/Boşluk) tuşuna basın. Esc'yi iptal edin.
+Listede Sekme sizi "Girişi Düzenle" ve "Seçili Girişi Kaldır" düğmelerine götürür.
+Sesli kitap okunurken ve oluşturulurken sözlük değişiklikleri uygulanır ve kaydedilir.
+Konuşma metnini YouTube'dan içe aktarın: Bir URL yapıştırın, dili seçin ve metni düzenleyiciye aktarın (Ctrl+Y). Zaman damgalarını ekleme seçeneği.
+Wikipedia'dan arayın ve içe aktarın: Wikipedia'da bir makale arayın ve metnini düzenleyiciye aktarın (Alt+Shift+W).
+Çevrimiçi Sözlük: Çevrimiçi Vikisözlük'te tanımları ve çevirileri arayın (Alt+Shift+D).
+Akıştan ses çal (Alt+Shift+S): YouTube gibi akış sitelerinden ses oynatır, formatı ve kaliteyi seçmenize olanak tanır ve indirmeden dinlemeye olanak tanır (örneğin çevrimiçi radyo için).
+Dünyanın dört bir yanından radyolar (alt + üst karakter + R): farklı ülkelerden çevrimiçi radyoları aramak ve dinlemek için pencereyi açar.
+Radyoları ada, ülkeye, dile ve türe göre arayabilirsiniz.
+Seçilen radyoyu çalmaya başlamak için sonuç listesinden Enter tuşuna basın.
+Favorilerinize bir radyo ekleyerek daha sonra bulmanızı kolaylaştırabilirsiniz.
+Sonarpad ayrıca yerel radyo istasyonlarını programın paylaşılan veritabanına eklemenize de olanak tanır: bu şekilde diğer kullanıcılar da bunları bulabilir ve dinleyebilir.
+Radyo eklerken en azından radyo adını ve yayın adresini girmelisiniz.
+Favori ve aranan radyolar doğrudan Radyo penceresinden yönetilir.
+
+Rotalar ve navigasyon (alt + üst karakter + N): iki adres arasındaki rotayı hesaplamak için pencereyi açar.
+Başlangıç ​​noktasını ve varış noktasını girin, ardından seyahat yöntemini seçin: yürüyerek, bisikletle, arabayla veya tekerlekli sandalyeyle.
+Daha hızlı veya daha kısa rota türünü seçebilirsiniz.
+Araba yolculukları için otoyollardan mı, ücretli geçişlerden mi yoksa her ikisinden de kaçınmayı seçebilirsiniz.
+Sonuçta çarpı işareti olan belediyeleri de dahil etme seçeneğini etkinleştirebilirsiniz.
+Hesaplamanın ardından Sonarpad ana rotayı ve mevcut olduğunda alternatif rotaları da görüntüler.
+Rota, başlangıç, bitiş, mesafe, tahmini süre ve adım adım yol tarifleri ile birlikte editöre metin olarak aktarılır.
+Bir rota haritası mevcut olduğunda, görsel haritayı PNG formatında kaydetmek için Dosya menüsünden Görüntüyü Kaydet'i kullanabilirsiniz.
+BdCiechi (Alt+Shift+B): Araçlar'dan veya Alt+Shift+B kısayoluyla erişilebilen BdCiechi kitaplığı için tam destek eklendi. Kitap aramak, indirmek, en son haberleri okumak, örnek metin indirmek mümkündür. Bir dosya kaydedildiğinde, onu doğrudan Sonarpad'de açabilir ve programda bulunan yüksek kaliteli seslerle okuyabilirsiniz.
+Erişilebilir Terminal: Ekran okuyucular için ayrı ve kararlı çıkışa sahip özel bir terminal açar (Ctrl+Shift+T).
+Kısayollar: Alt+I odağı girişe taşır, Alt+O odağı çıkışa kaydırır, Tab/Shift+Tab giriş, çıkış ve seçenekler arasında geçiş yapar.
+Gönder: Metni gönderin. Ctrl+C çıktıyı kopyalar (veya Ctrl+C'yi programa gönderir). Ctrl+L çıktıyı onayla temizler.
+Terminaldeki seçenekler: otomatik kaydırma, ANSI kodlarını kaldırma, yeni hatları duyurma, 1 saniye sonra sesli uyarı, enerji tasarrufunu devre dışı bırakma.
+Kullanılabilir programlar: Komut İstemi (cmd.exe), PowerShell, Codex CLI (Seçeneklerden).
+
+RSS / Makaleler: RSS/Makaleler penceresini açar; bir kaynak ekleyin, bir akışı genişletin ve bir makaleyi düzenleyiciye aktarmak için Enter tuşuna basın.
+RSS penceresinde bir yayın veya site seçin ve bunu kitaplıktan kaldırmak için Sil'e basın.
+Beslemeler veya siteler içerik menüsünde bir RSS'yi veya siteyi düzenleyebilir veya silebilirsiniz.
+Bir hikayeyi içe aktardıktan sonra RSS listesine dönmek için Esc tuşuna basın.
+Podcast'ler: Abonelikleri aramak ve yönetmek için Podcast'ler penceresini açar.
+Bölüm listesinde bölümü oynatmak için Enter tuşuna basın.
+Oynatma sırasında Esc podcast'i durdurur ve kitaplığa geri döner.
+
+AI ile Sesli Açıklama:
+Bu fonksiyonla herhangi bir video içeriğini sesli olarak tanımlayabilirsiniz. Sesli anlatım meraklısı biri olarak çok önemsediğim ve tatmin edici bulduğum bir seviyeye ulaştığı için kamuoyuna sunduğum bir fonksiyon. Benzer işlevleri sunan ücretli hizmetler de vardır; Eğer Sonarpad işinize yararsa sizleri çalışmalarıma destek olmaya davet ediyorum. Bu özellik yüzlerce film ve dizide de sahada test edilmiştir.
+
+Ele alınan bir diğer konu Gemini'nin şiddet içeren veya hassas olduğunu düşündüğü içerikle ilgilidir. Bazı yöntemler, yanlış pozitifler nedeniyle de sahnenin tamamını tanımlamayı reddedebilir. Bunun yerine Sonarpad, Gemini'den açıklamayı kendi politikalarıyla uyumlu bir şekilde formüle etmesini isteyerek bu vakaları ele almaya çalışır: Bir ayrıntı açıkça tanımlanamıyorsa, tüm sahneden vazgeçmek yerine atlanır veya daha az kaba hale getirilir.
+
+Temel bir özellik sessizliklerin yönetimidir: Sentezlenen ses diyaloglar üzerinden konuşmamalıdır. Bu nedenle Sonarpad ilk aşamada ses tanımlamasının dinlemeyi rahatsız etmeden müdahale edebileceği anları arayarak sesi analiz ediyor.
+
+İşlev yüzlerce film ve diziyle test edildi ve zamanla Gemini'nin yapabileceği birçok yanlışlık (örneğin, ekranda olanlar ile açıklama arasındaki senkronizasyon) düzeltildi. Elbette sonuç aynı zamanda dış hizmetlere de bağlıdır ve her filmin her açıklamasının her zaman mükemmel olacağını garanti edemem. Ancak Sonarpad'i ve dolayısıyla bu işlevi de geliştirmek için çalışmaya devam ediyorum.
+
+İşlevi açtığınızda, başlangıçta boş olan ve Video seç düğmesinin hemen ardından Yerel medya dosyası alanını bulacaksınız. Bu düğmeyi Space ile etkinleştirerek sesli olarak tanımlanacak videoyu seçebilirsiniz.
+
+Videoyu seçtikten sonra Sonarpad, hedef MP3 dosyasının yolunu otomatik olarak doldurur. Tab ile bu alana ulaşıp yolunu değiştirebilirsiniz veya Hedef klasörü değiştir butonunu kullanabilirsiniz.
+
+Sekme tuşuna tekrar basarak sesli açıklamanın dilini değiştirebilirsiniz. Seçim, Sonarpad ile tutarlıdır ve programın şu anda desteklediği tüm dilleri içerir.
+
+Daha sonra Sesli Açıklama Kısalığını bulacaksınız. Varsayılan değer Ayrıntılı'dır çünkü testlerimde özellikle uzun sessiz sahnelerin olduğu filmlerde iyi sonuç verir. Ancak mevcut diğer seviyeleri de seçebilirsiniz.
+
+Sekme ile Uzatılmış duraklamaları etkinleştir seçeneğini bulursunuz. Varsayılan olarak devre dışıdır. Bu, çok fazla diyaloğun, hızlı tempolu sahnelerin veya konuşmayı yapacak sesli açıklama için çok az boş alanın olduğu filmlerde yararlı olabilir. İstisnai durumlarda Sonarpad, sessizliğe sığmayacak bir açıklama eklemek için filmi kısaca kesebilir.
+
+Karakterleri tanımaya ve adlarını kullanmaya çalış onay kutusu, Sonarpad'in sesli açıklamada karakterin adını telaffuz etmeye çalışmasına olanak tanır. Devre dışı bırakıldığında açıklamalar daha genel kalır; örneğin “erkek yaklaşıyor” veya “kadın içeri giriyor”. Tanınma Gemini'ye emanet edilmiştir ve her durumda garanti edilemez: benzer karakterler, net olmayan çekimler veya zor görseller kimlik yanılgısına neden olabilir.
+
+Sekme tuşuna tekrar bastığınızda Karakter kataloğunu koru seçeneğini bulursunuz. Bu özellik özellikle bir diziyi sesli olarak anlatırken kullanışlıdır çünkü Gemini'nin bölümler arasındaki karakter tanımlarını ve kimliklerini korumasına olanak tanır. Henüz bir katalog yoksa Yeni katalog oluştur'u seçin ve sonraki alana adını (örneğin seri başlığı) girin.
+
+Sonarpad kataloğunda tanıma sürekliliğini artırmak için karakter bilgilerini kaydeder. Ayrıca Sonarpad tarafından oluşturulan örnek bir katalogdan başlayıp bunu başka bir yapay zekaya kopyalamak ve ilgilendiğiniz serilerin açıklamalarıyla tamamlamasını istemek de mümkündür. Ortaya çıkan kataloğun JSON formatında kalması gerekir ve Documents\Sonarpad\Audiodescriptions\Catalogs klasörüne kopyalanabilir. Bu şekilde hazır bir katalogla bir seriye başlayabilirsiniz.
+
+Tekrar Sekme tuşuna bastığınızda, projeyi gelecekteki değişiklikler için kaydet seçeneğini de bulacaksınız. Sesli açıklamayı daha sonra incelemek, açıklamaları düzeltmek veya sesi değiştirmek istediğinizi bildiğinizde bunu etkinleştirin.
+
+Orijinal video dosyasında ses açıklaması oluştur kutusu, yalnızca bir MP3 dosyası yerine, ses açıklamasının önceden eklenmiş olduğu bir video dosyasını doğrudan elde etmenize olanak tanır. Bu seçenek etkin olduğunda Sonarpad, videoyu gereksiz yere yeniden kodlamaya gerek kalmadan orijinal videoyu saklar ve oluşturulan açıklamaları ses parçasına ekler. Varsayılan format MP4'tür, ancak kaydetme penceresinden MKV'yi de seçebilirsiniz. Orijinal video dosyasının üzerine hiçbir zaman yazılmaz.
+
+Sesli anlatımlı videoyu doğrudan oluştururken, filmin süresini ve zamanlamasını değiştireceğinden uzun duraklamalar kullanılmaz. Sonarpad daha sonra açıklamaları yalnızca orijinal parçanın kullanılabilir alanlarına ekler.
+
+MP3'ü açıklayan sesi oluşturduktan sonra orijinal videoyu saklamak istemiyorsanız, Sesli açıklamadan sonra video dosyasını Çöp Kutusu'na taşı kutusu kullanışlıdır. Varsayılan olarak kapalıdır ve düzenlenebilir bir projenin hala orijinal videoya ihtiyacı olması nedeniyle proje kaydetme etkin olmadığında kullanılabilir.
+
+Daha sonra Gemini API Anahtarını bulacaksınız. Burada API anahtarınızı girmeniz gerekiyor. Anahtar ücretsiz olarak oluşturulabilir. Tab ile, tarayıcınızda, hesabınızla oturum açtıktan sonra anahtarı oluşturabileceğiniz Google sayfasını açan API anahtarını al düğmesine ulaşırsınız. Prosedür normalde çok hızlıdır.
+
+API anahtarından sonra Gemini Modelini ve Model Listesini Güncelle düğmesini bulacaksınız. Genellikle şablonu seçili halde bırakabilirsiniz; Anahtarınız için mevcut modelleri kontrol etmek istediğinizde liste güncellenebilir.
+
+Sekme tuşuna tekrar bastığınızda, tercihlerinize göre değiştirebileceğiniz Metinden Konuşmaya Motoru ve Ses'i bulacaksınız.
+
+Daha ileride Sesli açıklama projesini düzenle seçeneğini bulacaksınız. Bu işlev, daha önce kaydettiğiniz bir projeyi yeniden açmanıza ve değiştirmenize olanak tanır. Lütfen unutmayın: Projeyi düzenlemek için orijinal video dosyasının hâlâ mevcut olması gerekir.
+
+Segmenti yeniden analiz etme ayrıca Sesli Açıklama Projesini Düzenle penceresinde de mevcuttur. Bu işlev, filmin bir bölümünün bir veya daha fazla açıklaması sizi tatmin etmediğinde ve Gemini'den tüm sesli açıklamayı yeniden oluşturmak zorunda kalmadan o alanı yeniden analiz etmesini istediğinizde kullanışlıdır.
+
+İncelemek istediğiniz alana ait bir açıklama seçin ve Segmenti Yeniden Analiz Et'i etkinleştirin. Sonarpad, bu açıklamayı içeren video bölümünü tekrar analiz eder ve projede kayıtlı olan zamanları ve mekanları korurken yeni metinler önerir. Yeniden analizin sonunda, bölümün yeni ses önizlemeleri zaten hazırlanmıştır: Açıklamalar arasında geçiş yapabilir ve Space tuşuna basarak bunları orijinal sesle birlikte hemen dinleyebilirsiniz.
+
+Etkilenen açıklamalara yeniden analiz edilen segment adı verilir. Segmenti Uygula ve MP3'ü Yeniden Dışa Aktar seçeneğini seçene kadar yeniden analiz bir teklif olarak kalır. Ancak bundan sonra Sonarpad yeni açıklamaları projeye uygular ve ses tanımlı dosyayı yeniden oluşturur. Ancak segmenti uygulamazsanız kaydedilen proje değişmeden kalır.
+
+Ardından Sesli açıklamaya devam et seçeneğinin kesintiye uğradığını görürsünüz. Sonarpad, halihazırda yapılmış olan işi kaybetmeyecek şekilde tasarlanmıştır: oluşturma sırasında bağlantı kesilirse, Gemini'de bir sorun oluşursa veya süreç kesintiye uğrarsa, Sonarpad periyodik olarak ilerleme noktalarını kaydeder. Bu fonksiyonla, başladığınız bir işe baştan başlamadan devam edebilirsiniz.
+
+Sonunda Sesli açıklama oluştur seçeneğini bulursunuz. Geçerli bir Gemini API anahtarı girmediyseniz Sonarpad bir hata görüntüleyecektir. Her şey doğru yapılandırılırsa işlem başlayacaktır. Süre her şeyden önce videonun uzunluğuna ve karmaşıklığına bağlıdır: uzun bir film için işleme uzun zaman alabilir.
+
+teşekkürler
+
+Sonarpad'in yapay zeka sesli tanımlama fonksiyonunu geliştirmek için ilk ilham kaynağım olan Omni Tanımlayıcı projesinin yazarı Ömer Yılmaz'a teşekkürler. Sonarpad işlevi daha sonra filmler ve TV dizileri üzerinde yapılan kapsamlı testlerle bağımsız olarak geliştirildi ve iyileştirildi.
+
+Seçenekler
+Seçenekler penceresi Sonarpad'in davranışını özelleştirmenize olanak tanır. Ayarlar birkaç sekmeye ayrılmıştır.
+Genel sekmesi
+Arayüz dili: program dilini seçmenizi sağlar.
+Dosya Açma (Yeni Sekme / Yeni Pencere): Yeni Sekme ile Ctrl+Tab tuşlarını kullanarak açık dosyalar arasında geçiş yapabilirsiniz. Yeni Pencere ile Alt+Tab tuşlarını kullanarak pencereler arasında geçiş yapabilirsiniz.
+Başlangıçta güncellemeleri kontrol et: Program başlatıldığında güncellemeleri otomatik olarak kontrol eder.
+Anonim kilitlenme raporları gönderme: program yazarına otomatik olarak anonim hata raporları gönderir.
+Bağlam menüsüne “Sonarpad ile Aç” seçeneğini ekleyin: Dosya Gezgini'nde dosyaları doğrudan Sonarpad ile açma seçeneğini ekler.
+Dosya İlişkileri: Sonarpad tarafından desteklenen dosya ilişkilendirmelerini yönetmek için Windows penceresini açar.
+Genel proxy: tüm program bağlantıları için kullanılacak bir proxy yapılandırmanıza olanak tanır.
+Ses sekmesi
+TTS Engine (Microsoft / SAPI5 / SAPI4): Konuşma motorunu seçmenizi sağlar.
+Ana ses: metni okumak için kullanılacak sesi seçmenizi sağlar. Edge seslerinde bir dil filtresi ve "Yalnızca çok dilli sesler" seçeneği bulunur.
+Ses Önizleme: Seçilen sesin bir örneğini çalar.
+Ses perdesi, hız ve ses seviyesi: bu parametreleri ayarlamanıza olanak tanır.
+Diyaloglar için farklı ses: Etkinleştirilirse diyalog bölümleri için farklı bir ses kullanmanıza olanak tanır.
+İlk Diyalog Sesi (isteğe bağlı): Diyalog için özel bir ses ayarlar.
+İkinci Diyalog Sesi (isteğe bağlı): İkinci bir diyalog sesi ekler.
+Etkinleştirilirse Sonarpad en fazla üç farklı ses kullanabilir.
+Düzenleyici sekmesi
+Kelime Kaydırma: Kelime kaydırmayı etkinleştirin veya devre dışı bırakın.
+Satır Genişliği: Satır başına maksimum karakter sayısını ayarlayın.
+Akıllı Alıntılar: Otomatik olarak basit alıntıların yerini alır.
+Yazım Denetimi: Diliniz için yazım denetleyiciyi açın.
+Sözlük Çeviri Dili: Çevrimiçi sözlüğün dilini ayarlayın.
+Wikipedia Dili: Wikipedia aramaları için dili seçin.
+Ses kartı
+İleri/geri atlama aralığı: kaç saniye ileri veya geri atlanacağını tanımlar.
+Varsayılan Sesli Kitap Klasörü: Hedef klasörü ayarlayın.
+Sesli kitap bölümü: metne göre, belirli sayıda parçaya veya süreye göre bölünme yoktur.
+Altyazı seçenekleri: Dinlerken altyazıların nasıl yönetileceğini seçin.
+RSS ve Podcast sekmesi
+Podcast Önbellek Sınırı: İndirilen podcast'ler için maksimum alanı tanımlar.
+Podcast Dizini (API anahtarı / API sırrı): kimlik bilgilerinin eklenmesi.
+RSS/Podcast Silmeyi Onayla: Silmeden önce bir onay mesajı gösterir.
+Duyuru Okunmadı/Oynatılmadı Durumu: Öğelerin durumunu gösterir.
+Tarih/saat ekranı: ekranı özelleştirmenizi sağlar.
+RSS Hızlı Kopyalama: Neyin kopyalanacağını Ctrl+C ile seçin.
+Kısayollar sekmesi
+Düzenlenebilir kısayollara sahip komut listesi.
+Yeni tuş kombinasyonu kaydediliyor.
+Varsayılan kısayolları geri yükleyin.
+Pencere: Pencere menüsünü açar.
+Belgeleri Aç...: Açık belgelerin listesini gösterir.
+Diğerlerini kapat: Etkin olan dışındaki tüm belgeleri kapatır.
+Tümünü Kapat: Tüm açık belgeleri kapatır.
+
+Yardım:
+Yardım: bu kılavuzu açar (F1).
+Güncellemeleri kontrol et: Güncellemeleri kontrol edin (F2).
+Değişiklik Günlüğü: Değişiklik günlüğünü gösterir.
+Program Bilgileri: Program bilgilerini gösterir.
+
+========== MEDYA KESİCİ / SONARMÜZİK ==========
+
+ORTA DOSYA BOYUTU - TAM KILAVUZ
+
+İşlevi açmak için Araçlar, Multimedya, Medya Dosyasını Kes'e gidin veya Alt+Shift+X tuşlarına basın. Medya dosyasını aç'ı seçin ve yerel bir ses veya video dosyası seçin. Bu işlev, istenmeyen aralıkları ortadan kaldırmak ve korunan kısımlarla yeni bir dosya kaydetmek için kullanılır; Bu, bir dosyayı birden fazla dosyaya bölen Split Media'dan farklıdır.
+
+Kılavuzlu Kesim'de Geri ve İleri komutlarıyla ne kadar hareket edeceğinizi seçin: 1, 5, 10, 30 veya 60 saniye. Ctrl+Space tuşlarıyla dinleyebilir ve Alt+Sol/Sağ Ok tuşlarıyla hareket edebilirsiniz. Kaldırılacak bölümün başına ulaşın ve Kesimi başlat (Alt+1) tuşuna basın. Konturun sonuna gidin ve Kesimi Sonlandır (Alt+2) tuşuna basın. Kaldırılacak parçayı işaretlemek için Dinle Kesme'ye (Alt+3) basın, ardından Kesmeyi Uygula'ya (Alt+4) basın. Diğer aralıklar için tekrarlayın. Videoyu görsel olarak bilmenize gerek yok: Program, konumları ve eylemleri erişilebilir mesajlar aracılığıyla iletir.
+
+Komut Alanı NVDA ve JAWS için tasarlanmıştır: Sekme tuşuyla bu kontrole gidin. İçinde sol/sağ ok, 1 (başlat), 2 (bitiş), 3 veya Enter (oynat), 4 (uygula), Space (oynat/duraklat), Home ve End doğrudan çalışır. Shift+Yatay Oklar 5 saniye atlar, Ctrl+Yatay Oklar 10 saniye atlar. F1, geçerli mod için mevcut komutları okur; Sekme alanı terk eder. Alt kombinasyonları Komuta Alanı dışında da kullanılabilir.
+
+Gelişmiş Kesme'de S (buraya böl) ile dosyayı parçalara ayırabilir, Komut Alanında Yukarı/Aşağı Ok ile parçalar arasında geçiş yapabilir, 3 veya Enter ile seçilen parçayı dinleyebilir, D veya Del ile silebilir, R ile geri yükleyebilir ve seçilen parçanın önüne başka bir medya dosyası ekleyebilirsiniz. Aşırılıkları Başlangıç ​​ve Bitiş alanlarını ve 0,01, 0,1, 0,5 veya 1 saniye hassasiyetini kullanarak düzeltebilirsiniz. Dosya video içeriyorsa, döndürmeyi seçip bir önizleme de gösterebilirsiniz. Bir ses parçası ekleyebilir, orijinalin ve eklenen parçanın ses düzeylerini ayrı ayrı ayarlayabilir ve çok kısaysa ikincisini tekrarlayabilirsiniz.
+
+Son olarak Kaydet veya Ctrl+S tuşlarına basın, çıktı yolunu ve biçimini seçin ve yeni dosyaya orijinalinden farklı bir ad verin. Dışa aktarma sırasında ilerleme durumu ve Durdur düğmesi görüntülenir. Hala beklemede olan bir kılavuzlu kesim varsa kaydetmeden önce bunu tamamlayın. Kaydedilmemiş değişikliklerle kapattığınızda Sonarpad onay ister.
+
+GoldWave Stil Komutlarını Kullan onay kutusu alternatif bir kırpma yöntemini etkinleştirir: dinlerken, [ başlangıcını işaretler, ] sonunu işaretler ve Del, Gelişmiş Kırpma'da bile seçimi siler. Komut Alanında mevcut tuşları bulmak için F1 tuşuna basabilirsiniz. Uluslararası bir klavye kullanıyorsanız, düzeninizin sağladığı tuşlarla birlikte köşeli parantezleri ekleyin. Projeyi Kaydet ile sesi yeniden sıkıştırmadan çalışmaya devam etmek için kesimleri, parçaları, konumu ve ayarları koruyan bir .sonarcut dosyası oluşturursunuz. Open Project, orijinal dosyalar hala mevcut olduğu sürece oturumu geri yükler. Kaydet veya Ctrl+S ses veya video dosyasını dışa aktarmaya devam eder. Mevcut bir hedef dosyayı değiştirirseniz Sonarpad bir yedek oluşturur; normal modda kaynak dosyaların üzerine yazmaz. Kaydet'in üzerinde bulunan Orijinal dosyanın üzerine yaz kutusu, onaylandıktan sonra doğrudan açık dosyaya kaydetmenize ve önce bir yedek kopya oluşturmanıza olanak tanır. Sonarpad, programı kapatıp yeniden açtıktan sonra bile hem bu seçimi hem de GoldWave tarzı komutların seçimini hatırlar. Onaylama ve yedekleme etkin kalır. .sonarcut veya eklenen medya projelerinde üzerine yazma kullanılamaz.
+
+İşaretçileri Temizle düğmesi (Alt+0), yanlışlıkla bir tane ayarlasanız bile geçerli seçimin başlangıç ve bitiş işaretlerini temizler. Dinleme konumunu değiştirmez, uygulanmış olan kesmeleri değiştirmez ve onay gerektirmez. GoldWave kontrolleriyle bile yönlendirmeli ve gelişmiş kesimde çalışır; işaret yoksa düğme gri renkte görünür.
+
+SONARMUSIC — EKSİKSİZ KILAVUZ
+
+Araçlar, Multimedya, SonarMusic'ten veya Ctrl+Alt+Shift+M tuşlarına basarak SonarMusic'i açın. Arama alanına bir şarkı adı, sanatçı adı veya albüm adı girin. Arama Türünü Seçin: Tümü, Şarkılar, Albümler, Sanatçılar, Çalma Listeleri veya Müzik Videoları. Arama alanına veya Ara düğmesine basın. Seçilen filtre hatırlanır. Öneriler düğmesi mevcut olduğunda aramanızı tamamlamanıza yardımcı olur.
+
+Oklarla Arama Sonuçları kutusunu keşfedin. Seçilen öğede Enter tuşuna basın: oynatıcıda çalınabilir bir şarkı veya video açılır; bir albüm, sanatçı veya çalma listesi içeriğini açar. Önceki sonuçlara gitmek veya yenilerini yüklemek için kullanılan girişler doğrudan listede bulunur. Yüklemeden sonra odak sonuçlara geri döner; oynatma sona erdiğinde, mümkün olan yerlerde önceki aramalar ve seçimler kurtarılır.
+
+Diğer eylemler için bir sonuç seçin ve içerik menüsünü açmak için Uygulamalar tuşuna veya Shift+F10 tuşlarına basın. Öğenin türüne bağlı olarak Aç, Medyayı kaydet, Metne dönüştür, AI ile sesli açıklama oluştur ve Favorilere Ekle veya Favorilerden kaldır seçeneklerini bulacaksınız. Bazı eylemler yalnızca çalınabilir şarkılar veya videolar için görünür; albümler, sanatçılar ve çalma listeleri keşfedilmek üzere açılabilir. Medyayı kaydetmek için hizmetin sınırlamalarına saygı göstererek pencereleri ve mevcut seçenekleri izleyin.
+
+Favoriler kutusu saklanan öğeleri almanızı sağlar: bir öğe seçin ve açmak için Enter tuşuna basın. Uygulama tuşu veya Shift+F10 ile de kaldırabilirsiniz. Geri düğmesi sizi önceki aramaya veya sayfaya döndürür; Esc mümkün olduğunda geri döner veya SonarMusic'i kapatır. NVDA veya JAWS kullanılarak tüm pencerede Sekme, Shift+Sekme ve oklarla gezinilebilir. Müzik aramaları İnternet bağlantısı gerektirir.
+
+Küresel yer imi yönetimi:
+Açık olmasalar bile tüm dosyaların yer imlerine bakmak için Ekle menüsünden Tüm yer imlerini yönet'i seçin. Yola veya metne göre arama yapabilir, son açılmaya, dosya adına veya güncellemeye göre sıralayabilir, yaşa göre filtreleyebilir (30, 60, 90, 180, 365 gün), bilinmeyen tarihleri, var olmayan dosyaları veya yalnızca otomatik yer imlerini gösterebilirsiniz. Liste dosyanın adını ve yolunu, konumunu, en son açıldığını, en son güncellendiğini, türünü ve kullanılabilirliğini gösterir. NVDA veya JAWS ile Ok ve Sekme tuşlarını kullanın; Ctrl+A tüm satırları seçer, Ctrl veya Shift birden fazla seçime izin verir. Enter, dosyayı yer imine açar. Sil, onaylandıktan sonra yedek kopyalar oluşturmadan yalnızca seçilen öğeleri kalıcı olarak kaldırır. Bu sürümden önceki yer imlerinin son açılma tarihleri ​​bilinmiyor olabilir - Sonarpad bunları uydurmaz. Menüde yalnızca geçerli dosyanın yer imi yönetimi kullanılabilir durumda kalır.

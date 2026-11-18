@@ -76,6 +76,7 @@ pub const LANGUAGES: &[(&str, &str)] = &[
     ("hi-IN", "options.lang.hi"),
     ("de-DE", "options.lang.de"),
     ("id-ID", "voice.lang.id"),
+    ("tr-TR", "options.lang.tr"),
 ];
 
 fn language_instruction(language: &str) -> &'static str {
@@ -98,6 +99,7 @@ fn language_instruction(language: &str) -> &'static str {
         "hi-in" => "केवल हिंदी स्वर और हिंदी उच्चारण का उपयोग करें।",
         "de-de" => "Verwende ausschließlich eine deutsche Stimmfärbung und deutsche Aussprache.",
         "id-id" => "Gunakan hanya warna suara dan pelafalan bahasa Indonesia.",
+        "tr-tr" => "Yalnızca Türkçe ses tınısı ve telaffuz kullan.",
         _ => "",
     }
 }
@@ -607,7 +609,7 @@ mod tests {
         assert!(style.starts_with("Utilizza esclusivamente un timbro e una pronuncia italiani."));
         assert!(style.contains("115 percent of normal"));
         assert!(style.contains("Pitch: -2 semitones"));
-        assert_eq!(LANGUAGES.len(), 19);
+        assert_eq!(LANGUAGES.len(), 20);
         for (_, key) in LANGUAGES {
             assert_ne!(
                 crate::i18n::tr(crate::settings::Language::Italian, key),

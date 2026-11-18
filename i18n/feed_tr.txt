@@ -1,0 +1,17 @@
+Google News | https://news.google.com/rss?hl=tr&gl=TR&ceid=TR:tr
+Türkiye Gazetesi | https://www.turkiyegazetesi.com.tr/rss
+İhlas Haber Ajansı (İHA) | https://news.google.com/rss/search?q=site%3Aiha.com.tr%20when%3A7d&hl=tr&gl=TR&ceid=TR%3Atr
+TGRT Haber | https://www.tgrthaber.com/rss/manset
+Anadolu Ajansı | https://www.aa.com.tr/tr/rss/default?cat=guncel
+TRT Haber | https://www.trthaber.com/sondakika_articles.rss
+NTV | https://www.ntv.com.tr/son-dakika.rss
+Habertürk | https://www.haberturk.com/rss
+Hürriyet | https://www.hurriyet.com.tr/rss/anasayfa
+Cumhuriyet | https://www.cumhuriyet.com.tr/rss
+Sözcü | https://www.sozcu.com.tr/feeds-haberler
+Sabah | https://www.sabah.com.tr/rss/anasayfa.xml
+BirGün | https://www.birgun.net/rss/home
+Ensonhaber | https://www.ensonhaber.com/rss/ensonhaber.xml
+Edebiyat Haber – Kitaplar Arasında | https://www.edebiyathaber.net/category/kitaplar-arasinda/feed/
+Meb Personel | https://mebpersonel.com/service/rss.php
+Yaşadıkça | https://yasadikca.com/feed/
