@@ -2,7 +2,7 @@
 
 Version 0.9.30 – 2026-11-19
 
-1. Mėgstamiausi: į SonarTube, SonarMusic, radijo ir TV kontekstinį meniu pridėta komanda „Rikiuoti abėcėlės tvarka“, taip pat tiesiogiai pasiekiama tinklalaidžių prenumeratoms. Tvarka išsaugoma, o ekrano skaitytuvas praneša apie užbaigimą.
+1. Mėgstamiausi: į SonarTube, SonarMusic ir radijo kontekstinį meniu pridėta komanda „Rikiuoti abėcėlės tvarka“, taip pat tiesiogiai pasiekiama tinklalaidžių prenumeratoms. Tvarka išsaugoma, o ekrano skaitytuvas praneša apie užbaigimą.
 
 2. Kai TMDB atpažįsta animacinį filmą ar serialą, „Sonarpad“ automatiškai ieško jo pavadinimo „AniList“. Veikėjų iliustracijos padeda „Gemini“ atpažinti, kas pasirodo scenoje. Jei nepavyksta patikimai nustatyti kūrinio arba nėra paveikslėlių, garsinis vaizdavimas tęsiamas įprastai.
 

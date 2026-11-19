@@ -2,7 +2,7 @@
 
 Version 0.9.30 – 2026-11-19
 
-1. Omiljeni: dodata je radnja „Poređaj po abecedi“ u kontekstni meni za SonarTube, SonarMusic, radio i TV, dostupna i direktno za pretplate na podkaste. Redosled se čuva, a čitač ekrana najavljuje završetak.
+1. Omiljeni: dodata je radnja „Poređaj po abecedi“ u kontekstni meni za SonarTube, SonarMusic i radio, dostupna i direktno za pretplate na podkaste. Redosled se čuva, a čitač ekrana najavljuje završetak.
 
 2. Kada TMDB prepozna animirani film ili seriju, Sonarpad automatski traži naslov na servisu AniList. Ilustracije pomažu modelu Gemini da prepozna likove u sceni. Ako naslov nije pouzdano prepoznat ili nema slika, izrada audio-opisa se nastavlja kao i obično.
 

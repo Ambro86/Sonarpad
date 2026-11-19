@@ -2,7 +2,7 @@
 
 Version 0.9.30 – 2026-11-19
 
-1. Oblíbené: do kontextové nabídky SonarTube, SonarMusic, rádia a TV byla přidána akce „Seřadit abecedně“, dostupná také přímo u odběrů podcastů. Pořadí se uloží a odečítač obrazovky oznámí dokončení.
+1. Oblíbené: do kontextové nabídky SonarTube, SonarMusic a rádia byla přidána akce „Seřadit abecedně“, dostupná také přímo u odběrů podcastů. Pořadí se uloží a odečítač obrazovky oznámí dokončení.
 
 2. Když TMDB označí film nebo seriál jako animovaný, Sonarpad automaticky vyhledá titul na AniListu. Gemini využije ilustrace postav jako pomůcku při jejich rozpoznávání ve scéně. Pokud titul nelze spolehlivě určit nebo chybějí obrázky, tvorba audiopopisu pokračuje jako obvykle.
 

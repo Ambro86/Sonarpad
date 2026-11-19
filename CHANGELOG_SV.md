@@ -2,7 +2,7 @@
 
 Version 0.9.30 – 2026-11-19
 
-1. Favoriter: ”Sortera alfabetiskt” har lagts till i snabbmenyn i SonarTube, SonarMusic, radio och TV, även direkt tillgängligt för poddprenumerationer. Ordningen sparas och skärmläsaren meddelar när sorteringen är klar.
+1. Favoriter: ”Sortera alfabetiskt” har lagts till i snabbmenyn i SonarTube, SonarMusic och radio, även direkt tillgängligt för poddprenumerationer. Ordningen sparas och skärmläsaren meddelar när sorteringen är klar.
 
 2. När TMDB identifierar en animerad film eller serie söker Sonarpad automatiskt efter titeln på AniList. Bilder av figurerna hjälper Gemini att känna igen vem som syns i scenen. Om titeln inte kan matchas säkert eller om bilder saknas fortsätter syntolkningen som vanligt.
 

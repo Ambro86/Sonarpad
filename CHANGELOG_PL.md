@@ -2,7 +2,7 @@
 
 Version 0.9.30 – 2026-11-19
 
-1. Ulubione: dodano „Sortuj alfabetycznie” do menu kontekstowego SonarTube, SonarMusic, radia i TV, także bezpośrednio w subskrypcjach podcastów. Kolejność jest zapisywana, a czytnik ekranu ogłasza zakończenie.
+1. Ulubione: dodano „Sortuj alfabetycznie” do menu kontekstowego SonarTube, SonarMusic i radia, także bezpośrednio w subskrypcjach podcastów. Kolejność jest zapisywana, a czytnik ekranu ogłasza zakończenie.
 
 2. Gdy TMDB rozpozna film lub serial animowany, Sonarpad automatycznie wyszukuje tytuł w AniList. Ilustracje postaci pomagają Gemini rozpoznać, kto pojawia się w scenie. Jeśli nie uda się wiarygodnie dopasować tytułu lub brakuje ilustracji, tworzenie audiodeskrypcji przebiega jak zwykle.
 

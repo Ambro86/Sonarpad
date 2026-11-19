@@ -2,7 +2,7 @@
 
 Version 0.9.30 – 2026-11-19
 
-1. Favorit: menambahkan “Urutkan menurut abjad” ke menu konteks SonarTube, SonarMusic, radio dan TV, juga tersedia langsung untuk langganan podcast. Urutan disimpan dan pembaca layar mengumumkan penyelesaian.
+1. Favorit: menambahkan “Urutkan menurut abjad” ke menu konteks SonarTube, SonarMusic, dan radio, juga tersedia langsung untuk langganan podcast. Urutan disimpan dan pembaca layar mengumumkan penyelesaian.
 
 2. Saat TMDB mengenali film atau serial animasi, Sonarpad otomatis mencari judulnya di AniList. Ilustrasi karakter membantu Gemini mengenali siapa yang muncul dalam adegan. Jika judul yang cocok tidak dapat dipastikan atau gambar tidak tersedia, deskripsi audio tetap berjalan seperti biasa.
 

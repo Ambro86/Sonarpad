@@ -2,7 +2,7 @@
 
 Sürüm 0.9.30 – 2026-11-19
 
-1. Favoriler: SonarTube, SonarMusic, radyo ve TV bağlam menüsüne “Alfabetik sırala” eklendi; podcast aboneliklerinde de doğrudan kullanılabilir. Sıralama kaydedilir ve ekran okuyucu tamamlandığını duyurur.
+1. Favoriler: SonarTube, SonarMusic ve radyo bağlam menüsüne “Alfabetik sırala” eklendi; podcast aboneliklerinde de doğrudan kullanılabilir. Sıralama kaydedilir ve ekran okuyucu tamamlandığını duyurur.
 
 2. TMDB bir filmi veya diziyi animasyon olarak tanımladığında Sonarpad, yapımı otomatik olarak AniList’te arar. Karakter çizimleri Gemini’nin sahnede kimin göründüğünü tanımasına yardımcı olur. Güvenilir bir eşleşme bulunamazsa veya görsel yoksa sesli betimleme her zamanki gibi devam eder.
 

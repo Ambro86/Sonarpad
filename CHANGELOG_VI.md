@@ -2,7 +2,7 @@
 
 Version 0.9.30 – 2026-11-19
 
-1. Yêu thích: thêm “Sắp xếp theo bảng chữ cái” vào menu ngữ cảnh của SonarTube, SonarMusic, radio và TV, cũng có sẵn trực tiếp cho các podcast đã đăng ký. Thứ tự được lưu và trình đọc màn hình thông báo khi hoàn tất.
+1. Yêu thích: thêm “Sắp xếp theo bảng chữ cái” vào menu ngữ cảnh của SonarTube, SonarMusic và radio, cũng có sẵn trực tiếp cho các podcast đã đăng ký. Thứ tự được lưu và trình đọc màn hình thông báo khi hoàn tất.
 
 2. Khi TMDB xác định một phim điện ảnh hoặc phim bộ là phim hoạt hình, Sonarpad tự động tìm tên phim trên AniList. Hình minh họa nhân vật giúp Gemini nhận ra ai đang xuất hiện trong cảnh. Nếu không tìm được kết quả khớp đáng tin cậy hoặc không có hình ảnh, quá trình tạo mô tả âm thanh vẫn tiếp tục như thường lệ.
 
