@@ -4,6 +4,8 @@ Version 0.9.31 – 2026-11-19
 
 1. Ako Gemini blokira deo snimka tokom izrade audio-opisa, Sonarpad pokušava ponovo u odlomcima od jednog minuta. Ako neki odlomak ostane blokiran, Sonarpad zadržava originalni zvuk u tom delu i nastavlja sa ostatkom snimka.
 
+2. Kada se u RSS člancima izabere turski jezik, glavne vesti, kategorije i nove pretrage po ključnim rečima koriste tursko izdanje Google vesti. Uklonjen je dvostruki zahtev pri otvaranju izvora.
+
 Version 0.9.30 – 2026-11-19
 
 1. Omiljeni: dodata je radnja „Poređaj po abecedi“ u kontekstni meni za SonarTube, SonarMusic i radio, dostupna i direktno za pretplate na podkaste. Redosled se čuva, a čitač ekrana najavljuje završetak.

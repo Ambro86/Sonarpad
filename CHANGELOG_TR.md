@@ -4,6 +4,8 @@ Sürüm 0.9.31 – 2026-11-19
 
 1. Gemini sesli betimleme oluşturulurken bir bölümü engellerse Sonarpad bu bölümü birer dakikalık parçalar hâlinde yeniden işler. Bir parça hâlâ engelleniyorsa o parçanın özgün sesini korur ve videonun geri kalanıyla devam eder.
 
+2. RSS makalelerinde Türkçe seçildiğinde ana haberler, kategoriler ve yeni anahtar kelime aramaları için artık Google Haberler’in Türkiye sürümü kullanılıyor. Bir kaynak açılırken yinelenen istek kaldırıldı.
+
 Sürüm 0.9.30 – 2026-11-19
 
 1. Favoriler: SonarTube, SonarMusic ve radyo bağlam menüsüne “Alfabetik sırala” eklendi; podcast aboneliklerinde de doğrudan kullanılabilir. Sıralama kaydedilir ve ekran okuyucu tamamlandığını duyurur.

@@ -4,6 +4,8 @@ Version 0.9.31 – 2026-11-19
 
 1. Nếu Gemini chặn một đoạn khi tạo mô tả âm thanh, Sonarpad sẽ thử lại từng đoạn một phút. Nếu một đoạn vẫn bị chặn, Sonarpad giữ nguyên âm thanh gốc của đoạn đó và tiếp tục xử lý phần còn lại của video.
 
+2. Trong mục bài viết RSS, khi chọn tiếng Thổ Nhĩ Kỳ, tin nổi bật, các chuyên mục và các lượt tìm kiếm mới theo từ khóa sẽ dùng Google Tin tức phiên bản Thổ Nhĩ Kỳ. Đã loại bỏ yêu cầu trùng lặp khi mở nguồn tin.
+
 Version 0.9.30 – 2026-11-19
 
 1. Yêu thích: thêm “Sắp xếp theo bảng chữ cái” vào menu ngữ cảnh của SonarTube, SonarMusic và radio, cũng có sẵn trực tiếp cho các podcast đã đăng ký. Thứ tự được lưu và trình đọc màn hình thông báo khi hoàn tất.

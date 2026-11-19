@@ -587,6 +587,24 @@ mod tests {
     }
 
     #[test]
+    fn turkish_google_news_uses_the_selected_edition_for_categories_and_searches() {
+        let mut urls: Vec<_> = super::google_news_categories("tr")
+            .into_iter()
+            .filter(|category| !category.is_local)
+            .map(|category| category.url)
+            .collect();
+        urls.push(super::google_news_local_url("tr", "İstanbul"));
+        urls.push(build_google_news_rss_url("teknoloji", "tr"));
+        for url in urls {
+            let url = url::Url::parse(&url).unwrap();
+            let params: std::collections::HashMap<_, _> = url.query_pairs().collect();
+            assert_eq!(params["hl"], "tr");
+            assert_eq!(params["gl"], "TR");
+            assert_eq!(params["ceid"], "TR:tr");
+        }
+    }
+
+    #[test]
     fn google_news_search_uses_brazilian_portuguese_locale() {
         let url = build_google_news_rss_url("tecnologia", "pt-br");
         assert!(url.contains("hl=pt-BR"));
@@ -2760,7 +2778,7 @@ struct RssWindowState {
     hwnd_import: HWND,
     hwnd_export: HWND,
     node_data: HashMap<isize, NodeData>,
-    pending_fetches: HashMap<String, isize>, // URL -> hItem
+    pending_fetches: HashSet<isize>, // Source tree items currently being fetched
     source_items: HashMap<isize, SourceItemsState>,
     enter_guard: bool,
     add_guard: bool,
@@ -2948,6 +2966,21 @@ fn google_news_locale(code: &str) -> GoogleNewsLocale {
             hl: "cs",
             gl: "CZ",
             ceid: "CZ:cs",
+        },
+        "tr" => GoogleNewsLocale {
+            root_title: "Google Haberler",
+            top_title: "Öne çıkan haberler",
+            local_title: "Şehrim",
+            nation_title: "Türkiye",
+            world_title: "Dünya",
+            business_title: "Ekonomi",
+            technology_title: "Bilim ve teknoloji",
+            entertainment_title: "Eğlence",
+            sports_title: "Spor",
+            health_title: "Sağlık",
+            hl: "tr",
+            gl: "TR",
+            ceid: "TR:tr",
         },
         _ => GoogleNewsLocale {
             root_title: "Google News Italia",
@@ -5687,7 +5720,7 @@ fn rss_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                     hwnd_import: HWND(0),
                     hwnd_export: HWND(0),
                     node_data: HashMap::new(),
-                    pending_fetches: HashMap::new(),
+                    pending_fetches: HashSet::new(),
                     source_items: HashMap::new(),
                     enter_guard: false,
                     add_guard: false,
@@ -7935,9 +7968,9 @@ fn handle_expand(hwnd: HWND, hitem: windows::Win32::UI::Controls::HTREEITEM) {
         cache.last_modified = None;
     }
 
-    with_rss_state(hwnd, |s| {
-        s.pending_fetches.insert(url.clone(), hitem.0);
-    });
+    if !with_rss_state(hwnd, |s| s.pending_fetches.insert(hitem.0)).unwrap_or(false) {
+        return;
+    }
 
     let url_clone = url.clone();
 
@@ -7977,16 +8010,6 @@ fn handle_expand(hwnd: HWND, hitem: windows::Win32::UI::Controls::HTREEITEM) {
                 LPARAM(&mut tvis_loading as *mut _ as isize),
             );
         }
-        // Force visual expansion now.
-        unsafe {
-            SendMessageW(
-                hwnd_tree,
-                TVM_EXPAND,
-                WPARAM(TVE_EXPAND.0 as usize),
-                LPARAM(hitem.0),
-            );
-            SendMessageW(hwnd_tree, TVM_ENSUREVISIBLE, WPARAM(0), LPARAM(hitem.0));
-        }
     }
 
     let parent = with_rss_state(hwnd, |s| s.parent).unwrap_or(HWND(0));
@@ -8002,24 +8025,23 @@ fn handle_expand(hwnd: HWND, hitem: windows::Win32::UI::Controls::HTREEITEM) {
 
     // UI: "Refresh feeds" should trigger this fetch for the selected source.
     std::thread::spawn(move || {
-        let rt = match tokio::runtime::Builder::new_current_thread()
+        let res = match tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
         {
-            Ok(rt) => rt,
-            Err(e) => {
-                crate::log_debug(&format!("Failed to build tokio runtime: {}", e));
-                return;
-            }
+            Ok(rt) => rt.block_on(rss::fetch_and_parse(
+                &url_clone,
+                source_kind,
+                cache,
+                fetch_config,
+                false,
+                language,
+            )),
+            Err(e) => Err(rss::FeedFetchError::Network {
+                message: e.to_string(),
+                cache: Box::new(cache),
+            }),
         };
-        let res = rt.block_on(rss::fetch_and_parse(
-            &url_clone,
-            source_kind,
-            cache,
-            fetch_config,
-            false,
-            language,
-        ));
         let msg = Box::new(FetchResult {
             hitem: hitem.0,
             result: res,
@@ -8208,8 +8230,11 @@ fn process_background_check_result(hwnd: HWND, res: BackgroundCheckResult) {
 fn process_fetch_result(hwnd: HWND, res: FetchResult) {
     unsafe {
         let hitem = windows::Win32::UI::Controls::HTREEITEM(res.hitem);
-        let still_current =
-            with_rss_state(hwnd, |state| state.node_data.contains_key(&hitem.0)).unwrap_or(false);
+        let still_current = with_rss_state(hwnd, |state| {
+            state.pending_fetches.remove(&hitem.0);
+            state.node_data.contains_key(&hitem.0)
+        })
+        .unwrap_or(false);
         if !still_current {
             return;
         }

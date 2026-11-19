@@ -4,6 +4,8 @@ Version 0.9.31 – 2026-11-19
 
 1. Wenn Gemini beim Erstellen einer Audiodeskription einen Abschnitt blockiert, versucht Sonarpad es in einminütigen Abschnitten erneut. Bleibt eine Minute blockiert, behält Sonarpad dort den Originalton bei und fährt mit dem restlichen Video fort.
 
+2. Bei Auswahl von Türkisch verwenden die RSS-Artikel jetzt die türkische Ausgabe von Google News für Schlagzeilen, Kategorien und neue Stichwortsuchen. Beim Öffnen einer Quelle entfällt eine doppelte Anfrage.
+
 Version 0.9.30 – 2026-11-19
 
 1. Favoriten: „Alphabetisch sortieren“ zum Kontextmenü in SonarTube, SonarMusic und Radio hinzugefügt, auch direkt für Podcast-Abonnements verfügbar. Die Reihenfolge wird gespeichert und der Screenreader bestätigt den Abschluss.
