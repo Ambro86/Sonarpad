@@ -1100,8 +1100,7 @@ def _generate_blocked_chunk_by_minutes(
                     reason = str(getattr(exc, "reason", "")).upper()
                     if (reason not in ("PROHIBITED_CONTENT", "SAFETY")
                             or blocked_attempt == 1
-                            or (reason == "PROHIBITED_CONTENT"
-                                and minute_duration > _BLOCKED_CHUNK_FALLBACK_DURATION_SEC)):
+                            or minute_duration > _BLOCKED_CHUNK_FALLBACK_DURATION_SEC):
                         raise
                     app_logger.warning(
                         "Blocked chunk %d minute %d returned %s; retrying once.",
@@ -1164,10 +1163,10 @@ def _generate_blocked_chunk_by_minutes(
                 chunk_number, minute_label, len(normalized),
             )
         except ContentBlockedError as exc:
-            if str(getattr(exc, "reason", "")).upper() not in ("PROHIBITED_CONTENT", "SAFETY"):
+            reason = str(getattr(exc, "reason", "")).upper()
+            if reason not in ("PROHIBITED_CONTENT", "SAFETY"):
                 raise
-            if (str(getattr(exc, "reason", "")).upper() == "PROHIBITED_CONTENT"
-                    and clip_ranges is not None
+            if (clip_ranges is not None
                     and minute_duration > _BLOCKED_CHUNK_FALLBACK_DURATION_SEC):
                 # Retry only this custom segment through the existing minute loop.
                 # Keep the original chunk origin for prepared-file offsets.
@@ -1182,9 +1181,9 @@ def _generate_blocked_chunk_by_minutes(
                 minute_ranges[minute_index + 1:minute_index + 1] = subranges
                 minute_count = len(minute_ranges)
                 app_logger.warning(
-                    "Chunk %d custom segment %.3f-%.3fs is PROHIBITED_CONTENT; "
+                    "Chunk %d custom segment %.3f-%.3fs returned %s; "
                     "retrying only this segment in %d one-minute clips.",
-                    chunk_number, minute_start, minute_end, len(subranges),
+                    chunk_number, minute_start, minute_end, reason, len(subranges),
                 )
                 continue
             app_logger.warning(
@@ -1683,17 +1682,17 @@ def generate_descriptions_chunked(video_path, chunk_duration_sec, user_prompt=""
                     if glossary_language_usage:
                         all_token_usage.append(glossary_language_usage)
             except ContentBlockedError as exc:
-                if str(getattr(exc, "reason", "")).upper() != "PROHIBITED_CONTENT":
+                reason = str(getattr(exc, "reason", "")).upper()
+                if reason not in ("PROHIBITED_CONTENT", "SAFETY"):
                     raise
                 minute_fallback_used = True
                 app_logger.warning(
-                    "Chunk %d remained PROHIBITED_CONTENT after two full-chunk "
-                    "attempts; falling back to one-minute clips.",
-                    i + 1,
+                    "Chunk %d returned %s; falling back to one-minute clips.",
+                    i + 1, reason,
                 )
                 _update_status(
                     _(
-                        "Chunk %d remained blocked after two attempts; "
+                        "Chunk %d was blocked; "
                         "retrying it one minute at a time."
                     ) % (i + 1)
                 )

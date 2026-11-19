@@ -105,6 +105,31 @@ class NarrationRestartTests(unittest.TestCase):
             self.assertEqual(original_ranges, [(390,415),(415,550),(550,570)])
             self.assertTrue(all(c.args[1] == "existing.mkv" for c in prepare.call_args_list))
 
+    def test_full_chunk_safety_response_uses_minute_fallback(self):
+        with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:
+            video = Path(directory) / "original.mkv"
+            video.write_bytes(b"x")
+            stack.enter_context(mock.patch.object(ad.config_model, "get_setting", side_effect={
+                "description_coverage_mode": "standard", "intensive_min_silence_seconds": 3.0,
+            }.get))
+            stack.enter_context(mock.patch.object(ad.gemini, "get_gemini_client", return_value=object()))
+            stack.enter_context(mock.patch.object(ad.gemini, "validate_model_for_generate_content", return_value="test"))
+            for name in ("build_generation_config", "generate_content_with_retry", "save_raw_ai_output", "log_token_usage"):
+                stack.enter_context(mock.patch.object(ad.gemini, name, return_value=None))
+            stack.enter_context(mock.patch.object(ad, "_prepare_video_for_gemini", return_value=("part", None)))
+            stack.enter_context(mock.patch.object(ad.gemini, "process_gemini_response",
+                side_effect=ad.ContentBlockedError("blocked", reason="SAFETY")))
+            fallback = stack.enter_context(mock.patch.object(ad, "_generate_blocked_chunk_by_minutes",
+                return_value=([(5, 7, "Una strada.")], [], [])))
+            checkpoint = mock.Mock()
+            ad.generate_descriptions_chunked(
+                str(video), 180, dialogue_intervals=[],
+                prepared_chunks=[{"path": str(video), "start_sec": 0, "end_sec": 180}],
+                total_duration_override=180, checkpoint_callback=checkpoint)
+            fallback.assert_called_once()
+            self.assertNotIn("clip_ranges", fallback.call_args.kwargs)
+            self.assertEqual(checkpoint.call_args.args[:2], (1, 1))
+
     def test_generation_reuses_existing_path_and_preserves_checkpoint_layout(self):
         settings = {"enable_character_glossary":False,
                     "enable_extended_audio_description":False,
