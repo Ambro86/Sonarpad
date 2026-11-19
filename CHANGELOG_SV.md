@@ -1,5 +1,9 @@
 # Ändringslogg
 
+Version 0.9.31 – 2026-11-19
+
+1. Om Gemini blockerar ett avsnitt när en syntolkning skapas försöker Sonarpad igen med en minut i taget. Om en minut fortfarande är blockerad behåller Sonarpad originalljudet där och fortsätter med resten av videon.
+
 Version 0.9.30 – 2026-11-19
 
 1. Favoriter: ”Sortera alfabetiskt” har lagts till i snabbmenyn i SonarTube, SonarMusic och radio, även direkt tillgängligt för poddprenumerationer. Ordningen sparas och skärmläsaren meddelar när sorteringen är klar.

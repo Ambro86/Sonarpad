@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.31 – 2026-11-19
+
+1. If Gemini blocks a segment during audio description, Sonarpad retries it in one-minute clips. If a minute remains blocked, Sonarpad keeps the original audio for that part and continues with the rest of the video.
+
 Version 0.9.30 – 2026-11-19
 
 1. Favourites: added “Sort alphabetically” to the context menu in SonarTube, SonarMusic and radio, also available directly for podcast subscriptions. The order is saved and a screen reader announces completion.

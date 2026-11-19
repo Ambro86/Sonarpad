@@ -1,5 +1,9 @@
 # Changelog
 
+Version 0.9.31 – 2026-11-19
+
+1. Se o Gemini bloquear um trecho durante a criação de uma audiodescrição, o Sonarpad tenta novamente em segmentos de um minuto. Se algum minuto continuar bloqueado, mantém o áudio original nesse trecho e segue com o restante do vídeo.
+
 Version 0.9.30 – 2026-11-19
 
 1. Favoritos: adicionada a ação “Ordenar alfabeticamente” ao menu de contexto do SonarTube, SonarMusic e rádio, também disponível diretamente nas assinaturas de podcasts. A ordem é salva e o leitor de tela anuncia a conclusão.

@@ -1,5 +1,9 @@
 # Değişiklik günlüğü
 
+Sürüm 0.9.31 – 2026-11-19
+
+1. Gemini sesli betimleme oluşturulurken bir bölümü engellerse Sonarpad bu bölümü birer dakikalık parçalar hâlinde yeniden işler. Bir parça hâlâ engelleniyorsa o parçanın özgün sesini korur ve videonun geri kalanıyla devam eder.
+
 Sürüm 0.9.30 – 2026-11-19
 
 1. Favoriler: SonarTube, SonarMusic ve radyo bağlam menüsüne “Alfabetik sırala” eklendi; podcast aboneliklerinde de doğrudan kullanılabilir. Sıralama kaydedilir ve ekran okuyucu tamamlandığını duyurur.

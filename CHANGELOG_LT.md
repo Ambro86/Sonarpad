@@ -1,5 +1,9 @@
 # Pakeitimų žurnalas
 
+Version 0.9.31 – 2026-11-19
+
+1. Jei kuriant garsinį vaizdavimą „Gemini“ užblokuoja vaizdo įrašo atkarpą, „Sonarpad“ bando ją apdoroti iš naujo vienos minutės dalimis. Jei kuri nors minutė lieka užblokuota, joje paliekamas originalus garsas ir tęsiamas likusio įrašo garsinis vaizdavimas.
+
 Version 0.9.30 – 2026-11-19
 
 1. Mėgstamiausi: į SonarTube, SonarMusic ir radijo kontekstinį meniu pridėta komanda „Rikiuoti abėcėlės tvarka“, taip pat tiesiogiai pasiekiama tinklalaidžių prenumeratoms. Tvarka išsaugoma, o ekrano skaitytuvas praneša apie užbaigimą.

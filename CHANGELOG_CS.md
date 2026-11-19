@@ -1,5 +1,9 @@
 # Přehled změn
 
+Version 0.9.31 – 2026-11-19
+
+1. Pokud Gemini při vytváření zvukového popisu zablokuje úsek videa, Sonarpad jej zkusí zpracovat po minutách. Pokud některá minuta zůstane zablokovaná, ponechá v ní původní zvuk a pokračuje se zbytkem videa.
+
 Version 0.9.30 – 2026-11-19
 
 1. Oblíbené: do kontextové nabídky SonarTube, SonarMusic a rádia byla přidána akce „Seřadit abecedně“, dostupná také přímo u odběrů podcastů. Pořadí se uloží a odečítač obrazovky oznámí dokončení.

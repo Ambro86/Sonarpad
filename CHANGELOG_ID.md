@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+Version 0.9.31 – 2026-11-19
+
+1. Jika Gemini memblokir suatu segmen saat membuat deskripsi audio, Sonarpad mencoba lagi dengan membaginya menjadi klip satu menit. Jika suatu klip tetap diblokir, Sonarpad mempertahankan audio asli pada bagian tersebut dan melanjutkan ke bagian video berikutnya.
+
 Version 0.9.30 – 2026-11-19
 
 1. Favorit: menambahkan “Urutkan menurut abjad” ke menu konteks SonarTube, SonarMusic, dan radio, juga tersedia langsung untuk langganan podcast. Urutan disimpan dan pembaca layar mengumumkan penyelesaian.

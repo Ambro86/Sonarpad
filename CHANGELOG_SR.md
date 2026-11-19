@@ -1,5 +1,9 @@
 # Dnevnik izmena
 
+Version 0.9.31 – 2026-11-19
+
+1. Ako Gemini blokira deo snimka tokom izrade audio-opisa, Sonarpad pokušava ponovo u odlomcima od jednog minuta. Ako neki odlomak ostane blokiran, Sonarpad zadržava originalni zvuk u tom delu i nastavlja sa ostatkom snimka.
+
 Version 0.9.30 – 2026-11-19
 
 1. Omiljeni: dodata je radnja „Poređaj po abecedi“ u kontekstni meni za SonarTube, SonarMusic i radio, dostupna i direktno za pretplate na podkaste. Redosled se čuva, a čitač ekrana najavljuje završetak.
