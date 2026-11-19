@@ -1,6 +1,6 @@
 [package]
 name = "sonarpad"
-version = "0.9.31"
+version = "0.9.30"
 edition = "2024"
 authors = ["Ambrogio Riili"]
 description = "A modern Notepad with PDF, DOCX, XLS, EPUB, Kindle and DAISY support and TTS capabilities."
@@ -226,6 +226,7 @@ cpal = "0.17"
 url = "2.5"
 uuid = { version = "1.19", features = ["v4"] }
 epub = "2.1"
+tempfile = "3"
 ebook-rs = { version = "=0.14.1", default-features = false, features = ["serde"] }
 zip = "0.6"
 feed-rs = "2.3"
@@ -234,11 +235,9 @@ httpdate = "1.0"
 mp3-duration = "0.1"
 fancy-regex = "0.17"
 regex = "1"
-sevenz-rust = "0.6"
 once_cell = "1.21"
 libloading = "0.8"
 libc = "0.2"
-whisper-rs = { version = "0.14", default-features = false }
 hound = "3.5"
 sentry = { version = "0.35", default-features = false, features = [
     "backtrace",
@@ -257,7 +256,7 @@ bindgen = { version = "0.70", default-features = false, features = ["runtime"] }
 [features]
 portable = []
 standalone = []
-whisper_cuda = ["whisper-rs/cuda"]
+whisper_cuda = []
 
 [profile.dev.package.symphonia]
 opt-level = 3

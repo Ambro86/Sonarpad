@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Eşleşen film veya dizi bulunamadı.",
   "audio_description.tmdb.no_cast": "Yayın bilgisi mevcut değil.",
   "audio_description.tmdb.continue_without": "TMDB araması tamamlanamadı. Normal sesli açıklamaya devam etmek istiyor musunuz?",
+  "audio_description.references.unavailable": "Karakter görselleri kullanılamıyor. Standart sesli betimleme devam ediyor.",
   "audio_description.tmdb.animation": "Bu içerik animasyonludur. Oyuncuların fotoğrafları animasyon karakterlerini tanımlamaz ve gönderilmez. Sesli anlatım normal şekilde devam edecektir.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "Gemini seslerini kullanmak için Sonarpad AI'yi erişim kodunuzla veya kişisel Gemini API anahtarınızla kurun. AI Sesli Açıklamaları Oluştur'u açmak için Tamam'a basın ve kullanılacak hizmeti seçin.",

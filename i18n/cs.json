@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Nebyl nalezen odpovídající film ani seriál.",
   "audio_description.tmdb.no_cast": "Informace o obsazení nejsou k dispozici.",
   "audio_description.tmdb.continue_without": "Vyhledávání TMDB se nezdařilo. Pokračovat se standardním audiopopisem?",
+  "audio_description.references.unavailable": "Obrázky postav nejsou dostupné. Pokračuje standardní audiopopis.",
   "audio_description.tmdb.animation": "Jde o animovaný obsah. Fotografie herců nepomáhají identifikovat animované postavy a nebudou odeslány. Audiopopis bude pokračovat normálně.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "Pro hlasy Gemini nastavte Sonarpad AI se svým přístupovým kódem nebo osobní klíč Gemini API. Stisknutím OK otevřete Tvorbu audiopopisů pomocí AI a vyberte službu.",

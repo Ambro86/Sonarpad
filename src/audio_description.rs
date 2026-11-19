@@ -367,6 +367,7 @@ fn normalized_catalog_character(character: &BridgeCharacter) -> Option<BridgeCha
         id: character.id.trim().to_string(),
         name,
         description,
+        anilist: character.anilist.clone(),
         tmdb: character.tmdb.clone(),
         provisional: character.provisional,
     })
@@ -391,10 +392,10 @@ fn find_catalog_identity(
 ) -> Option<usize> {
     let candidate_id = candidate.id.trim().to_lowercase();
     // Cast candidates must not overwrite user-verified identities with the same name.
-    if candidate.tmdb.is_some() {
+    if candidate.has_reference() {
         return characters
             .iter()
-            .position(|entry| entry.tmdb.is_some() && entry.id == candidate.id);
+            .position(|entry| entry.has_reference() && entry.id == candidate.id);
     }
     if !candidate_id.is_empty() {
         let mut matches = characters
@@ -527,7 +528,7 @@ fn merge_catalog_characters(
             continue;
         };
         if let Some(index) = find_catalog_identity(&merged, &candidate) {
-            if merged[index].provisional && merged[index].tmdb.is_none() {
+            if merged[index].provisional && !merged[index].has_reference() {
                 merged[index] = candidate;
                 continue;
             }
@@ -550,10 +551,10 @@ fn merge_catalog_characters(
         if let Some(index) = find_catalog_identity(&merged, &candidate) {
             // Never turn an inferred face match into permanent TMDB evidence.
             // The cast row contains verified casting, not a verified visual biography.
-            if merged[index].tmdb.is_some() && candidate.tmdb.is_none() {
+            if merged[index].has_reference() && !candidate.has_reference() {
                 continue;
             }
-            if merged[index].provisional && merged[index].tmdb.is_none() {
+            if merged[index].provisional && !merged[index].has_reference() {
                 merged[index] = candidate;
                 continue;
             }
@@ -9657,6 +9658,7 @@ mod tests {
             &context,
             &[
                 BridgeCharacter {
+                    anilist: None,
                     tmdb: None,
                     provisional: false,
                     id: "c1".to_string(),
@@ -9664,6 +9666,7 @@ mod tests {
                     description: "Donna dai capelli scuri".to_string(),
                 },
                 BridgeCharacter {
+                    anilist: None,
                     tmdb: None,
                     provisional: false,
                     id: "c2".to_string(),
@@ -9680,6 +9683,7 @@ mod tests {
         assert_eq!(loaded.characters.len(), 2);
         let mut second_episode = loaded.characters.clone();
         second_episode.push(BridgeCharacter {
+            anilist: None,
             tmdb: None,
             provisional: false,
             id: "c1".to_string(),
@@ -9687,6 +9691,7 @@ mod tests {
             description: "Donna dai capelli scuri, occhi verdi e cappotto rosso".to_string(),
         });
         second_episode.push(BridgeCharacter {
+            anilist: None,
             tmdb: None,
             provisional: false,
             id: "c3".to_string(),
@@ -9727,6 +9732,7 @@ mod tests {
     #[test]
     fn character_catalog_single_entry_normalization_does_not_index_empty_alias_matches() {
         let characters = vec![BridgeCharacter {
+            anilist: None,
             tmdb: None,
             provisional: false,
             id: "flo".to_string(),
@@ -9757,6 +9763,7 @@ mod tests {
             name: "Serie".to_string(),
             path: path.clone(),
             characters: vec![BridgeCharacter {
+                anilist: None,
                 tmdb: None,
                 provisional: false,
                 id: "anna_robinson".to_string(),
@@ -9767,6 +9774,7 @@ mod tests {
         save_audio_description_character_catalog(
             &context,
             &[BridgeCharacter {
+                anilist: None,
                 tmdb: None,
                 provisional: false,
                 id: "anna".to_string(),
@@ -9815,6 +9823,7 @@ mod tests {
     fn character_catalog_does_not_merge_ambiguous_first_name_only() {
         let established = vec![
             BridgeCharacter {
+                anilist: None,
                 tmdb: None,
                 provisional: false,
                 id: "eric_capretto".to_string(),
@@ -9822,6 +9831,7 @@ mod tests {
                 description: "Capretto giovane.".to_string(),
             },
             BridgeCharacter {
+                anilist: None,
                 tmdb: None,
                 provisional: false,
                 id: "eric_beths".to_string(),
@@ -9830,6 +9840,7 @@ mod tests {
             },
         ];
         let detected = vec![BridgeCharacter {
+            anilist: None,
             tmdb: None,
             provisional: false,
             id: "eric".to_string(),

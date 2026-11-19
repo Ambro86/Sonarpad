@@ -1,8 +1,14 @@
 # Nhật ký thay đổi
 
-Version 0.9.31 – 2026-11-17
+Version 0.9.30 – 2026-11-19
 
 1. Yêu thích: thêm “Sắp xếp theo bảng chữ cái” vào menu ngữ cảnh của SonarTube, SonarMusic, radio và TV, cũng có sẵn trực tiếp cho các podcast đã đăng ký. Thứ tự được lưu và trình đọc màn hình thông báo khi hoàn tất.
+
+2. Khi TMDB xác định một phim điện ảnh hoặc phim bộ là phim hoạt hình, Sonarpad tự động tìm tên phim trên AniList. Hình minh họa nhân vật giúp Gemini nhận ra ai đang xuất hiện trong cảnh. Nếu không tìm được kết quả khớp đáng tin cậy hoặc không có hình ảnh, quá trình tạo mô tả âm thanh vẫn tiếp tục như thường lệ.
+
+3. Sonarpad cho Windows đã được dịch đầy đủ sang tiếng Thổ Nhĩ Kỳ, bao gồm giao diện, tùy chọn, lịch với 365 ngày kỷ niệm và 128 câu trích dẫn, mô tả âm thanh, mục chọn ngôn ngữ, trợ giúp, quyên góp và nhật ký thay đổi.
+
+4. Sonarpad hiện mở được cả những sách EPUB có cách viết hoa hoặc viết thường khác trong đường dẫn nội bộ đến container.xml. Trước đây, khi mở những sách này, ứng dụng báo không tìm thấy tệp trong kho lưu trữ.
 
 Version 0.9.29 – 2026-11-16
 

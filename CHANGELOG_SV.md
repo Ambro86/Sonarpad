@@ -1,8 +1,14 @@
 # Ändringslogg
 
-Version 0.9.31 – 2026-11-17
+Version 0.9.30 – 2026-11-19
 
 1. Favoriter: ”Sortera alfabetiskt” har lagts till i snabbmenyn i SonarTube, SonarMusic, radio och TV, även direkt tillgängligt för poddprenumerationer. Ordningen sparas och skärmläsaren meddelar när sorteringen är klar.
+
+2. När TMDB identifierar en animerad film eller serie söker Sonarpad automatiskt efter titeln på AniList. Bilder av figurerna hjälper Gemini att känna igen vem som syns i scenen. Om titeln inte kan matchas säkert eller om bilder saknas fortsätter syntolkningen som vanligt.
+
+3. Sonarpad för Windows finns nu helt på turkiska, inklusive gränssnittet, inställningarna, kalendern med 365 minnesdagar och 128 citat, syntolkningen, språkvalen, hjälpen, donationerna och ändringsloggen.
+
+4. Sonarpad öppnar nu även EPUB-böcker där den interna sökvägen till container.xml har en annan kombination av stora och små bokstäver. Tidigare visades ett meddelande om att filen inte kunde hittas i arkivet.
 
 Version 0.9.29 – 2026-11-16
 

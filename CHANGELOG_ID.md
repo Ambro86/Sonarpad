@@ -1,8 +1,14 @@
 # Catatan perubahan
 
-Version 0.9.31 – 2026-11-17
+Version 0.9.30 – 2026-11-19
 
 1. Favorit: menambahkan “Urutkan menurut abjad” ke menu konteks SonarTube, SonarMusic, radio dan TV, juga tersedia langsung untuk langganan podcast. Urutan disimpan dan pembaca layar mengumumkan penyelesaian.
+
+2. Saat TMDB mengenali film atau serial animasi, Sonarpad otomatis mencari judulnya di AniList. Ilustrasi karakter membantu Gemini mengenali siapa yang muncul dalam adegan. Jika judul yang cocok tidak dapat dipastikan atau gambar tidak tersedia, deskripsi audio tetap berjalan seperti biasa.
+
+3. Sonarpad untuk Windows kini tersedia sepenuhnya dalam bahasa Turki, termasuk antarmuka, opsi, kalender dengan 365 hari peringatan dan 128 kutipan, deskripsi audio, pemilih bahasa, bantuan, donasi, dan catatan perubahan.
+
+4. Sonarpad kini juga dapat membuka buku EPUB yang menggunakan huruf besar dan kecil yang berbeda pada jalur internal ke container.xml. Sebelumnya, saat buku dibuka, muncul pesan bahwa berkas tidak ditemukan di dalam arsip.
 
 Version 0.9.29 – 2026-11-16
 

@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "No matching film or series found.",
   "audio_description.tmdb.no_cast": "No cast information available.",
   "audio_description.tmdb.continue_without": "TMDB lookup could not be completed. Continue with the standard audio description?",
+  "audio_description.references.unavailable": "Character reference images unavailable. Continuing with standard audio description.",
   "audio_description.tmdb.animation": "This is animated content. Actor portraits cannot identify animated characters and will not be sent. Audio description will continue normally.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "To use Gemini voices, configure Sonarpad AI with your access code or your personal Gemini API key. Press OK to open Create AI audio descriptions and choose the service to use.",

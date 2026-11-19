@@ -1,4 +1,6 @@
-//! Optional cast lookup. All requests use the existing Sonarpad Cinema proxy.
+//! Optional cast lookup. TMDB uses the Sonarpad Cinema proxy; animation can use AniList.
+#[path = "audio_description_anilist.rs"]
+mod anilist;
 use super::cinema_service::CinemaClient;
 use crate::i18n;
 use crate::settings::Language;
@@ -71,6 +73,34 @@ pub(super) fn lookup(
         .iter()
         .any(|genre| number(genre, "id") == 16);
     let production_title = text(&details, if *kind == "movie" { "title" } else { "name" });
+    if animation {
+        let original = text(
+            &details,
+            if *kind == "movie" {
+                "original_title"
+            } else {
+                "original_name"
+            },
+        );
+        let date = text(
+            &details,
+            if *kind == "movie" {
+                "release_date"
+            } else {
+                "first_air_date"
+            },
+        );
+        return Ok(anilist::lookup(
+            &[&production_title, &original],
+            date.get(..4).unwrap_or(year),
+            kind,
+            &mut choose,
+        )
+        .unwrap_or_else(|e| {
+            crate::log_debug(&format!("Optional AniList lookup: {e}"));
+            Vec::new()
+        }));
+    }
     let mut season_number = None;
     let mut episode_number = None;
     let mut action = format!("{kind}_credits");
@@ -153,6 +183,7 @@ pub(super) fn lookup(
                     "TMDB cast candidate: {}. Identity in the video is NOT verified.",
                     reference.actor_name
                 ),
+                anilist: None,
                 tmdb: Some(reference),
                 provisional: true,
             });
@@ -185,4 +216,61 @@ pub(super) fn episode_options(
         (number, format!("{} — {}", number, text(episode, "name")))
     }));
     Ok(options)
+}
+
+#[cfg(test)]
+mod live_tests {
+    #[test]
+    #[ignore = "live TMDB and AniList integration"]
+    fn selected_productions_follow_expected_provider() {
+        for (name, year, anime) in [
+            ("Titanic", "1997", None),
+            ("Dragon Ball Z", "1989", Some(813)),
+            ("Dragon Ball GT", "1996", Some(225)),
+            ("Death Note", "2006", Some(1535)),
+            ("Spirited Away", "2001", Some(199)),
+            ("The Simpsons", "1989", Some(0)),
+        ] {
+            let cast = super::lookup(
+                name,
+                year,
+                crate::settings::Language::English,
+                |_, options| {
+                    let kind = if matches!(name, "Spirited Away" | "Titanic") {
+                        "movie"
+                    } else {
+                        "tv"
+                    };
+                    let label = crate::i18n::tr(
+                        crate::settings::Language::English,
+                        &format!("audio_description.tmdb.{kind}"),
+                    );
+                    options
+                        .iter()
+                        .position(|s| s == &format!("{name} ({year}) — {label}"))
+                        .ok_or_else(|| format!("missing {name}"))
+                },
+                |_, _| Err("Unexpected TV prompt".into()),
+            )
+            .unwrap();
+            match anime {
+                None => {
+                    assert!(cast.iter().any(|c| {
+                        c.tmdb.as_ref().is_some_and(|r| {
+                            r.actor_name == "Leonardo DiCaprio" && r.profile_image_url.is_some()
+                        })
+                    }))
+                }
+                Some(0) => assert!(cast.is_empty()),
+                Some(id) => assert!(
+                    !cast.is_empty()
+                        && cast.iter().all(|c| c
+                            .anilist
+                            .as_ref()
+                            .is_some_and(|r| r.media_id == id && !r.image_urls.is_empty())),
+                    "{name}"
+                ),
+            }
+        }
+    }
 }

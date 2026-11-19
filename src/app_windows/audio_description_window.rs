@@ -4897,17 +4897,12 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                 }
                 match ready.result {
                     Ok(characters) => {
-                        if characters.iter().any(|character| {
-                            character
-                                .tmdb
-                                .as_ref()
-                                .is_some_and(|reference| reference.animation)
-                        }) {
-                            show_info(
-                                hwnd,
+                        if characters.is_empty() {
+                            let message = i18n::tr(
                                 state.language,
-                                &i18n::tr(state.language, "audio_description.tmdb.animation"),
+                                "audio_description.references.unavailable",
                             );
+                            crate::accessibility::screen_reader_speak(&message);
                         }
                         let catalog = ready.job.character_catalog.get_or_insert_with(|| {
                             AudioDescriptionCharacterCatalogContext {
@@ -4921,7 +4916,7 @@ fn window_proc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LR
                         // those from a different season), keeping the user's own catalog.
                         catalog
                             .characters
-                            .retain(|character| character.tmdb.is_none());
+                            .retain(|character| !character.has_reference());
                         catalog.characters.extend(characters);
                     }
                     Err(error) => {

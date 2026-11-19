@@ -1,12 +1,14 @@
 # Değişiklik günlüğü
 
-Version 0.9.31 – 2026-11-17
+Sürüm 0.9.30 – 2026-11-19
 
 1. Favoriler: SonarTube, SonarMusic, radyo ve TV bağlam menüsüne “Alfabetik sırala” eklendi; podcast aboneliklerinde de doğrudan kullanılabilir. Sıralama kaydedilir ve ekran okuyucu tamamlandığını duyurur.
 
-Sürüm 0.9.30 – 2026-11-16
+2. TMDB bir filmi veya diziyi animasyon olarak tanımladığında Sonarpad, yapımı otomatik olarak AniList’te arar. Karakter çizimleri Gemini’nin sahnede kimin göründüğünü tanımasına yardımcı olur. Güvenilir bir eşleşme bulunamazsa veya görsel yoksa sesli betimleme her zamanki gibi devam eder.
 
-1. Sonarpad Windows için eksiksiz Türkçe çeviri: arayüz, ayarlar, 365 özel gün ve 128 alıntı içeren takvim, sesli betimlemeler, dil seçimleri, yardım, bağış bilgileri ve değişiklik günlüğü. Türkçe artık uygulamanın dilleri arasında yer alıyor.
+3. Sonarpad Windows için eksiksiz Türkçe çeviri: arayüz, ayarlar, 365 özel gün ve 128 alıntı içeren takvim, sesli betimlemeler, dil seçimleri, yardım, bağış bilgileri ve değişiklik günlüğü. Türkçe artık uygulamanın dilleri arasında yer alıyor.
+
+4. Sonarpad artık container.xml dosyasının arşiv içindeki yolunda büyük ve küçük harf kullanımı farklı olan EPUB kitaplarını da açıyor. Daha önce bu kitaplar açılırken dosyanın arşivde bulunamadığını belirten bir hata gösteriliyordu.
 
 Sürüm 0.9.29 – 2026-11-16
 

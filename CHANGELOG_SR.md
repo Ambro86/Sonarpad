@@ -1,8 +1,14 @@
 # Dnevnik izmena
 
-Version 0.9.31 – 2026-11-17
+Version 0.9.30 – 2026-11-19
 
 1. Omiljeni: dodata je radnja „Poređaj po abecedi“ u kontekstni meni za SonarTube, SonarMusic, radio i TV, dostupna i direktno za pretplate na podkaste. Redosled se čuva, a čitač ekrana najavljuje završetak.
+
+2. Kada TMDB prepozna animirani film ili seriju, Sonarpad automatski traži naslov na servisu AniList. Ilustracije pomažu modelu Gemini da prepozna likove u sceni. Ako naslov nije pouzdano prepoznat ili nema slika, izrada audio-opisa se nastavlja kao i obično.
+
+3. Sonarpad za Windows je u potpunosti preveden na turski, uključujući interfejs, opcije, kalendar sa 365 spomendana i 128 citata, audio-opise, izbor jezika, pomoć, donacije i dnevnik izmena.
+
+4. Sonarpad sada otvara i EPUB knjige u kojima se velika i mala slova u internoj putanji do datoteke container.xml razlikuju od uobičajenih. Ranije se pri otvaranju tih knjiga prikazivala poruka da datoteka nije pronađena u arhivi.
 
 Version 0.9.29 – 2026-11-16
 

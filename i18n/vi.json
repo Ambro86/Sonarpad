@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Không tìm thấy phim hoặc loạt phim phù hợp.",
   "audio_description.tmdb.no_cast": "Không có thông tin dàn diễn viên.",
   "audio_description.tmdb.continue_without": "Không thể hoàn tất tìm kiếm TMDB. Tiếp tục mô tả âm thanh thông thường?",
+  "audio_description.references.unavailable": "Không có hình ảnh nhân vật. Tiếp tục mô tả âm thanh thông thường.",
   "audio_description.tmdb.animation": "Đây là nội dung hoạt hình. Ảnh diễn viên không giúp nhận diện nhân vật hoạt hình và sẽ không được gửi. Mô tả âm thanh vẫn tiếp tục bình thường.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "Để dùng giọng Gemini, hãy cấu hình Sonarpad AI bằng mã truy cập hoặc khóa API Gemini cá nhân. Nhấn OK để mở Tạo mô tả âm thanh bằng AI và chọn dịch vụ.",

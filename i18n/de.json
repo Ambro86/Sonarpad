@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Kein passender Film oder keine passende Serie gefunden.",
   "audio_description.tmdb.no_cast": "Keine Besetzungsdaten verfügbar.",
   "audio_description.tmdb.continue_without": "Die TMDB-Suche ist fehlgeschlagen. Mit der normalen Audiodeskription fortfahren?",
+  "audio_description.references.unavailable": "Keine Figurenbilder verfügbar. Die normale Audiodeskription wird fortgesetzt.",
   "audio_description.tmdb.animation": "Dies ist animierter Inhalt. Schauspielerfotos helfen nicht bei der Erkennung animierter Figuren und werden nicht gesendet. Die Audiodeskription wird normal fortgesetzt.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "Konfigurieren Sie für Gemini-Stimmen Sonarpad AI mit Ihrem Zugangscode oder Ihren persönlichen Gemini-API-Schlüssel. Mit OK öffnen Sie Audiodeskriptionen mit KI erstellen und wählen den Dienst aus.",

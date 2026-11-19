@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Подходящий фильм или сериал не найден.",
   "audio_description.tmdb.no_cast": "Сведения об актёрском составе недоступны.",
   "audio_description.tmdb.continue_without": "Не удалось завершить поиск TMDB. Продолжить обычное аудиоописание?",
+  "audio_description.references.unavailable": "Изображения персонажей недоступны. Продолжается обычная тифлокомментированная версия.",
   "audio_description.tmdb.animation": "Это анимация. Фотографии актёров не позволяют распознать анимационных персонажей и не будут отправлены. Аудиоописание продолжится в обычном режиме.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "Для голосов Gemini настройте Sonarpad AI со своим кодом доступа или личный ключ API Gemini. Нажмите OK, чтобы открыть создание аудиоописаний с ИИ и выбрать сервис.",

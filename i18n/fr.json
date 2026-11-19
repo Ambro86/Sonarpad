@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Aucun film ou série correspondant.",
   "audio_description.tmdb.no_cast": "Distribution indisponible.",
   "audio_description.tmdb.continue_without": "La recherche TMDB a échoué. Continuer avec l’audiodescription standard ?",
+  "audio_description.references.unavailable": "Images des personnages indisponibles. L’audiodescription standard continue.",
   "audio_description.tmdb.animation": "Ce contenu est animé. Les photos des acteurs ne permettent pas d’identifier les personnages animés et ne seront pas envoyées. L’audiodescription continuera normalement.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "Pour utiliser les voix Gemini, configurez Sonarpad AI avec votre code d’accès ou votre clé API Gemini personnelle. Appuyez sur OK pour ouvrir Créer des audiodescriptions avec l’IA et choisir le service.",

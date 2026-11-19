@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(debug_assertions)]
 const BRIDGE_DEBUG_FILE_NAME: &str = "audio_description_bridge.exe";
-const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v18.exe";
+const BRIDGE_CACHE_FILE_NAME: &str = "audio_description_bridge_v19.exe";
 const BRIDGE_MIN_VALID_SIZE_BYTES: u64 = 5_000_000;
 const BRIDGE_DOWNLOAD_URLS: [&str; 2] = [
     "https://github.com/Ambro86/Sonarpad-Tools/releases/download/0.7/audio_description_bridge.exe",
@@ -39,8 +39,25 @@ pub struct BridgeCharacter {
     pub description: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tmdb: Option<TmdbCharacterReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anilist: Option<AniListReference>,
     #[serde(default)]
     pub provisional: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AniListReference {
+    pub media_id: i64,
+    pub media_title: String,
+    pub source_character_id: i64,
+    pub role: String,
+    pub aliases: Vec<String>,
+    pub image_urls: Vec<String>,
+}
+impl BridgeCharacter {
+    pub fn has_reference(&self) -> bool {
+        self.tmdb.is_some() || self.anilist.is_some()
+    }
 }
 
 /// Cast metadata is a candidate identity, never a verified face identification.

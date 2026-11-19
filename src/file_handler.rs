@@ -1194,11 +1194,84 @@ pub fn read_epub_text(path: &Path, language: Language) -> Result<String, String>
     read_epub_document(path, language).map(|document| document.text)
 }
 
+pub(crate) struct OpenEpub {
+    pub document: epub::doc::EpubDoc<std::io::BufReader<std::fs::File>>,
+    pub repaired_path: Option<tempfile::TempPath>,
+}
+
+pub(crate) fn open_epub(path: &Path) -> Result<OpenEpub, String> {
+    use epub::doc::{DocError, EpubDoc};
+    use std::io::Write;
+    const CONTAINER: &str = "META-INF/container.xml";
+
+    let error = match EpubDoc::new(path) {
+        Ok(document) => {
+            return Ok(OpenEpub {
+                document,
+                repaired_path: None,
+            });
+        }
+        Err(error @ DocError::ArchiveError(_)) => error.to_string(),
+        Err(error) => return Err(error.to_string()),
+    };
+    let file = std::fs::File::open(path).map_err(|_| error.clone())?;
+    let mut archive = ZipArchive::new(file).map_err(|_| error.clone())?;
+    {
+        let mut matches = archive
+            .file_names()
+            .filter(|name| name.eq_ignore_ascii_case(CONTAINER));
+        let Some(variant) = matches.next() else {
+            return Err(error);
+        };
+        if variant == CONTAINER || matches.next().is_some() {
+            return Err(error);
+        }
+    }
+    // Some generators lowercase the container path. Feed a corrected temporary
+    // archive to the same EPUB reader, leaving the source and chapter bytes intact.
+    let mut temporary = tempfile::NamedTempFile::new().map_err(|e| e.to_string())?;
+    {
+        let mut writer = zip::ZipWriter::new(temporary.as_file_mut());
+        writer.set_raw_comment(archive.comment().to_vec());
+        writer
+            .start_file(
+                "mimetype",
+                zip::write::FileOptions::default()
+                    .compression_method(zip::CompressionMethod::Stored),
+            )
+            .map_err(|e| e.to_string())?;
+        writer
+            .write_all(b"application/epub+zip")
+            .map_err(|e| e.to_string())?;
+        for index in 0..archive.len() {
+            let entry = archive.by_index_raw(index).map_err(|e| e.to_string())?;
+            if entry.name() == "mimetype" {
+                continue;
+            }
+            if entry.name().eq_ignore_ascii_case(CONTAINER) {
+                writer.raw_copy_file_rename(entry, CONTAINER)
+            } else {
+                writer.raw_copy_file(entry)
+            }
+            .map_err(|e| e.to_string())?;
+        }
+        writer.finish().map_err(|e| e.to_string())?;
+    }
+    let repaired_path = temporary.into_temp_path();
+    let document = EpubDoc::new(&repaired_path).map_err(|e| e.to_string())?;
+    Ok(OpenEpub {
+        document,
+        repaired_path: Some(repaired_path),
+    })
+}
+
 pub fn read_epub_document(path: &Path, language: Language) -> Result<EpubDocumentContent, String> {
-    use epub::doc::EpubDoc;
     use std::collections::HashMap;
 
-    let mut doc = EpubDoc::new(path).map_err(|e| {
+    let OpenEpub {
+        document: mut doc,
+        repaired_path: _temporary,
+    } = open_epub(path).map_err(|e| {
         i18n::tr_f(
             language,
             "file_handler.epub_read_error",
@@ -1723,8 +1796,10 @@ fn filter_epub_text_with_anchors(
 }
 
 pub fn read_epub_chapters(path: &Path, language: Language) -> Result<Vec<String>, String> {
-    use epub::doc::EpubDoc;
-    let mut doc = EpubDoc::new(path).map_err(|e| {
+    let OpenEpub {
+        document: mut doc,
+        repaired_path: _temporary,
+    } = open_epub(path).map_err(|e| {
         i18n::tr_f(
             language,
             "file_handler.epub_read_error",
@@ -2086,6 +2161,51 @@ mod tests {
         embedded_nul_count, filter_epub_text_with_anchors, html_to_text, html_to_text_with_anchors,
         is_epub_metadata_noise_line, strip_embedded_nuls,
     };
+
+    #[test]
+    fn epub_lowercase_container_opens_for_reading_and_editing() {
+        use std::io::Write;
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("source.epub");
+        let mut zip = zip::ZipWriter::new(std::fs::File::create(&input).unwrap());
+        for (name, contents) in [
+            (
+                "meta-inf/container.xml",
+                r#"<container><rootfiles><rootfile full-path="book.opf"/></rootfiles></container>"#,
+            ),
+            ("mimetype", "application/epub+zip\r\n"),
+            (
+                "book.opf",
+                r#"<package version="2.0"><metadata/><manifest><item id="one" href="one.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="one"/></spine></package>"#,
+            ),
+            (
+                "one.xhtml",
+                "<html><body><p>Prima frase del libro.</p></body></html>",
+            ),
+        ] {
+            zip.start_file(name, zip::write::FileOptions::default())
+                .unwrap();
+            zip.write_all(contents.as_bytes()).unwrap();
+        }
+        zip.finish().unwrap();
+        let bytes = std::fs::read(&input).unwrap();
+        let language = Language::Italian;
+        let doc = super::read_epub_document(&input, language).unwrap();
+        assert!(doc.text.contains("Prima frase"));
+        assert!(super::read_epub_chapters(&input, language).unwrap()[0].contains("Prima frase"));
+        let edited = doc.text.replace("Prima", "Primo");
+        let copy = dir.path().join("copy.epub");
+        crate::epub_editor::write_epub_preserving_structure(
+            &input, &copy, &doc.text, &edited, language,
+        )
+        .unwrap();
+        assert_eq!(
+            super::read_epub_document(&copy, language).unwrap().text,
+            edited
+        );
+        assert!(super::open_epub(&copy).unwrap().repaired_path.is_none());
+        assert_eq!(bytes, std::fs::read(input).unwrap());
+    }
 
     #[test]
     fn marked_epub_breaks_survive_filtering_consecutively() {

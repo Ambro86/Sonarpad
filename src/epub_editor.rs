@@ -132,7 +132,11 @@ pub(crate) fn write_epub_preserving_structure(
         original_text.chars().count(),
         edited_text.chars().count()
     ));
-    let model = build_epub_edit_model(source_path, language)?;
+    let same_destination = source_path == destination_path;
+    let opened =
+        crate::file_handler::open_epub(source_path).map_err(|error| save_error(language, error))?;
+    let source_path = opened.repaired_path.as_deref().unwrap_or(source_path);
+    let model = build_epub_edit_model(source_path, opened.document, language)?;
     let normalized_original = normalize_newlines(original_text);
     let mapped_original = if normalized_original == model.full_text {
         normalized_original
@@ -180,7 +184,7 @@ pub(crate) fn write_epub_preserving_structure(
     ));
 
     if edits.is_empty() {
-        if source_path == destination_path {
+        if same_destination {
             crate::log_debug("EPUB save: no text changes; destination already is the source file.");
             return Ok(());
         }
@@ -242,9 +246,12 @@ pub(crate) fn write_epub_preserving_structure(
     commit_result
 }
 
-fn build_epub_edit_model(path: &Path, language: Language) -> Result<EpubEditModel, String> {
+fn build_epub_edit_model(
+    path: &Path,
+    mut document: EpubDoc<std::io::BufReader<File>>,
+    language: Language,
+) -> Result<EpubEditModel, String> {
     let opf_path = read_epub_rootfile_path(path, language)?;
-    let mut document = EpubDoc::new(path).map_err(|error| save_error(language, error))?;
     let title_metadata = document.mdata("title");
     let has_title_metadata = title_metadata.is_some();
     let title = title_metadata

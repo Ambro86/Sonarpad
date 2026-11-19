@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Ingen matchande film eller serie hittades.",
   "audio_description.tmdb.no_cast": "Ingen rollista tillgänglig.",
   "audio_description.tmdb.continue_without": "TMDB-sökningen kunde inte slutföras. Fortsätt med vanlig syntolkning?",
+  "audio_description.references.unavailable": "Figurbilder saknas. Standardiserad syntolkning fortsätter.",
   "audio_description.tmdb.animation": "Detta är animerat innehåll. Skådespelarfoton identifierar inte animerade figurer och skickas inte. Syntolkningen fortsätter som vanligt.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "För Gemini-röster, konfigurera Sonarpad AI med din åtkomstkod eller din personliga Gemini API-nyckel. Tryck på OK för att öppna Skapa syntolkningar med AI och välja tjänst.",

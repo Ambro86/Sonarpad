@@ -1,8 +1,14 @@
 # Änderungsprotokoll
 
-Version 0.9.31 – 2026-11-17
+Version 0.9.30 – 2026-11-19
 
 1. Favoriten: „Alphabetisch sortieren“ zum Kontextmenü in SonarTube, SonarMusic, Radio und TV hinzugefügt, auch direkt für Podcast-Abonnements verfügbar. Die Reihenfolge wird gespeichert und der Screenreader bestätigt den Abschluss.
+
+2. Erkennt TMDB einen Animationsfilm oder eine animierte Serie, sucht Sonarpad den Titel automatisch bei AniList. Die Figurenbilder helfen Gemini dabei, die Figuren in einer Szene zu erkennen. Fehlt ein eindeutiger Treffer oder sind keine Bilder verfügbar, läuft die Audiodeskription wie gewohnt weiter.
+
+3. Sonarpad für Windows ist vollständig auf Türkisch verfügbar. Übersetzt wurden die Oberfläche, die Optionen, der Kalender mit 365 Gedenktagen und 128 Zitaten, die Audiodeskriptionen, die Sprachauswahl, die Hilfe, der Spendenbereich und das Änderungsprotokoll.
+
+4. Sonarpad öffnet jetzt auch EPUB-Bücher mit abweichender Groß- und Kleinschreibung im internen Pfad zu container.xml. Bisher erschien beim Öffnen die Meldung, dass die Datei im Archiv nicht gefunden wurde.
 
 Version 0.9.29 – 2026-11-16
 

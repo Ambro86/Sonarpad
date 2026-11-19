@@ -16,6 +16,16 @@ ACTIVE_CAST_RULE = 'ACTIVE CAST MATCHING: The supplied TMDB listing is authorita
 LOCALIZATION_RULE = "CHARACTER NAME LOCALIZATION: TMDB character fields may contain untranslated original or English names. For TMDB-derived or provisional identities, use the established conventional character name in the requested audio-description language in BOTH character_glossary.name and description_text. Prefer the name clearly used in the video's target-language dialogue when available. Do not translate actor names or change character IDs, TMDB metadata, or explicitly user-confirmed names. Do not translate proper names literally or invent localized names: if no established localized form is known, retain the original. This rule concerns name spelling only, and never establishes who is visible in the video. Keep one consistent localized name per identity throughout the output. This is an explicit exception to instructions to keep names unchanged, only for TMDB-derived or provisional identities."
 
 
+ANIME_RULE = ("AniList reference illustrations depict characters, not scenes. Use a name from its first "
+              "appearance only if the actual video supports a confident match. Costumes, transformations "
+              "and art styles vary. Use a neutral description when uncertain. Earlier guesses are provisional "
+              "and can be corrected. Repetition does not confirm identity. Ignore plot information in metadata.")
+
+def anime_url(url):
+    import re
+    return isinstance(url, str) and bool(re.fullmatch(
+        r"https://s4\.anilist\.co/file/anilistcdn/character/(?:large|medium)/[A-Za-z0-9_-]+\.(?:jpg|jpeg|png)", url))
+
 def valid_image_url(url):
     parsed = urllib.parse.urlsplit(str(url or ""))
     return (parsed.scheme == "https" and parsed.netloc == "image.tmdb.org"
@@ -25,32 +35,52 @@ def valid_image_url(url):
 
 
 def download_image(url, cache_dir=None):
-    if not valid_image_url(url):
+    if not (valid_image_url(url) or anime_url(url)):
         raise ValueError("Invalid TMDB portrait URL")
     directory = Path(cache_dir or Path(os.environ.get("LOCALAPPDATA") or Path.home())
                      / "Sonarpad" / "tmdb_portraits")
     directory.mkdir(parents=True, exist_ok=True)
-    target = directory / (hashlib.sha256(url.encode()).hexdigest() + ".jpg")
+    target = directory / (hashlib.sha256(url.encode()).hexdigest() + (".png" if url.endswith(".png") else ".jpg"))
     if target.exists() and time.time() - target.stat().st_mtime < 30 * 86400:
         data = target.read_bytes()
-        if 0 < len(data) <= MAX_IMAGE_BYTES and data.startswith(b"\xff\xd8\xff"):
+        if 0 < len(data) <= MAX_IMAGE_BYTES and data.startswith(b"\x89PNG\r\n\x1a\n" if target.suffix == ".png" else b"\xff\xd8\xff"):
             return target
     request = urllib.request.Request(url, headers={"User-Agent": "Sonarpad/TMDB"})
     with urllib.request.urlopen(request, timeout=12) as response:
-        if not valid_image_url(response.geturl()):
+        if not (anime_url(response.geturl()) if anime_url(url) else valid_image_url(response.geturl())):
             raise ValueError("Unexpected portrait redirect")
         data = response.read(MAX_IMAGE_BYTES + 1)
-    if not data.startswith(b"\xff\xd8\xff") or len(data) > MAX_IMAGE_BYTES:
+    if not data.startswith(b"\x89PNG\r\n\x1a\n" if target.suffix == ".png" else b"\xff\xd8\xff") or len(data) > MAX_IMAGE_BYTES:
         raise ValueError("Invalid or oversized portrait")
     target.write_bytes(data)
     # Bounded local cache; nothing is embedded in the character JSON.
-    for old in sorted(directory.glob("*.jpg"), key=lambda item: item.stat().st_mtime)[:-128]:
+    for old in sorted((p for p in directory.iterdir() if p.suffix in (".jpg", ".png")), key=lambda item: item.stat().st_mtime)[:-128]:
         old.unlink(missing_ok=True)
     return target
 
 
 def prepare(client, glossary):
     candidates = [item for item in glossary or [] if isinstance(item.get("tmdb"), dict)][:96]
+    anime = [item for item in glossary or [] if isinstance(item.get("anilist"), dict)][:96]
+    if anime:
+        from google.genai import types
+        parts, uploaded, seen = [], [], set()
+        for item in anime:
+            ref = item["anilist"]
+            for url in ref.get("image_urls") or []:
+                if not anime_url(url) or url in seen:
+                    continue
+                seen.add(url)
+                try:
+                    path = download_image(url)
+                    mime = "image/png" if path.suffix == ".png" else "image/jpeg"
+                    file = client.files.upload(file=str(path), config={"mime_type": mime})
+                    uploaded.append(file)
+                    parts.extend([json.dumps(item, ensure_ascii=False), types.Part.from_uri(file_uri=file.uri, mime_type=mime)])
+                except Exception as exc:
+                    app_logger.warning("Optional AniList illustration unavailable (%s)", type(exc).__name__)
+        app_logger.info("AniList: %d characters, %d illustrations attached", len(anime), len(uploaded))
+        return ([ANIME_RULE] + parts if parts else []), uploaded
     if not candidates:
         return [], []
     from google.genai import types

@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "No se encontró ninguna película o serie coincidente.",
   "audio_description.tmdb.no_cast": "Información del reparto no disponible.",
   "audio_description.tmdb.continue_without": "No se pudo completar la búsqueda en TMDB. ¿Continuar con la audiodescripción normal?",
+  "audio_description.references.unavailable": "Imágenes de personajes no disponibles. Continúa la audiodescripción estándar.",
   "audio_description.tmdb.animation": "Este contenido es animado. Las fotos de los actores no identifican a los personajes animados y no se enviarán. La audiodescripción continuará normalmente.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "Para usar las voces Gemini, configura Sonarpad AI con tu código de acceso o tu clave API Gemini personal. Pulsa Aceptar para abrir Crear audiodescripciones con IA y elegir el servicio.",

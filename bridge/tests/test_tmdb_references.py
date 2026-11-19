@@ -28,6 +28,22 @@ class TmdbReferencesTests(unittest.TestCase):
         self.assertEqual(len(result), 97)
         self.assertEqual(result[-1]["tmdb"]["person_id"], 123)
 
+    def test_anilist_catalog_images_and_unavailable_fallback(self):
+        url = "https://s4.anilist.co/file/anilistcdn/character/large/test.png"
+        row = {"id": "anilist_813_1", "name": "Goku", "description": "Candidate",
+               "provisional": True, "anilist": {"media_id": 813, "image_urls": [url, url]}}
+        self.assertEqual(bridge._normalise_initial_character_glossary([row]), [row])
+        client = Mock()
+        client.files.upload.return_value = SimpleNamespace(uri="https://example.test/goku")
+        with patch.object(refs, "download_image", return_value=Path("goku.png")) as download:
+            parts, uploaded = refs.prepare(client, [row])
+        download.assert_called_once_with(url)
+        self.assertEqual(len(uploaded), 1)
+        self.assertIn("Goku", parts[1])
+        self.assertEqual(parts[2].file_data.mime_type, "image/png")
+        with patch.object(refs, "download_image", side_effect=TimeoutError):
+            self.assertEqual(refs.prepare(client, [row, candidate(True)]), ([], []))
+
     def test_animation_never_downloads_voice_actor(self):
         with patch.object(refs, "download_image") as download:
             parts, uploaded = refs.prepare(Mock(), [candidate(True)])

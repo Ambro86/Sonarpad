@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Atitinkančio filmo ar serialo nerasta.",
   "audio_description.tmdb.no_cast": "Aktorių duomenys nepasiekiami.",
   "audio_description.tmdb.continue_without": "Nepavyko užbaigti TMDB paieškos. Tęsti įprastą garsinį vaizdavimą?",
+  "audio_description.references.unavailable": "Veikėjų vaizdų nėra. Tęsiamas įprastas garsinis vaizdavimas.",
   "audio_description.tmdb.animation": "Tai animacinis turinys. Aktorių nuotraukos nepadeda atpažinti animacinių personažų ir nebus siunčiamos. Garsinis vaizdavimas bus tęsiamas įprastai.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "Norėdami naudoti Gemini balsus, nustatykite Sonarpad AI su savo prieigos kodu arba asmeninį Gemini API raktą. Paspauskite OK, kad atidarytumėte garsinių aprašymų kūrimą su DI ir pasirinktumėte paslaugą.",

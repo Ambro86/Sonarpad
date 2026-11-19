@@ -223,6 +223,8 @@ def _normalise_initial_character_glossary(value) -> list[dict]:
         }
         if isinstance(item.get("tmdb"), dict):
             candidate["tmdb"] = item["tmdb"]
+        if isinstance(item.get("anilist"), dict):
+            candidate["anilist"] = item["anilist"]
         if item.get("provisional") is True:
             candidate["provisional"] = True
         existing = merged.get(key)
@@ -235,8 +237,8 @@ def _normalise_initial_character_glossary(value) -> list[dict]:
     # Keep the established-catalog limit, without letting a full catalog hide
     # the optional TMDB candidates and their reference photographs.
     rows = list(merged.values())
-    return ([item for item in rows if not item.get("tmdb")][:96]
-            + [item for item in rows if item.get("tmdb")][:96])
+    return ([item for item in rows if not (item.get("tmdb") or item.get("anilist"))][:96]
+            + [item for item in rows if item.get("tmdb") or item.get("anilist")][:96])
 
 
 def _configure_omni(request: dict) -> None:

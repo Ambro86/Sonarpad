@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Nie znaleziono pasującego filmu ani serialu.",
   "audio_description.tmdb.no_cast": "Brak informacji o obsadzie.",
   "audio_description.tmdb.continue_without": "Nie udało się ukończyć wyszukiwania TMDB. Kontynuować standardową audiodeskrypcję?",
+  "audio_description.references.unavailable": "Brak ilustracji postaci. Standardowa audiodeskrypcja będzie kontynuowana.",
   "audio_description.tmdb.animation": "To treść animowana. Zdjęcia aktorów nie identyfikują animowanych postaci i nie zostaną wysłane. Audiodeskrypcja będzie kontynuowana normalnie.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "Aby używać głosów Gemini, skonfiguruj Sonarpad AI ze swoim kodem dostępu lub osobisty klucz API Gemini. Naciśnij OK, aby otworzyć tworzenie audiodeskrypcji z AI i wybrać usługę.",

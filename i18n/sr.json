@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "Nije pronađen odgovarajući film ili serija.",
   "audio_description.tmdb.no_cast": "Podaci o glumačkoj ekipi nisu dostupni.",
   "audio_description.tmdb.continue_without": "TMDB pretraga nije uspela. Nastaviti sa standardnim audio-opisom?",
+  "audio_description.references.unavailable": "Слике ликова нису доступне. Наставља се стандардни аудио-опис.",
   "audio_description.tmdb.animation": "Ovo je animirani sadržaj. Fotografije glumaca ne identifikuju animirane likove i neće biti poslate. Audio-opis će se nastaviti normalno.",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "За Gemini гласове подесите Sonarpad AI са својим приступним кодом или лични Gemini API кључ. Притисните OK да отворите прављење аудио-описа помоћу AI и изаберете услугу.",

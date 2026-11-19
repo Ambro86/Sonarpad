@@ -1,8 +1,14 @@
 # Pakeitimų žurnalas
 
-Version 0.9.31 – 2026-11-17
+Version 0.9.30 – 2026-11-19
 
 1. Mėgstamiausi: į SonarTube, SonarMusic, radijo ir TV kontekstinį meniu pridėta komanda „Rikiuoti abėcėlės tvarka“, taip pat tiesiogiai pasiekiama tinklalaidžių prenumeratoms. Tvarka išsaugoma, o ekrano skaitytuvas praneša apie užbaigimą.
+
+2. Kai TMDB atpažįsta animacinį filmą ar serialą, „Sonarpad“ automatiškai ieško jo pavadinimo „AniList“. Veikėjų iliustracijos padeda „Gemini“ atpažinti, kas pasirodo scenoje. Jei nepavyksta patikimai nustatyti kūrinio arba nėra paveikslėlių, garsinis vaizdavimas tęsiamas įprastai.
+
+3. Visa „Sonarpad“ programa „Windows“ sistemoje išversta į turkų kalbą, įskaitant sąsają, parinktis, kalendorių su 365 atmintinomis dienomis ir 128 citatomis, garsinį vaizdavimą, kalbos pasirinkimą, žinyną, paramos skiltį ir pakeitimų žurnalą.
+
+4. „Sonarpad“ dabar atveria ir EPUB knygas, kurių vidiniame kelyje iki failo container.xml skiriasi didžiosios ir mažosios raidės. Anksčiau atveriant tokias knygas buvo rodoma, kad failas archyve nerastas.
 
 Version 0.9.29 – 2026-11-16
 

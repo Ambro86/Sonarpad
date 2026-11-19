@@ -12,6 +12,7 @@
   "audio_description.tmdb.no_results": "未找到匹配的电影或剧集。",
   "audio_description.tmdb.no_cast": "没有可用的演员信息。",
   "audio_description.tmdb.continue_without": "无法完成 TMDB 搜索。是否继续使用普通音频描述？",
+  "audio_description.references.unavailable": "没有可用的角色图片。将继续标准音频描述。",
   "audio_description.tmdb.animation": "这是动画内容。演员照片无法用于识别动画角色，因此不会发送。音频描述将正常继续。",
   "options.engine.gemini": "Gemini",
   "gemini_tts.key_required": "要使用 Gemini 语音，请通过访问码配置 Sonarpad AI，或配置个人 Gemini API 密钥。点击确定打开“使用 AI 创建音频描述”并选择服务。",

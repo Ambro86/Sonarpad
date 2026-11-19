@@ -1,12 +1,14 @@
 # Changelog
 
-Version 0.9.31 – 2026-11-17
+Version 0.9.30 – 2026-11-19
 
 1. Preferiti: aggiunta l’azione «Riordina alfabeticamente» al menu contestuale di SonarTube, SonarMusic, radio e TV, disponibile anche direttamente nelle iscrizioni podcast. L’ordine viene salvato e uno screen reader annuncia il completamento.
 
-Version 0.9.30 – 2026-11-16
+2. Quando TMDB riconosce un film o una serie di animazione, Sonarpad cerca automaticamente il titolo su AniList. Gemini usa le illustrazioni dei personaggi per riconoscere chi appare in scena. Se il titolo è incerto o mancano le immagini, l’audiodescrizione prosegue normalmente.
 
-1. Traduzione turca completa di Sonarpad Windows: interfaccia, opzioni, calendario con 365 ricorrenze e 128 citazioni, audiodescrizioni, selettori delle lingue, guida, donazioni e changelog. Il turco è ora disponibile tra le lingue dell'applicazione.
+3. Traduzione turca completa di Sonarpad Windows: interfaccia, opzioni, calendario con 365 ricorrenze e 128 citazioni, audiodescrizioni, selettori delle lingue, guida, donazioni e changelog. Il turco è ora disponibile tra le lingue dell'applicazione.
+
+4. Sonarpad ora apre anche gli EPUB che usano maiuscole o minuscole diverse nel percorso interno di container.xml. Prima questi libri segnalavano che il file non era stato trovato nell’archivio.
 
 Version 0.9.29 – 2026-11-16
 
