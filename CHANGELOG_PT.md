@@ -1,5 +1,10 @@
 # Changelog
 
+Version 0.9.32 – 2026-11-19
+
+1. O carregamento das fontes RSS criadas a partir de palavras-chave é agora mais fiável. Se o pedido ao Google Notícias demorar mais de 4 segundos, o Sonarpad tenta automaticamente obter os artigos por outra via.
+2. No SonarTube e no SonarMusic, se um vídeo tiver várias faixas de áudio, pode mudar de faixa durante a reprodução através do menu de reprodução.
+
 Version 0.9.31 – 2026-11-19
 
 1. Se o Gemini bloquear um segmento durante a criação de uma audiodescrição, o Sonarpad volta a tentar em excertos de um minuto. Se algum minuto continuar bloqueado, mantém o áudio original nesse trecho e prossegue com o resto do vídeo.

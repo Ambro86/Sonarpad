@@ -250,6 +250,10 @@ struct RequestPermits {
 }
 
 static RSS_HTTP: OnceLock<Result<RssHttp, String>> = OnceLock::new();
+// Only the keyword feed opened by the user uses this connection. Background
+// refreshes already in flight can finish without making the user wait for them.
+static KEYWORD_HTTP: OnceLock<Result<RssHttp, String>> = OnceLock::new();
+static KEYWORD_IN_PROGRESS: Mutex<()> = Mutex::const_new(());
 
 pub fn init_http(config: RssHttpConfig) -> Result<(), String> {
     let res = RSS_HTTP.get_or_init(|| RssHttp::new(config));
@@ -1509,7 +1513,7 @@ async fn fetch_and_parse_direct(
     _source_kind: RssSourceType,
     cache: RssFeedCache,
     fetch_config: RssFetchConfig,
-    _override_cooldown: bool,
+    interactive: bool,
     language: Language,
 ) -> Result<RssFetchOutcome, FeedFetchError> {
     let mut url = normalize_url(url);
@@ -1546,7 +1550,43 @@ async fn fetch_and_parse_direct(
         cache.last_modified = None;
     }
 
-    let out_result = fetch_bytes_with_retries(http, &url, true, language, Some(&mut cache)).await;
+    let keyword_search = interactive
+        && Url::parse(&url)
+            .is_ok_and(|u| u.host_str() == Some("news.google.com") && u.path() == "/rss/search");
+    let _keyword_guard = if keyword_search {
+        Some(KEYWORD_IN_PROGRESS.lock().await)
+    } else {
+        if !interactive {
+            // Check admission only. Ordinary refreshes still run concurrently.
+            let _admission = KEYWORD_IN_PROGRESS.lock().await;
+        }
+        None
+    };
+    let http = if keyword_search {
+        KEYWORD_HTTP
+            .get_or_init(|| RssHttp::new(http.config))
+            .as_ref()
+            .map_err(|e| FeedFetchError::Network {
+                message: e.clone(),
+                cache: Box::new(cache.clone()),
+            })?
+    } else {
+        http
+    };
+    let fetch = fetch_bytes_with_retries(http, &url, true, language, Some(&mut cache));
+    // An explicitly opened keyword feed should not sit behind background requests
+    // and their network retries for minutes before using the existing alternative.
+    let out_result = if keyword_search {
+        match tokio::time::timeout(Duration::from_secs(4), fetch).await {
+            Ok(result) => result,
+            Err(_) => Err(FeedFetchError::Network {
+                message: "Google News keyword request exceeded 4 seconds".into(),
+                cache: Box::new(cache.clone()),
+            }),
+        }
+    } else {
+        fetch.await
+    };
 
     let out = match out_result {
         Ok(o) => o,
@@ -1656,7 +1696,7 @@ pub async fn fetch_and_parse(
     source_kind: RssSourceType,
     cache: RssFeedCache,
     fetch_config: RssFetchConfig,
-    override_cooldown: bool,
+    interactive: bool,
     language: Language,
 ) -> Result<RssFetchOutcome, FeedFetchError> {
     let normalized = normalize_url(url);
@@ -1669,7 +1709,7 @@ pub async fn fetch_and_parse(
             source_kind,
             cache,
             fetch_config,
-            override_cooldown,
+            interactive,
             language,
         )
         .await;
@@ -1683,7 +1723,7 @@ pub async fn fetch_and_parse(
             source_kind,
             cache,
             fetch_config,
-            override_cooldown,
+            interactive,
             language,
         )
         .await;
@@ -1708,7 +1748,7 @@ pub async fn fetch_and_parse(
             source_kind.clone(),
             RssFeedCache::default(),
             fetch_config,
-            override_cooldown,
+            interactive,
             language,
         )
         .await
@@ -1743,7 +1783,7 @@ pub async fn fetch_and_parse(
         source_kind.clone(),
         cache.clone(),
         fetch_config,
-        override_cooldown,
+        interactive,
         language,
     )
     .await;
@@ -1781,7 +1821,7 @@ pub async fn fetch_and_parse(
         source_kind,
         RssFeedCache::default(),
         fetch_config,
-        override_cooldown,
+        interactive,
         language,
     )
     .await
@@ -1997,6 +2037,87 @@ pub fn fetch_config_from_settings(settings: &crate::settings::AppSettings) -> Rs
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn background_feed_waits_for_keyword_then_resumes() {
+        use super::*;
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/feed", listener.local_addr().unwrap());
+        let request = fetch_and_parse_direct(
+            &url,
+            RssSourceType::Feed,
+            RssFeedCache::default(),
+            RssFetchConfig::default(),
+            false,
+            Language::Portuguese,
+        );
+        tokio::pin!(request);
+        {
+            let _keyword = KEYWORD_IN_PROGRESS.lock().await;
+            assert!(
+                tokio::time::timeout(Duration::from_millis(50), &mut request)
+                    .await
+                    .is_err()
+            );
+            listener.set_nonblocking(true).unwrap();
+            assert_eq!(
+                listener.accept().unwrap_err().kind(),
+                std::io::ErrorKind::WouldBlock
+            );
+        }
+        listener.set_nonblocking(false).unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut client, _) = listener.accept().unwrap();
+            let mut headers = [0; 4096];
+            assert!(client.read(&mut headers).unwrap() > 0);
+            let feed = r#"<rss version="2.0"><channel><title>News</title><item><title>First</title><link>https://example.com/first</link></item></channel></rss>"#;
+            write!(
+                client,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{feed}",
+                feed.len()
+            )
+            .unwrap();
+        });
+        let result = tokio::time::timeout(Duration::from_secs(5), request)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(result.items[0].title, "First");
+        server.join().unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "uses the live Google News feed and the Windows curl transport"]
+    async fn interactive_keyword_search_recovers_while_background_connections_are_busy() {
+        use super::*;
+        let http = shared_http().unwrap();
+        let mut occupied = Vec::new();
+        for _ in 0..http.config.per_host_max_concurrency {
+            occupied.push(http.acquire_permits("news.google.com").await.unwrap());
+        }
+        let start = Instant::now();
+        let result = tokio::time::timeout(
+            Duration::from_secs(25),
+            fetch_and_parse(
+                "https://news.google.com/rss/search?q=intelig%C3%AAncia+artificial&hl=pt-PT&gl=PT&ceid=PT:pt-150",
+                RssSourceType::Site,
+                RssFeedCache::default(),
+                RssFetchConfig::default(),
+                true,
+                Language::Portuguese,
+            ),
+        )
+        .await
+        .expect("keyword search remained queued")
+        .expect("Google News feed");
+        assert!(!result.items.is_empty());
+        eprintln!(
+            "{} articles in {:.2}s",
+            result.items.len(),
+            start.elapsed().as_secs_f64()
+        );
+    }
+
     #[test]
     fn il_giornale_legacy_feed_matches_only_the_retired_endpoint() {
         for url in [

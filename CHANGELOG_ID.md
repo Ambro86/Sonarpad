@@ -1,5 +1,10 @@
 # Catatan perubahan
 
+Version 0.9.32 – 2026-11-19
+
+1. Pemuatan sumber RSS yang dibuat dengan kata kunci kini lebih andal. Jika permintaan ke Google Berita memerlukan waktu lebih dari 4 detik, Sonarpad otomatis mencoba cara lain untuk mengambil artikel.
+2. Jika video memiliki beberapa trek audio, Anda dapat beralih trek saat video diputar melalui menu pemutaran di SonarTube dan SonarMusic.
+
 Version 0.9.31 – 2026-11-19
 
 1. Jika Gemini memblokir suatu segmen saat membuat deskripsi audio, Sonarpad mencoba lagi dengan membaginya menjadi klip satu menit. Jika suatu klip tetap diblokir, Sonarpad mempertahankan audio asli pada bagian tersebut dan melanjutkan ke bagian video berikutnya.

@@ -1,5 +1,10 @@
 # Journal des modifications
 
+Version 0.9.32 – 2026-11-19
+
+1. Le chargement des sources RSS créées à partir de mots-clés est plus fiable. Si la requête à Google Actualités prend plus de 4 secondes, Sonarpad essaie automatiquement une autre méthode pour récupérer les articles.
+2. Dans SonarTube et SonarMusic, lorsqu’une vidéo propose plusieurs pistes audio, vous pouvez changer de piste pendant la lecture depuis le menu de lecture.
+
 Version 0.9.31 – 2026-11-19
 
 1. Si Gemini bloque un passage pendant la création d’une audiodescription, Sonarpad réessaie par extraits d’une minute. Si une minute reste bloquée, Sonarpad conserve le son d’origine pour ce passage et poursuit l’audiodescription du reste de la vidéo.

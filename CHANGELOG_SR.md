@@ -1,5 +1,10 @@
 # Dnevnik izmena
 
+Version 0.9.32 – 2026-11-19
+
+1. Pouzdanije učitavanje RSS izvora napravljenih pomoću ključnih reči. Ako zahtev za Google vesti traje duže od 4 sekunde, Sonarpad automatski pokušava da preuzme članke na drugi način.
+2. U aplikacijama SonarTube i SonarMusic, ako video ima više zvučnih zapisa, možete promeniti zvučni zapis tokom reprodukcije iz menija za reprodukciju.
+
 Version 0.9.31 – 2026-11-19
 
 1. Ako Gemini blokira deo snimka tokom izrade audio-opisa, Sonarpad pokušava ponovo u odlomcima od jednog minuta. Ako neki odlomak ostane blokiran, Sonarpad zadržava originalni zvuk u tom delu i nastavlja sa ostatkom snimka.

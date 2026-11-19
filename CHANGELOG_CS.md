@@ -1,5 +1,10 @@
 # Přehled změn
 
+Version 0.9.32 – 2026-11-19
+
+1. Spolehlivější načítání zdrojů RSS vytvořených pomocí klíčových slov. Pokud požadavek na Zprávy Google trvá déle než 4 sekundy, Sonarpad automaticky zkusí načíst články jiným způsobem.
+2. Pokud má video více zvukových stop, můžete mezi nimi v SonarTube a SonarMusic přepínat během přehrávání v nabídce přehrávání.
+
 Version 0.9.31 – 2026-11-19
 
 1. Pokud Gemini při vytváření zvukového popisu zablokuje úsek videa, Sonarpad jej zkusí zpracovat po minutách. Pokud některá minuta zůstane zablokovaná, ponechá v ní původní zvuk a pokračuje se zbytkem videa.

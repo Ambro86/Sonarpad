@@ -8024,6 +8024,11 @@ fn handle_expand(hwnd: HWND, hitem: windows::Win32::UI::Controls::HTREEITEM) {
     }
 
     // UI: "Refresh feeds" should trigger this fetch for the selected source.
+    let started = std::time::Instant::now();
+    log_debug(&format!(
+        "rss_expand start node={} kind={source_kind:?}",
+        hitem.0
+    ));
     std::thread::spawn(move || {
         let res = match tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -8034,7 +8039,7 @@ fn handle_expand(hwnd: HWND, hitem: windows::Win32::UI::Controls::HTREEITEM) {
                 source_kind,
                 cache,
                 fetch_config,
-                false,
+                true,
                 language,
             )),
             Err(e) => Err(rss::FeedFetchError::Network {
@@ -8042,6 +8047,12 @@ fn handle_expand(hwnd: HWND, hitem: windows::Win32::UI::Controls::HTREEITEM) {
                 cache: Box::new(cache),
             }),
         };
+        log_debug(&format!(
+            "rss_expand completed node={} items={:?} elapsed_ms={}",
+            hitem.0,
+            res.as_ref().ok().map(|outcome| outcome.items.len()),
+            started.elapsed().as_millis()
+        ));
         let msg = Box::new(FetchResult {
             hitem: hitem.0,
             result: res,

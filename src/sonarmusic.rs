@@ -901,6 +901,94 @@ mod tests {
 
 /// Resolve only progressive video+audio streams. Other formats keep the existing
 /// yt-dlp path; never hand a video-only stream to the player.
+#[derive(Clone)]
+pub struct YoutubeAudioTrack {
+    pub title: String,
+    pub language: String,
+    pub url: String,
+}
+
+const PLAYER_ENDPOINT: &str = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false&key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vfUWA8808";
+// Pass the result of the playback lookup to the background track discovery.
+static LAST_AUDIO_VISITOR: std::sync::Mutex<Option<(String, Option<String>)>> =
+    std::sync::Mutex::new(None);
+
+fn audio_track_visitor(data: &Value) -> Option<String> {
+    let formats = data["streamingData"]["adaptiveFormats"].as_array()?;
+    let mut ids = formats
+        .iter()
+        .filter_map(|f| f["audioTrack"]["id"].as_str());
+    let first = ids.next()?;
+    if ids.any(|id| id != first) {
+        data["responseContext"]["visitorData"]
+            .as_str()
+            .map(str::to_owned)
+    } else {
+        None
+    }
+}
+
+pub fn youtube_audio_tracks(id: &str, lang: &str) -> Option<Vec<YoutubeAudioTrack>> {
+    if !valid_video_id(id) {
+        return None;
+    }
+    let cached = LAST_AUDIO_VISITOR.lock().ok().and_then(|mut last| {
+        if last.as_ref().is_some_and(|(video, _)| video == id) {
+            last.take()
+        } else {
+            None
+        }
+    });
+    let visitor = match cached {
+        Some((_, visitor)) => visitor?,
+        None => audio_track_visitor(&android_player(id).ok()?)?,
+    };
+    vision_audio_tracks(id, lang, &visitor).or_else(|| {
+        crate::log_debug("YouTube alternate audio lookup failed; retrying with fresh visitor data");
+        let visitor = audio_track_visitor(&android_player(id).ok()?)?;
+        vision_audio_tracks(id, lang, &visitor)
+    })
+}
+
+fn vision_audio_tracks(id: &str, lang: &str, visitor: &str) -> Option<Vec<YoutubeAudioTrack>> {
+    const UA: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15";
+    static CLIENT: OnceLock<reqwest::blocking::Client> = OnceLock::new();
+    let data: Value = CLIENT.get_or_init(reqwest::blocking::Client::new)
+        .post(PLAYER_ENDPOINT)
+        .timeout(Duration::from_secs(10)).header("User-Agent", UA)
+        .json(&serde_json::json!({"context":{"client":{"hl":lang,"gl":"US","visitorData":visitor,"clientName":"VISIONOS","clientVersion":"1.02",
+            "deviceMake":"Apple","deviceModel":"RealityDevice17,1","userAgent":UA,"osName":"visionOS","osVersion":"26.5.23O471"}},
+            "videoId":id,"playbackContext":{"contentPlaybackContext":{"html5Preference":"HTML5_PREF_WANTS"}},"contentCheckOk":true,"racyCheckOk":true}))
+        .send().ok()?.error_for_status().ok()?.json().ok()?;
+    let mut seen = HashSet::new();
+    let mut tracks = Vec::new();
+    for f in data["streamingData"]["adaptiveFormats"].as_array()? {
+        let t = &f["audioTrack"];
+        let Some((id, url)) = t["id"].as_str().zip(f["url"].as_str()) else {
+            continue;
+        };
+        if !f["mimeType"]
+            .as_str()
+            .is_some_and(|mime| mime.starts_with("audio/"))
+            || !reqwest::Url::parse(url).is_ok_and(|u| {
+                u.scheme() == "https"
+                    && u.host_str()
+                        .is_some_and(|h| h.ends_with(".googlevideo.com"))
+            })
+            || !seen.insert(id)
+        {
+            continue;
+        }
+        let language = id.split('.').next().unwrap_or(id).to_owned();
+        tracks.push(YoutubeAudioTrack {
+            title: t["displayName"].as_str().unwrap_or(&language).to_owned(),
+            language,
+            url: url.to_owned(),
+        });
+    }
+    (tracks.len() > 1).then_some(tracks)
+}
+
 pub fn resolve_playback(watch_url: &str) -> Result<String, String> {
     resolve_playback_with_title(watch_url).map(|(url, _)| url)
 }
@@ -916,9 +1004,17 @@ pub fn resolve_playback_with_title(watch_url: &str) -> Result<(String, String), 
         .map(|(_, value)| value.into_owned())
         .filter(|id| valid_video_id(id))
         .ok_or("Invalid video ID")?;
+    let data = android_player(&id)?;
+    if let Ok(mut last) = LAST_AUDIO_VISITOR.lock() {
+        *last = Some((id, audio_track_visitor(&data)));
+    }
+    Ok((playback_url(&data)?, string(&data["videoDetails"], "title")))
+}
+
+fn android_player(id: &str) -> Result<Value, String> {
     static HTTP: OnceLock<reqwest::blocking::Client> = OnceLock::new();
     let client = HTTP.get_or_init(reqwest::blocking::Client::new);
-    let data: Value = client.post("https://www.youtube.com/youtubei/v1/player?prettyPrint=false&key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vfUWA8808")
+    let data: Value = client.post(PLAYER_ENDPOINT)
         .timeout(Duration::from_secs(10))
         .header("User-Agent", "com.google.android.youtube/21.29.366 (Linux; U; Android 16; en_US; SM-S908E Build/TP1A.220624.014) gzip")
         .header("X-YouTube-Client-Name", "3")
@@ -927,7 +1023,7 @@ pub fn resolve_playback_with_title(watch_url: &str) -> Result<(String, String), 
         .send().map_err(|_| "Direct resolver network failure")?
         .error_for_status().map_err(|_| "Direct resolver HTTP failure")?
         .json().map_err(|_| "Direct resolver invalid response")?;
-    Ok((playback_url(&data)?, string(&data["videoDetails"], "title")))
+    Ok(data)
 }
 
 fn playback_url(data: &Value) -> Result<String, String> {

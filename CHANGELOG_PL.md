@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+Version 0.9.32 – 2026-11-19
+
+1. Usprawniono wczytywanie źródeł RSS utworzonych za pomocą słów kluczowych. Jeśli pobieranie z Wiadomości Google trwa dłużej niż 4 sekundy, Sonarpad automatycznie próbuje pobrać artykuły w inny sposób.
+2. Jeśli film ma kilka ścieżek dźwiękowych, w SonarTube i SonarMusic możesz zmienić ścieżkę podczas oglądania za pomocą menu odtwarzania.
+
 Version 0.9.31 – 2026-11-19
 
 1. Jeśli Gemini zablokuje fragment podczas tworzenia audiodeskrypcji, Sonarpad ponawia próbę w jednominutowych odcinkach. Jeśli któraś minuta nadal jest zablokowana, Sonarpad zachowuje w niej oryginalny dźwięk i kontynuuje pracę nad resztą filmu.

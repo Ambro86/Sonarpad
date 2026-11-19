@@ -1,5 +1,10 @@
 # Nhật ký thay đổi
 
+Version 0.9.32 – 2026-11-19
+
+1. Các nguồn RSS được tạo bằng từ khóa hiện tải ổn định hơn. Nếu yêu cầu tới Google Tin tức mất hơn 4 giây, Sonarpad sẽ tự động thử cách khác để lấy bài viết.
+2. Trong SonarTube và SonarMusic, nếu video có nhiều bản âm thanh, bạn có thể chuyển sang bản khác ngay khi đang xem bằng menu phát.
+
 Version 0.9.31 – 2026-11-19
 
 1. Nếu Gemini chặn một đoạn khi tạo mô tả âm thanh, Sonarpad sẽ thử lại từng đoạn một phút. Nếu một đoạn vẫn bị chặn, Sonarpad giữ nguyên âm thanh gốc của đoạn đó và tiếp tục xử lý phần còn lại của video.

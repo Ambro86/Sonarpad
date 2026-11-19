@@ -1,5 +1,10 @@
 # Änderungsprotokoll
 
+Version 0.9.32 – 2026-11-19
+
+1. RSS-Quellen aus Stichwortsuchen werden zuverlässiger geladen. Dauert die Anfrage an Google News länger als 4 Sekunden, versucht Sonarpad automatisch, die Artikel auf anderem Weg abzurufen.
+2. Bei Videos mit mehreren Tonspuren können Sie in SonarTube und SonarMusic die Tonspur während der Wiedergabe über das Wiedergabemenü wechseln.
+
 Version 0.9.31 – 2026-11-19
 
 1. Wenn Gemini beim Erstellen einer Audiodeskription einen Abschnitt blockiert, versucht Sonarpad es in einminütigen Abschnitten erneut. Bleibt eine Minute blockiert, behält Sonarpad dort den Originalton bei und fährt mit dem restlichen Video fort.

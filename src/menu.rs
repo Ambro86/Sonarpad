@@ -108,7 +108,7 @@ pub const IDM_PLAYBACK_CHAPTER_NEXT: usize = 8013;
 pub const IDM_PLAYBACK_CHAPTER_LIST: usize = 8014;
 pub const IDM_PLAYBACK_DOWNLOAD_EPISODE: usize = 8015;
 pub const IDM_PLAYBACK_AUDIO_TRACK_BASE: usize = 8100;
-pub const IDM_PLAYBACK_AUDIO_TRACK_MAX: usize = 20;
+pub const IDM_PLAYBACK_AUDIO_TRACK_MAX: usize = 200;
 pub const IDM_INSERT_BOOKMARK: usize = 2101;
 pub const IDM_MANAGE_BOOKMARKS: usize = 2102;
 pub const IDM_INSERT_CLEAR_BOOKMARKS: usize = 2103;
@@ -957,7 +957,41 @@ pub fn update_playback_menu(hwnd: HWND, show: bool) {
                 );
             }
             // Audio tracks submenu
-            if !audio_tracks.is_empty() {
+            let youtube = with_state(hwnd, |s| {
+                crate::current_youtube_audio_menu(s).map(|m| {
+                    (
+                        m.tracks
+                            .iter()
+                            .map(|t| t.title.replace('&', "&&"))
+                            .collect::<Vec<_>>(),
+                        m.selected,
+                    )
+                })
+            })
+            .flatten();
+            if let Some((labels, selected)) = youtube {
+                if let Ok(submenu) = CreateMenu() {
+                    for (i, label) in labels.iter().take(IDM_PLAYBACK_AUDIO_TRACK_MAX).enumerate() {
+                        let flags = if selected == Some(i) {
+                            MF_CHECKED
+                        } else {
+                            MF_UNCHECKED
+                        };
+                        append_menu_string(
+                            submenu,
+                            MF_STRING | flags,
+                            IDM_PLAYBACK_AUDIO_TRACK_BASE + i,
+                            label,
+                        );
+                    }
+                    append_menu_string(
+                        audio_menu,
+                        MF_POPUP,
+                        submenu.0 as usize,
+                        &audio_track_label,
+                    );
+                }
+            } else if !audio_tracks.is_empty() {
                 let audio_tracks_menu = CreateMenu().unwrap_or(HMENU(0));
                 if audio_tracks_menu.0 != 0 {
                     for (i, track) in audio_tracks.iter().enumerate() {

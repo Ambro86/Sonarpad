@@ -311,6 +311,7 @@ const WM_EDITOR_TRANSLATION_DONE: u32 = WM_APP + 42;
 const WM_EDITOR_SUMMARY_DONE: u32 = WM_APP + 43;
 const WM_REACTIVATE_MODAL_AFTER_EXTERNAL_OPEN: u32 = WM_APP + 44;
 const WM_YOUTUBE_MPV_PLAYBACK_FAILED: u32 = WM_APP + 45;
+const WM_YOUTUBE_AUDIO_TRACKS_READY: u32 = WM_APP + 54;
 const WM_YOUTUBE_MPV_STALLED: u32 = WM_APP + 53;
 const WM_OPEN_AUDIO_DESCRIPTION_FOR_TV_RECORDING: u32 = WM_APP + 46;
 const WM_START_CONTEXT_WHISPER_TRANSCRIPTION: u32 = WM_APP + 47;
@@ -3794,6 +3795,95 @@ fn youtube_mpv_log_has_failure(log: &str) -> Option<String> {
         .map(|(_, detail)| detail.to_string())
 }
 
+struct YoutubeAudioMenu {
+    generation: u64,
+    tracks: Vec<sonarmusic::YoutubeAudioTrack>,
+    selected: Option<usize>,
+}
+
+fn current_youtube_audio_menu(state: &AppState) -> Option<&YoutubeAudioMenu> {
+    state.youtube_audio_tracks.as_ref().filter(|m| {
+        state.active_mpv_session.is_some() && m.generation == state.active_mpv_playback_generation
+    })
+}
+
+fn load_youtube_audio_menu(hwnd: HWND, watch_url: String, generation: u64) {
+    let language = with_state(hwnd, |s| s.settings.language).unwrap_or_default();
+    std::thread::spawn(move || {
+        if let Some(id) = watch_url.strip_prefix("https://www.youtube.com/watch?v=")
+            && let Some(tracks) =
+                sonarmusic::youtube_audio_tracks(id, audio_description::language_code(language))
+        {
+            log_debug(&format!(
+                "YouTube audio menu: {} tracks for {id}",
+                tracks.len()
+            ));
+            let raw = Box::into_raw(Box::new(YoutubeAudioMenu {
+                generation,
+                tracks,
+                selected: None,
+            }));
+            unsafe {
+                if PostMessageW(
+                    hwnd,
+                    WM_YOUTUBE_AUDIO_TRACKS_READY,
+                    WPARAM(0),
+                    LPARAM(raw as isize),
+                )
+                .is_err()
+                {
+                    let _reclaimed_payload = Box::from_raw(raw);
+                }
+            }
+        }
+    });
+}
+
+fn select_youtube_audio_track(hwnd: HWND, index: usize) -> Option<Result<(), String>> {
+    let (track, session) = with_state(hwnd, |s| {
+        Some((
+            current_youtube_audio_menu(s)?.tracks.get(index)?.clone(),
+            s.active_mpv_session.clone()?,
+        ))
+    })??;
+    Some((|| {
+        let tracks = query_managed_mpv_property_transient(hwnd, "track-list")?;
+        let existing = tracks.as_array().and_then(|ts| {
+            ts.iter().find(|t| {
+                t["type"] == "audio" && t["external-filename"].as_str() == Some(track.url.as_str())
+            })
+        });
+        let command = if let Some(id) = existing.and_then(|t| t["id"].as_i64()) {
+            serde_json::json!(["set_property", "aid", id])
+        } else {
+            serde_json::json!([
+                "audio-add",
+                track.url,
+                "select",
+                track.title,
+                track.language
+            ])
+        };
+        let mut pipe = open_mpv_ipc_pipe(&session.ipc_path)?;
+        let response = send_mpv_ipc_request_with_id(
+            &session.ipc_path,
+            &mut pipe,
+            &serde_json::json!({"command":command}).to_string(),
+            1,
+        )?;
+        if response["error"] != "success" {
+            return Err(response["error"].as_str().unwrap_or("mpv").to_owned());
+        }
+        with_state(hwnd, |state| {
+            if let Some(menu) = state.youtube_audio_tracks.as_mut() {
+                menu.selected = Some(index);
+            }
+        });
+        menu::update_playback_menu(hwnd, true);
+        Ok(())
+    })())
+}
+
 fn monitor_youtube_mpv_startup(hwnd: HWND, process_id: u32, log_path: PathBuf) {
     std::thread::spawn(move || {
         // IPC has already confirmed an audio track. Keep a short asynchronous
@@ -4204,10 +4294,15 @@ pub(crate) fn send_mpv_ipc_request_with_id(
     use std::io::Write as _;
 
     let message = build_mpv_ipc_message(command_json, request_id)?;
+    let logged_command = if message.contains(".googlevideo.com/") {
+        "audio-add [stream]"
+    } else {
+        &message
+    };
     log_debug(&format!(
         "Managed mpv IPC request send: pipe={} command={}",
         ipc_path.display(),
-        message
+        logged_command
     ));
     pipe.write_all(message.as_bytes())
         .map_err(|err| format!("Impossibile inviare il comando a mpv: {err}"))?;
@@ -4216,11 +4311,22 @@ pub(crate) fn send_mpv_ipc_request_with_id(
     pipe.flush()
         .map_err(|err| format!("Impossibile inviare il comando a mpv: {err}"))?;
     let response = read_mpv_ipc_response_with_pipe(ipc_path, pipe, request_id)?;
+    let logged_response = if response["data"].as_array().is_some_and(|tracks| {
+        tracks.iter().any(|track| {
+            track["external-filename"]
+                .as_str()
+                .is_some_and(|url| url.contains(".googlevideo.com/"))
+        })
+    }) {
+        "track-list [external streams]".to_owned()
+    } else {
+        response.to_string()
+    };
     log_debug(&format!(
         "Managed mpv IPC request response: pipe={} command={} response={}",
         ipc_path.display(),
-        message,
-        response
+        logged_command,
+        logged_response
     ));
     Ok(response)
 }
@@ -6244,6 +6350,9 @@ fn launch_stream_url_in_mpv_with_input(
                 monitor_youtube_mpv_startup(hwnd, child.id(), log_path);
             }
             if is_youtube {
+                if let Some(watch_url) = sonartube::direct_watch_url(url, false) {
+                    load_youtube_audio_menu(hwnd, watch_url, mpv_generation);
+                }
                 monitor_youtube_mpv_progress(hwnd, child.id(), mpv_generation);
             }
             if prefer_audio_description {
@@ -10803,6 +10912,7 @@ pub(crate) struct AppState {
     active_podcast_chapters_key: Option<String>,
     active_podcast_chapters: Vec<Chapter>,
     last_announced_chapter_index: Option<usize>,
+    youtube_audio_tracks: Option<YoutubeAudioMenu>,
     available_audio_tracks: Vec<crate::ffmpeg_source::AudioStreamInfo>,
     selected_audio_track: Option<i32>,
     audio_playlist: Vec<PathBuf>,
@@ -13052,6 +13162,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     active_podcast_chapters_key: None,
                     active_podcast_chapters: Vec::new(),
                     last_announced_chapter_index: None,
+                    youtube_audio_tracks: None,
                     available_audio_tracks: Vec::new(),
                     selected_audio_track: None,
                     audio_playlist: Vec::new(),
@@ -13234,6 +13345,24 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
             }
             WM_RESTART_YOUTUBE_MPV_AFTER_PREVIEW => {
                 restart_youtube_mpv_after_audio_description_preview(hwnd);
+                LRESULT(0)
+            }
+            WM_YOUTUBE_AUDIO_TRACKS_READY => {
+                let menu = Box::from_raw(lparam.0 as *mut YoutubeAudioMenu);
+                if with_state(hwnd, |s| {
+                    if s.active_mpv_session.is_some()
+                        && s.active_mpv_playback_generation == menu.generation
+                    {
+                        s.youtube_audio_tracks = Some(*menu);
+                        true
+                    } else {
+                        false
+                    }
+                })
+                .unwrap_or(false)
+                {
+                    menu::update_playback_menu(hwnd, true);
+                }
                 LRESULT(0)
             }
             WM_YOUTUBE_MPV_STALLED => {
@@ -15770,6 +15899,14 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                             .contains(&cmd_id) =>
                     {
                         let track_menu_index = cmd_id - IDM_PLAYBACK_AUDIO_TRACK_BASE;
+                        if let Some(result) = select_youtube_audio_track(hwnd, track_menu_index) {
+                            if let Err(err) = result {
+                                let language =
+                                    with_state(hwnd, |s| s.settings.language).unwrap_or_default();
+                                show_error(hwnd, language, &err);
+                            }
+                            return LRESULT(0);
+                        }
                         let live_variant = with_state(hwnd, |state| {
                             state
                                 .raiplay_live_audio_variants

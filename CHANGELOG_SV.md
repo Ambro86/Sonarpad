@@ -1,5 +1,10 @@
 # Ändringslogg
 
+Version 0.9.32 – 2026-11-19
+
+1. RSS-källor som skapats med sökord läses nu in mer tillförlitligt. Om en begäran till Google Nyheter tar längre än 4 sekunder försöker Sonarpad automatiskt hämta artiklarna på ett annat sätt.
+2. När en video har flera ljudspår kan du byta ljudspår under uppspelningen via uppspelningsmenyn i SonarTube och SonarMusic.
+
 Version 0.9.31 – 2026-11-19
 
 1. Om Gemini blockerar ett avsnitt när en syntolkning skapas försöker Sonarpad igen med en minut i taget. Om en minut fortfarande är blockerad behåller Sonarpad originalljudet där och fortsätter med resten av videon.

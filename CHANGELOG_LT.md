@@ -1,5 +1,10 @@
 # Pakeitimų žurnalas
 
+Version 0.9.32 – 2026-11-19
+
+1. Patikimiau įkeliami pagal raktažodžius sukurti RSS šaltiniai. Jei „Google“ naujienų užklausa užtrunka ilgiau nei 4 sekundes, „Sonarpad“ automatiškai bando gauti straipsnius kitu būdu.
+2. Jei vaizdo įrašas turi kelis garso takelius, „SonarTube“ ir „SonarMusic“ atkūrimo meniu galite perjungti takelį įrašo peržiūros metu.
+
 Version 0.9.31 – 2026-11-19
 
 1. Jei kuriant garsinį vaizdavimą „Gemini“ užblokuoja vaizdo įrašo atkarpą, „Sonarpad“ bando ją apdoroti iš naujo vienos minutės dalimis. Jei kuri nors minutė lieka užblokuota, joje paliekamas originalus garsas ir tęsiamas likusio įrašo garsinis vaizdavimas.

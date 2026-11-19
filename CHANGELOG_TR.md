@@ -1,5 +1,10 @@
 # Değişiklik günlüğü
 
+Sürüm 0.9.32 – 2026-11-19
+
+1. Anahtar kelimelerle oluşturulan RSS kaynakları artık daha güvenilir biçimde yükleniyor. Google Haberler isteği 4 saniyeden uzun sürerse Sonarpad makaleleri almak için otomatik olarak başka bir yöntem dener.
+2. SonarTube ve SonarMusic’te bir videoda birden fazla ses parçası varsa oynatma sırasında oynatma menüsünden ses parçasını değiştirebilirsiniz.
+
 Sürüm 0.9.31 – 2026-11-19
 
 1. Gemini sesli betimleme oluşturulurken bir bölümü engellerse Sonarpad bu bölümü birer dakikalık parçalar hâlinde yeniden işler. Bir parça hâlâ engelleniyorsa o parçanın özgün sesini korur ve videonun geri kalanıyla devam eder.

@@ -1,5 +1,10 @@
 # Changelog
 
+Version 0.9.32 – 2026-11-19
+
+1. Migliorato il caricamento delle fonti RSS create con parole chiave. Se la richiesta a Google News supera i 4 secondi, Sonarpad prova automaticamente un altro metodo per recuperare gli articoli.
+2. In SonarTube e SonarMusic, quando un video ha più tracce audio, puoi cambiare traccia durante la riproduzione dal menu Riproduci → Audio e sottotitoli → Traccia audio.
+
 Version 0.9.31 – 2026-11-19
 
 1. Se Gemini blocca un segmento durante la creazione di un’audiodescrizione, Sonarpad lo riprova in parti da un minuto. Se un minuto resta bloccato, Sonarpad mantiene l’audio originale per quel tratto e prosegue con il resto del video.
