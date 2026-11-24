@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Danh sách phát",
   "media_cutter.open_project": "Mở dự án Sonarpad…",
   "media_cutter.save_project": "Lưu dự án…",
+  "media_cutter.precise_audio": "Cắt chính xác bằng cách mã hóa lại",
   "media_cutter.overwrite_original": "Ghi đè tệp gốc (tạo bản sao lưu)",
   "media_cutter.overwrite_confirm": "Bạn có muốn thay thế tệp gốc không? Sonarpad sẽ tạo bản sao lưu trước khi thay thế.",
   "media_cutter.overwrite_unavailable": "Chỉ có thể ghi đè tệp gốc có định dạng được hỗ trợ khi không có phương tiện chèn thêm hoặc dự án .sonarcut đang mở.",

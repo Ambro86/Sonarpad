@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "प्लेलिस्ट",
   "media_cutter.open_project": "Sonarpad प्रोजेक्ट खोलें…",
   "media_cutter.save_project": "प्रोजेक्ट सहेजें…",
+  "media_cutter.precise_audio": "दोबारा एन्कोड करके सटीक कट",
   "media_cutter.overwrite_original": "मूल फ़ाइल अधिलेखित करें (बैकअप बनाएँ)",
   "media_cutter.overwrite_confirm": "क्या आप मूल फ़ाइल को बदलना चाहते हैं? बदलने से पहले Sonarpad उसका बैकअप बनाएगा।",
   "media_cutter.overwrite_unavailable": ".sonarcut प्रोजेक्ट खुले होने या अतिरिक्त मीडिया जोड़े जाने पर मूल फ़ाइल को अधिलेखित नहीं किया जा सकता। केवल समर्थित फ़ाइल प्रारूपों पर यह विकल्प उपलब्ध है।",

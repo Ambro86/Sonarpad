@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Плейлист",
   "media_cutter.open_project": "Открыть проект Sonarpad…",
   "media_cutter.save_project": "Сохранить проект…",
+  "media_cutter.precise_audio": "Точная обрезка с перекодированием",
   "media_cutter.overwrite_original": "Перезаписать исходный файл (создать резервную копию)",
   "media_cutter.overwrite_confirm": "Заменить исходный файл? Sonarpad сначала создаст резервную копию.",
   "media_cutter.overwrite_unavailable": "Перезапись доступна только для поддерживаемого исходного файла без вставленных медиа и открытого проекта .sonarcut.",

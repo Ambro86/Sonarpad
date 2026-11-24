@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+Version 0.9.33 – 2026-11-24
+
+1. Naprawiono błąd powodujący wyświetlanie nieczytelnych znaków w niektórych plikach .doc programu Word. Tekst i liczby w tabelach są teraz odczytywane w kolejności komórek.
+2. Przy prostym przycinaniu dźwięku plik jest teraz zapisywany bez ponownego kodowania, jeśli zachowasz obsługiwany format źródłowy. Jeśli kopiowanie się nie powiedzie, Sonarpad automatycznie ponowi próbę z kodowaniem. Aby uzyskać precyzyjne cięcie, zaznacz pole ponownego kodowania.
+3. Jeśli błąd nagłówka uniemożliwi przygotowanie fragmentów wideo zarówno z dźwiękiem, jak i bez niego, Sonarpad automatycznie ponowi próbę utworzenia audiodeskrypcji, używając do analizy tymczasowej kopii MP4. Oryginalny plik pozostanie bez zmian.
+4. Poprawiono odświeżanie monitora brajlowskiego po rozpoczęciu pisania tuż po otwarciu programu Sonarpad. Edytor przekazuje czytnikowi ekranu położenie kursora już po wpisaniu pierwszego znaku.
+
 Version 0.9.32 – 2026-11-19
 
 1. Usprawniono wczytywanie źródeł RSS utworzonych za pomocą słów kluczowych. Jeśli pobieranie z Wiadomości Google trwa dłużej niż 4 sekundy, Sonarpad automatycznie próbuje pobrać artykuły w inny sposób.

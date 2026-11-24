@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+Version 0.9.33 – 2026-11-24
+
+1. Ein Fehler wurde behoben, durch den in einigen Word-Dateien im Format .doc unleserliche Zeichen erschienen. Text und Zahlen in Tabellen werden jetzt in der Reihenfolge der Zellen gelesen.
+2. Einfache Audioschnitte werden jetzt ohne Neukodierung gespeichert, wenn das unterstützte Originalformat beibehalten wird. Schlägt das Kopieren fehl, versucht es Sonarpad automatisch mit Neukodierung erneut. Für einen präzisen Schnitt lässt sich die Neukodierung per Kontrollkästchen einschalten.
+3. Verhindert ein Fehler im Dateikopf die Vorbereitung der Videosegmente sowohl mit als auch ohne Ton, versucht Sonarpad erneut, die Audiodeskription zu erstellen. Für die Analyse verwendet es automatisch eine temporäre MP4-Kopie. Die Originaldatei bleibt unverändert.
+4. Die Braillezeile wird beim Tippen nach dem Öffnen von Sonarpad zuverlässiger aktualisiert. Der Editor meldet dem Screenreader die Cursorposition bereits beim ersten eingegebenen Zeichen.
+
 Version 0.9.32 – 2026-11-19
 
 1. RSS-Quellen aus Stichwortsuchen werden zuverlässiger geladen. Dauert die Anfrage an Google News länger als 4 Sekunden, versucht Sonarpad automatisch, die Artikel auf anderem Weg abzurufen.

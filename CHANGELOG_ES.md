@@ -1,5 +1,12 @@
 # Changelog
 
+Version 0.9.33 – 2026-11-24
+
+1. Se ha corregido un error que mostraba caracteres ilegibles en algunos archivos .doc de Word. Ahora el texto y los números de las tablas se leen en el orden de las celdas.
+2. Los cortes sencillos de audio ahora se guardan sin recodificar si se conserva el formato original compatible. Si la copia falla, Sonarpad vuelve a intentarlo automáticamente con recodificación. Para un corte preciso, marca la casilla de recodificación.
+3. Si un error de cabecera impide preparar los segmentos de vídeo tanto con audio como sin él, Sonarpad vuelve a intentar la audiodescripción automáticamente con una copia MP4 temporal para el análisis. El archivo original se conserva intacto.
+4. Se ha mejorado la actualización de la línea braille al empezar a escribir después de abrir Sonarpad. El editor comunica al lector de pantalla la posición del cursor desde el primer carácter tecleado.
+
 Version 0.9.32 – 2026-11-19
 
 1. Las fuentes RSS creadas con palabras clave se cargan de forma más fiable. Si la solicitud a Google Noticias tarda más de 4 segundos, Sonarpad prueba automáticamente otro método para obtener los artículos.

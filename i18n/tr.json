@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Çalma listeleri",
   "media_cutter.open_project": "Sonarpad projesini açın…",
   "media_cutter.save_project": "Projeyi kaydet…",
+  "media_cutter.precise_audio": "Yeniden kodlayarak hassas kesim",
   "media_cutter.overwrite_original": "Orijinal dosyanın üzerine yazın (yedek kopya oluşturun)",
   "media_cutter.overwrite_confirm": "Orijinal dosyayı değiştirmek istiyor musunuz? Sonarpad değiştirmeden önce bir yedek kopya kaydedecektir.",
   "media_cutter.overwrite_unavailable": "Üzerine yazma yalnızca desteklenen formata sahip, medya eklenmemiş ve açık bir .sonarcut projesi olmayan orijinal dosya için kullanılabilir.",

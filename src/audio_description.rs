@@ -1713,6 +1713,53 @@ fn clear_prepared_gemini_chunks(cache_dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn prepare_gemini_chunks_with_header_recovery(
+    input_path: &Path,
+    duration_sec: f64,
+    cache_dir: &Path,
+    preferred_audio_stream_index: Option<i32>,
+    cancel: &Arc<AtomicBool>,
+) -> Result<Vec<AudioDescriptionPreparedChunk>, String> {
+    let primary_error = match prepare_gemini_chunks(
+        input_path,
+        duration_sec,
+        cache_dir,
+        preferred_audio_stream_index,
+        cancel,
+    ) {
+        Err(error) if both_chunk_headers_invalid(&error) => error,
+        result => return result,
+    };
+    if cancel.load(Ordering::Relaxed) {
+        return Err("cancelled".into());
+    }
+    crate::log_debug(&format!(
+        "Audio description: both MKV segment headers failed; normalizing a temporary analysis copy with bundled FFmpeg. {primary_error}"
+    ));
+    let normalized = cache_dir.join("gemini_normalized.mp4");
+    let result = (|| {
+        let stream = audio_description_selected_audio_stream_index(
+            input_path,
+            preferred_audio_stream_index,
+        )?;
+        write_normalized_analysis_video(input_path, &normalized, stream, cancel)?;
+        prepare_gemini_chunks(&normalized, duration_sec, cache_dir, None, cancel)
+    })();
+    if cancel.load(Ordering::Relaxed) {
+        return Err("cancelled".into());
+    }
+    result.map_err(|error| format!("{primary_error}; normalized analysis copy failed: {error}"))
+}
+
+fn both_chunk_headers_invalid(error: &str) -> bool {
+    let Some((primary, video_only)) = error.split_once("; video-only fallback failed: ") else {
+        return false;
+    };
+    let invalid = "FFmpeg: failed to write segment header: Invalid argument (-22)";
+    primary.strip_prefix("Audio description: FFmpeg chunk preparation failed: ") == Some(invalid)
+        && video_only == invalid
+}
+
 fn prepare_gemini_chunks(
     input_path: &Path,
     duration_sec: f64,
@@ -5617,6 +5664,31 @@ fn validate_audio_description_recode_output(output_path: &Path) -> Result<(), St
     Ok(())
 }
 
+fn write_normalized_analysis_video(
+    input_path: &Path,
+    output_path: &Path,
+    preferred_audio_stream_index: Option<i32>,
+    cancel: &Arc<AtomicBool>,
+) -> Result<(), String> {
+    crate::log_debug(
+        "Audio description: recoding with bundled FFmpeg DLLs (MPEG-4/AAC), no external executable",
+    );
+    crate::media_conversion::convert_with_preferred_audio_stream(
+        input_path,
+        output_path,
+        &crate::ffmpeg_export::ConvertAudioSettings {
+            format: crate::ffmpeg_export::ConvertAudioFormat::Aac,
+            quality: crate::ffmpeg_export::ConvertAudioQuality::BitrateKbps(192),
+        },
+        true,
+        None,
+        cancel.clone(),
+        &mut |_| {},
+        preferred_audio_stream_index,
+    )
+    .and_then(|()| validate_audio_description_recode_output(output_path))
+}
+
 fn recode_audio_description_source_for_invalid_timeline(
     input_path: &Path,
     preferred_audio_stream_index: Option<i32>,
@@ -5633,23 +5705,12 @@ fn recode_audio_description_source_for_invalid_timeline(
         audio_description_selected_audio_stream_index(input_path, preferred_audio_stream_index)?;
     let final_path = audio_description_recoded_source_path(input_path);
     let temporary_path = temporary_sibling_path(&final_path, "recode");
-    crate::log_debug(
-        "Audio description: recoding with bundled FFmpeg DLLs (MPEG-4/AAC), no external executable",
-    );
-    let result = crate::media_conversion::convert_with_preferred_audio_stream(
+    let result = write_normalized_analysis_video(
         input_path,
         &temporary_path,
-        &crate::ffmpeg_export::ConvertAudioSettings {
-            format: crate::ffmpeg_export::ConvertAudioFormat::Aac,
-            quality: crate::ffmpeg_export::ConvertAudioQuality::BitrateKbps(192),
-        },
-        true,
-        None,
-        cancel.clone(),
-        &mut |_| {},
         preferred_audio_stream_index,
-    )
-    .and_then(|()| validate_audio_description_recode_output(&temporary_path));
+        cancel,
+    );
     if let Err(error) = result {
         if temporary_path.exists() {
             crate::log_if_err!(fs::remove_file(&temporary_path));
@@ -6868,7 +6929,7 @@ pub fn create_audio_description(
             "Preparing Gemini video chunks with Sonarpad FFmpeg libraries...",
         );
         let chunks = match chunk_mode {
-            AudioDescriptionChunkMode::Normal => prepare_gemini_chunks(
+            AudioDescriptionChunkMode::Normal => prepare_gemini_chunks_with_header_recovery(
                 source_path,
                 duration_sec,
                 cache_dir,
@@ -7993,6 +8054,54 @@ mod tests {
             duck_start_sec: None,
             duck_end_sec: None,
         }
+    }
+
+    #[test]
+    #[ignore = "requires a sample that Matroska rejects via SONARPAD_HEADER_RECOVERY_INPUT"]
+    fn real_chunk_header_recovery() {
+        let input =
+            std::path::PathBuf::from(std::env::var_os("SONARPAD_HEADER_RECOVERY_INPUT").unwrap());
+        let cache = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        std::fs::create_dir(&cache).unwrap();
+        let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let duration = crate::ffmpeg_export::media_duration_seconds(&input).unwrap();
+        // Explicit stream selection exercises segmentation even with a short fixture.
+        let error =
+            super::prepare_gemini_chunks(&input, duration, &cache, Some(0), &cancel).unwrap_err();
+        assert!(super::both_chunk_headers_invalid(&error), "{error}");
+        let chunks = super::prepare_gemini_chunks_with_header_recovery(
+            &input,
+            duration,
+            &cache,
+            Some(0),
+            &cancel,
+        )
+        .unwrap();
+        assert!(!chunks.is_empty());
+        assert!((chunks.last().unwrap().end_sec - duration).abs() < 0.1);
+        for chunk in chunks {
+            assert!(
+                crate::ffmpeg_source::has_real_video_stream(std::path::Path::new(&chunk.path))
+                    .unwrap()
+            );
+        }
+        std::fs::remove_dir_all(cache).unwrap();
+    }
+
+    #[test]
+    fn chunk_header_recovery_only_after_both_mux_attempts_fail() {
+        let header = "FFmpeg: failed to write segment header: Invalid argument (-22)";
+        let primary = format!("Audio description: FFmpeg chunk preparation failed: {header}");
+        assert!(super::both_chunk_headers_invalid(&format!(
+            "{primary}; video-only fallback failed: {header}"
+        )));
+        assert!(!super::both_chunk_headers_invalid(&primary));
+        assert!(!super::both_chunk_headers_invalid(&format!(
+            "{primary}; video-only fallback failed: cancelled"
+        )));
+        assert!(!super::both_chunk_headers_invalid(
+            "Audio description: invalid Gemini chunk timeline"
+        ));
     }
 
     #[test]

@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Листа за репродукцију",
   "media_cutter.open_project": "Отвори Sonarpad пројекат…",
   "media_cutter.save_project": "Сачувај пројекат…",
+  "media_cutter.precise_audio": "Прецизно исецање са поновним кодирањем",
   "media_cutter.overwrite_original": "Препиши оригиналну датотеку (направи резервну копију)",
   "media_cutter.overwrite_confirm": "Желите ли да замените оригиналну датотеку? Sonarpad ће прво направити резервну копију.",
   "media_cutter.overwrite_unavailable": "Преписивање је доступно само за подржан оригинални формат, без уметнутих медија и отвореног .sonarcut пројекта.",

@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Lista de reprodução",
   "media_cutter.open_project": "Abrir projeto Sonarpad…",
   "media_cutter.save_project": "Salvar projeto…",
+  "media_cutter.precise_audio": "Corte preciso com recodificação",
   "media_cutter.overwrite_original": "Sobrescrever o arquivo original (criar backup)",
   "media_cutter.overwrite_confirm": "Deseja substituir o arquivo original? O Sonarpad criará uma cópia de segurança antes da substituição.",
   "media_cutter.overwrite_unavailable": "A substituição só está disponível para arquivos originais de formato compatível, sem mídia inserida nem projeto .sonarcut aberto.",

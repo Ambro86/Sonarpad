@@ -1,5 +1,12 @@
 # Dnevnik izmena
 
+Version 0.9.33 – 2026-11-24
+
+1. Ispravljena je greška zbog koje su se u nekim Word dokumentima u formatu .doc prikazivali nečitljivi znakovi. Tekst i brojevi u tabelama sada se čitaju redosledom ćelija.
+2. Pri jednostavnom isecanju zvuka datoteka se sada čuva bez ponovnog kodiranja ako zadržite podržani izvorni format. Ako kopiranje ne uspe, Sonarpad automatski pokušava ponovo uz kodiranje. Za precizno isecanje označite polje za ponovno kodiranje.
+3. Ako zbog greške u zaglavlju priprema video segmenata ne uspe ni sa zvukom ni bez njega, Sonarpad automatski ponovo pokušava da napravi audio-opis i za analizu koristi privremenu MP4 kopiju. Originalna datoteka ostaje neizmenjena.
+4. Poboljšano je osvežavanje Brajevog reda kada počnete da pišete odmah po otvaranju Sonarpada. Uređivač sada javlja čitaču ekrana položaj kursora već pri unosu prvog znaka.
+
 Version 0.9.32 – 2026-11-19
 
 1. Pouzdanije učitavanje RSS izvora napravljenih pomoću ključnih reči. Ako zahtev za Google vesti traje duže od 4 sekunde, Sonarpad automatski pokušava da preuzme članke na drugi način.

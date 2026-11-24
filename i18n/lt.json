@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Grojaraštis",
   "media_cutter.open_project": "Atverti Sonarpad projektą…",
   "media_cutter.save_project": "Išsaugoti projektą…",
+  "media_cutter.precise_audio": "Tikslus kirpimas perkoduojant",
   "media_cutter.overwrite_original": "Perrašyti pradinį failą (sukurti atsarginę kopiją)",
   "media_cutter.overwrite_confirm": "Ar pakeisti pradinį failą? Prieš jį pakeisdama „Sonarpad“ sukurs atsarginę kopiją.",
   "media_cutter.overwrite_unavailable": "Perrašyti galima tik palaikomo formato pradinį failą, kai nėra įterptos medijos ir atidaryto .sonarcut projekto.",

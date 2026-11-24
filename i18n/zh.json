@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "播放列表",
   "media_cutter.open_project": "打开 Sonarpad 项目…",
   "media_cutter.save_project": "保存项目…",
+  "media_cutter.precise_audio": "重新编码以精确剪辑",
   "media_cutter.overwrite_original": "覆盖原始文件（创建备份）",
   "media_cutter.overwrite_confirm": "确定要替换原始文件吗？Sonarpad 会先创建备份，再执行替换。",
   "media_cutter.overwrite_unavailable": "仅当原始文件格式受支持、未插入其他媒体且未打开 .sonarcut 项目时，才能覆盖原始文件。",

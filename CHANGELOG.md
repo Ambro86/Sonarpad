@@ -1,5 +1,12 @@
 # Changelog
 
+Version 0.9.33 – 2026-11-24
+
+1. Fixed an issue that displayed unreadable characters in some Word .doc files. Text and numbers in tables are now read in cell order.
+2. Simple audio cuts are now saved without re-encoding when you keep the original supported format. If copying fails, Sonarpad automatically retries with re-encoding. For a precise cut, select the re-encoding checkbox.
+3. If a header error prevents Sonarpad from preparing video segments both with and without audio, it now retries audio description automatically using a temporary MP4 copy for analysis. The original file stays intact.
+4. Improved braille display updates when you start typing after opening Sonarpad. The editor now reports the cursor position to the screen reader from the first character you type.
+
 Version 0.9.32 – 2026-11-19
 
 1. Keyword-based RSS sources now load more reliably. If Google News takes more than 4 seconds to respond, Sonarpad automatically tries another way to retrieve the articles.

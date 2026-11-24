@@ -15162,6 +15162,7 @@ fn wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESUL
                     mark_dirty_from_edit(hwnd, HWND(lparam.0));
                     let active_edit = get_active_edit(hwnd).unwrap_or(HWND(0));
                     if active_edit == HWND(lparam.0) {
+                        notify_editor_caret_changed(active_edit);
                         let language =
                             with_state(hwnd, |state| state.settings.language).unwrap_or_default();
                         let label = i18n::tr(language, "undo.action.text");

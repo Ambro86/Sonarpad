@@ -75,6 +75,7 @@ fn fixtures() -> (PathBuf, PathBuf, PathBuf) {
 }
 fn plan(input: &Path, output: &Path) -> ExportPlan {
     ExportPlan {
+        precise_audio: false,
         still_video: None,
         input: input.into(),
         sources: vec![],
@@ -252,6 +253,54 @@ fn overwrite_original_mp3_and_mp4_preserves_previous_versions() -> Result<(), St
     std::fs::remove_dir_all(dir).map_err(|e| e.to_string())?;
     Ok(())
 }
+#[test]
+fn simple_audio_copy_precise_and_automatic_retry() -> Result<(), String> {
+    let (dir, input, _) = fixtures();
+    let run = |plan: &ExportPlan| export(plan, Arc::new(AtomicBool::new(false)), &mut |_| {});
+    let mut job = plan(&input, &dir.join("copied.wav"));
+    run(&job)?;
+    assert_eq!(
+        hound::WavReader::open(&job.output).unwrap().spec().channels,
+        1
+    );
+    tones(&job.output);
+
+    let aac = dir.join("original.m4a");
+    let compressed = plan(&aac, &dir.join("copied.m4a"));
+    run(&compressed)?;
+    tones(&compressed.output);
+    let original = std::fs::read(aac).unwrap();
+    let copied = std::fs::read(&compressed.output).unwrap();
+    // A byte sequence inside the first retained AAC frames survives packet copying.
+    let mdat = original.windows(4).position(|v| v == b"mdat").unwrap();
+    let payload = &original[mdat + 2048..mdat + 2304];
+    assert!(copied.windows(payload.len()).any(|bytes| bytes == payload));
+
+    job.precise_audio = true;
+    job.output = dir.join("precise.wav");
+    run(&job)?;
+    assert_eq!(
+        hound::WavReader::open(&job.output).unwrap().spec().channels,
+        2
+    );
+
+    // An interval lying entirely between packet starts requires sample-accurate encoding.
+    job.precise_audio = false;
+    job.parts = vec![MediaPart {
+        start: 0.001,
+        end: 0.013,
+        keep: true,
+    }];
+    job.output = dir.join("retry.wav");
+    run(&job)?;
+    {
+        let wav = hound::WavReader::open(&job.output).unwrap();
+        assert_eq!(wav.spec().channels, 2);
+        assert_eq!(wav.duration(), 576);
+    }
+    std::fs::remove_dir_all(dir).map_err(|e| e.to_string())
+}
+
 #[test]
 fn native_cutter_real_exports_and_playback() -> Result<(), String> {
     let (dir, audio, av) = fixtures();

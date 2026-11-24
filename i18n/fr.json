@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Liste de lecture",
   "media_cutter.open_project": "Ouvrir un projet Sonarpad…",
   "media_cutter.save_project": "Enregistrer le projet…",
+  "media_cutter.precise_audio": "Découpe précise avec réencodage",
   "media_cutter.overwrite_original": "Écraser le fichier original (créer une sauvegarde)",
   "media_cutter.overwrite_confirm": "Voulez-vous remplacer le fichier original ? Sonarpad créera une sauvegarde avant de le remplacer.",
   "media_cutter.overwrite_unavailable": "Cette option est réservée aux fichiers originaux de format compatible, sans média inséré ni projet .sonarcut ouvert.",

@@ -2392,6 +2392,37 @@ mod tests {
     }
 
     #[test]
+    fn doc_piece_table_reads_compressed_cells_and_unicode_main_text() {
+        let mut word = vec![0; 640];
+        word[..4].copy_from_slice(&[0xec, 0xa5, 0xc1, 0]);
+        word[0x4c..0x50].copy_from_slice(&8u32.to_le_bytes());
+        word[0x1a2..0x1a6].copy_from_slice(&9u32.to_le_bytes());
+        let mut table = vec![0; 9];
+        table.extend_from_slice(&[1, 2, 0, 0, 0, 2]);
+        table.extend_from_slice(&28u32.to_le_bytes());
+        for cp in [0u32, 6, 10] {
+            table.extend_from_slice(&cp.to_le_bytes());
+        }
+        for fc in [0x4000_0000 | (501u32 * 2), 521] {
+            table.extend_from_slice(&[0; 2]);
+            table.extend_from_slice(&fc.to_le_bytes());
+            table.extend_from_slice(&[0; 2]);
+        }
+        word[0x1a6..0x1aa].copy_from_slice(&((table.len() - 9) as u32).to_le_bytes());
+        word[501..507].copy_from_slice(b"Caf\xe8\x073");
+        for (chunk, unit) in word[521..529]
+            .chunks_exact_mut(2)
+            .zip("東西XY".encode_utf16())
+        {
+            chunk.copy_from_slice(&unit.to_le_bytes());
+        }
+        assert_eq!(
+            super::extract_declared_doc_text(&word, &table).as_deref(),
+            Some("Cafè\n3東西")
+        );
+    }
+
+    #[test]
     fn choose_ansi_prefers_cp1252_for_italian_when_acp_looks_cp1250() {
         let source = "Luana si asciugò il sudore e arrivò all’altezza.";
         let (encoded, _, _) = WINDOWS_1252.encode(source);
@@ -2472,14 +2503,26 @@ pub fn read_doc_text(path: &Path, language: Language) -> Result<String, String> 
             };
 
             let mut table_bytes = Vec::new();
-            if let Ok(mut table_stream) = comp.open_stream("1Table") {
-                crate::log_if_err!(table_stream.read_to_end(&mut table_bytes));
-            } else if let Ok(mut table_stream) = comp.open_stream("0Table") {
-                crate::log_if_err!(table_stream.read_to_end(&mut table_bytes));
+            let prefer_one = buffer.get(11).is_none_or(|flags| flags & 2 != 0);
+            let (selected, other) = if prefer_one {
+                ("1Table", "0Table")
+            } else {
+                ("0Table", "1Table")
+            };
+            let name = if comp.exists(selected) {
+                selected
+            } else {
+                other
+            };
+            if let Ok(mut stream) = comp.open_stream(name) {
+                crate::log_if_err!(stream.read_to_end(&mut table_bytes));
             }
-
+            if let Some(text) = extract_declared_doc_text(&buffer, &table_bytes) {
+                return Ok(text);
+            }
             if !table_bytes.is_empty()
-                && let Some(text) = extract_doc_text_piece_table(&buffer, &table_bytes)
+                && let Some(pieces) = find_piece_table(&table_bytes)
+                && let Some(text) = decode_doc_pieces(&buffer, pieces, usize::MAX)
             {
                 return Ok(clean_doc_text(text));
             }
@@ -2545,31 +2588,65 @@ struct DocPiece {
     compressed: bool,
 }
 
-fn extract_doc_text_piece_table(word: &[u8], table: &[u8]) -> Option<String> {
-    let pieces = find_piece_table(table)?;
+// Word 97 and later store fcClx/lcbClx in FibRgFcLcb97 (pair 33).
+fn extract_declared_doc_text(word: &[u8], table: &[u8]) -> Option<String> {
+    let u32_at = |offset: usize| -> Option<usize> {
+        Some(u32::from_le_bytes(word.get(offset..offset + 4)?.try_into().ok()?) as usize)
+    };
+    if word.get(..2)? != [0xec, 0xa5] || u16::from_le_bytes(word.get(2..4)?.try_into().ok()?) < 0xc1
+    {
+        return None;
+    }
+    let start = u32_at(0x1a2)?;
+    let mut clx = table.get(start..start.checked_add(u32_at(0x1a6)?)?)?;
+    while clx.first() == Some(&1) {
+        let size = u16::from_le_bytes(clx.get(1..3)?.try_into().ok()?) as usize;
+        clx = clx.get(3 + size..)?;
+    }
+    if clx.first() != Some(&2) {
+        return None;
+    }
+    let size = u32::from_le_bytes(clx.get(1..5)?.try_into().ok()?) as usize;
+    let plc = clx.get(5..)?;
+    if plc.len() != size || plc.get(..4)? != [0; 4] {
+        return None;
+    }
+    let main_chars = u32_at(0x4c)?;
+    let pieces = parse_plc_pcd(plc)?;
+    if pieces.iter().map(|p| p.cp_len).sum::<usize>() < main_chars {
+        return None;
+    }
+    let text = decode_doc_pieces(word, pieces, main_chars)?;
+    Some(text.replace(['\u{7}', '\u{b}'], "\n"))
+}
+
+fn decode_doc_pieces(word: &[u8], pieces: Vec<DocPiece>, mut remaining: usize) -> Option<String> {
     let mut out = String::new();
     for piece in pieces {
-        if piece.cp_len == 0 {
-            continue;
+        if remaining == 0 {
+            break;
         }
-        if piece.compressed {
-            let end = piece.offset.saturating_add(piece.cp_len);
-            if end > word.len() {
-                continue;
-            }
-            let (decoded, _, _) = WINDOWS_1252.decode(&word[piece.offset..end]);
-            out.push_str(&decoded);
+        let len = piece.cp_len.min(remaining);
+        remaining -= len;
+        let size = if piece.compressed {
+            len
         } else {
-            let byte_len = piece.cp_len.saturating_mul(2);
-            let end = piece.offset.saturating_add(byte_len);
-            if end > word.len() {
-                continue;
-            }
-            let mut utf16 = Vec::with_capacity(byte_len / 2);
-            for chunk in word[piece.offset..end].as_chunks::<2>().0 {
-                utf16.push(u16::from_le_bytes([chunk[0], chunk[1]]));
-            }
-            out.push_str(&String::from_utf16_lossy(&utf16));
+            len.checked_mul(2)?
+        };
+        let data = word.get(piece.offset..piece.offset.checked_add(size)?)?;
+        if piece.compressed {
+            out.push_str(&WINDOWS_1252.decode_without_bom_handling(data).0);
+        } else {
+            out.extend(
+                char::decode_utf16(
+                    data.as_chunks::<2>()
+                        .0
+                        .iter()
+                        .copied()
+                        .map(u16::from_le_bytes),
+                )
+                .map(|ch| ch.unwrap_or(char::REPLACEMENT_CHARACTER)),
+            );
         }
     }
     if out.is_empty() {
@@ -2644,8 +2721,8 @@ fn parse_plc_pcd(data: &[u8]) -> Option<Vec<DocPiece>> {
             .get(off + 2..off + 6)
             .and_then(|slice| slice.try_into().ok())
             .map(u32::from_le_bytes)?;
-        let compressed = (fc_raw & 1) == 1;
-        let fc = fc_raw & 0xFFFFFFFE;
+        let compressed = (fc_raw & 0x4000_0000) != 0;
+        let fc = fc_raw & 0x3fff_ffff;
         let offset = if compressed {
             (fc as usize) / 2
         } else {

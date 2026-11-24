@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Seznam skladeb",
   "media_cutter.open_project": "Otevřít projekt Sonarpad…",
   "media_cutter.save_project": "Uložit projekt…",
+  "media_cutter.precise_audio": "Přesný střih s překódováním",
   "media_cutter.overwrite_original": "Přepsat původní soubor (vytvořit zálohu)",
   "media_cutter.overwrite_confirm": "Opravdu chcete nahradit původní soubor? Sonarpad před nahrazením vytvoří zálohu.",
   "media_cutter.overwrite_unavailable": "Přepsání je dostupné pouze pro podporovaný původní soubor bez vložených médií a bez otevřeného projektu .sonarcut.",

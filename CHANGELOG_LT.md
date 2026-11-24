@@ -1,5 +1,12 @@
 # Pakeitimų žurnalas
 
+Version 0.9.33 – 2026-11-24
+
+1. Ištaisyta klaida, dėl kurios kai kuriuose „Word“ .doc failuose buvo rodomi neįskaitomi simboliai. Lentelių tekstas ir skaičiai dabar skaitomi langelių eilės tvarka.
+2. Paprastai apkarpyti garso failai dabar išsaugomi neperkoduojant, jei paliekamas palaikomas pradinis formatas. Jei nukopijuoti nepavyksta, „Sonarpad“ automatiškai bando dar kartą perkoduodama garsą. Jei reikia tikslaus kirpimo, pažymėkite perkodavimo langelį.
+3. Jei dėl antraštės klaidos nepavyksta paruošti vaizdo įrašo segmentų nei su garsu, nei be jo, „Sonarpad“ automatiškai dar kartą bando sukurti garsinį vaizdavimą ir analizei naudoja laikiną MP4 kopiją. Pradinis failas lieka nepakeistas.
+4. Pagerintas Brailio eilutės atnaujinimas pradėjus rašyti iškart atvėrus „Sonarpad“. Redaktorius dabar praneša ekrano skaitytuvui žymeklio padėtį jau įvedus pirmąjį ženklą.
+
 Version 0.9.32 – 2026-11-19
 
 1. Patikimiau įkeliami pagal raktažodžius sukurti RSS šaltiniai. Jei „Google“ naujienų užklausa užtrunka ilgiau nei 4 sekundes, „Sonarpad“ automatiškai bando gauti straipsnius kitu būdu.

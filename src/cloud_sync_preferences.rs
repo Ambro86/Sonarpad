@@ -43,7 +43,7 @@ fn field(id: &str, mac: bool) -> Option<&'static str> {
         "converter.flac_compression" => "converter_flac_compression",
         "tv.audio_description" if mac => "prefer_raiplay_audio_description",
         "reader.sleep_minutes" if !mac => "sleep_timer_minutes",
-        "playback.seek_seconds" if !mac => "audiobook_skip_seconds",
+        "playback.seek_seconds" | "playback.seek_seconds_extra" if !mac => "audiobook_skip_seconds",
         "weather.city" => "weather_city_query",
         "weather.unit" => "weather_temperature_unit",
         "podcast.country" => "podcast_directory_country",
@@ -85,6 +85,9 @@ fn valid(id: &str, v: &Value) -> bool {
             [1000, 5000, 10000, 30000, 60000, 120000, 300000, 600000].contains(&n)
         }),
         "reader.sleep_minutes" => v.as_u64().is_some_and(|n| n <= 120),
+        "playback.seek_seconds_extra" => {
+            v.as_u64().is_some_and(|n| matches!(n, 0..=9 | 301..=7200))
+        }
         "playback.seek_seconds" => v.as_u64().is_some_and(|n| (10..=300).contains(&n)),
         "converter.format" => v.as_str().is_some_and(|s| {
             [
@@ -124,6 +127,7 @@ pub fn export(s: &Value, mac: bool) -> Value {
         "tv.audio_description",
         "reader.sleep_minutes",
         "playback.seek_seconds",
+        "playback.seek_seconds_extra",
         "weather.city",
         "weather.unit",
         "podcast.country",
@@ -136,6 +140,19 @@ pub fn export(s: &Value, mac: bool) -> Value {
         let Some(key) = field(id, mac) else { continue };
         let Some(raw) = s.get(key) else { continue };
         let v = match id {
+            "playback.seek_seconds" | "playback.seek_seconds_extra" => {
+                let Some(seconds @ 1..=7200) = raw.as_u64() else {
+                    continue;
+                };
+                let legacy = seconds.clamp(10, 300);
+                json!(if id == "playback.seek_seconds" {
+                    legacy
+                } else if seconds == legacy {
+                    0
+                } else {
+                    seconds
+                })
+            }
             "sonartube.search_type" => json!(
                 SEARCH
                     .get(raw.as_u64().unwrap_or(0) as usize)
@@ -195,10 +212,26 @@ pub fn project(rows: &Value, mac: bool) -> Result<Value, String> {
     Ok(json!(out))
 }
 pub fn apply(s: &mut Value, rows: &Value, mac: bool) -> Result<(), String> {
-    for row in project(rows, mac)?.as_array().ok_or("invalid_preference")? {
+    let projected = project(rows, mac)?;
+    let rows = projected.as_array().ok_or("invalid_preference")?;
+    let extra = rows
+        .iter()
+        .find(|r| r["id"] == "playback.seek_seconds_extra")
+        .and_then(|r| r["data"]["value"].as_u64());
+    for row in rows {
         let id = row["id"].as_str().ok_or("invalid_preference")?;
         let key = field(id, mac).ok_or("invalid_preference")?;
         let v = &row["data"]["value"];
+        if id == "playback.seek_seconds_extra" {
+            continue;
+        }
+        if id == "playback.seek_seconds" {
+            // Older clients can update the shared value independently of the extension.
+            s[key] = extra
+                .filter(|n| *n > 0 && Some((*n).clamp(10, 300)) == v.as_u64())
+                .map_or_else(|| v.clone(), |n| json!(n));
+            continue;
+        }
         if id == "activation.code" && valid(id, &s[key]) {
             continue;
         }
@@ -230,6 +263,21 @@ pub fn apply(s: &mut Value, rows: &Value, mac: bool) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn seek_intervals_round_trip_with_legacy_projection() {
+        for seconds in [1, 5, 10, 15, 40, 300, 600, 7200] {
+            let mut rows = export(&json!({"audiobook_skip_seconds":seconds}), false);
+            let legacy = &mut rows[0];
+            assert_eq!(legacy["data"]["value"], seconds.clamp(10, 300));
+            let mut local = json!({});
+            apply(&mut local, &rows, false).unwrap();
+            assert_eq!(local["audiobook_skip_seconds"], seconds);
+            rows[0]["data"]["value"] = json!(90);
+            apply(&mut local, &rows, false).unwrap();
+            assert_eq!(local["audiobook_skip_seconds"], 90);
+        }
+    }
+
     #[test]
     fn mobile_desktop_module_preferences_round_trip() {
         let rows = json!([

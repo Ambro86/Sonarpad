@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Lista odtwarzania",
   "media_cutter.open_project": "Otwórz projekt Sonarpad…",
   "media_cutter.save_project": "Zapisz projekt…",
+  "media_cutter.precise_audio": "Dokładne przycinanie z ponownym kodowaniem",
   "media_cutter.overwrite_original": "Nadpisz oryginalny plik (utwórz kopię zapasową)",
   "media_cutter.overwrite_confirm": "Czy zastąpić oryginalny plik? Sonarpad utworzy kopię zapasową przed zastąpieniem.",
   "media_cutter.overwrite_unavailable": "Nadpisywanie jest dostępne tylko dla obsługiwanego pliku oryginalnego, bez wstawionych mediów i otwartego projektu .sonarcut.",

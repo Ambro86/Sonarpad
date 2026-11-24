@@ -1,5 +1,12 @@
 # Přehled změn
 
+Version 0.9.33 – 2026-11-24
+
+1. Opravena chyba, která v některých souborech Wordu ve formátu .doc zobrazovala nečitelné znaky. Text a čísla v tabulkách se nyní čtou v pořadí buněk.
+2. Při jednoduchém střihu zvuku se nyní výsledek uloží bez překódování, pokud zachováte původní podporovaný formát. Pokud se kopírování nezdaří, Sonarpad automaticky zopakuje uložení s překódováním. Pro přesný střih můžete zaškrtnout volbu překódování.
+3. Pokud chyba hlavičky zabrání přípravě úseků videa se zvukem i bez něj, Sonarpad nyní automaticky zopakuje pokus o vytvoření audiopopisu a k analýze použije dočasnou kopii ve formátu MP4. Původní soubor zůstane beze změny.
+4. Byla vylepšena aktualizace braillského řádku při psaní po otevření Sonarpadu. Editor nyní hlásí odečítači obrazovky polohu kurzoru už od prvního napsaného znaku.
+
 Version 0.9.32 – 2026-11-19
 
 1. Spolehlivější načítání zdrojů RSS vytvořených pomocí klíčových slov. Pokud požadavek na Zprávy Google trvá déle než 4 sekundy, Sonarpad automaticky zkusí načíst články jiným způsobem.

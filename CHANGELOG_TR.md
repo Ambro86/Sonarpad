@@ -1,5 +1,12 @@
 # Değişiklik günlüğü
 
+Sürüm 0.9.33 – 2026-11-24
+
+1. Bazı .doc biçimindeki Word belgelerinde okunamayan karakterlerin görünmesine neden olan hata düzeltildi. Tablolardaki metin ve sayılar artık hücre sırasına göre okunuyor.
+2. Desteklenen özgün biçimi koruduğunuzda basit ses kesimleri artık yeniden kodlanmadan kaydedilir. Kopyalama başarısız olursa Sonarpad yeniden kodlayarak otomatik olarak tekrar dener. Hassas kesim için yeniden kodlama onay kutusunu işaretleyebilirsiniz.
+3. Bir başlık hatası nedeniyle video bölümleri hem sesli hem de sessiz olarak hazırlanamazsa Sonarpad, analiz için geçici bir MP4 kopyası kullanarak sesli betimleme oluşturmayı otomatik olarak yeniden dener. Özgün dosya değişmez.
+4. Sonarpad açıldıktan hemen sonra yazmaya başlandığında braille ekranın güncellenmesi iyileştirildi. Düzenleyici artık ilk karakter girildiği anda imlecin konumunu ekran okuyucuya bildiriyor.
+
 Sürüm 0.9.32 – 2026-11-19
 
 1. Anahtar kelimelerle oluşturulan RSS kaynakları artık daha güvenilir biçimde yükleniyor. Google Haberler isteği 4 saniyeden uzun sürerse Sonarpad makaleleri almak için otomatik olarak başka bir yöntem dener.

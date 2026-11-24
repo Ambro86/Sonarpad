@@ -1,5 +1,12 @@
 # Catatan perubahan
 
+Version 0.9.33 – 2026-11-24
+
+1. Memperbaiki masalah yang menyebabkan sebagian berkas .doc Word menampilkan karakter yang tidak terbaca. Teks dan angka dalam tabel kini dibaca sesuai urutan sel.
+2. Potongan audio sederhana kini disimpan tanpa pengodean ulang jika format asli yang didukung tetap digunakan. Jika penyalinan gagal, Sonarpad otomatis mencoba lagi dengan pengodean ulang. Untuk potongan yang presisi, centang opsi pengodean ulang.
+3. Jika kesalahan header membuat segmen video gagal disiapkan baik dengan maupun tanpa audio, Sonarpad kini otomatis mencoba kembali membuat deskripsi audio menggunakan salinan MP4 sementara untuk analisis. Berkas asli tetap utuh.
+4. Pembaruan tampilan braille saat mulai mengetik setelah membuka Sonarpad telah ditingkatkan. Editor kini memberi tahu pembaca layar tentang posisi kursor sejak karakter pertama diketik.
+
 Version 0.9.32 – 2026-11-19
 
 1. Pemuatan sumber RSS yang dibuat dengan kata kunci kini lebih andal. Jika permintaan ke Google Berita memerlukan waktu lebih dari 4 detik, Sonarpad otomatis mencoba cara lain untuk mengambil artikel.

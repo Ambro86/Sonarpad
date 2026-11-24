@@ -87,6 +87,7 @@ const EXPORT_VIDEO: usize = 9855;
 const EXPORT_IMAGE: usize = 9856;
 const EXPORT_VIDEO_LABEL: usize = 9857;
 const SAVE_SCOPE: usize = 9858;
+const PRECISE_AUDIO: usize = 9859;
 const TICK: usize = 1;
 const WM_RESTORE_CUTTER_FOCUS: u32 = WM_APP + 212;
 #[derive(Default)]
@@ -1463,8 +1464,17 @@ impl State {
                     Some(input.clone())
                 } else {
                     let stem = input.file_stem().unwrap_or_default().to_string_lossy();
-                    let suggested =
+                    let mut suggested =
                         input.with_file_name(format!("{stem} {}", self.tr("output_suffix")));
+                    if !self.has_video
+                        && still_video.is_none()
+                        && let Some(ext) = input.extension().and_then(|ext| ext.to_str())
+                        && media_cutter_export::AUDIO_EXTENSIONS
+                            .contains(&ext.to_ascii_lowercase().as_str())
+                    {
+                        suggested = input
+                            .with_file_name(format!("{stem} {}.{ext}", self.tr("output_suffix")));
+                    }
                     choose_kind(
                         self.hwnd,
                         true,
@@ -1477,6 +1487,7 @@ impl State {
                 };
                 if let Some(output) = output {
                     let plan = ExportPlan {
+                        precise_audio: self.checked(PRECISE_AUDIO),
                         still_video,
                         input,
                         output,
@@ -1784,12 +1795,20 @@ fn choose_kind(
         };
         let filter = to_wide(&filter_text);
         let title = to_wide(title);
-        let ext = to_wide(if video { "mp4" } else { "mp3" });
+        let filter_index = suggested
+            .and_then(|p| p.extension()?.to_str())
+            .and_then(|ext| {
+                formats
+                    .iter()
+                    .position(|format| format.eq_ignore_ascii_case(ext))
+            })
+            .unwrap_or(0);
+        let ext = to_wide(formats[filter_index]);
         let mut ofn = OPENFILENAMEW {
             lStructSize: std::mem::size_of::<OPENFILENAMEW>() as u32,
             hwndOwner: hwnd,
             lpstrFilter: PCWSTR(filter.as_ptr()),
-            nFilterIndex: 1,
+            nFilterIndex: (filter_index + 1) as u32,
             lpstrFile: PWSTR(path.as_mut_ptr()),
             nMaxFile: path.len() as u32,
             lpstrTitle: PCWSTR(title.as_ptr()),
@@ -2107,7 +2126,16 @@ fn create(hwnd: HWND, parent: HWND) -> State {
         "BUTTON",
         &label,
         OVERWRITE_ORIGINAL,
-        [12, 560, 750, 26],
+        [12, 560, 370, 26],
+        WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
+    );
+    let label = s.tr("precise_audio");
+    control(
+        &mut s,
+        "BUTTON",
+        &label,
+        PRECISE_AUDIO,
+        [386, 560, 380, 26],
         WS_TABSTOP | WINDOW_STYLE(BS_AUTOCHECKBOX as u32),
     );
     let label = s.tr("export_video");
@@ -3163,6 +3191,7 @@ mod tests {
             assert_ne!(after_area, area);
             assert_eq!(GetNextDlgTabItem(hwnd, after_area, true), area);
             assert!(seen.contains(&(*ptr).ctrl(SAVE)));
+            assert!(seen.contains(&(*ptr).ctrl(PRECISE_AUDIO)));
             // Disabled checkboxes are deliberately skipped by Windows tab navigation.
             assert!(!seen.contains(&(*ptr).ctrl(OVERWRITE_ORIGINAL)));
             assert!(seen.contains(&(*ptr).ctrl(CLOSE)));
@@ -3191,14 +3220,24 @@ mod tests {
             (*ptr).input = Some(PathBuf::from("selected-media.wav"));
             (*ptr).visibility();
             assert!(IsWindowEnabled((*ptr).ctrl(OVERWRITE_ORIGINAL)).as_bool());
-            assert_eq!(
-                GetNextDlgTabItem(hwnd, (*ptr).ctrl(OVERWRITE_ORIGINAL), false),
-                (*ptr).ctrl(EXPORT_VIDEO)
-            );
-            assert_eq!(
-                GetNextDlgTabItem(hwnd, (*ptr).ctrl(EXPORT_VIDEO), false),
-                (*ptr).ctrl(SAVE)
-            );
+            for (before, after) in [
+                (OVERWRITE_ORIGINAL, PRECISE_AUDIO),
+                (PRECISE_AUDIO, EXPORT_VIDEO),
+                (EXPORT_VIDEO, SAVE),
+            ] {
+                assert_eq!(
+                    GetNextDlgTabItem(hwnd, (*ptr).ctrl(before), false),
+                    (*ptr).ctrl(after)
+                );
+                assert_eq!(
+                    GetNextDlgTabItem(hwnd, (*ptr).ctrl(after), true),
+                    (*ptr).ctrl(before)
+                );
+            }
+            let precise = (*ptr).ctrl(PRECISE_AUDIO);
+            let was_checked = (*ptr).checked(PRECISE_AUDIO);
+            SendMessageW(precise, BM_CLICK, WPARAM(0), LPARAM(0));
+            assert_ne!((*ptr).checked(PRECISE_AUDIO), was_checked);
             SendMessageW(
                 (*ptr).ctrl(OVERWRITE_ORIGINAL),
                 BM_SETCHECK,

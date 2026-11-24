@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Spellista",
   "media_cutter.open_project": "Öppna Sonarpad-projekt…",
   "media_cutter.save_project": "Spara projekt…",
+  "media_cutter.precise_audio": "Exakt klippning med omkodning",
   "media_cutter.overwrite_original": "Skriv över originalfilen (skapa säkerhetskopia)",
   "media_cutter.overwrite_confirm": "Vill du ersätta originalfilen? Sonarpad skapar en säkerhetskopia innan filen ersätts.",
   "media_cutter.overwrite_unavailable": "Överskrivning är endast tillgänglig för originalfiler i format som stöds, utan infogade medier eller öppet .sonarcut-projekt.",

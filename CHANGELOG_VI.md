@@ -1,5 +1,12 @@
 # Nhật ký thay đổi
 
+Version 0.9.33 – 2026-11-24
+
+1. Đã sửa lỗi hiển thị ký tự khó đọc trong một số tài liệu Word định dạng .doc. Văn bản và số trong bảng hiện được đọc theo thứ tự các ô.
+2. Khi cắt âm thanh đơn giản, tệp giờ đây được lưu mà không cần mã hóa lại nếu bạn giữ định dạng gốc được hỗ trợ. Nếu sao chép thất bại, Sonarpad tự động thử lại bằng cách mã hóa lại. Để cắt chính xác, hãy chọn hộp kiểm mã hóa lại.
+3. Nếu lỗi ở phần đầu tệp khiến việc chuẩn bị các đoạn video thất bại cả khi có và không có âm thanh, Sonarpad sẽ tự động thử tạo lại bản mô tả âm thanh bằng một bản sao MP4 tạm thời để phân tích. Tệp gốc được giữ nguyên.
+4. Đã cải thiện việc cập nhật màn hình chữ nổi khi bắt đầu nhập ngay sau khi mở Sonarpad. Trình soạn thảo giờ đây thông báo vị trí con trỏ cho trình đọc màn hình ngay từ ký tự đầu tiên được nhập.
+
 Version 0.9.32 – 2026-11-19
 
 1. Các nguồn RSS được tạo bằng từ khóa hiện tải ổn định hơn. Nếu yêu cầu tới Google Tin tức mất hơn 4 giây, Sonarpad sẽ tự động thử cách khác để lấy bài viết.

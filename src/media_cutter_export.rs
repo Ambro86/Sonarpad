@@ -24,6 +24,7 @@ pub struct AddedTrack {
 }
 #[derive(Clone, Debug)]
 pub struct ExportPlan {
+    pub precise_audio: bool,
     pub still_video: Option<Option<PathBuf>>,
     pub input: PathBuf,
     pub output: PathBuf,
@@ -169,13 +170,52 @@ pub fn export(
     std::fs::create_dir(&work).map_err(|e| e.to_string())?;
     let mut last = None;
     let mut report = |pct: u32| {
-        if last.is_none_or(|v| pct > v) {
+        if last.is_none_or(|v| pct > v || (pct == 0 && v > 0)) {
             last = Some(pct);
             progress(pct);
         }
     };
     let result = (|| {
         report(0);
+        let copy_audio = !plan.precise_audio
+            && !has_video
+            && !output_video
+            && plan.track.is_none()
+            && plan.sources.is_empty()
+            && plan
+                .input
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| ext.eq_ignore_ascii_case(&extension));
+        if copy_audio {
+            let copied = work.join(format!("copied.{extension}"));
+            let result = crate::ffmpeg_export::copy_audio_cut(
+                &plan.input,
+                &copied,
+                crate::ffmpeg_export::AudioCut {
+                    ranges: &kept,
+                    cancel: &cancel,
+                    progress: &mut report,
+                },
+            );
+            check_cancel(&cancel)?;
+            match result {
+                Ok(())
+                    if crate::ffmpeg_export::media_duration_seconds(&copied)
+                        .is_some_and(|actual| (actual - total).abs() <= 0.25) =>
+                {
+                    std::fs::rename(copied, &plan.output).map_err(|e| e.to_string())?;
+                    report(100);
+                    return Ok(());
+                }
+                other => crate::log_debug(&format!(
+                    "Media cutter: retrying with precise encoding after packet copy: {other:?} (expected {total:.3}s)"
+                )),
+            }
+        }
+        if copy_audio {
+            report(0);
+        }
         let wav = work.join("edited.wav");
         let audio_extension = if output_video {
             if extension == "avi" { "mp3" } else { "m4a" }

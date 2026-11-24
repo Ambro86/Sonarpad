@@ -1,5 +1,12 @@
 # Journal des modifications
 
+Version 0.9.33 – 2026-11-24
+
+1. Correction d’un problème qui affichait des caractères illisibles dans certains fichiers Word au format .doc. Le texte et les nombres des tableaux sont désormais lus dans l’ordre des cellules.
+2. Les coupes simples de fichiers audio sont désormais enregistrées sans réencodage si vous conservez le format d’origine pris en charge. Si la copie échoue, Sonarpad réessaie automatiquement avec réencodage. Pour une coupe précise, cochez la case de réencodage.
+3. Si une erreur d’en-tête empêche la préparation des segments vidéo avec puis sans le son, Sonarpad réessaie automatiquement de créer l’audiodescription en utilisant une copie MP4 temporaire pour l’analyse. Le fichier d’origine reste intact.
+4. L’affichage sur la plage braille a été amélioré lorsqu’on commence à écrire après l’ouverture de Sonarpad. L’éditeur signale désormais la position du curseur au lecteur d’écran dès le premier caractère saisi.
+
 Version 0.9.32 – 2026-11-19
 
 1. Le chargement des sources RSS créées à partir de mots-clés est plus fiable. Si la requête à Google Actualités prend plus de 4 secondes, Sonarpad essaie automatiquement une autre méthode pour récupérer les articles.

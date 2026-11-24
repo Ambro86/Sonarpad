@@ -1057,14 +1057,28 @@ pub fn merge_audio_files_with_chapters_copy(
     output_path: &Path,
     chapter_titles: Option<&[String]>,
 ) -> Result<(), String> {
-    merge_audio_files_copy_internal(input_files, output_path, chapter_titles, true)
+    merge_audio_files_copy_internal(input_files, output_path, chapter_titles, true, None)
 }
 
 pub(crate) fn concatenate_audio_files_copy(
     input_files: &[PathBuf],
     output_path: &Path,
 ) -> Result<(), String> {
-    merge_audio_files_copy_internal(input_files, output_path, None, false)
+    merge_audio_files_copy_internal(input_files, output_path, None, false, None)
+}
+
+pub(crate) struct AudioCut<'a> {
+    pub ranges: &'a [crate::media_cutter_model::MediaPart],
+    pub cancel: &'a AtomicBool,
+    pub progress: &'a mut dyn FnMut(u32),
+}
+
+pub(crate) fn copy_audio_cut(
+    input: &PathBuf,
+    output: &Path,
+    cut: AudioCut<'_>,
+) -> Result<(), String> {
+    merge_audio_files_copy_internal(std::slice::from_ref(input), output, None, false, Some(cut))
 }
 
 fn merge_audio_files_copy_internal(
@@ -1072,8 +1086,9 @@ fn merge_audio_files_copy_internal(
     output_path: &Path,
     chapter_titles: Option<&[String]>,
     include_chapters: bool,
+    mut cut: Option<AudioCut<'_>>,
 ) -> Result<(), String> {
-    if input_files.len() < 2 {
+    if cut.is_none() && input_files.len() < 2 {
         return Err("FFmpeg: at least 2 input files are required".to_string());
     }
     let api = ffmpeg_api()?;
@@ -1342,14 +1357,51 @@ fn merge_audio_files_copy_internal(
         };
         let mut part_max_end_ts = part_cursor_ts;
         let mut packets_written_in_part: usize = 0;
+        let mut cut_error = None;
+        let mut visited = vec![false; cut.as_ref().map_or(0, |c| c.ranges.len())];
+        let stream_start = unsafe { (*in_stream).start_time };
+        let stream_start = if stream_start == AV_NOPTS_VALUE_I64 {
+            0
+        } else {
+            stream_start
+        };
         loop {
             let read_ret = crate::ffmpeg_source::av_read_frame_safe(api, in_ctx, pkt);
+            if let Some(c) = &cut
+                && c.cancel.load(Ordering::Relaxed)
+            {
+                cut_error = Some("__CANCELLED__".to_string());
+                break;
+            }
             if read_ret < 0 {
+                if cut.is_some() && read_ret != AVERROR_EOF_FALLBACK {
+                    cut_error = Some(ffmpeg_error_text(api, read_ret));
+                }
                 break;
             }
             if crate::ffmpeg_source::av_packet_stream_index_safe(pkt) != audio_idx {
                 crate::ffmpeg_source::av_packet_unref_safe(api, pkt);
                 continue;
+            }
+            if let Some(c) = cut.as_mut() {
+                let pts = unsafe { (*pkt).pts };
+                if pts == AV_NOPTS_VALUE_I64 || in_tb.den <= 0 {
+                    cut_error = Some("Missing audio packet timestamp".to_string());
+                    break;
+                }
+                let time = pts.saturating_sub(stream_start) as f64 * f64::from(in_tb.num)
+                    / f64::from(in_tb.den);
+                let index = c.ranges.partition_point(|part| part.end <= time);
+                let Some(part) = c.ranges.get(index) else {
+                    break;
+                };
+                let end = c.ranges.last().unwrap_or(part).end;
+                (c.progress)((time * 99.0 / end).clamp(0.0, 99.0) as u32);
+                if time < part.start {
+                    crate::ffmpeg_source::av_packet_unref_safe(api, pkt);
+                    continue;
+                }
+                visited[index] = true;
             }
             unsafe {
                 (*pkt).stream_index = (*out_stream).index;
@@ -1416,17 +1468,19 @@ fn merge_audio_files_copy_internal(
             part_offset_ts,
             part_max_end_ts
         ));
-        if packets_written_in_part == 0 {
+        if packets_written_in_part == 0 || cut_error.is_some() || visited.contains(&false) {
             unsafe {
                 crate::ffmpeg_source::av_packet_free_safe(api, &mut pkt);
                 (api.avformat_close_input)(&mut in_ctx);
                 (api.avio_closep)(&mut io);
                 (api.avformat_free_context)(out_ctx);
             }
-            return Err(format!(
-                "FFmpeg: no audio packets written while merging part {}",
-                idx + 1
-            ));
+            return Err(cut_error.unwrap_or_else(|| {
+                format!(
+                    "FFmpeg: no audio packets written for a selected interval in part {}",
+                    idx + 1
+                )
+            }));
         }
         unsafe {
             crate::ffmpeg_source::av_packet_free_safe(api, &mut pkt);
@@ -1442,8 +1496,11 @@ fn merge_audio_files_copy_internal(
                 trailer_ret
             ));
         }
-        (api.avio_closep)(&mut io);
+        let close_ret = (api.avio_closep)(&mut io);
         (api.avformat_free_context)(out_ctx);
+        if cut.is_some() && (trailer_ret < 0 || close_ret < 0) {
+            return Err("FFmpeg: could not finalize copied audio".to_string());
+        }
     }
     Ok(())
 }

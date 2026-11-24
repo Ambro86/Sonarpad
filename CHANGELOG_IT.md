@@ -1,5 +1,12 @@
 # Changelog
 
+Version 0.9.33 – 2026-11-24
+
+1. Corretta l’apertura di alcuni documenti Word in formato .doc che mostravano caratteri illeggibili. Ora il testo e i numeri delle tabelle si leggono nell’ordine delle celle.
+2. In «Taglia file media», i tagli semplici dei file audio ora vengono salvati senza ricodifica quando si mantiene il formato originale supportato. Se la copia non riesce, Sonarpad riprova automaticamente con la ricodifica. Per un taglio preciso si può attivare la casella «Taglio preciso con ricodifica».
+3. Se la preparazione dei segmenti video fallisce sia con l’audio sia con il solo video per un errore di intestazione, Sonarpad riprova automaticamente a creare l’audiodescrizione usando una copia MP4 temporanea per l’analisi. Il file originale resta intatto.
+4. Migliorato l’aggiornamento della barra braille quando si inizia a scrivere dopo l’apertura di Sonarpad. L’editor ora segnala al lettore di schermo la posizione del cursore fin dal primo carattere digitato.
+
 Version 0.9.32 – 2026-11-19
 
 1. Migliorato il caricamento delle fonti RSS create con parole chiave. Se la richiesta a Google News supera i 4 secondi, Sonarpad prova automaticamente un altro metodo per recuperare gli articoli.

@@ -9589,6 +9589,15 @@ fn initialize_options_dialog(hwnd: HWND) {
         ];
         let mut selected_idx = None;
         let mut default_idx = None;
+        let current_skip = settings.audiobook_skip_seconds;
+        let custom_label = format!("{current_skip} s");
+        let mut skip_options = skip_options.to_vec();
+        if (1..=7200).contains(&current_skip)
+            && !skip_options.iter().any(|(s, _)| *s == current_skip)
+        {
+            skip_options.push((current_skip, &custom_label));
+            skip_options.sort_by_key(|(seconds, _)| *seconds);
+        }
         for (secs, label) in skip_options.iter() {
             let idx = SendMessageW(
                 combo_audio_skip,

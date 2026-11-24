@@ -1,5 +1,12 @@
 # Ändringslogg
 
+Version 0.9.33 – 2026-11-24
+
+1. Åtgärdade ett fel som gjorde att vissa Word-filer i formatet .doc visade oläsliga tecken. Text och siffror i tabeller läses nu i cellernas ordning.
+2. Enkla ljudklipp sparas nu utan omkodning om du behåller det ursprungliga formatet och det stöds. Om kopieringen misslyckas försöker Sonarpad automatiskt igen med omkodning. Markera kryssrutan för omkodning om du vill klippa exakt.
+3. Om ett fel i filhuvudet gör att videosegmenten varken kan förberedas med eller utan ljud, försöker Sonarpad automatiskt skapa syntolkningen igen med en tillfällig MP4-kopia för analysen. Originalfilen lämnas oförändrad.
+4. Punktskriftsdisplayen uppdateras nu bättre när du börjar skriva direkt efter att du öppnat Sonarpad. Redigeraren meddelar skärmläsaren markörens position redan när du skriver det första tecknet.
+
 Version 0.9.32 – 2026-11-19
 
 1. RSS-källor som skapats med sökord läses nu in mer tillförlitligt. Om en begäran till Google Nyheter tar längre än 4 sekunder försöker Sonarpad automatiskt hämta artiklarna på ett annat sätt.

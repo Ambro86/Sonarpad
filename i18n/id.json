@@ -58,6 +58,7 @@
   "stream_audio.playlist_label": "Daftar putar",
   "media_cutter.open_project": "Buka proyek Sonarpad…",
   "media_cutter.save_project": "Simpan proyek…",
+  "media_cutter.precise_audio": "Potong presisi dengan pengodean ulang",
   "media_cutter.overwrite_original": "Timpa berkas asli (buat cadangan)",
   "media_cutter.overwrite_confirm": "Ganti berkas asli? Sonarpad akan membuat salinan cadangan sebelum menggantinya.",
   "media_cutter.overwrite_unavailable": "Penimpaan hanya tersedia untuk berkas asli dengan format yang didukung, tanpa media sisipan atau proyek .sonarcut yang sedang dibuka.",
