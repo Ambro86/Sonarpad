@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "Välj ett annat namn: den ursprungliga PDF-filen ska förbli oförändrad.",
   "app.pdf_copy_saved": "PDF-kopia utan lösenord sparad.",
   "app.pdf_unlocked_hint": "Du kan spara PDF-filen utan lösenord genom att välja Spara PDF utan lösenord i menyn Arkiv.",
+  "stream_audio.channel_filter": "Filtrera innehåll",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Söktyp",
   "stream_audio.search_all": "Alla",
   "stream_audio.search_videos": "Videor",

@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "Изаберите друго име: оригинални PDF мора остати непромењен.",
   "app.pdf_copy_saved": "Копија PDF-а без лозинке је сачувана.",
   "app.pdf_unlocked_hint": "PDF можете сачувати без лозинке избором ставке Сачувај PDF без лозинке у менију Датотека.",
+  "stream_audio.channel_filter": "Филтрирај садржај",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Tip pretrage",
   "stream_audio.search_all": "Sve",
   "stream_audio.search_videos": "Video snimci",

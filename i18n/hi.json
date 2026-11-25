@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "दूसरा नाम चुनें: मूल PDF में बदलाव नहीं होना चाहिए।",
   "app.pdf_copy_saved": "बिना पासवर्ड वाली PDF प्रति सहेजी गई।",
   "app.pdf_unlocked_hint": "आप फ़ाइल मेनू में पासवर्ड के बिना PDF सहेजें चुनकर PDF को बिना पासवर्ड सहेज सकते हैं।",
+  "stream_audio.channel_filter": "सामग्री फ़िल्टर करें",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "खोज प्रकार",
   "stream_audio.search_all": "सभी",
   "stream_audio.search_videos": "वीडियो",

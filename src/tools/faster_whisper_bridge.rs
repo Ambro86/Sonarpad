@@ -399,27 +399,20 @@ pub fn prewarm_shared_worker(model: BridgeModel, use_cuda_runtime: bool) {
     });
 }
 
-fn language_code(language: Language) -> &'static str {
-    match language {
-        Language::Italian => "it",
-        Language::German => "de",
-        Language::English => "en",
-        Language::Spanish => "es",
-        Language::Portuguese | Language::PortugueseBrazilian => "pt",
-        Language::Swedish => "sv",
-        Language::Vietnamese => "vi",
-        Language::Czech => "cs",
-        Language::Polish => "pl",
-        Language::French => "fr",
-        Language::Serbian => "sr",
-        Language::Ukrainian => "uk",
-        Language::Lithuanian => "lt",
-        Language::Russian => "ru",
-        Language::Chinese => "zh",
-        Language::Hindi => "hi",
-        Language::Indonesian => "id",
-        Language::Turkish => "tr",
-    }
+pub(crate) const TRANSCRIPTION_LANGUAGES: &[&str] = &[
+    "it", "en", "es", "pt", "pt-BR", "sv", "vi", "cs", "pl", "fr", "sr", "uk", "lt", "ru", "zh",
+    "hi", "de", "id", "tr", "af", "am", "ar", "as", "az", "bg", "bn", "bs", "ca", "cy", "da", "el",
+    "et", "fa", "fi", "gl", "gu", "he", "hr", "hu", "hy", "is", "ja", "ka", "kk", "km", "kn", "ko",
+    "lo", "lv", "mk", "ml", "mn", "mr", "ms", "my", "ne", "nl", "pa", "ps", "ro", "sa", "sd", "si",
+    "sk", "sl", "sq", "su", "sw", "ta", "te", "th", "ur", "uz",
+];
+
+pub(crate) fn selected_language(code: &str, fallback: Language) -> &'static str {
+    TRANSCRIPTION_LANGUAGES
+        .iter()
+        .copied()
+        .find(|entry| entry.eq_ignore_ascii_case(code.trim()))
+        .unwrap_or_else(|| crate::audio_description::language_code(fallback))
 }
 
 fn decode_bridge_text(bytes: &[u8]) -> String {
@@ -870,7 +863,7 @@ fn spawn_bridge_process(
     bridge_path: &Path,
     wav_path: &Path,
     model: BridgeModel,
-    language: Option<Language>,
+    language: Option<&str>,
     include_timestamps: bool,
     work_dir: &Path,
     cuda_dir: Option<&Path>,
@@ -889,7 +882,7 @@ fn spawn_bridge_process(
     ];
     if let Some(language) = language {
         args.push("--language".to_string());
-        args.push(language_code(language).to_string());
+        args.push(language.to_string());
     }
     if include_timestamps {
         args.push("--timestamps".to_string());
@@ -974,7 +967,7 @@ fn spawn_bridge_worker_process(
 fn select_and_spawn_bridge(
     wav_path: &Path,
     model: BridgeModel,
-    language: Option<Language>,
+    language: Option<&str>,
     include_timestamps: bool,
     cancel: &Arc<AtomicBool>,
     bridge_download_progress: &mut Option<Box<dyn FnMut(i32) + Send>>,
@@ -1092,7 +1085,7 @@ fn start_dictation_bridge_worker(
 pub fn transcribe_wav(
     wav_path: &Path,
     model: BridgeModel,
-    language: Option<Language>,
+    language: Option<&str>,
     include_timestamps: bool,
     use_cuda_runtime: bool,
     cancel: &Arc<AtomicBool>,
@@ -1105,7 +1098,7 @@ pub fn transcribe_wav(
         model.as_name(),
         use_cuda_runtime,
         include_timestamps,
-        language.map(language_code).unwrap_or("auto")
+        language.unwrap_or("auto")
     ));
     let mut child = select_and_spawn_bridge(
         wav_path,
@@ -1250,7 +1243,7 @@ pub fn transcribe_wav(
 pub fn transcribe_wav_with_shared_worker(
     wav_path: &Path,
     model: BridgeModel,
-    language: Option<Language>,
+    language: Option<&str>,
     include_timestamps: bool,
     use_cuda_runtime: bool,
     cancel: &Arc<AtomicBool>,
@@ -1343,7 +1336,7 @@ pub fn transcribe_wav_with_shared_worker(
     let request = serde_json::json!({
         "command": "transcribe",
         "input": wav_path.display().to_string(),
-        "language": language.map(language_code).unwrap_or(""),
+        "language": language.unwrap_or(""),
         "timestamps": include_timestamps,
     });
     let request_line = json_line_ascii(&request);

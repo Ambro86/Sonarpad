@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+Version 0.9.34 – 2026-11-25
+
+1. Öffne in SonarTube einen Kanal und drücke beim ersten Eintrag „Inhalte filtern“ die Eingabetaste. Du kannst zwischen Videos, Playlists, Shorts, Kursen und Podcasts wechseln, auch wenn der Kanal keinen Tab für Videos hat.
+2. Für die Audiotranskription stehen jetzt 73 Sprachen zur Auswahl, darunter Hebräisch. Die Sprachnamen werden in der Sprache der Benutzeroberfläche angezeigt.
+3. Bei jeder neuen Transkription fragt Sonarpad nach der Sprache der Aufnahme. So können Sie die Sprache wechseln, ohne die Optionen zu öffnen.
+
 Version 0.9.33 – 2026-11-24
 
 1. Ein Fehler wurde behoben, durch den in einigen Word-Dateien im Format .doc unleserliche Zeichen erschienen. Text und Zahlen in Tabellen werden jetzt in der Reihenfolge der Zellen gelesen.

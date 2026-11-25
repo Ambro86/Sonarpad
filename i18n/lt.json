@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "Pasirinkite kitą pavadinimą: originalus PDF turi likti nepakeistas.",
   "app.pdf_copy_saved": "PDF kopija be slaptažodžio išsaugota.",
   "app.pdf_unlocked_hint": "PDF be slaptažodžio galite išsaugoti meniu Failas pasirinkę Išsaugoti PDF be slaptažodžio.",
+  "stream_audio.channel_filter": "Filtruoti turinį",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Paieškos tipas",
   "stream_audio.search_all": "Visi",
   "stream_audio.search_videos": "Vaizdo įrašai",

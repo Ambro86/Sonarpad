@@ -2599,6 +2599,47 @@ fn is_youtube_collection_url(input: &str) -> bool {
         || path == "/playlist"
 }
 
+const CHANNEL_TABS: [(&str, &str); 5] = [
+    ("videos", "stream_audio.search_videos"),
+    ("playlists", "stream_audio.search_playlists"),
+    ("shorts", "stream_audio.channel_shorts"),
+    ("courses", "stream_audio.search_courses"),
+    ("podcasts", "stream_audio.search_podcasts"),
+];
+
+fn channel_tab_index(input: &str) -> usize {
+    Url::parse(input)
+        .ok()
+        .and_then(|url| {
+            let mut parts = url.path().trim_matches('/').split('/');
+            let first = parts.next()?;
+            if !first.starts_with('@') {
+                parts.next()?;
+            }
+            let selected = parts.next()?;
+            CHANNEL_TABS.iter().position(|(tab, _)| *tab == selected)
+        })
+        .unwrap_or(0)
+}
+
+fn channel_tab_url(input: &str, tab: &str) -> Option<String> {
+    let mut url = Url::parse(&normalize_youtube_collection_url(input)?).ok()?;
+    if !is_youtube_channel_url(input) {
+        return None;
+    }
+    let mut segments = url.path().trim_matches('/').split('/');
+    let first = segments.next()?;
+    let root = if first.starts_with('@') {
+        first.to_owned()
+    } else {
+        format!("{first}/{}", segments.next()?)
+    };
+    url.set_path(&format!("/{root}/{tab}"));
+    url.set_query(None);
+    url.set_fragment(None);
+    Some(url.to_string())
+}
+
 fn youtube_mix_seed_video_url(input: &str) -> Option<String> {
     let normalized = normalize_youtube_collection_url(input)?;
     let url = Url::parse(&normalized).ok()?;
@@ -2668,6 +2709,7 @@ struct StreamCollectionPageRequest<'a> {
     entries: &'a [StreamCollectionEntry],
     has_previous: bool,
     has_more: bool,
+    channel_filter: Option<&'a str>,
     show_playlist_download_action: bool,
     initial_selected_label: Option<&'a str>,
     download_options: PlaylistDownloadOptions,
@@ -3069,7 +3111,9 @@ fn probe_youtube_collection_entries(
         .ok()
         .and_then(|v| v.as_str().map(str::to_owned))
         .unwrap_or_else(|| "en".into());
-    if let Some(page_data) = crate::sonartube::page(url, true, &locale, page)? {
+    let channel = is_youtube_channel_url(url);
+    let alternate_tab = channel && channel_tab_index(url) != 0;
+    if !alternate_tab && let Some(page_data) = crate::sonartube::page(url, true, &locale, page)? {
         crate::log_debug(&format!(
             "SonarTube service navigation: collection=true page={} entries={}",
             page,
@@ -3108,6 +3152,9 @@ fn probe_youtube_collection_entries(
         .map_err(|e| e.to_string())?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        if channel && stderr.contains("This channel does not have a ") && stderr.contains(" tab") {
+            return Ok((Vec::new(), false));
+        }
         return Err(if stderr.is_empty() {
             "yt-dlp collection probe failed".to_string()
         } else {
@@ -3123,7 +3170,7 @@ fn probe_youtube_collection_entries(
 
     let has_more = entries.len() > STREAM_SELECTION_PAGE_SIZE;
     let page_entries = &entries[..entries.len().min(STREAM_SELECTION_PAGE_SIZE)];
-    let out = collect_stream_collection_entries(page_entries, language, true);
+    let out = collect_stream_collection_entries(page_entries, language, !alternate_tab);
     Ok((out, has_more))
 }
 
@@ -3188,6 +3235,40 @@ fn probe_youtube_playlist_all_entries(
 #[cfg(test)]
 mod youtube_search_stability_tests {
     use super::*;
+
+    #[test]
+    fn channel_tabs_keep_channel_identity_and_replace_the_previous_tab() {
+        for channel in ["channel/UCabc", "@example", "user/example", "c/example"] {
+            let root = format!("https://www.youtube.com/{channel}");
+            for (tab, _) in CHANNEL_TABS {
+                assert_eq!(
+                    channel_tab_url(&format!("{root}/playlists?view=1"), tab),
+                    Some(format!("{root}/{tab}"))
+                );
+            }
+        }
+        assert!(channel_tab_url("https://www.youtube.com/playlist?list=PLabc", "shorts").is_none());
+    }
+
+    #[test]
+    #[ignore = "requires live YouTube access and the installed Windows yt-dlp"]
+    fn channel_tabs_evren_live() -> Result<(), String> {
+        let channel = "https://www.youtube.com/channel/UCWmtNqlWOzlPafA7R-5l__g";
+        let ytdlp = PathBuf::from(
+            std::env::var_os("SONARPAD_TEST_YTDLP").unwrap_or_else(|| "yt-dlp".into()),
+        );
+        for tab in ["shorts", "playlists"] {
+            let url = channel_tab_url(channel, tab).ok_or("invalid channel")?;
+            let (rows, _) = probe_youtube_collection_entries(&ytdlp, &url, Language::English, 0)?;
+            assert!(!rows.is_empty());
+            assert!(rows.iter().all(|row| if tab == "shorts" {
+                is_explicit_youtube_video_url(&row.url)
+            } else {
+                is_youtube_collection_url(&row.url)
+            }));
+        }
+        Ok(())
+    }
 
     #[test]
     fn fallback_search_filters_playlists_channels_and_videos_without_kind_metadata() {
@@ -3644,6 +3725,7 @@ fn choose_stream_collection_entry_page(request: StreamCollectionPageRequest<'_>)
         has_previous,
         has_more,
         show_playlist_download_action,
+        channel_filter,
         initial_selected_label,
         download_options,
     } = request;
@@ -3653,6 +3735,9 @@ fn choose_stream_collection_entry_page(request: StreamCollectionPageRequest<'_>)
             + usize::from(has_more)
             + usize::from(show_playlist_download_action),
     );
+    if let Some(label) = channel_filter {
+        labels.push(label.to_owned());
+    }
     if has_previous {
         labels.push(i18n::tr(language, STREAM_SELECTION_PREVIOUS_KEY));
     }
@@ -6946,9 +7031,13 @@ fn choose_youtube_collection_entry(
         }));
     }
 
+    let channel = is_youtube_channel_url(url);
+    let mut current_url = url.to_owned();
+    let mut restore_label = initial_selected_label;
     let mut page = initial_page.unwrap_or(0);
     let mut shared_progress = initial_progress;
     loop {
+        let url = current_url.as_str();
         let progress = if let Some(existing) = shared_progress.take() {
             report_progress_status(existing, &i18n::tr(language, "podcasts.loading"));
             keep_stream_progress_focus(existing);
@@ -7030,11 +7119,11 @@ fn choose_youtube_collection_entry(
             entries.len(),
             has_more
         ));
-        if !entries.is_empty() {
+        if channel || !entries.is_empty() {
             crate::app_windows::podcast_save_window::suppress_parent_restore_on_close(progress);
         }
         close_progress_dialog(progress);
-        if entries.is_empty() {
+        if entries.is_empty() && !channel {
             crate::log_debug(&format!(
                 "stream transition [collection_probe.empty]: page={} url={}",
                 page, url
@@ -7047,6 +7136,21 @@ fn choose_youtube_collection_entry(
             };
         }
 
+        let current_tab = channel_tab_index(url);
+        let filter = channel.then(|| {
+            let mut label = format!(
+                "{} ({})",
+                i18n::tr(language, "stream_audio.channel_filter"),
+                i18n::tr(language, CHANNEL_TABS[current_tab].1)
+            );
+            if entries.is_empty() {
+                label.push_str(&format!(
+                    " – {}",
+                    i18n::tr(language, "podcasts.search.no_results")
+                ));
+            }
+            label
+        });
         let Some(selected) = choose_stream_collection_entry_page(StreamCollectionPageRequest {
             parent,
             language,
@@ -7054,9 +7158,9 @@ fn choose_youtube_collection_entry(
             entries: &entries,
             has_previous: page > 0,
             has_more,
+            channel_filter: filter.as_deref(),
             show_playlist_download_action: normalize_youtube_playlist_url_from_input(url).is_some(),
-            initial_selected_label: initial_selected_label
-                .filter(|_| page == initial_page.unwrap_or(0)),
+            initial_selected_label: restore_label.filter(|_| page == initial_page.unwrap_or(0)),
             download_options: playlist_download_options,
         }) else {
             if context_stream_selector_unwind_pending(parent) {
@@ -7079,6 +7183,22 @@ fn choose_youtube_collection_entry(
             return Ok(None);
         };
         restore_stream_parent_after_selection(parent);
+        if filter.as_deref() == Some(selected.as_str()) {
+            let labels: Vec<_> = CHANNEL_TABS
+                .iter()
+                .map(|(_, key)| i18n::tr(language, key))
+                .collect();
+            if let Some(choice) = crate::app_windows::interpreter_select_window::select_interpreter_with_context_actions_without_parent_restore_on_accept(
+                parent, labels.clone(), language, i18n::tr(language, "stream_audio.channel_filter"),
+                Some(labels[current_tab].clone()), Vec::new(),
+            ) && let Some(index) = labels.iter().position(|label| label == &choice)
+                && let Some(next) = channel_tab_url(url, CHANNEL_TABS[index].0) {
+                current_url = next;
+                page = 0;
+                restore_label = None;
+            }
+            continue;
+        }
         if selected == i18n::tr(language, STREAM_SELECTION_DOWNLOAD_PLAYLIST_KEY) {
             crate::log_debug(&format!(
                 "stream transition [collection_probe.download_playlist]: page={} url={}",
@@ -7263,6 +7383,7 @@ fn choose_youtube_search_entry(
             entries: &entries,
             has_previous: page > 0,
             has_more,
+            channel_filter: None,
             show_playlist_download_action: false,
             initial_selected_label: initial_selected_label.filter(|_| page == initial_page),
             download_options: playlist_download_options,

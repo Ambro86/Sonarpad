@@ -2541,6 +2541,8 @@
   "app.pdf_copy_different_path": "Farklı bir ad seçin; orijinal PDF değişmeden kalmalıdır.",
   "app.pdf_copy_saved": "PDF'yi kayıtlı şifre olmadan kopyalayın.",
   "app.pdf_unlocked_hint": "Dosya menüsünden PDF'yi şifresiz kaydet öğesini seçerek PDF'yi şifresiz kaydedebilirsiniz.",
+  "stream_audio.channel_filter": "İçeriği filtrele",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Arama türü",
   "stream_audio.search_all": "Herkes",
   "stream_audio.search_videos": "Videolar",

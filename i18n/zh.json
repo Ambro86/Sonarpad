@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "请选择其他名称，原始 PDF 必须保持不变。",
   "app.pdf_copy_saved": "已保存无密码 PDF 副本。",
   "app.pdf_unlocked_hint": "您可以在“文件”菜单中选择“保存无密码 PDF”，将 PDF 保存为无需密码的副本。",
+  "stream_audio.channel_filter": "筛选内容",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "搜索类型",
   "stream_audio.search_all": "全部",
   "stream_audio.search_videos": "视频",

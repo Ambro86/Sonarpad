@@ -8965,28 +8965,10 @@ fn is_whisper_transcribable_audio_file(path: &Path) -> bool {
     )
 }
 
-fn whisper_audio_language_from_setting(code: &str, fallback: Language) -> Language {
-    match code.trim() {
-        "it" => Language::Italian,
-        "en" => Language::English,
-        "de" => Language::German,
-        "es" => Language::Spanish,
-        "pt" => Language::Portuguese,
-        "pt-BR" | "pt-br" => Language::PortugueseBrazilian,
-        "sv" => Language::Swedish,
-        "vi" => Language::Vietnamese,
-        "cs" => Language::Czech,
-        "pl" => Language::Polish,
-        "fr" => Language::French,
-        "sr" => Language::Serbian,
-        "uk" => Language::Ukrainian,
-        "lt" => Language::Lithuanian,
-        "ru" => Language::Russian,
-        "zh" => Language::Chinese,
-        "hi" => Language::Hindi,
-        "id" => Language::Indonesian,
-        "tr" => Language::Turkish,
-        _ => fallback,
+fn whisper_audio_language_from_setting(code: &str, fallback: Language) -> &'static str {
+    match crate::tools::faster_whisper_bridge::selected_language(code, fallback) {
+        "pt-BR" => "pt",
+        language => language,
     }
 }
 
@@ -9118,14 +9100,48 @@ pub(crate) fn start_whisper_transcription_for_la7_context(
     queue_context_whisper_transcription(hwnd, PathBuf::from(media_url), media_title, false, true);
 }
 
+fn choose_whisper_audio_language(hwnd: HWND, language: Language) -> Option<&'static str> {
+    use crate::tools::faster_whisper_bridge::{TRANSCRIPTION_LANGUAGES, selected_language};
+
+    let current = with_state(hwnd, |state| {
+        selected_language(&state.settings.whisper_audio_language, language)
+    })?;
+    let index = TRANSCRIPTION_LANGUAGES
+        .iter()
+        .position(|&code| code == current)?;
+    let options = TRANSCRIPTION_LANGUAGES
+        .iter()
+        .map(|code| i18n::tr(language, &format!("voice.lang.{code}")))
+        .collect();
+    let selection = app_windows::youtube_transcript_window::choose_combo_option_dialog(
+        hwnd,
+        language,
+        i18n::tr(language, "whisper.progress_title"),
+        i18n::tr(language, "options.label.whisper_audio_language"),
+        options,
+        index,
+    )?;
+    let &code = TRANSCRIPTION_LANGUAGES.get(selection)?;
+    if let Some(snapshot) = with_state(hwnd, |state| {
+        if state.settings.whisper_audio_language == code {
+            return None;
+        }
+        state.settings.whisper_audio_language = code.to_owned();
+        Some(state.settings.clone())
+    })
+    .flatten()
+    {
+        settings::save_settings(snapshot);
+    }
+    Some(code)
+}
+
 fn start_whisper_transcription_with_media(
     hwnd: HWND,
     explicit_media: Option<(PathBuf, Option<i32>, Option<String>)>,
     download_direct_stream_with_ytdlp: bool,
 ) {
     let language = with_state(hwnd, |state| state.settings.language).unwrap_or_default();
-    let whisper_audio_language =
-        with_state(hwnd, |state| state.settings.whisper_audio_language.clone()).unwrap_or_default();
     let whisper_include_timestamps =
         with_state(hwnd, |state| state.settings.whisper_include_timestamps).unwrap_or(false);
     let whisper_cuda_enabled =
@@ -9168,6 +9184,10 @@ fn start_whisper_transcription_with_media(
 
     let Some((mut media_path, mut stream_index, media_title)) = media_info else {
         screen_reader_speak(&i18n::tr(language, "whisper.error.no_active_media"));
+        return;
+    };
+
+    let Some(whisper_audio_language) = choose_whisper_audio_language(hwnd, language) else {
         return;
     };
 
@@ -9251,7 +9271,7 @@ fn start_whisper_transcription_with_media(
             );
             screen_reader_speak(&i18n::tr(language, "whisper.status.transcribing"));
             let forced_language = Some(whisper_audio_language_from_setting(
-                &whisper_audio_language,
+                whisper_audio_language,
                 language,
             ));
             let mut download_progress_last = -1;
@@ -9392,8 +9412,6 @@ fn start_whisper_transcription_with_media(
 
 fn start_whisper_folder_transcription(hwnd: HWND) {
     let language = with_state(hwnd, |state| state.settings.language).unwrap_or_default();
-    let whisper_audio_language =
-        with_state(hwnd, |state| state.settings.whisper_audio_language.clone()).unwrap_or_default();
     let whisper_include_timestamps =
         with_state(hwnd, |state| state.settings.whisper_include_timestamps).unwrap_or(false);
     let whisper_cuda_enabled =
@@ -9434,6 +9452,10 @@ fn start_whisper_folder_transcription(hwnd: HWND) {
         return;
     }
 
+    let Some(whisper_audio_language) = choose_whisper_audio_language(hwnd, language) else {
+        return;
+    };
+
     crate::audio_player::pause_audiobook_if_playing(hwnd);
     crate::power_awake::set_required("media-transcription", true);
 
@@ -9463,7 +9485,7 @@ fn start_whisper_folder_transcription(hwnd: HWND) {
         let result = (|| -> Result<WhisperTranscriptionResult, String> {
             let model = map_profile_to_bridge_model(whisper_profile);
             let forced_language = Some(whisper_audio_language_from_setting(
-                &whisper_audio_language,
+                whisper_audio_language,
                 language,
             ));
             let total = files.len();
@@ -9872,30 +9894,6 @@ fn apply_dictation_result(hwnd: HWND, result: DictationResult) {
     }
 }
 
-fn dictation_language_name(language: Language) -> &'static str {
-    match language {
-        Language::Italian => "it",
-        Language::German => "de",
-        Language::English => "en",
-        Language::Spanish => "es",
-        Language::Portuguese => "pt",
-        Language::PortugueseBrazilian => "pt-BR",
-        Language::Swedish => "sv",
-        Language::Vietnamese => "vi",
-        Language::Czech => "cs",
-        Language::Polish => "pl",
-        Language::French => "fr",
-        Language::Serbian => "sr",
-        Language::Ukrainian => "uk",
-        Language::Lithuanian => "lt",
-        Language::Russian => "ru",
-        Language::Chinese => "zh",
-        Language::Hindi => "hi",
-        Language::Indonesian => "id",
-        Language::Turkish => "tr",
-    }
-}
-
 fn start_dictation_recorder_from_state(
     hwnd: HWND,
 ) -> Result<podcast_recorder::RecorderHandle, String> {
@@ -9950,7 +9948,7 @@ fn toggle_voice_dictation(hwnd: HWND) {
             HWND(0),
             BridgeModel::Small,
             false,
-            Some(language),
+            Some(whisper_audio_language_from_setting("", language)),
             Arc::new(AtomicBool::new(false)),
             0,
         ));
@@ -9978,9 +9976,7 @@ fn toggle_voice_dictation(hwnd: HWND) {
                             BridgeModel::LargeV3 => "large-v3",
                         },
                         whisper_cuda_enabled,
-                        forced_language
-                            .map(dictation_language_name)
-                            .unwrap_or("auto")
+                        forced_language.unwrap_or("auto")
                     )),
                     Err(err) => log_debug(&format!(
                         "Dictation: bridge start session={} path={} size={} duration_unknown err={} model={} cuda={} forced_language={}",
@@ -9994,9 +9990,7 @@ fn toggle_voice_dictation(hwnd: HWND) {
                             BridgeModel::LargeV3 => "large-v3",
                         },
                         whisper_cuda_enabled,
-                        forced_language
-                            .map(dictation_language_name)
-                            .unwrap_or("auto")
+                        forced_language.unwrap_or("auto")
                     )),
                 }
                 let mut progress_last = -1;

@@ -2541,6 +2541,8 @@
   "app.pdf_copy_different_path": "Escolha outro nome: o PDF original deve permanecer inalterado.",
   "app.pdf_copy_saved": "Cópia do PDF sem senha salva.",
   "app.pdf_unlocked_hint": "Você pode salvar o PDF sem senha pelo menu Arquivo, escolhendo Salvar PDF sem senha.",
+  "stream_audio.channel_filter": "Filtrar conteúdo",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Tipo de pesquisa",
   "stream_audio.search_all": "Todos",
   "stream_audio.search_videos": "Vídeos",

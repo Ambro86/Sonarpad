@@ -1,5 +1,11 @@
 # Catatan perubahan
 
+Version 0.9.34 – 2026-11-25
+
+1. Di SonarTube, buka kanal dan tekan Enter pada pilihan pertama, “Filter konten”, untuk memilih video, playlist, Shorts, kursus, atau podcast. Anda tetap dapat berpindah bagian meskipun kanal tidak memiliki tab Video.
+2. Untuk transkripsi audio, kini Anda dapat memilih dari 73 bahasa, termasuk bahasa Ibrani. Nama bahasa ditampilkan dalam bahasa antarmuka.
+3. Setiap kali Anda memulai transkripsi, Sonarpad meminta Anda memilih bahasa rekaman. Anda dapat berganti bahasa tanpa membuka pengaturan.
+
 Version 0.9.33 – 2026-11-24
 
 1. Memperbaiki masalah yang menyebabkan sebagian berkas .doc Word menampilkan karakter yang tidak terbaca. Teks dan angka dalam tabel kini dibaca sesuai urutan sel.

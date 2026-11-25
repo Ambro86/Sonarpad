@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "Elige otro nombre: el PDF original debe permanecer intacto.",
   "app.pdf_copy_saved": "Copia del PDF sin contraseña guardada.",
   "app.pdf_unlocked_hint": "Puedes guardar el PDF sin contraseña desde el menú Archivo, eligiendo Guardar PDF sin contraseña.",
+  "stream_audio.channel_filter": "Filtrar contenido",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Tipo de búsqueda",
   "stream_audio.search_all": "Todos",
   "stream_audio.search_videos": "Vídeos",

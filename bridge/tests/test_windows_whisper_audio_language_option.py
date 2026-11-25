@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -22,26 +23,16 @@ class WindowsWhisperAudioLanguageOptionTests(unittest.TestCase):
         self.assertIn("CBS_DROPDOWNLIST", source)
         self.assertIn("settings.whisper_audio_language =", source)
         self.assertNotIn("whisper_keep_original_language", source)
-        for label in (
-            "lang_it",
-            "lang_en",
-            "lang_es",
-            "lang_pt",
-            "lang_pt_br",
-            "lang_sv",
-            "lang_vi",
-            "lang_cs",
-            "lang_pl",
-            "lang_fr",
-            "lang_sr",
-            "lang_uk",
-            "lang_lt",
-            "lang_ru",
-            "lang_zh",
-            "lang_hi",
-            "lang_de",
-        ):
-            self.assertIn(f"labels.{label}.as_str()", source)
+        self.assertIn("for code in TRANSCRIPTION_LANGUAGES", source)
+        bridge = (ROOT / "src/tools/faster_whisper_bridge.rs").read_text(encoding="utf-8")
+        catalog = bridge.split("const TRANSCRIPTION_LANGUAGES:", 1)[1].split("= &[", 1)[1].split("];", 1)[0]
+        codes = re.findall(r'"([^"]+)"', catalog)
+        self.assertEqual(len(codes), len(set(codes)))
+        self.assertIn("he", codes)
+        for path in (ROOT / "i18n").glob("*.json"):
+            labels = json.loads(path.read_text(encoding="utf-8"))
+            for code in codes:
+                self.assertTrue(labels.get(f"voice.lang.{code}"), (path.name, code))
 
     def test_media_folder_and_dictation_force_selected_language(self):
         source = (ROOT / "src" / "main.rs").read_text(encoding="utf-8")

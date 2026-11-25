@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "Wybierz inną nazwę: oryginalny PDF musi pozostać niezmieniony.",
   "app.pdf_copy_saved": "Zapisano kopię PDF bez hasła.",
   "app.pdf_unlocked_hint": "Możesz zapisać PDF bez hasła, wybierając Zapisz PDF bez hasła w menu Plik.",
+  "stream_audio.channel_filter": "Filtruj treści",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Typ wyszukiwania",
   "stream_audio.search_all": "Wszystkie",
   "stream_audio.search_videos": "Filmy",

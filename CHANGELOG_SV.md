@@ -1,5 +1,11 @@
 # Ändringslogg
 
+Version 0.9.34 – 2026-11-25
+
+1. Öppna en kanal i SonarTube och tryck på Enter på det första alternativet, ”Filtrera innehåll”, för att välja mellan videor, spellistor, Shorts, kurser och poddar. Du kan byta avsnitt även om kanalen saknar en videoflik.
+2. För ljudtranskribering kan du nu välja mellan 73 språk, däribland hebreiska. Språkens namn visas på gränssnittets språk.
+3. Varje gång du startar en transkribering får du välja inspelningens språk. Du kan alltså byta språk utan att öppna inställningarna.
+
 Version 0.9.33 – 2026-11-24
 
 1. Åtgärdade ett fel som gjorde att vissa Word-filer i formatet .doc visade oläsliga tecken. Text och siffror i tabeller läses nu i cellernas ordning.

@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "Vyberte jiný název: původní PDF musí zůstat nezměněné.",
   "app.pdf_copy_saved": "Kopie PDF bez hesla byla uložena.",
   "app.pdf_unlocked_hint": "PDF můžete uložit bez hesla v nabídce Soubor pomocí položky Uložit PDF bez hesla.",
+  "stream_audio.channel_filter": "Filtrovat obsah",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Typ hledání",
   "stream_audio.search_all": "Vše",
   "stream_audio.search_videos": "Videa",

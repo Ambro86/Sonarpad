@@ -1,5 +1,11 @@
 # Değişiklik günlüğü
 
+Sürüm 0.9.34 – 2026-11-25
+
+1. SonarTube’da bir kanal açıp ilk öğe olan “İçeriği filtrele” üzerinde Enter tuşuna basarak videolar, oynatma listeleri, Shorts, kurslar veya podcast’ler arasında seçim yapabilirsiniz. Kanalın Videolar sekmesi olmasa bile bölümler arasında geçiş yapabilirsiniz.
+2. Ses kaydını yazıya dökmek için artık İbranice dahil 73 dil arasından seçim yapabilirsiniz. Dil adları arayüz dilinde gösterilir.
+3. Her transkripsiyon başlattığınızda Sonarpad ses kaydının dilini seçmenizi ister. Böylece seçenekleri açmadan dil değiştirebilirsiniz.
+
 Sürüm 0.9.33 – 2026-11-24
 
 1. Bazı .doc biçimindeki Word belgelerinde okunamayan karakterlerin görünmesine neden olan hata düzeltildi. Tablolardaki metin ve sayılar artık hücre sırasına göre okunuyor.

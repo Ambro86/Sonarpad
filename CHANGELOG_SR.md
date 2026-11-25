@@ -1,5 +1,11 @@
 # Dnevnik izmena
 
+Version 0.9.34 – 2026-11-25
+
+1. U SonarTube-u otvorite kanal i pritisnite Enter na prvoj stavci „Филтрирај садржај“ da biste izabrali video-snimke, plejliste, Shorts, kurseve ili podkaste. Možete promeniti odeljak čak i ako kanal nema karticu sa video-snimcima.
+2. Za transkripciju zvuka sada možete izabrati jedan od 73 jezika, uključujući hebrejski. Nazivi jezika prikazuju se na jeziku interfejsa.
+3. Svaki put kada pokrenete transkripciju, Sonarpad traži da izaberete jezik snimka. Tako možete promeniti jezik bez otvaranja podešavanja.
+
 Version 0.9.33 – 2026-11-24
 
 1. Ispravljena je greška zbog koje su se u nekim Word dokumentima u formatu .doc prikazivali nečitljivi znakovi. Tekst i brojevi u tabelama sada se čitaju redosledom ćelija.

@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "Choose a different name: the original PDF must remain unchanged.",
   "app.pdf_copy_saved": "PDF copy without password saved.",
   "app.pdf_unlocked_hint": "You can save the PDF without a password from the File menu by choosing Save PDF without password.",
+  "stream_audio.channel_filter": "Filter content",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Search type",
   "stream_audio.search_all": "All",
   "stream_audio.search_videos": "Videos",

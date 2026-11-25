@@ -1,5 +1,11 @@
 # Přehled změn
 
+Version 0.9.34 – 2026-11-25
+
+1. V SonarTube otevřete kanál a stiskněte Enter na první položce „Filtrovat obsah“. Můžete vybrat videa, playlisty, Shorts, kurzy nebo podcasty, i když kanál nemá kartu Videa.
+2. Pro přepis zvuku si nyní můžete vybrat ze 73 jazyků včetně hebrejštiny. Názvy jazyků se zobrazují v jazyce rozhraní.
+3. Při každém spuštění přepisu vás Sonarpad vyzve k výběru jazyka nahrávky. Jazyk tak můžete změnit bez otevírání nastavení.
+
 Version 0.9.33 – 2026-11-24
 
 1. Opravena chyba, která v některých souborech Wordu ve formátu .doc zobrazovala nečitelné znaky. Text a čísla v tabulkách se nyní čtou v pořadí buněk.

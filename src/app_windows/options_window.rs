@@ -15,6 +15,9 @@ use crate::settings::{
     save_settings_with_default_copy, sync_context_menu, sync_start_menu_shortcuts,
     tts_tuning_for_engine, voice_profile_from_settings_fields,
 };
+use crate::tools::faster_whisper_bridge::{
+    TRANSCRIPTION_LANGUAGES, selected_language as selected_whisper_language,
+};
 use crate::{
     i18n, rebuild_menus, refresh_voice_panel, tts_engine, update_voice_panel_menu_check, with_state,
 };
@@ -1935,104 +1938,6 @@ fn options_labels(language: Language) -> OptionsLabels {
         ok: i18n::tr(language, "options.ok"),
         cancel: i18n::tr(language, "options.cancel"),
         voices_empty: i18n::tr(language, "options.voices.empty"),
-    }
-}
-
-fn sonarpad_language_index(language: Language) -> usize {
-    match language {
-        Language::Italian => 0,
-        Language::English => 1,
-        Language::Spanish => 2,
-        Language::Portuguese => 3,
-        Language::PortugueseBrazilian => 4,
-        Language::Swedish => 5,
-        Language::Vietnamese => 6,
-        Language::Czech => 7,
-        Language::Polish => 8,
-        Language::French => 9,
-        Language::Serbian => 10,
-        Language::Ukrainian => 11,
-        Language::Lithuanian => 12,
-        Language::Russian => 13,
-        Language::Chinese => 14,
-        Language::Hindi => 15,
-        Language::German => 16,
-        Language::Indonesian => 17,
-        Language::Turkish => 18,
-    }
-}
-
-fn sonarpad_language_from_index(index: isize) -> Option<Language> {
-    match index {
-        0 => Some(Language::Italian),
-        1 => Some(Language::English),
-        2 => Some(Language::Spanish),
-        3 => Some(Language::Portuguese),
-        4 => Some(Language::PortugueseBrazilian),
-        5 => Some(Language::Swedish),
-        6 => Some(Language::Vietnamese),
-        7 => Some(Language::Czech),
-        8 => Some(Language::Polish),
-        9 => Some(Language::French),
-        10 => Some(Language::Serbian),
-        11 => Some(Language::Ukrainian),
-        12 => Some(Language::Lithuanian),
-        13 => Some(Language::Russian),
-        14 => Some(Language::Chinese),
-        15 => Some(Language::Hindi),
-        16 => Some(Language::German),
-        17 => Some(Language::Indonesian),
-        18 => Some(Language::Turkish),
-        _ => None,
-    }
-}
-
-fn sonarpad_language_code(language: Language) -> &'static str {
-    match language {
-        Language::Italian => "it",
-        Language::English => "en",
-        Language::German => "de",
-        Language::Spanish => "es",
-        Language::Portuguese => "pt",
-        Language::PortugueseBrazilian => "pt-BR",
-        Language::Swedish => "sv",
-        Language::Vietnamese => "vi",
-        Language::Czech => "cs",
-        Language::Polish => "pl",
-        Language::French => "fr",
-        Language::Serbian => "sr",
-        Language::Ukrainian => "uk",
-        Language::Lithuanian => "lt",
-        Language::Russian => "ru",
-        Language::Chinese => "zh",
-        Language::Hindi => "hi",
-        Language::Indonesian => "id",
-        Language::Turkish => "tr",
-    }
-}
-
-fn whisper_audio_language_from_code(code: &str) -> Option<Language> {
-    match code.trim() {
-        "it" => Some(Language::Italian),
-        "en" => Some(Language::English),
-        "de" => Some(Language::German),
-        "es" => Some(Language::Spanish),
-        "pt" => Some(Language::Portuguese),
-        "pt-BR" | "pt-br" => Some(Language::PortugueseBrazilian),
-        "sv" => Some(Language::Swedish),
-        "vi" => Some(Language::Vietnamese),
-        "cs" => Some(Language::Czech),
-        "pl" => Some(Language::Polish),
-        "fr" => Some(Language::French),
-        "sr" => Some(Language::Serbian),
-        "uk" => Some(Language::Ukrainian),
-        "lt" => Some(Language::Lithuanian),
-        "ru" => Some(Language::Russian),
-        "zh" => Some(Language::Chinese),
-        "hi" => Some(Language::Hindi),
-        "id" => Some(Language::Indonesian),
-        "tr" => Some(Language::Turkish),
-        _ => None,
     }
 }
 
@@ -5585,32 +5490,13 @@ fn options_wndproc_inner(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -
                     HINSTANCE(0),
                     None,
                 );
-                for language_label in [
-                    labels.lang_it.as_str(),
-                    labels.lang_en.as_str(),
-                    labels.lang_es.as_str(),
-                    labels.lang_pt.as_str(),
-                    labels.lang_pt_br.as_str(),
-                    labels.lang_sv.as_str(),
-                    labels.lang_vi.as_str(),
-                    labels.lang_cs.as_str(),
-                    labels.lang_pl.as_str(),
-                    labels.lang_fr.as_str(),
-                    labels.lang_sr.as_str(),
-                    labels.lang_uk.as_str(),
-                    labels.lang_lt.as_str(),
-                    labels.lang_ru.as_str(),
-                    labels.lang_zh.as_str(),
-                    labels.lang_hi.as_str(),
-                    labels.lang_de.as_str(),
-                    labels.lang_id.as_str(),
-                    labels.lang_tr.as_str(),
-                ] {
+                for code in TRANSCRIPTION_LANGUAGES {
+                    let language_label = i18n::tr(language, &format!("voice.lang.{code}"));
                     SendMessageW(
                         combo_whisper_audio_language,
                         CB_ADDSTRING,
                         WPARAM(0),
-                        LPARAM(to_wide(language_label).as_ptr() as isize),
+                        LPARAM(to_wide(&language_label).as_ptr() as isize),
                     );
                 }
                 y += 30;
@@ -10039,15 +9925,18 @@ fn initialize_options_dialog(hwnd: HWND) {
                 LPARAM(0),
             );
         }
-        let whisper_audio_language =
-            whisper_audio_language_from_code(&settings.whisper_audio_language)
-                .unwrap_or(settings.language);
-        SendMessageW(
-            combo_whisper_audio_language,
-            CB_SETCURSEL,
-            WPARAM(sonarpad_language_index(whisper_audio_language)),
-            LPARAM(0),
-        );
+        let code = selected_whisper_language(&settings.whisper_audio_language, settings.language);
+        if let Some(index) = TRANSCRIPTION_LANGUAGES
+            .iter()
+            .position(|&item| item == code)
+        {
+            SendMessageW(
+                combo_whisper_audio_language,
+                CB_SETCURSEL,
+                WPARAM(index),
+                LPARAM(0),
+            );
+        }
         if let Some(checkbox_whisper_include_timestamps) =
             with_options_state(hwnd, |state| state.checkbox_whisper_include_timestamps)
         {
@@ -13549,9 +13438,9 @@ fn apply_options_dialog(hwnd: HWND) {
                 LPARAM(0),
             )
             .0;
-            let selected_language =
-                sonarpad_language_from_index(selection).unwrap_or(settings.language);
-            settings.whisper_audio_language = sonarpad_language_code(selected_language).to_string();
+            if let Some(&code) = TRANSCRIPTION_LANGUAGES.get(selection as usize) {
+                settings.whisper_audio_language = code.to_string();
+            }
         }
         if let Some(checkbox_whisper_include_timestamps) =
             with_options_state(hwnd, |state| state.checkbox_whisper_include_timestamps)

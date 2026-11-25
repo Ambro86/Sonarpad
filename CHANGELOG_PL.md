@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+Version 0.9.34 – 2026-11-25
+
+1. W SonarTube otwórz kanał i naciśnij Enter na pierwszej pozycji „Filtruj treści”. Możesz wybierać filmy, playlisty, Shorts, kursy i podcasty, nawet jeśli kanał nie ma karty z filmami.
+2. Do transkrypcji nagrań można teraz wybrać jeden z 73 języków, w tym hebrajski. Nazwy języków są wyświetlane w języku interfejsu.
+3. Przy każdym uruchomieniu transkrypcji Sonarpad pyta o język nagrania. Możesz więc zmieniać język bez otwierania opcji.
+
 Version 0.9.33 – 2026-11-24
 
 1. Naprawiono błąd powodujący wyświetlanie nieczytelnych znaków w niektórych plikach .doc programu Word. Tekst i liczby w tabelach są teraz odczytywane w kolejności komórek.

@@ -2489,6 +2489,8 @@
   "app.pdf_copy_different_path": "Виберіть іншу назву: оригінальний PDF має залишитися незмінним.",
   "app.pdf_copy_saved": "Копію PDF без пароля збережено.",
   "app.pdf_unlocked_hint": "Щоб зберегти PDF без пароля, виберіть «Зберегти PDF без пароля» в меню «Файл».",
+  "stream_audio.channel_filter": "Фільтрувати вміст",
+  "stream_audio.channel_shorts": "Shorts",
   "stream_audio.search_type": "Тип пошуку",
   "stream_audio.search_all": "Усі",
   "stream_audio.search_videos": "Відео",

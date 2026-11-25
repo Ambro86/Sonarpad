@@ -1,5 +1,11 @@
 # Changelog
 
+Version 0.9.34 – 2026-11-25
+
+1. In SonarTube, apri un canale e premi Invio sulla prima voce, «Filtra contenuti», per scegliere tra video, playlist, Shorts, corsi e podcast. Puoi cambiare sezione anche quando il canale non ha una scheda Video.
+2. Per la trascrizione audio puoi scegliere tra 73 lingue, tra cui l’ebraico. I nomi delle lingue sono mostrati nella lingua dell’interfaccia.
+3. Ogni volta che avvii la trascrizione, Sonarpad ti chiede di scegliere la lingua dell’audio. Così puoi passare da una lingua all’altra senza aprire le Opzioni.
+
 Version 0.9.33 – 2026-11-24
 
 1. Corretta l’apertura di alcuni documenti Word in formato .doc che mostravano caratteri illeggibili. Ora il testo e i numeri delle tabelle si leggono nell’ordine delle celle.

@@ -1,5 +1,11 @@
 # Changelog
 
+Version 0.9.34 – 2026-11-25
+
+1. In SonarTube, open a channel and press Enter on “Filter content”, the first item, to choose videos, playlists, Shorts, courses or podcasts. You can switch sections even when the channel has no Videos tab.
+2. For audio transcription, you can now choose from 73 languages, including Hebrew. Language names appear in your interface language.
+3. Each time you start a transcription, Sonarpad asks you to choose the audio language. You can switch languages without opening Options.
+
 Version 0.9.33 – 2026-11-24
 
 1. Fixed an issue that displayed unreadable characters in some Word .doc files. Text and numbers in tables are now read in cell order.

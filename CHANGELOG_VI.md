@@ -1,5 +1,11 @@
 # Nhật ký thay đổi
 
+Version 0.9.34 – 2026-11-25
+
+1. Trong SonarTube, mở một kênh rồi nhấn Enter ở mục đầu tiên, “Lọc nội dung”, để chọn video, danh sách phát, Shorts, khóa học hoặc podcast. Bạn vẫn có thể chuyển mục ngay cả khi kênh không có thẻ Video.
+2. Khi chuyển âm thanh thành văn bản, bạn có thể chọn một trong 73 ngôn ngữ, bao gồm cả tiếng Do Thái. Tên các ngôn ngữ được hiển thị bằng ngôn ngữ giao diện.
+3. Mỗi khi bạn bắt đầu chuyển âm thanh thành văn bản, Sonarpad sẽ yêu cầu bạn chọn ngôn ngữ của bản ghi. Nhờ vậy, bạn có thể đổi ngôn ngữ mà không cần mở phần cài đặt.
+
 Version 0.9.33 – 2026-11-24
 
 1. Đã sửa lỗi hiển thị ký tự khó đọc trong một số tài liệu Word định dạng .doc. Văn bản và số trong bảng hiện được đọc theo thứ tự các ô.

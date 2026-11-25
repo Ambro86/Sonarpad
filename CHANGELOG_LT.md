@@ -1,5 +1,11 @@
 # Pakeitimų žurnalas
 
+Version 0.9.34 – 2026-11-25
+
+1. Atverkite kanalą „SonarTube“ ir ties pirmuoju sąrašo elementu „Filtruoti turinį“ paspauskite Enter. Galite rinktis vaizdo įrašus, grojaraščius, „Shorts“, kursus ar tinklalaides, net jei kanalas neturi vaizdo įrašų kortelės.
+2. Garso įrašų transkripcijai dabar galite rinktis iš 73 kalbų, įskaitant hebrajų. Kalbų pavadinimai rodomi sąsajos kalba.
+3. Kaskart pradėjus transkripciją, „Sonarpad“ prašo pasirinkti įrašo kalbą. Taip kalbą galite pakeisti neatverdami nustatymų.
+
 Version 0.9.33 – 2026-11-24
 
 1. Ištaisyta klaida, dėl kurios kai kuriuose „Word“ .doc failuose buvo rodomi neįskaitomi simboliai. Lentelių tekstas ir skaičiai dabar skaitomi langelių eilės tvarka.
